@@ -6,6 +6,21 @@ import { ensureDB } from '@/lib/db'
 
 type Params = { params: Promise<{ id: string }> }
 
+export async function GET(_req: NextRequest, { params }: Params) {
+  try {
+    const { userId } = await auth()
+    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    await ensureDB()
+    const { id } = await params
+    const project = await ProjectModel.findOne({ _id: id, userId }).lean()
+    if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json({ project })
+  } catch {
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
 export async function PATCH(req: NextRequest, { params }: Params) {
   try {
     const { userId } = await auth()
