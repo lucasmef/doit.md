@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const ItemVersionSchema = new Schema(
   {
@@ -14,4 +14,6 @@ const ItemVersionSchema = new Schema(
   },
 )
 
-export const ItemVersionModel = models['ItemVersion'] ?? model('ItemVersion', ItemVersionSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const ItemVersionModel: Model<any> =
+  (models['ItemVersion'] as Model<any>) ?? model('ItemVersion', ItemVersionSchema)

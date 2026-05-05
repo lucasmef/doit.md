@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const AreaSchema = new Schema(
   {
@@ -15,4 +15,5 @@ const AreaSchema = new Schema(
   },
 )
 
-export const AreaModel = models['Area'] ?? model('Area', AreaSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const AreaModel: Model<any> = (models['Area'] as Model<any>) ?? model('Area', AreaSchema)

@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const ProjectSchema = new Schema(
   {
@@ -21,4 +21,5 @@ const ProjectSchema = new Schema(
   },
 )
 
-export const ProjectModel = models['Project'] ?? model('Project', ProjectSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const ProjectModel: Model<any> = (models['Project'] as Model<any>) ?? model('Project', ProjectSchema)

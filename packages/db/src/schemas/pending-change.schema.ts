@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const PendingChangeSchema = new Schema(
   {
@@ -8,14 +8,8 @@ const PendingChangeSchema = new Schema(
     changeType: {
       type: String,
       enum: [
-        'created',
-        'updated',
-        'moved',
-        'renamed',
-        'frontmatter_changed',
-        'content_changed',
-        'deleted',
-        'conflict',
+        'created', 'updated', 'moved', 'renamed',
+        'frontmatter_changed', 'content_changed', 'deleted', 'conflict',
       ],
       required: true,
     },
@@ -35,5 +29,6 @@ const PendingChangeSchema = new Schema(
   },
 )
 
-export const PendingChangeModel =
-  models['PendingChange'] ?? model('PendingChange', PendingChangeSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const PendingChangeModel: Model<any> =
+  (models['PendingChange'] as Model<any>) ?? model('PendingChange', PendingChangeSchema)

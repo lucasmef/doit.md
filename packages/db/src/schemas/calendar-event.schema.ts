@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const CalendarEventSchema = new Schema(
   {
@@ -22,5 +22,6 @@ const CalendarEventSchema = new Schema(
 
 CalendarEventSchema.index({ userId: 1, start: 1 })
 
-export const CalendarEventModel =
-  models['CalendarEvent'] ?? model('CalendarEvent', CalendarEventSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const CalendarEventModel: Model<any> =
+  (models['CalendarEvent'] as Model<any>) ?? model('CalendarEvent', CalendarEventSchema)

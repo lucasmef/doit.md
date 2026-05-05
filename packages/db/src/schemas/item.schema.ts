@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const ItemSchema = new Schema(
   {
@@ -41,4 +41,5 @@ ItemSchema.index({ userId: 1, status: 1 })
 ItemSchema.index({ userId: 1, dueDate: 1 })
 ItemSchema.index({ userId: 1, projectId: 1 })
 
-export const ItemModel = models['Item'] ?? model('Item', ItemSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const ItemModel: Model<any> = (models['Item'] as Model<any>) ?? model('Item', ItemSchema)

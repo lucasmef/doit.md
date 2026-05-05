@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose'
+import { Schema, model, models, type Model } from 'mongoose'
 
 const AuditLogSchema = new Schema(
   {
@@ -8,16 +8,9 @@ const AuditLogSchema = new Schema(
     action: {
       type: String,
       enum: [
-        'pull',
-        'diff',
-        'push',
-        'file_created',
-        'file_updated',
-        'file_moved',
-        'file_deleted',
-        'frontmatter_changed',
-        'conflict_detected',
-        'version_created',
+        'pull', 'diff', 'push',
+        'file_created', 'file_updated', 'file_moved', 'file_deleted',
+        'frontmatter_changed', 'conflict_detected', 'version_created',
       ],
       required: true,
     },
@@ -37,4 +30,6 @@ const AuditLogSchema = new Schema(
 
 AuditLogSchema.index({ userId: 1, createdAt: -1 })
 
-export const AuditLogModel = models['AuditLog'] ?? model('AuditLog', AuditLogSchema)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const AuditLogModel: Model<any> =
+  (models['AuditLog'] as Model<any>) ?? model('AuditLog', AuditLogSchema)
