@@ -7,7 +7,7 @@ type SyncConfig = {
   userId: string
 }
 
-const store = new Conf<SyncConfig>({ projectName: 'clarity-sync' })
+const store = new Conf<SyncConfig>({ projectName: 'doit-sync' })
 
 export function getConfig(): SyncConfig {
   const apiUrl = store.get('apiUrl')
@@ -16,7 +16,7 @@ export function getConfig(): SyncConfig {
   const userId = store.get('userId')
 
   if (!apiUrl || !apiKey || !workspacePath || !userId) {
-    throw new Error('Workspace não inicializado. Execute: clarity-sync init')
+    throw new Error('Workspace não inicializado. Execute: doit-sync init')
   }
 
   return { apiUrl, apiKey, workspacePath, userId }

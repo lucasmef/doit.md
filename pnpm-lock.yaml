@@ -20,6 +20,9 @@ importers:
 
   apps/sync-agent:
     dependencies:
+      '@doit/audit':
+        specifier: workspace:*
+        version: link:../../packages/audit
       '@doit/core':
         specifier: workspace:*
         version: link:../../packages/core

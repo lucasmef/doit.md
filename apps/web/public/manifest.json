@@ -1,22 +1,47 @@
 {
-  "name": "Clarity",
-  "short_name": "Clarity",
-  "description": "Notas, tarefas, projetos e calendário",
+  "name": "doit.md",
+  "short_name": "doit",
+  "description": "Notas, tarefas, projetos e calendário em um só lugar",
   "start_url": "/today",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
+  "background_color": "#f5f3ef",
   "theme_color": "#3b82f6",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "categories": ["productivity"],
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/api/icon/192",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/api/icon/512",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Inbox",
+      "short_name": "Inbox",
+      "url": "/inbox",
+      "description": "Ver itens do inbox"
+    },
+    {
+      "name": "Hoje",
+      "short_name": "Hoje",
+      "url": "/today",
+      "description": "Ver tarefas de hoje"
+    },
+    {
+      "name": "Capturar",
+      "short_name": "Capturar",
+      "url": "/inbox?capture=1",
+      "description": "Capturar novo item"
     }
   ]
 }

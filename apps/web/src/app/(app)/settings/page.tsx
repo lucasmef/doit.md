@@ -145,16 +145,16 @@ export default function SettingsPage() {
         </div>
         <div className="px-5 py-5">
           <p className="text-sm text-slate-600 mb-3">
-            Use o CLI <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">clarity-sync</code> para
+            Use o CLI <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">doit-sync</code> para
             sincronizar itens via arquivos Markdown, ideal para integrações com agentes de IA como Claude Code e Cursor.
           </p>
           <div className="bg-slate-900 rounded-lg px-4 py-3 text-xs font-mono text-slate-200 space-y-1">
             <p><span className="text-slate-500">#</span> instalar</p>
-            <p>npm install -g clarity-sync</p>
+            <p>npm install -g doit-sync</p>
             <p className="pt-1"><span className="text-slate-500">#</span> configurar</p>
-            <p>clarity-sync init</p>
+            <p>doit-sync init</p>
             <p className="pt-1"><span className="text-slate-500">#</span> sincronizar</p>
-            <p>clarity-sync pull && clarity-sync diff && clarity-sync push</p>
+            <p>doit-sync pull && doit-sync diff && doit-sync push</p>
           </div>
         </div>
       </section>

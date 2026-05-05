@@ -40,7 +40,7 @@ export function Sidebar() {
   return (
     <aside className="w-56 shrink-0 h-full bg-surface-sidebar border-r border-ui-border flex flex-col py-6 px-3">
       <div className="px-2 mb-5">
-        <span className="text-lg font-semibold tracking-tight text-slate-900">Clarity</span>
+        <span className="text-lg font-semibold tracking-tight text-slate-900">doit.md</span>
       </div>
 
       <div className="flex flex-col gap-0.5">

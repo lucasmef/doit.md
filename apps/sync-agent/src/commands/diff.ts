@@ -17,7 +17,7 @@ export async function diffCommand() {
 
   const manifest = await readJson<Manifest>(join(config.workspacePath, '_system', 'manifest.json'))
   if (!manifest) {
-    spinner.fail('Nenhum manifest encontrado. Execute clarity-sync pull primeiro.')
+    spinner.fail('Nenhum manifest encontrado. Execute doit-sync pull primeiro.')
     process.exit(1)
   }
 
@@ -125,5 +125,5 @@ export async function diffCommand() {
     )
   }
 
-  console.log(chalk.dim('\n  Revise e aprove no app → clarity-sync push'))
+  console.log(chalk.dim('\n  Revise e aprove no app → doit-sync push'))
 }

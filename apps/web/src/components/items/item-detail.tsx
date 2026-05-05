@@ -8,6 +8,7 @@ import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
 import { StatusSelect } from './status-select'
 import { ItemVersions } from './item-versions'
+import { useToast } from '@/components/ui/toast'
 import type { ItemComplexity, ItemStatus } from '@doit/types'
 
 export function ItemDetail() {
@@ -15,12 +16,14 @@ export function ItemDetail() {
   const { item, isLoading } = useItem(selectedItemId)
   const { projects } = useProjects()
   const { areas } = useAreas()
+  const { toast } = useToast()
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [dirty, setDirty] = useState(false)
+  const [creatingEvent, setCreatingEvent] = useState(false)
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -86,6 +89,28 @@ export function ItemDetail() {
     if (!selectedItemId) return
     await archiveItem(selectedItemId)
     setSelectedItemId(null)
+  }
+
+  async function handleCreateCalendarEvent() {
+    if (!selectedItemId) return
+    setCreatingEvent(true)
+    try {
+      const res = await fetch('/api/calendar/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: selectedItemId }),
+      })
+      if (res.ok) {
+        toast('Evento criado no Google Calendar!', 'success')
+      } else {
+        const { error } = await res.json() as { error: string }
+        toast(error === 'Google account not connected' ? 'Conecte o Google Calendar em Configurações.' : 'Erro ao criar evento.', 'error')
+      }
+    } catch {
+      toast('Erro ao criar evento.', 'error')
+    } finally {
+      setCreatingEvent(false)
+    }
   }
 
   if (!selectedItemId) {
@@ -154,6 +179,20 @@ export function ItemDetail() {
               onChange={handleDueDateChange}
               className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
             />
+            {dueDate && (
+              <button
+                onClick={handleCreateCalendarEvent}
+                disabled={creatingEvent}
+                className="flex items-center gap-1.5 text-[12px] text-brand-600 hover:text-brand-700 disabled:opacity-50 transition-colors w-fit"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                  <path d="M12 14v4M10 16h4" strokeLinecap="round" />
+                </svg>
+                {creatingEvent ? 'Criando...' : 'Criar evento no Google Calendar'}
+              </button>
+            )}
           </div>
 
           {/* Projeto */}

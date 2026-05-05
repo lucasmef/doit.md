@@ -1,4 +1,4 @@
-# PRD — Clarity: Personal Productivity PWA
+# PRD — doit.md: Personal Productivity PWA
 
 **Versão:** 1.0  
 **Data:** Maio 2025  
@@ -8,7 +8,7 @@
 
 ## 1. Visão do Produto
 
-Clarity é uma **PWA de produtividade pessoal** que unifica notas, tarefas, projetos e calendário
+doit.md é uma **PWA de produtividade pessoal** que unifica notas, tarefas, projetos e calendário
 em uma única entidade chamada **Item**, com complexidade progressiva.
 
 ### Problema
@@ -84,11 +84,11 @@ capture → task → project → area
 - Configurações: conectar, desconectar, sincronizar manualmente
 
 ### 3.5 Agente de Sincronização (CLI)
-- `clarity-sync init` — configura workspace
-- `clarity-sync pull` — baixa itens como arquivos .md
-- `clarity-sync diff` — detecta mudanças e classifica por risco
-- `clarity-sync push` — aplica mudanças aprovadas na UI
-- `clarity-sync status` — mostra estado atual
+- `doit-sync init` — configura workspace
+- `doit-sync pull` — baixa itens como arquivos .md
+- `doit-sync diff` — detecta mudanças e classifica por risco
+- `doit-sync push` — aplica mudanças aprovadas na UI
+- `doit-sync status` — mostra estado atual
 
 ### 3.6 Auditoria e Aprovação
 - Toda mudança do agente cria um `PendingChange`
@@ -111,7 +111,7 @@ capture → task → project → area
 ```
 apps/
   web/           # Next.js PWA
-  sync-agent/    # CLI clarity-sync
+  sync-agent/    # CLI doit-sync
 packages/
   types/         # Tipos TypeScript compartilhados
   core/          # Lógica pura (ids, regras)
@@ -142,7 +142,7 @@ Schemas Mongoose, API REST para Items/Projects/Areas, hooks SWR, páginas base
 Layout responsivo, ItemDetail, QuickCapture, todas as views, componentes
 
 ### Fase 3 — Sync Agent + Auditoria ✅
-CLI clarity-sync, Markdown mirror, PendingChange, aprovação na UI, versionamento
+CLI doit-sync, Markdown mirror, PendingChange, aprovação na UI, versionamento
 
 ### Fase 4 — Google Calendar + Polish ✅
 OAuth2, sync de eventos, Settings page, animações, skeletons, type-check limpo

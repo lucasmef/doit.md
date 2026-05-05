@@ -133,7 +133,7 @@ export default function AuditPage() {
             <div className="rounded-xl border border-dashed border-slate-200 px-4 py-12 text-center">
               <p className="text-sm text-slate-400 mb-1">Nenhuma mudança pendente.</p>
               <p className="text-xs text-slate-300">
-                Execute <code className="font-mono bg-slate-100 px-1 rounded">clarity-sync diff</code> para detectar alterações locais.
+                Execute <code className="font-mono bg-slate-100 px-1 rounded">doit-sync diff</code> para detectar alterações locais.
               </p>
             </div>
           )}

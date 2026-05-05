@@ -1,16 +1,19 @@
 import type { Metadata, Viewport } from 'next'
 import { ClerkProvider } from '@clerk/nextjs'
+import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Clarity',
+  title: { default: 'doit.md', template: '%s — doit.md' },
   description: 'Notas, tarefas, projetos e calendário em um só lugar',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Clarity',
+    title: 'doit.md',
   },
+  applicationName: 'doit.md',
+  formatDetection: { telephone: false },
 }
 
 export const viewport: Viewport = {
@@ -23,7 +26,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="pt-BR">
-        <body className="bg-surface text-slate-900 antialiased">{children}</body>
+        <body className="bg-surface text-slate-900 antialiased">
+          {children}
+          <ServiceWorkerRegister />
+        </body>
       </html>
     </ClerkProvider>
   )
