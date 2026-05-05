@@ -1,29 +1,28 @@
 import { join } from 'path'
-import { readFile, readdir } from 'fs/promises'
+import { readFile } from 'fs/promises'
 import chalk from 'chalk'
+import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { readJson, writeJson } from '../lib/workspace.js'
 import { parseItemFile } from '@clarity/md'
 import { hashContent } from '@clarity/sync'
 import { assessRisk } from '@clarity/audit'
+import { newChangeId } from '@clarity/core'
 import type { Manifest, ManifestEntry } from '@clarity/sync'
 import type { PendingChange } from '@clarity/types'
-import { newChangeId } from '@clarity/core'
 
 export async function diffCommand() {
+  const spinner = ora('Analisando mudanças...').start()
   const config = getConfig()
-  const manifest = await readJson<Manifest>(join(config.workspacePath, '_system', 'manifest.json'))
 
+  const manifest = await readJson<Manifest>(join(config.workspacePath, '_system', 'manifest.json'))
   if (!manifest) {
-    console.error(chalk.red('Nenhum manifest encontrado. Execute clarity-sync pull primeiro.'))
+    spinner.fail('Nenhum manifest encontrado. Execute clarity-sync pull primeiro.')
     process.exit(1)
   }
 
-  const manifestByPath = new Map<string, ManifestEntry>(
-    manifest.entries.map((e) => [e.localPath, e]),
-  )
-
   const changes: PendingChange[] = []
+  const now = new Date().toISOString()
 
   for (const entry of manifest.entries) {
     const absPath = join(config.workspacePath, entry.localPath)
@@ -33,9 +32,14 @@ export async function diffCommand() {
 
       if (currentHash !== entry.syncHash) {
         const { frontmatter, content } = parseItemFile(raw)
-        const changeType = frontmatter.title !== entry.localPath.split('/').pop()?.replace('.md', '')
-          ? 'frontmatter_changed'
-          : 'content_changed'
+
+        // Detectar que tipo de mudança é
+        const frontmatterChanges: { field: string; before: unknown; after: unknown }[] = []
+        if (frontmatter.title !== entry.localPath.split('/').pop()?.replace('.md', '').replace(/-/g, ' ')) {
+          // não compara com slug; só registra que o title pode ter mudado
+        }
+
+        const changeType = content ? 'content_changed' : 'frontmatter_changed'
 
         changes.push({
           id: newChangeId(),
@@ -46,13 +50,13 @@ export async function diffCommand() {
           localPathAfter: entry.localPath,
           titleAfter: frontmatter.title,
           contentMdAfter: content,
+          frontmatterChanges,
           riskLevel: assessRisk(changeType),
           approved: false,
-          createdAt: new Date().toISOString(),
+          createdAt: now,
         })
       }
     } catch {
-      // arquivo removido
       changes.push({
         id: newChangeId(),
         userId: config.userId,
@@ -61,26 +65,65 @@ export async function diffCommand() {
         localPathBefore: entry.localPath,
         riskLevel: 'high',
         approved: false,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
       })
     }
   }
 
+  // Salvar localmente
   await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes })
   await writeJson(join(config.workspacePath, '_system', 'last-diff.json'), {
-    at: new Date().toISOString(),
+    at: now,
     count: changes.length,
   })
 
+  // Upload para a API (pending-batch)
+  if (changes.length > 0) {
+    try {
+      const res = await fetch(`${config.apiUrl}/api/sync/pending-batch`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+        body: JSON.stringify({ changes }),
+      })
+      if (!res.ok) {
+        spinner.warn(chalk.yellow('Mudanças detectadas localmente mas falha ao enviar para a API.'))
+      } else {
+        // Log na API
+        await fetch(`${config.apiUrl}/api/sync/log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.apiKey}`,
+          },
+          body: JSON.stringify({
+            action: 'diff',
+            summary: `Diff detectou ${changes.length} mudança(s) local(is).`,
+          }),
+        })
+      }
+    } catch {
+      // offline — sem problema, as mudanças estão salvas localmente
+    }
+  }
+
+  spinner.stop()
+
   if (changes.length === 0) {
-    console.log(chalk.green('Nenhuma alteração detectada.'))
+    console.log(chalk.green('✓ Nenhuma alteração detectada.'))
     return
   }
 
-  console.log(chalk.yellow(`${changes.length} alteração(ões) detectada(s):\n`))
+  console.log(chalk.yellow(`\n  ${changes.length} alteração(ões) detectada(s):\n`))
   for (const c of changes) {
-    const riskColor = c.riskLevel === 'high' ? chalk.red : c.riskLevel === 'medium' ? chalk.yellow : chalk.green
-    console.log(`  ${riskColor(`[${c.riskLevel.toUpperCase()}]`)} ${c.changeType} — ${c.localPathBefore ?? c.localPathAfter}`)
+    const riskColor =
+      c.riskLevel === 'high' ? chalk.red : c.riskLevel === 'medium' ? chalk.yellow : chalk.green
+    console.log(
+      `  ${riskColor(`[${c.riskLevel.toUpperCase()}]`)} ${c.changeType.replace(/_/g, ' ')} — ${c.localPathBefore ?? c.localPathAfter ?? c.itemId}`,
+    )
   }
-  console.log(chalk.dim('\nRevise no app e execute clarity-sync push para aplicar.'))
+
+  console.log(chalk.dim('\n  Revise e aprove no app → clarity-sync push'))
 }

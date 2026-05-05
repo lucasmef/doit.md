@@ -12,6 +12,7 @@
   "dependencies": {
     "@clarity/core": "workspace:*",
     "@clarity/db": "workspace:*",
+    "@clarity/sync": "workspace:*",
     "@clarity/types": "workspace:*",
     "@clarity/ui": "workspace:*",
     "@clerk/nextjs": "^6.0.0",

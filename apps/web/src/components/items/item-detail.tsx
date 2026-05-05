@@ -7,6 +7,7 @@ import { useAreas } from '@/hooks/use-areas'
 import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
 import { StatusSelect } from './status-select'
+import { ItemVersions } from './item-versions'
 import type { ItemComplexity, ItemStatus } from '@clarity/types'
 
 export function ItemDetail() {
@@ -202,6 +203,11 @@ export function ItemDetail() {
             rows={14}
             className="w-full text-sm font-mono text-slate-700 border border-slate-200 rounded-lg px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed"
           />
+        </div>
+
+        {/* Histórico de versões */}
+        <div className="border-t border-slate-100 pt-3">
+          <ItemVersions itemId={item.id} />
         </div>
 
         {/* Metadados */}

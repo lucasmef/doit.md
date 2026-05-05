@@ -69,6 +69,9 @@ importers:
       '@clarity/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@clarity/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       '@clarity/types':
         specifier: workspace:*
         version: link:../../packages/types

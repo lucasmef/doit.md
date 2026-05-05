@@ -12,25 +12,26 @@ export async function pushCommand() {
   )
 
   if (!pending || pending.changes.length === 0) {
-    console.log(chalk.green('Nenhuma mudança pendente para enviar.'))
+    console.log(chalk.green('✓ Nenhuma mudança pendente para enviar.'))
     return
   }
 
   const approved = pending.changes.filter((c) => c.approved)
-  const highRiskBlocked = approved.filter((c) => c.riskLevel === 'high')
+  const highRiskUnapproved = pending.changes.filter((c) => c.riskLevel === 'high' && !c.approved)
 
-  if (highRiskBlocked.length > 0) {
-    console.log(chalk.red(`${highRiskBlocked.length} alteração(ões) de alto risco bloqueada(s).`))
-    console.log(chalk.dim('Aprove explicitamente no app antes de fazer push.'))
+  if (highRiskUnapproved.length > 0) {
+    console.log(chalk.red(`\n  ✕ ${highRiskUnapproved.length} mudança(s) de alto risco aguardam aprovação no app.`))
+    console.log(chalk.dim('  Acesse a tela de Auditoria para aprovar antes de fazer push.\n'))
     return
   }
 
   if (approved.length === 0) {
-    console.log(chalk.yellow('Nenhuma mudança aprovada. Aprove no app e execute novamente.'))
+    console.log(chalk.yellow(`  ${pending.changes.length} mudança(s) detectadas mas nenhuma aprovada.`))
+    console.log(chalk.dim('  Aprove no app (Auditoria → Mudanças pendentes) e execute novamente.\n'))
     return
   }
 
-  const spinner = ora(`Enviando ${approved.length} alteração(ões)...`).start()
+  const spinner = ora(`Enviando ${approved.length} mudança(s) aprovada(s)...`).start()
 
   try {
     const res = await fetch(`${config.apiUrl}/api/sync/push`, {
@@ -42,19 +43,29 @@ export async function pushCommand() {
       body: JSON.stringify({ changes: approved, userId: config.userId }),
     })
 
-    if (!res.ok) throw new Error(`API retornou ${res.status}`)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`)
+    }
 
+    const { applied } = (await res.json()) as { applied: number }
+
+    const now = new Date().toISOString()
     await writeJson(join(config.workspacePath, '_system', 'last-push.json'), {
-      at: new Date().toISOString(),
-      count: approved.length,
+      at: now,
+      count: applied,
     })
 
-    await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes: [] })
+    // Limpar aprovados do pending local
+    const remaining = pending.changes.filter((c) => !approved.find((a) => a.id === c.id))
+    await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes: remaining })
 
-    spinner.succeed(chalk.green(`${approved.length} alteração(ões) enviada(s) com sucesso!`))
+    spinner.succeed(chalk.green(`✓ ${applied} mudança(s) aplicada(s) com sucesso!`))
+    if (remaining.length > 0) {
+      console.log(chalk.dim(`  ${remaining.length} mudança(s) rejeitadas ou pendentes permaneceram.`))
+    }
   } catch (err) {
-    spinner.fail('Falha no push')
-    console.error(err)
+    spinner.fail(chalk.red(`Falha no push: ${err instanceof Error ? err.message : String(err)}`))
     process.exit(1)
   }
 }
