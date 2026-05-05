@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { AreaModel } from '@clarity/db'
-import type { UpdateAreaInput } from '@clarity/types'
+import { AreaModel } from '@doit/db'
+import type { UpdateAreaInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 type Params = { params: Promise<{ id: string }> }

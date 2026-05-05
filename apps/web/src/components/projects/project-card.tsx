@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { Project } from '@clarity/types'
+import type { Project } from '@doit/types'
 import { updateProject } from '@/hooks/use-projects'
 
 const STATUS_LABEL: Record<Project['status'], string> = {

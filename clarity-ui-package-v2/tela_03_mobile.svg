@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="1100" viewBox="0 0 540 1100">
+
+  <style>
+    .bg { fill: #f5f3ef; }
+    .window { fill: #fcfbf9; stroke: #ddd7cf; stroke-width: 1.5; }
+    .sidebar { fill: #f0ece6; }
+    .panel { fill: #ffffff; stroke: #e7e1d8; stroke-width: 1; }
+    .soft { fill: #f8f5f1; stroke: #ebe4da; stroke-width: 1; }
+    .selected { fill: #eaf2fb; stroke: #d7e6f8; stroke-width: 1; }
+    .text { font-family: Arial, Helvetica, sans-serif; fill: #2d2a26; }
+    .title { font-size: 28px; font-weight: 700; }
+    .label { font-size: 18px; font-weight: 700; }
+    .body { font-size: 14px; }
+    .small { font-size: 12px; fill: #6f685f; }
+    .muted { font-size: 13px; fill: #7d756c; }
+    .chipBlue { fill: #e7f1ff; stroke: #d8e8ff; }
+    .chipOrange { fill: #fff1df; stroke: #fde4c2; }
+    .chipPurple { fill: #f1eaff; stroke: #e4d8ff; }
+    .chipGreen { fill: #e9f7ea; stroke: #d7ecd9; }
+    .chipText { font-family: Arial, Helvetica, sans-serif; font-size: 12px; fill: #5a534a; }
+    .line { stroke: #ebe5dc; stroke-width: 1; }
+    .blue { fill: #2f80ed; }
+    .green { fill: #5bbf65; }
+    .orange { fill: #f2a33b; }
+    .purple { fill: #8d6adf; }
+  </style>
+
+<rect class="bg" width="540" height="1100"/>
+<rect x="70" y="30" width="400" height="1040" rx="54" fill="#111"/>
+<rect class="window" x="82" y="42" width="376" height="1016" rx="46"/>
+<rect x="205" y="58" width="120" height="28" rx="14" fill="#111"/>
+<text class="text body" x="112" y="112">09:41</text>
+<text class="text title" x="110" y="170">Hoje</text>
+<circle class="orange" cx="420" cy="162" r="6"/>
+<g class="text small">
+  <text x="110" y="210">SEG</text><text x="158" y="210">TER</text><text x="206" y="210">QUA</text><text x="254" y="210">QUI</text><text x="302" y="210">SEX</text><text x="350" y="210">SÁB</text><text x="398" y="210">DOM</text>
+  <text x="114" y="238" class="text body">12</text><text x="162" y="238" class="text body">13</text><text x="210" y="238" class="text body">14</text>
+  <circle cx="265" cy="230" r="18" fill="#2f80ed"/><text x="258" y="236" fill="white" font-family="Arial" font-size="14">15</text>
+  <text x="306" y="238" class="text body">16</text><text x="354" y="238" class="text body">17</text><text x="402" y="238" class="text body">18</text>
+</g>
+<circle class="blue" cx="132" cy="254" r="4"/><circle class="orange" cx="229" cy="254" r="4"/><circle class="purple" cx="325" cy="254" r="4"/><circle class="green" cx="372" cy="254" r="4"/>
+<rect class="panel" x="110" y="285" rx="18" width="320" height="250"/>
+<text class="text label" x="130" y="325" font-size="18">Próximos eventos</text>
+<rect x="126" y="350" width="4" height="50" fill="#2f80ed" rx="2"/><text class="text body" x="142" y="370">10:00</text><text class="text body" x="220" y="370">Revisar proposta de campanha</text><text class="text small" x="220" y="388">Trabalho</text><rect x="126" y="420" width="4" height="50" fill="#2f80ed" rx="2"/><text class="text body" x="142" y="440">14:00</text><text class="text body" x="220" y="440">Reunião de alinhamento</text><text class="text small" x="220" y="458">Trabalho</text><rect x="126" y="490" width="4" height="50" fill="#2f80ed" rx="2"/><text class="text body" x="142" y="510">18:30</text><text class="text body" x="220" y="510">Atualizar relatório de mídia</text><text class="text small" x="220" y="528">Trabalho</text><text class="text label" x="110" y="585" font-size="18">Tarefas</text><circle cx="132" cy="620" r="10" fill="none" stroke="#2f80ed" stroke-width="2"/><text class="text body" x="154" y="625">Revisar proposta de campanha</text><text class="text small" x="154" y="645">Trabalho - Hoje</text><circle cx="132" cy="696" r="10" fill="none" stroke="#bdb6ac" stroke-width="2"/><text class="text body" x="154" y="701">Organizar despesas de abril</text><text class="text small" x="154" y="721">Finanças - Hoje</text><circle cx="132" cy="772" r="10" fill="none" stroke="#bdb6ac" stroke-width="2"/><text class="text body" x="154" y="777">Estudar capítulo 4 - Comportamento</text><text class="text small" x="154" y="797">Estudos - Amanhã</text>
+<text class="text small" x="154" y="850">+ Adicionar tarefa</text>
+<line class="line" x1="110" y1="930" x2="430" y2="930"/>
+<text class="text small" x="120" y="980">Inbox</text>
+<text class="text small" x="204" y="980" fill="#2f80ed">Hoje</text>
+<circle cx="270" cy="968" r="28" fill="#2f80ed"/><text x="260" y="976" fill="white" font-family="Arial" font-size="28">+</text>
+<text class="text small" x="324" y="980">Calendário</text>
+<text class="text small" x="410" y="980">Mais</text>
+</svg>

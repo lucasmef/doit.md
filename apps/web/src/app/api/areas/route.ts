@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { AreaModel } from '@clarity/db'
-import { newAreaId } from '@clarity/core'
-import type { CreateAreaInput } from '@clarity/types'
+import { AreaModel } from '@doit/db'
+import { newAreaId } from '@doit/core'
+import type { CreateAreaInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 export async function GET() {

@@ -1,4 +1,4 @@
-import type { AuditLog } from '@clarity/types'
+import type { AuditLog } from '@doit/types'
 
 const ACTION_ICON: Record<AuditLog['action'], string> = {
   pull: '↓',

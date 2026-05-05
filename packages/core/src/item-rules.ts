@@ -1,4 +1,4 @@
-import type { Item, ItemComplexity, ItemStatus } from '@clarity/types'
+import type { Item, ItemComplexity, ItemStatus } from '@doit/types'
 
 export function isToday(item: Item): boolean {
   const today = new Date().toISOString().slice(0, 10)

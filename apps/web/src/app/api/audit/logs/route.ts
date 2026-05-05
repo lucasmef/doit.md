@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { AuditLogModel } from '@clarity/db'
+import { AuditLogModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
 export async function GET(req: NextRequest) {

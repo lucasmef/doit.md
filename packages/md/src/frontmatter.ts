@@ -1,5 +1,5 @@
 import matter from 'gray-matter'
-import type { Item } from '@clarity/types'
+import type { Item } from '@doit/types'
 
 export type ItemFrontmatter = {
   id: string

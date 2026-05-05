@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useAuditLogs, usePendingChanges, applyApprovedChanges } from '@/hooks/use-audit'
 import { PendingChangeCard } from '@/components/audit/pending-change-card'
 import { AuditLogRow } from '@/components/audit/audit-log-row'
+import { useToast } from '@/components/ui/toast'
 
 type Tab = 'pending' | 'logs'
 
@@ -11,6 +12,7 @@ export default function AuditPage() {
   const [tab, setTab] = useState<Tab>('pending')
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const { changes, isLoading: loadingChanges, refresh } = usePendingChanges()
   const { logs, isLoading: loadingLogs } = useAuditLogs()
@@ -26,9 +28,12 @@ export default function AuditPage() {
     try {
       const { applied } = await applyApprovedChanges()
       setPushResult(`✓ ${applied} mudança(s) aplicada(s) com sucesso.`)
+      toast(`${applied} mudança(s) aplicada(s)`, 'success')
       await refresh()
     } catch (err) {
-      setPushResult(`✕ Erro: ${err instanceof Error ? err.message : 'Falha desconhecida'}`)
+      const msg = err instanceof Error ? err.message : 'Falha desconhecida'
+      setPushResult(`✕ Erro: ${msg}`)
+      toast(msg, 'error')
     } finally {
       setPushing(false)
     }

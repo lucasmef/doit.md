@@ -14,6 +14,7 @@ const TOP_NAV = [
 const BOTTOM_NAV = [
   { href: '/areas', label: 'Áreas' },
   { href: '/audit', label: 'Auditoria' },
+  { href: '/settings', label: 'Configurações' },
 ]
 
 function NavLink({ href, label }: { href: string; label: string }) {
@@ -37,7 +38,7 @@ export function Sidebar() {
   const { projects } = useProjects()
 
   return (
-    <aside className="w-56 shrink-0 h-full bg-surface-subtle border-r border-slate-200 flex flex-col py-4 px-3">
+    <aside className="w-56 shrink-0 h-full bg-surface-sidebar border-r border-ui-border flex flex-col py-6 px-3">
       <div className="px-2 mb-5">
         <span className="text-lg font-semibold tracking-tight text-slate-900">Clarity</span>
       </div>

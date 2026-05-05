@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { ProjectModel } from '@clarity/db'
-import { newProjectId } from '@clarity/core'
-import type { CreateProjectInput } from '@clarity/types'
+import { ProjectModel } from '@doit/db'
+import { newProjectId } from '@doit/core'
+import type { CreateProjectInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 export async function GET() {

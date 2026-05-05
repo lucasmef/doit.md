@@ -1,0 +1,20 @@
+{
+  "shell": [
+    "AppShell",
+    "SidebarNav",
+    "TopBar",
+    "BottomTabBar"
+  ],
+  "items": [
+    "ItemList",
+    "ItemRow",
+    "ItemDetailPanel",
+    "ComplexitySelector",
+    "AIToolbar"
+  ],
+  "calendar": [
+    "CalendarMonthGrid",
+    "AgendaPanel",
+    "CalendarWeekStrip"
+  ]
+}

@@ -1,12 +1,12 @@
 {
-  "name": "@clarity/audit",
+  "name": "@doit/audit",
   "version": "0.0.1",
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
-    "@clarity/types": "workspace:*",
-    "@clarity/core": "workspace:*"
+    "@doit/types": "workspace:*",
+    "@doit/core": "workspace:*"
   }
 }

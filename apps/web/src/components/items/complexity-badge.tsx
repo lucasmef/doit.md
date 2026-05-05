@@ -1,17 +1,17 @@
-import type { ItemComplexity } from '@clarity/types'
-import { COMPLEXITY_LABELS } from '@clarity/core'
+import type { ItemComplexity } from '@doit/types'
+import { COMPLEXITY_LABELS } from '@doit/core'
 
 const COLORS: Record<ItemComplexity, string> = {
-  capture: 'bg-slate-100 text-slate-500',
-  task: 'bg-blue-50 text-blue-600',
-  note: 'bg-amber-50 text-amber-600',
-  project: 'bg-violet-50 text-violet-600',
-  document: 'bg-emerald-50 text-emerald-600',
+  capture: 'bg-slate-100 border border-slate-200 text-slate-600',
+  task: 'bg-[#e7f1ff] border border-[#d8e8ff] text-[#5a534a]',
+  note: 'bg-[#fff1df] border border-[#fde4c2] text-[#5a534a]',
+  project: 'bg-[#f1eaff] border border-[#e4d8ff] text-[#5a534a]',
+  document: 'bg-[#e9f7ea] border border-[#d7ecd9] text-[#5a534a]',
 }
 
 export function ComplexityBadge({ complexity }: { complexity: ItemComplexity }) {
   return (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${COLORS[complexity]}`}>
+    <span className={`text-[12px] font-medium px-3 py-1 rounded-full ${COLORS[complexity]}`}>
       {COMPLEXITY_LABELS[complexity]}
     </span>
   )

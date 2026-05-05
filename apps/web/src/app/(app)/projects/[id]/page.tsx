@@ -5,7 +5,7 @@ import useSWR from 'swr'
 import { useItems } from '@/hooks/use-items'
 import { updateProject } from '@/hooks/use-projects'
 import { ItemList } from '@/components/items/item-list'
-import type { Project } from '@clarity/types'
+import type { Project } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 

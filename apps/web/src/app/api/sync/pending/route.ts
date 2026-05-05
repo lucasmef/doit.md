@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { PendingChangeModel } from '@clarity/db'
+import { PendingChangeModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
 export async function GET() {

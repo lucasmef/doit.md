@@ -14,13 +14,13 @@ export default function ProjectsPage() {
   const done = projects.filter((p) => p.status === 'done' || p.status === 'archived')
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Projetos</h1>
+    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="flex items-center justify-between mb-8 border-b border-ui-border-soft pb-4">
+        <h1 className="text-[28px] font-bold text-slate-900">Projetos</h1>
         {!creating && (
           <button
             onClick={() => setCreating(true)}
-            className="text-sm font-medium px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors"
+            className="text-[14px] font-medium px-4 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-sm"
           >
             + Novo projeto
           </button>

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Item } from '@clarity/types'
+import type { Item } from '@doit/types'
 
 type Props = {
   items: Item[]
@@ -55,37 +55,38 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
   const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
 
   return (
-    <div className="select-none">
+    <div className="select-none bg-surface-panel border border-ui-border-panel rounded-[16px] p-6 shadow-sm">
       {/* Navegação */}
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-        <h2 className="text-sm font-semibold text-slate-800">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-slate-900">
           {MONTHS[month]} {year}
         </h2>
-        <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2 bg-surface-soft p-1 rounded-xl">
+          <button onClick={prevMonth} className="px-3 py-1.5 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-sm font-medium transition-all">
+            Anterior
+          </button>
+          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()) }} className="px-3 py-1.5 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-sm font-medium transition-all">
+            Hoje
+          </button>
+          <button onClick={nextMonth} className="px-3 py-1.5 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-sm font-medium transition-all">
+            Próximo
+          </button>
+        </div>
       </div>
 
       {/* Cabeçalho dias da semana */}
-      <div className="grid grid-cols-7 mb-1">
+      <div className="grid grid-cols-7 mb-2">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="text-center text-[10px] font-semibold text-slate-400 py-1">
-            {d}
+          <div key={d} className="text-center text-[12px] font-semibold text-slate-400 py-2">
+            {d.toUpperCase()}
           </div>
         ))}
       </div>
 
       {/* Grade */}
-      <div className="grid grid-cols-7 gap-px bg-slate-100 rounded-xl overflow-hidden border border-slate-100">
+      <div className="grid grid-cols-7 gap-px bg-ui-border-soft border border-ui-border-soft overflow-hidden rounded-xl">
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} className="bg-white h-14" />
+          if (!day) return <div key={`empty-${i}`} className="bg-white h-24 lg:h-32" />
 
           const ds = dayStr(day)
           const dayItems = itemsForDay(day)
@@ -96,25 +97,38 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
             <button
               key={ds}
               onClick={() => onDayClick?.(ds)}
-              className={`bg-white h-14 p-1 flex flex-col items-start hover:bg-slate-50 transition-colors ${isSelected ? 'ring-2 ring-inset ring-brand-400' : ''}`}
+              className={`bg-white h-24 lg:h-32 p-1.5 flex flex-col items-start hover:bg-slate-50 transition-colors relative ${isSelected ? 'ring-2 ring-inset ring-brand-400 z-10' : ''}`}
             >
-              <span
-                className={`text-xs font-medium w-6 h-6 flex items-center justify-center rounded-full mb-0.5 ${
-                  isToday ? 'bg-brand-600 text-white' : 'text-slate-700'
-                }`}
-              >
-                {day}
-              </span>
-              <div className="flex flex-wrap gap-0.5 overflow-hidden max-h-5">
-                {dayItems.slice(0, 3).map((item) => (
-                  <span
-                    key={item.id}
-                    className="w-1.5 h-1.5 rounded-full bg-brand-400 shrink-0"
-                    title={item.title}
-                  />
-                ))}
+              <div className="flex justify-between w-full items-start">
+                <span
+                  className={`text-[13px] font-medium w-7 h-7 flex items-center justify-center rounded-full mb-1 ${
+                    isToday ? 'bg-brand-600 text-white' : 'text-slate-700'
+                  }`}
+                >
+                  {day}
+                </span>
+              </div>
+              
+              <div className="flex flex-col gap-1 w-full overflow-hidden">
+                {dayItems.slice(0, 3).map((item) => {
+                  let badgeClass = 'bg-slate-100 text-slate-600'
+                  if (item.complexity === 'task') badgeClass = 'bg-[#e7f1ff] text-[#5a534a]'
+                  if (item.complexity === 'note') badgeClass = 'bg-[#fff1df] text-[#5a534a]'
+                  if (item.complexity === 'project') badgeClass = 'bg-[#f1eaff] text-[#5a534a]'
+                  if (item.complexity === 'document') badgeClass = 'bg-[#e9f7ea] text-[#5a534a]'
+                  
+                  return (
+                    <div
+                      key={item.id}
+                      className={`w-full truncate text-[10px] font-medium px-1.5 py-0.5 rounded-md text-left ${badgeClass}`}
+                      title={item.title}
+                    >
+                      {item.title}
+                    </div>
+                  )
+                })}
                 {dayItems.length > 3 && (
-                  <span className="text-[8px] text-slate-400">+{dayItems.length - 3}</span>
+                  <span className="text-[10px] font-medium text-slate-400 px-1">+ {dayItems.length - 3} itens</span>
                 )}
               </div>
             </button>

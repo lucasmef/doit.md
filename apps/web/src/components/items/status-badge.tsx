@@ -1,5 +1,5 @@
-import type { ItemStatus } from '@clarity/types'
-import { STATUS_LABELS } from '@clarity/core'
+import type { ItemStatus } from '@doit/types'
+import { STATUS_LABELS } from '@doit/core'
 
 const COLORS: Record<ItemStatus, string> = {
   inbox: 'bg-slate-100 text-slate-500',

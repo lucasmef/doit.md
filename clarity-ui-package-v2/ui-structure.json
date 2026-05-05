@@ -1,0 +1,41 @@
+{
+  "app": {
+    "name": "Clarity",
+    "concept": "Unified items",
+    "complexities": [
+      "capture",
+      "task",
+      "note",
+      "project",
+      "document"
+    ]
+  },
+  "screens": [
+    {
+      "id": "desktop_today",
+      "regions": [
+        "sidebar",
+        "item_list",
+        "detail_panel"
+      ]
+    },
+    {
+      "id": "desktop_calendar",
+      "regions": [
+        "sidebar",
+        "month_grid",
+        "agenda_panel"
+      ]
+    },
+    {
+      "id": "mobile_today",
+      "regions": [
+        "topbar",
+        "calendar_strip",
+        "events_card",
+        "task_list",
+        "bottom_tabbar"
+      ]
+    }
+  ]
+}

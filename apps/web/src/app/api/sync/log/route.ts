@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { AuditLogModel } from '@clarity/db'
-import { newAuditId } from '@clarity/core'
-import type { AuditAction } from '@clarity/types'
+import { AuditLogModel } from '@doit/db'
+import { newAuditId } from '@doit/core'
+import type { AuditAction } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 export async function POST(req: NextRequest) {

@@ -2,7 +2,7 @@
 
 import { useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
-import type { Item } from '@clarity/types'
+import type { Item } from '@doit/types'
 
 function getGroup(item: Item): string {
   const today = new Date()
@@ -45,8 +45,10 @@ export default function UpcomingPage() {
   }, {})
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold text-slate-900 mb-6">Próximos</h1>
+    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="flex items-baseline justify-between mb-8 border-b border-ui-border-soft pb-4">
+        <h1 className="text-[28px] font-bold text-slate-900">Próximos</h1>
+      </div>
 
       {isLoading && (
         <div className="space-y-1">

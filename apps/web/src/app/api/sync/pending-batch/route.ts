@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { PendingChangeModel } from '@clarity/db'
+import { PendingChangeModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
-import type { PendingChange } from '@clarity/types'
+import type { PendingChange } from '@doit/types'
 
 export async function POST(req: NextRequest) {
   try {

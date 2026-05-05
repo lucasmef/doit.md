@@ -3,7 +3,7 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { readJson, writeJson } from '../lib/workspace.js'
-import type { PendingChange } from '@clarity/types'
+import type { PendingChange } from '@doit/types'
 
 export async function pushCommand() {
   const config = getConfig()

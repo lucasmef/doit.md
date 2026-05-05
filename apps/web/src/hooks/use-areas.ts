@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR, { mutate as globalMutate } from 'swr'
-import type { Area, CreateAreaInput } from '@clarity/types'
+import type { Area, CreateAreaInput } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
-import { ItemModel } from '@clarity/db'
-import { newItemId } from '@clarity/core'
-import type { CreateItemInput } from '@clarity/types'
+import { ItemModel } from '@doit/db'
+import { newItemId } from '@doit/core'
+import type { CreateItemInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 export async function GET(req: NextRequest) {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
-import type { ItemVersion } from '@clarity/types'
+import type { ItemVersion } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 

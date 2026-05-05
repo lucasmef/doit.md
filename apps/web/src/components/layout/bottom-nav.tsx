@@ -56,10 +56,10 @@ export function BottomNav() {
             <button
               key="capture"
               onClick={() => setQuickCaptureOpen(true)}
-              className="flex-1 flex flex-col items-center justify-center py-2"
+              className="flex-1 flex flex-col items-center justify-center"
             >
-              <div className="w-10 h-10 rounded-full bg-brand-600 flex items-center justify-center shadow-md">
-                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className="w-14 h-14 rounded-full bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30 -translate-y-3 border-4 border-white">
+                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
               </div>

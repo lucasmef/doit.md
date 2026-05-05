@@ -3,13 +3,15 @@
 import { useState, useEffect, useRef } from 'react'
 import { createItem } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
-import type { ItemComplexity } from '@clarity/types'
-import { COMPLEXITY_LABELS } from '@clarity/core'
+import { useToast } from '@/components/ui/toast'
+import type { ItemComplexity } from '@doit/types'
+import { COMPLEXITY_LABELS } from '@doit/core'
 
 const COMPLEXITIES: ItemComplexity[] = ['capture', 'task', 'note']
 
 export function QuickCapture() {
   const { quickCaptureOpen, setQuickCaptureOpen, setSelectedItemId } = useUI()
+  const { toast } = useToast()
   const [title, setTitle] = useState('')
   const [complexity, setComplexity] = useState<ItemComplexity>('capture')
   const [dueDate, setDueDate] = useState('')
@@ -51,6 +53,7 @@ export function QuickCapture() {
       })
       setQuickCaptureOpen(false)
       setSelectedItemId(item.id)
+      toast('Item criado com sucesso', 'success')
     } finally {
       setSaving(false)
     }

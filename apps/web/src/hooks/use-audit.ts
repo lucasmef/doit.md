@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR, { mutate as globalMutate } from 'swr'
-import type { AuditLog, PendingChange } from '@clarity/types'
+import type { AuditLog, PendingChange } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 

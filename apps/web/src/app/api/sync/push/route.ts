@@ -5,10 +5,10 @@ import {
   AuditLogModel,
   PendingChangeModel,
   ItemVersionModel,
-} from '@clarity/db'
-import { newAuditId, newVersionId } from '@clarity/core'
-import { hashContent } from '@clarity/sync'
-import type { PendingChange } from '@clarity/types'
+} from '@doit/db'
+import { newAuditId, newVersionId } from '@doit/core'
+import { hashContent } from '@doit/sync'
+import type { PendingChange } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 export async function POST(req: NextRequest) {

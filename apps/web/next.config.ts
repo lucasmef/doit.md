@@ -1,7 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@clarity/core', '@clarity/types', '@clarity/db', '@clarity/sync', '@clarity/ui'],
+  transpilePackages: ['@doit/core', '@doit/types', '@doit/db', '@doit/sync', '@doit/ui'],
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000'],

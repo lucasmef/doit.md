@@ -1,4 +1,4 @@
-import { connectDB } from '@clarity/db'
+import { connectDB } from '@doit/db'
 
 let connecting: Promise<void> | null = null
 

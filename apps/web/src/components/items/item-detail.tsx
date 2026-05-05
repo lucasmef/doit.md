@@ -8,7 +8,7 @@ import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
 import { StatusSelect } from './status-select'
 import { ItemVersions } from './item-versions'
-import type { ItemComplexity, ItemStatus } from '@clarity/types'
+import type { ItemComplexity, ItemStatus } from '@doit/types'
 
 export function ItemDetail() {
   const { selectedItemId, setSelectedItemId } = useUI()
@@ -107,11 +107,11 @@ export function ItemDetail() {
   }
 
   return (
-    <aside className="w-80 xl:w-96 shrink-0 hidden lg:flex flex-col border-l border-slate-200 overflow-y-auto">
+    <aside className="w-[380px] xl:w-[420px] shrink-0 hidden lg:flex flex-col border-l border-ui-border overflow-y-auto bg-surface-window">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 shrink-0">
+      <div className="flex items-center justify-between px-6 py-4 shrink-0">
         <span className="text-xs text-slate-400">{dirty ? 'Salvando...' : 'Salvo'}</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button onClick={handleArchive} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
             Arquivar
           </button>
@@ -123,75 +123,83 @@ export function ItemDetail() {
         </div>
       </div>
 
-      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+      <div className="flex-1 px-6 pb-6 space-y-6 overflow-y-auto">
         {/* Título */}
         <input
           value={title}
           onChange={handleTitleChange}
           placeholder="Título do item"
-          className="w-full text-lg font-semibold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300"
+          className="w-full text-[22px] font-bold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300"
         />
 
-        {/* Complexidade e Status */}
-        <div className="flex flex-wrap items-center gap-2">
-          <ComplexitySelect value={item.complexity} onChange={handleComplexityChange} />
-          <StatusSelect value={item.status} onChange={handleStatusChange} />
+        <div className="space-y-4">
+          {/* Status */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Status</label>
+            <StatusSelect value={item.status} onChange={handleStatusChange} />
+          </div>
+
+          {/* Complexidade */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Complexidade</label>
+            <ComplexitySelect value={item.complexity} onChange={handleComplexityChange} />
+          </div>
+
+          {/* Prazo */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Data</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={handleDueDateChange}
+              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+            />
+          </div>
+
+          {/* Projeto */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Projeto</label>
+            <select
+              value={item.projectId ?? ''}
+              onChange={(e) => handleProjectChange(e.target.value)}
+              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+            >
+              <option value="">Sem projeto</option>
+              {projects.filter((p) => p.status !== 'archived').map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Área */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Área</label>
+            <select
+              value={item.areaId ?? ''}
+              onChange={(e) => handleAreaChange(e.target.value)}
+              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+            >
+              <option value="">Sem área</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>{a.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Etiquetas</label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              onBlur={handleTagsBlur}
+              placeholder="ex: trabalho, urgente"
+              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+            />
+          </div>
         </div>
 
-        {/* Prazo */}
-        <div>
-          <label className="text-xs text-slate-400 font-medium block mb-1">Prazo</label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={handleDueDateChange}
-            className="text-sm border border-slate-200 rounded-md px-2 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
-
-        {/* Projeto */}
-        <div>
-          <label className="text-xs text-slate-400 font-medium block mb-1">Projeto</label>
-          <select
-            value={item.projectId ?? ''}
-            onChange={(e) => handleProjectChange(e.target.value)}
-            className="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="">Sem projeto</option>
-            {projects.filter((p) => p.status !== 'archived').map((p) => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Área */}
-        <div>
-          <label className="text-xs text-slate-400 font-medium block mb-1">Área</label>
-          <select
-            value={item.areaId ?? ''}
-            onChange={(e) => handleAreaChange(e.target.value)}
-            className="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          >
-            <option value="">Sem área</option>
-            {areas.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Tags */}
-        <div>
-          <label className="text-xs text-slate-400 font-medium block mb-1">Tags</label>
-          <input
-            value={tags}
-            onChange={(e) => setTags(e.target.value)}
-            onBlur={handleTagsBlur}
-            placeholder="ex: trabalho, urgente"
-            className="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 text-slate-700 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
-        </div>
-
-        <div className="border-t border-slate-100" />
+        <div className="border-t border-ui-border-soft" />
 
         {/* Editor Markdown */}
         <div>

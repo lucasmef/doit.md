@@ -4,12 +4,12 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { readJson, writeJson } from '../lib/workspace.js'
-import { parseItemFile } from '@clarity/md'
-import { hashContent } from '@clarity/sync'
-import { assessRisk } from '@clarity/audit'
-import { newChangeId } from '@clarity/core'
-import type { Manifest, ManifestEntry } from '@clarity/sync'
-import type { PendingChange } from '@clarity/types'
+import { parseItemFile } from '@doit/md'
+import { hashContent } from '@doit/sync'
+import { assessRisk } from '@doit/audit'
+import { newChangeId } from '@doit/core'
+import type { Manifest, ManifestEntry } from '@doit/sync'
+import type { PendingChange } from '@doit/types'
 
 export async function diffCommand() {
   const spinner = ora('Analisando mudanças...').start()

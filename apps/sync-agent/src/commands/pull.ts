@@ -4,10 +4,10 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { writeJson } from '../lib/workspace.js'
-import { serializeItemFile, itemFilename } from '@clarity/md'
-import { hashContent } from '@clarity/sync'
-import type { Item } from '@clarity/types'
-import type { ManifestEntry } from '@clarity/sync'
+import { serializeItemFile, itemFilename } from '@doit/md'
+import { hashContent } from '@doit/sync'
+import type { Item } from '@doit/types'
+import type { ManifestEntry } from '@doit/sync'
 
 export async function pullCommand() {
   const spinner = ora('Baixando itens...').start()

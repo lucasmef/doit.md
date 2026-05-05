@@ -12,13 +12,13 @@ export default function AreasPage() {
   const [creating, setCreating] = useState(false)
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold text-slate-900">Áreas</h1>
+    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
+      <div className="flex items-baseline justify-between mb-8 border-b border-ui-border-soft pb-4">
+        <h1 className="text-[28px] font-bold text-slate-900">Áreas</h1>
         {!creating && (
           <button
             onClick={() => setCreating(true)}
-            className="text-sm font-medium px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 transition-colors"
+            className="text-[14px] font-medium px-4 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-sm"
           >
             + Nova área
           </button>
@@ -52,7 +52,7 @@ export default function AreasPage() {
           return (
             <div
               key={area.id}
-              className="rounded-xl border border-slate-200 bg-white p-4"
+              className="rounded-[16px] border border-ui-border-panel bg-surface-panel p-5 shadow-sm"
             >
               <div className="flex items-center gap-3 mb-3">
                 <div

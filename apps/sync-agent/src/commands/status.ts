@@ -2,7 +2,7 @@ import { join } from 'path'
 import chalk from 'chalk'
 import { getConfig, isConfigured } from '../lib/config.js'
 import { readJson } from '../lib/workspace.js'
-import type { PendingChange } from '@clarity/types'
+import type { PendingChange } from '@doit/types'
 
 export async function statusCommand() {
   if (!isConfigured()) {

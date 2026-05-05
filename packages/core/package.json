@@ -1,5 +1,5 @@
 {
-  "name": "@clarity/core",
+  "name": "@doit/core",
   "version": "0.0.1",
   "private": true,
   "main": "./src/index.ts",
@@ -8,6 +8,6 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@clarity/types": "workspace:*"
+    "@doit/types": "workspace:*"
   }
 }

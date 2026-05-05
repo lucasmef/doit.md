@@ -1,4 +1,4 @@
-import type { ChangeType, RiskLevel } from '@clarity/types'
+import type { ChangeType, RiskLevel } from '@doit/types'
 
 const RISK_MAP: Record<ChangeType, RiskLevel> = {
   created: 'low',

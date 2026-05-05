@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { PendingChange } from '@clarity/types'
+import type { PendingChange } from '@doit/types'
 import { approveChange, rejectChange } from '@/hooks/use-audit'
 import { DiffViewer } from './diff-viewer'
 

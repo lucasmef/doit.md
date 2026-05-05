@@ -1,5 +1,5 @@
 {
-  "name": "@clarity/web",
+  "name": "@doit/web",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -10,12 +10,13 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clarity/core": "workspace:*",
-    "@clarity/db": "workspace:*",
-    "@clarity/sync": "workspace:*",
-    "@clarity/types": "workspace:*",
-    "@clarity/ui": "workspace:*",
+    "@doit/core": "workspace:*",
+    "@doit/db": "workspace:*",
+    "@doit/sync": "workspace:*",
+    "@doit/types": "workspace:*",
+    "@doit/ui": "workspace:*",
     "@clerk/nextjs": "^6.0.0",
+    "googleapis": "^171.4.0",
     "next": "^15.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
