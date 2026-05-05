@@ -4,15 +4,15 @@ import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: { default: 'Clarity', template: '%s — Clarity' },
+  title: { default: 'doit.md', template: '%s — doit.md' },
   description: 'Notas, tarefas, projetos e calendário em um só lugar',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Clarity',
+    title: 'doit.md',
   },
-  applicationName: 'Clarity',
+  applicationName: 'doit.md',
   formatDetection: { telephone: false },
 }
 

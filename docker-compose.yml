@@ -5,8 +5,8 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-    image: clarity-web:latest
-    container_name: clarity-app
+    image: doitmd-web:latest
+    container_name: doitmd-app
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -19,7 +19,7 @@ services:
     expose:
       - "3000"
     networks:
-      - clarity-net
+      - doitmd-net
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 30s
@@ -29,7 +29,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: clarity-nginx
+    container_name: doitmd-nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -42,10 +42,10 @@ services:
     depends_on:
       - app
     networks:
-      - clarity-net
+      - doitmd-net
 
 networks:
-  clarity-net:
+  doitmd-net:
     driver: bridge
 
 volumes:

@@ -6,7 +6,7 @@ import type { PendingChange } from '@doit/types'
 
 export async function statusCommand() {
   if (!isConfigured()) {
-    console.log(chalk.red('Workspace não inicializado. Execute: clarity-sync init'))
+    console.log(chalk.red('Workspace não inicializado. Execute: doit-sync init'))
     return
   }
 
@@ -25,7 +25,7 @@ export async function statusCommand() {
     join(config.workspacePath, '_changes', 'pending.json'),
   )
 
-  console.log(chalk.bold('\n  Clarity Sync — Status\n'))
+  console.log(chalk.bold('\n  doit.md Sync — Status\n'))
   console.log(`  Workspace: ${chalk.dim(config.workspacePath)}`)
   console.log(`  API: ${chalk.dim(config.apiUrl)}\n`)
 

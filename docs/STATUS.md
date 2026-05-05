@@ -1,4 +1,4 @@
-# Status do Projeto — Clarity
+# Status do Projeto — doit.md
 
 **Última atualização:** Maio 2025  
 **Estado geral:** MVP implementado, aguardando configuração de ambiente e deploy
@@ -78,11 +78,11 @@
 - [x] `packages/sync` — `hashContent()`, `createManifest()`
 - [x] `packages/audit` — `assessRisk(changeType)`
 - [x] `apps/sync-agent` — CLI com commander
-- [x] Comando `clarity-sync init` — cria workspace, AGENTS.md, salva config
-- [x] Comando `clarity-sync pull` — baixa itens como .md, gera manifest.json
-- [x] Comando `clarity-sync diff` — detecta mudanças, envia pending-batch, loga
-- [x] Comando `clarity-sync push` — valida, versiona, patcha, limpa pending
-- [x] Comando `clarity-sync status` — tempos de pull/diff/push, contagem pending
+- [x] Comando `doit-sync init` — cria workspace, AGENTS.md, salva config
+- [x] Comando `doit-sync pull` — baixa itens como .md, gera manifest.json
+- [x] Comando `doit-sync diff` — detecta mudanças, envia pending-batch, loga
+- [x] Comando `doit-sync push` — valida, versiona, patcha, limpa pending
+- [x] Comando `doit-sync status` — tempos de pull/diff/push, contagem pending
 - [x] `GET /api/audit/logs` — histórico com filtros
 - [x] `GET /api/sync/pending` — pendentes para aprovação
 - [x] `POST /api/sync/approve` / `reject` / `push` / `log` / `pending-batch`
@@ -127,7 +127,7 @@
 - [ ] Criar projeto no MongoDB Atlas e obter connection string
 - [ ] Criar aplicação no Clerk e obter chaves
 - [ ] Criar projeto no Google Cloud Console, habilitar Calendar API, obter credenciais OAuth2
-- [ ] Rodar `pnpm install` e `pnpm --filter @clarity/web dev` para validar
+- [ ] Rodar `pnpm install` e `pnpm --filter @doit/web dev` para validar
 
 ### MVP Incompleto (Média Prioridade)
 
@@ -155,7 +155,7 @@
 - [ ] Tarefas recorrentes (`rrule`)
 - [ ] Service Worker para funcionamento offline
 - [ ] Busca full-text com Atlas Search
-- [ ] Publicar `clarity-sync` no npm
+- [ ] Publicar `doit-sync` no npm
 - [ ] Deploy em produção (Vercel + MongoDB Atlas)
 - [ ] Domínio personalizado
 - [ ] Notificações push para tarefas com prazo

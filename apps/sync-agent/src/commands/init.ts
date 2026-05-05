@@ -9,7 +9,7 @@ const AGENTS_MD = `# AGENTS.md
 
 ## Objetivo
 
-Organizar este workspace de notas, tarefas, projetos e documentos do Clarity.
+Organizar este workspace de notas, tarefas, projetos e documentos do doit.md.
 
 ## Regras obrigatórias
 
@@ -61,13 +61,13 @@ export async function initCommand() {
   const spinner = ora('Inicializando workspace...').start()
 
   try {
-    const workspacePath = join(process.cwd(), 'workspace-clarity')
+    const workspacePath = join(process.cwd(), 'workspace-doitmd')
     await ensureWorkspace(workspacePath)
 
     await writeFile(join(workspacePath, 'AGENTS.md'), AGENTS_MD, 'utf-8')
     await writeFile(
       join(workspacePath, 'README.md'),
-      `# Clarity Workspace\n\nEste diretório é o espelho local dos seus itens do Clarity.\n\nLeia o [AGENTS.md](./AGENTS.md) para entender como a IA pode interagir com os arquivos.\n`,
+      `# doit.md Workspace\n\nEste diretório é o espelho local dos seus itens do doit.md.\n\nLeia o [AGENTS.md](./AGENTS.md) para entender como a IA pode interagir com os arquivos.\n`,
       'utf-8',
     )
 
@@ -80,16 +80,16 @@ export async function initCommand() {
     await writeJson(join(workspacePath, '_changes', 'pending.json'), { changes: [] })
 
     // Solicitar configuração
-    const apiUrl = process.env['CLARITY_API_URL'] ?? 'http://localhost:3000'
-    const apiKey = process.env['CLARITY_API_KEY'] ?? ''
-    const userId = process.env['CLARITY_USER_ID'] ?? ''
+    const apiUrl = process.env['DOITMD_API_URL'] ?? 'http://localhost:3000'
+    const apiKey = process.env['DOITMD_API_KEY'] ?? ''
+    const userId = process.env['DOITMD_USER_ID'] ?? ''
 
     saveConfig({ apiUrl, apiKey, workspacePath, userId })
 
     spinner.succeed(chalk.green('Workspace inicializado com sucesso!'))
     console.log(chalk.dim(`  Pasta: ${workspacePath}`))
-    console.log(chalk.dim('  Configure CLARITY_API_KEY e CLARITY_USER_ID nas variáveis de ambiente.'))
-    console.log(chalk.dim('  Execute: clarity-sync pull'))
+    console.log(chalk.dim('  Configure DOITMD_API_KEY e DOITMD_USER_ID nas variáveis de ambiente.'))
+    console.log(chalk.dim('  Execute: doit-sync pull'))
   } catch (err) {
     spinner.fail('Falha ao inicializar workspace')
     console.error(err)

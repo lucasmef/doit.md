@@ -9,8 +9,8 @@ import { statusCommand } from './commands/status.js'
 const program = new Command()
 
 program
-  .name('clarity-sync')
-  .description('Clarity local sync agent — sincroniza itens com workspace Markdown')
+  .name('doit-sync')
+  .description('doit.md sync agent — sincroniza itens com workspace Markdown')
   .version('0.0.1')
 
 program

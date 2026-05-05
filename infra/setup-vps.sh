@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Setup inicial do VPS KingHost para o Clarity
+# Setup inicial do VPS KingHost para o doit.md
 # Execute como root: bash setup-vps.sh SEU_DOMINIO.com.br
 
 set -euo pipefail
 
 DOMAIN="${1:?Uso: bash setup-vps.sh SEU_DOMINIO.com.br}"
-APP_DIR="/opt/clarity"
+APP_DIR="/opt/doitmd"
 REPO_URL="${2:-}" # opcional: URL do repositório Git
 
 echo "======================================================"
-echo " Clarity — Setup VPS"
+echo " doit.md — Setup VPS"
 echo " Domínio: $DOMAIN"
 echo "======================================================"
 
@@ -92,10 +92,10 @@ if ! crontab -l 2>/dev/null | grep -q certbot; then
 fi
 
 # ── 9. Configura chave SSH para GitHub Actions ───────────
-SSH_KEY_FILE="/root/.ssh/clarity_deploy"
+SSH_KEY_FILE="/root/.ssh/doitmd_deploy"
 if [ ! -f "$SSH_KEY_FILE" ]; then
   echo "→ Gerando chave SSH para CI/CD..."
-  ssh-keygen -t ed25519 -C "clarity-deploy" -f "$SSH_KEY_FILE" -N ""
+  ssh-keygen -t ed25519 -C "doitmd-deploy" -f "$SSH_KEY_FILE" -N ""
   cat "$SSH_KEY_FILE.pub" >> /root/.ssh/authorized_keys
   echo ""
   echo "======================================================"

@@ -14,7 +14,7 @@ export default async function HomePage() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h1 className="text-[32px] font-bold text-slate-900 mb-4">Clarity</h1>
+        <h1 className="text-[32px] font-bold text-slate-900 mb-4">doit.md</h1>
         <p className="text-[15px] text-slate-500 mb-8 leading-relaxed">
           O seu cérebro digital unificado. Gerencie tarefas, projetos, anotações e seu calendário em um só lugar.
         </p>

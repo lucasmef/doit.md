@@ -1,18 +1,18 @@
 # AGENTS.md — Contrato para Agentes de IA
 
 Este arquivo define as regras e convenções que agentes de IA (Claude Code, Cursor, Copilot, etc.)
-devem seguir ao trabalhar com o repositório **Clarity**.
+devem seguir ao trabalhar com o repositório **doit.md**.
 
 ---
 
 ## Visão Geral do Projeto
 
-Clarity é uma PWA de produtividade pessoal construída em Next.js 15 com monorepo pnpm.
+doit.md é uma PWA de produtividade pessoal construída em Next.js 15 com monorepo pnpm.
 Unifica notas, tarefas, projetos e calendário em uma única entidade chamada **Item**.
 
 **Stack principal:**
 - `apps/web` — Next.js 15 App Router, Tailwind CSS, SWR, Clerk
-- `apps/sync-agent` — CLI Node.js ESM (`clarity-sync`)
+- `apps/sync-agent` — CLI Node.js ESM (`doit-sync`)
 - `packages/types` — tipos TypeScript compartilhados
 - `packages/core` — lógica pura (ids, regras de item)
 - `packages/db` — Mongoose schemas e conexão MongoDB
@@ -55,9 +55,9 @@ EDITABLE_BY_AI_FIELDS = ['title', 'body', 'tags', 'dueDate', 'status', 'complexi
 ## Fluxo de Sincronização
 
 ```
-clarity-sync pull     # baixa itens → .md com frontmatter
-clarity-sync diff     # detecta mudanças → envia para /api/sync/pending-batch
-clarity-sync push     # aplica pendentes aprovados na UI → /api/sync/push
+doit-sync pull     # baixa itens → .md com frontmatter
+doit-sync diff     # detecta mudanças → envia para /api/sync/pending-batch
+doit-sync push     # aplica pendentes aprovados na UI → /api/sync/push
 ```
 
 ### Níveis de Risco
@@ -78,7 +78,7 @@ Mudanças de risco **high** são bloqueadas no push até aprovação explícita 
 
 ## Estrutura de Arquivos Markdown
 
-Cada item é espelhado em `.clarity/items/<slug>.md`:
+Cada item é espelhado em `.doitmd/items/<slug>.md`:
 
 ```markdown
 ---
@@ -111,8 +111,8 @@ Conteúdo em Markdown aqui...
 
 ### Imports
 - Usar aliases `@/` para imports dentro de `apps/web/src/`
-- Packages do monorepo: `@clarity/types`, `@clarity/core`, `@clarity/db`, etc.
-- Nunca importar `@clarity/db` em componentes client — apenas em Route Handlers
+- Packages do monorepo: `@doit/types`, `@doit/core`, `@doit/db`, etc.
+- Nunca importar `@doit/db` em componentes client — apenas em Route Handlers
 
 ### API Routes (Next.js)
 - Sempre validar `userId` via `auth()` do Clerk antes de qualquer operação
@@ -151,15 +151,15 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/callback
 pnpm install
 
 # Rodar em desenvolvimento
-pnpm --filter @clarity/web dev
+pnpm --filter @doit/web dev
 
 # Type check
-pnpm --filter @clarity/web exec tsc --noEmit
+pnpm --filter @doit/web exec tsc --noEmit
 
 # Build
-pnpm --filter @clarity/web build
+pnpm --filter @doit/web build
 
 # CLI sync (após build do sync-agent)
-pnpm --filter @clarity/sync-agent build
-clarity-sync init
+pnpm --filter @doit/sync-agent build
+doit-sync init
 ```

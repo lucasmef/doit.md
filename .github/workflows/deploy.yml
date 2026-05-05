@@ -39,7 +39,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
-            cd /opt/clarity
+            cd /opt/doitmd
 
             echo "→ Atualizando código..."
             git pull origin master
@@ -53,7 +53,7 @@ jobs:
 
             echo "→ Aguardando health check..."
             for i in $(seq 1 12); do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' clarity-app 2>/dev/null || echo "starting")
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' doitmd-app 2>/dev/null || echo "starting")
               echo "  [$i/12] $STATUS"
               if [ "$STATUS" = "healthy" ]; then break; fi
               if [ "$i" = "12" ]; then echo "❌ Health check falhou"; exit 1; fi
