@@ -30,4 +30,4 @@ jobs:
         run: bash scripts/lint-incremental.sh
 
       - name: Build
-        run: corepack pnpm --filter @doit/web build
+        run: bash scripts/with-build-env.sh dev corepack pnpm --filter @doit/web build

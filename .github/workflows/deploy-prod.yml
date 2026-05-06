@@ -38,7 +38,7 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm --filter @doit/web exec tsc --noEmit
       - run: bash scripts/lint-incremental.sh
-      - run: corepack pnpm --filter @doit/web build
+      - run: bash scripts/with-build-env.sh prod corepack pnpm --filter @doit/web build
 
   security:
     name: Security Gate
