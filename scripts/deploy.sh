@@ -197,19 +197,17 @@ set -a
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 set +a
-export NODE_ENV="${NODE_ENV:-development}"
+export NODE_ENV=production
 export PORT="$PORT"
 export HOSTNAME="${HOSTNAME:-127.0.0.1}"
 
 cd "$APP_DIR"
 
 echo "Installing dependencies..."
-"${PNPM_CMD[@]}" install --frozen-lockfile
+"${PNPM_CMD[@]}" install --frozen-lockfile --prod=false
 
 echo "Building application..."
 "${PNPM_CMD[@]}" --filter @doit/web build
-
-export NODE_ENV=production
 
 echo "Cleaning orphan listeners on port $PORT..."
 cleanup_orphan_listener "$PORT"
