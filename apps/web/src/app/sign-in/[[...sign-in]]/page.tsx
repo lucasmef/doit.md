@@ -5,10 +5,24 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { FormEvent, useState } from 'react'
 
+function getSafeCallbackUrl(callbackUrl: string | null) {
+  if (!callbackUrl || !callbackUrl.startsWith('/') || callbackUrl.startsWith('//')) return '/today'
+
+  try {
+    const url = new URL(callbackUrl, 'http://doit.local')
+    url.searchParams.delete('email')
+    url.searchParams.delete('password')
+
+    return `${url.pathname}${url.search}${url.hash}`
+  } catch {
+    return '/today'
+  }
+}
+
 export default function SignInPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/today'
+  const callbackUrl = getSafeCallbackUrl(searchParams.get('callbackUrl'))
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -18,25 +32,31 @@ export default function SignInPage() {
     setError(null)
 
     const form = new FormData(event.currentTarget)
+    const email = String(form.get('email') ?? '')
+    const password = String(form.get('password') ?? '')
     const result = await signIn('credentials', {
-      email: form.get('email'),
-      password: form.get('password'),
+      email,
+      password,
       redirect: false,
       callbackUrl,
     })
 
     setLoading(false)
-    if (result?.error) {
+    if (!result?.ok || result.error) {
       setError('Email ou senha invalidos.')
       return
     }
-    router.push(result?.url ?? callbackUrl)
+    router.push(callbackUrl)
     router.refresh()
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-lg border border-ui-border bg-white p-6 shadow-sm">
+      <form
+        onSubmit={onSubmit}
+        method="post"
+        className="w-full max-w-sm rounded-lg border border-ui-border bg-white p-6 shadow-sm"
+      >
         <h1 className="text-xl font-semibold text-slate-950">Entrar no doit.md</h1>
         <div className="mt-6 space-y-4">
           <label className="block text-sm font-medium text-slate-700">

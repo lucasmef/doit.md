@@ -53,7 +53,11 @@ export default function SignUpPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-surface-muted px-4">
-      <form onSubmit={onSubmit} className="w-full max-w-sm rounded-lg border border-ui-border bg-white p-6 shadow-sm">
+      <form
+        onSubmit={onSubmit}
+        method="post"
+        className="w-full max-w-sm rounded-lg border border-ui-border bg-white p-6 shadow-sm"
+      >
         <h1 className="text-xl font-semibold text-slate-950">Criar conta</h1>
         <div className="mt-6 space-y-4">
           <label className="block text-sm font-medium text-slate-700">
