@@ -197,7 +197,7 @@ set -a
 # shellcheck source=/dev/null
 source "$ENV_FILE"
 set +a
-export NODE_ENV=production
+export NODE_ENV="${NODE_ENV:-development}"
 export PORT="$PORT"
 export HOSTNAME="${HOSTNAME:-127.0.0.1}"
 
@@ -208,6 +208,8 @@ echo "Installing dependencies..."
 
 echo "Building application..."
 "${PNPM_CMD[@]}" --filter @doit/web build
+
+export NODE_ENV=production
 
 echo "Cleaning orphan listeners on port $PORT..."
 cleanup_orphan_listener "$PORT"
