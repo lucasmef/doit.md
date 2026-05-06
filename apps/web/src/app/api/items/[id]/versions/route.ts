@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { ItemVersionModel, ItemModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Params) {

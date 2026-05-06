@@ -2,18 +2,20 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useItems } from '@/hooks/use-items'
 import { useProjects } from '@/hooks/use-projects'
 
 const TOP_NAV = [
   { href: '/inbox', label: 'Inbox' },
   { href: '/today', label: 'Hoje' },
-  { href: '/upcoming', label: 'Próximos' },
+  { href: '/upcoming', label: 'Proximos' },
+  { href: '/tags', label: 'Tags' },
 ]
 
 const BOTTOM_NAV = [
-  { href: '/areas', label: 'Áreas' },
+  { href: '/areas', label: 'Areas' },
   { href: '/audit', label: 'Auditoria' },
-  { href: '/settings', label: 'Configurações' },
+  { href: '/settings', label: 'Configuracoes' },
 ]
 
 function NavLink({ href, label }: { href: string; label: string }) {
@@ -35,6 +37,15 @@ function NavLink({ href, label }: { href: string; label: string }) {
 
 export function Sidebar() {
   const { projects } = useProjects()
+  const { items } = useItems()
+  const tags = Array.from(
+    new Set(
+      items
+        .filter((item) => item.status !== 'archived')
+        .flatMap((item) => item.tags ?? [])
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
   return (
     <aside className="w-56 shrink-0 h-full bg-surface-sidebar border-r border-ui-border flex flex-col py-6 px-3">
@@ -46,7 +57,6 @@ export function Sidebar() {
         {TOP_NAV.map((n) => <NavLink key={n.href} {...n} />)}
       </div>
 
-      {/* Projetos */}
       <div className="mt-5">
         <div className="flex items-center justify-between px-3 mb-1">
           <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
@@ -65,6 +75,25 @@ export function Sidebar() {
             ))}
           {projects.length === 0 && (
             <span className="px-3 text-xs text-slate-300">Nenhum projeto</span>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-5">
+        <div className="flex items-center justify-between px-3 mb-1">
+          <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+            Tags
+          </span>
+          <Link href="/tags" className="text-[10px] text-slate-400 hover:text-slate-700">
+            Ver todas
+          </Link>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          {tags.slice(0, 10).map((tag) => (
+            <NavLink key={tag} href={`/tags/${encodeURIComponent(tag)}`} label={`@${tag}`} />
+          ))}
+          {tags.length === 0 && (
+            <span className="px-3 text-xs text-slate-300">Nenhuma tag</span>
           )}
         </div>
       </div>

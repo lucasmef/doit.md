@@ -11,6 +11,8 @@ import { hashContent } from '@doit/sync'
 import type { PendingChange } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()

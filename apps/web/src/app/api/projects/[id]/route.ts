@@ -4,6 +4,8 @@ import { ProjectModel } from '@doit/db'
 import type { UpdateProjectInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(_req: NextRequest, { params }: Params) {

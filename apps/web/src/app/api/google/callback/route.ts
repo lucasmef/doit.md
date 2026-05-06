@@ -4,6 +4,8 @@ import { GoogleAccountModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 import { createOAuthClient } from '@/lib/google'
 
+export const dynamic = 'force-dynamic'
+
 function generateId() {
   return 'gac_' + Math.random().toString(36).slice(2, 10)
 }

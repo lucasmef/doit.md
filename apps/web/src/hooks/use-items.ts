@@ -5,6 +5,15 @@ import type { Item, CreateItemInput, UpdateItemInput } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
+async function readError(res: Response, fallback: string) {
+  try {
+    const data = (await res.json()) as { error?: string }
+    return data.error ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
 export function useItems(params?: { status?: string; projectId?: string }) {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
@@ -39,7 +48,7 @@ export async function createItem(input: CreateItemInput): Promise<Item> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-  if (!res.ok) throw new Error('Falha ao criar item')
+  if (!res.ok) throw new Error(await readError(res, 'Falha ao criar item'))
   const { item } = await res.json()
   await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
   return item
@@ -51,7 +60,7 @@ export async function updateItem(id: string, input: UpdateItemInput): Promise<It
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-  if (!res.ok) throw new Error('Falha ao atualizar item')
+  if (!res.ok) throw new Error(await readError(res, 'Falha ao atualizar item'))
   const { item } = await res.json()
   await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
   return item

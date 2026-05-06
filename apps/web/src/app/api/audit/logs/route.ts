@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { AuditLogModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()

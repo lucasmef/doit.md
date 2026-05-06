@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { PendingChangeModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()

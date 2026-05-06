@@ -32,27 +32,19 @@ export function PrioritySelect({ value, onChange }: Props) {
   const current = value ?? 4
 
   return (
-    <div className="flex gap-1.5">
+    <select
+      value={current}
+      onChange={(e) => onChange(Number(e.target.value) as Priority)}
+      className="text-[13px] font-semibold border border-ui-border-soft rounded-[8px] px-2.5 py-1.5 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+    >
       {PRIORITIES.map((p) => {
         const cfg = PRIORITY_CONFIG[p]
-        const active = current === p
         return (
-          <button
-            key={p}
-            type="button"
-            title={cfg.title}
-            onClick={() => onChange(p)}
-            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-[8px] text-[13px] font-semibold border transition-all ${
-              active
-                ? `${cfg.bg} text-white border-transparent ring-2 ${cfg.ring}`
-                : `bg-surface-soft ${cfg.color} border-ui-border-soft hover:border-current`
-            }`}
-          >
-            <PriorityFlag priority={p} size={11} />
-            {cfg.label}
-          </button>
+          <option key={p} value={p}>
+            {cfg.label} - {cfg.title}
+          </option>
         )
       })}
-    </div>
+    </select>
   )
 }

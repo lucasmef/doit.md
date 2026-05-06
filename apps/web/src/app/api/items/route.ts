@@ -5,9 +5,18 @@ import { newItemId } from '@doit/core'
 import type { CreateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 function mapDocToItem(doc: unknown): Item {
   const { _id, ...rest } = doc as { _id: string; [key: string]: unknown }
   return { id: _id, ...rest } as unknown as Item
+}
+
+function validateItemInput(input: Pick<CreateItemInput, 'complexity'> & Partial<CreateItemInput>) {
+  if (input.complexity === 'note' && input.priority) {
+    return 'priority is not allowed for notes'
+  }
+  return null
 }
 
 export async function GET(req: NextRequest) {
@@ -45,17 +54,24 @@ export async function POST(req: NextRequest) {
     if (!body.title?.trim()) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })
     }
+    const validationError = validateItemInput(body)
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 })
+    }
 
     const now = new Date().toISOString()
+    const complexity = body.complexity ?? 'task'
+    const hasInboxContext = !body.projectId && !body.dueDate && !body.scheduledDate
+
     const item = await ItemModel.create({
       _id: newItemId(),
       userId,
       title: body.title.trim(),
-      complexity: body.complexity ?? 'capture',
-      status: body.status ?? 'inbox',
+      complexity,
+      status: body.status ?? (hasInboxContext ? 'inbox' : 'todo'),
       tags: body.tags ?? [],
       backlinks: [],
-      priority: body.priority,
+      priority: complexity === 'note' ? undefined : body.priority,
       dueDate: body.dueDate,
       startDate: body.startDate,
       scheduledDate: body.scheduledDate,

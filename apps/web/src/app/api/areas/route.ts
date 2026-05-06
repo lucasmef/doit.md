@@ -5,6 +5,8 @@ import { newAreaId } from '@doit/core'
 import type { CreateAreaInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const { userId } = await auth()

@@ -5,6 +5,8 @@ import { newProjectId } from '@doit/core'
 import type { CreateProjectInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const { userId } = await auth()
@@ -13,7 +15,8 @@ export async function GET() {
     await ensureDB()
     const projects = await ProjectModel.find({ userId }).sort({ order: 1 }).lean()
     return NextResponse.json({ projects })
-  } catch {
+  } catch (err) {
+    console.error('[GET /api/projects]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
@@ -43,7 +46,8 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ project }, { status: 201 })
-  } catch {
+  } catch (err) {
+    console.error('[POST /api/projects]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

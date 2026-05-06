@@ -3,6 +3,8 @@ import { auth } from '@clerk/nextjs/server'
 import { GoogleAccountModel, CalendarEventModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST() {
   try {
     const { userId } = await auth()

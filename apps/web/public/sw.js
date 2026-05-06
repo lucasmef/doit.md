@@ -1,13 +1,13 @@
-const CACHE_VERSION = 'clarity-v1'
+const CACHE_VERSION = 'clarity-v2'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 
 // Assets estáticos — cache-first
 const STATIC_PATTERNS = [
-  /^\/_next\/static\//,
   /^\/fonts\//,
   /\.(ico|png|svg|webp|woff2?)$/,
 ]
+const NEXT_STATIC_PATTERN = /^\/_next\/static\//
 
 // Páginas do app — network-first com fallback para cache
 const APP_PAGES = ['/today', '/inbox', '/upcoming', '/projects', '/areas', '/audit', '/settings']
@@ -54,6 +54,24 @@ self.addEventListener('fetch', (event) => {
         const response = await fetch(request)
         if (response.ok) cache.put(request, response.clone())
         return response
+      })
+    )
+    return
+  }
+
+  // Next assets change on deploy. Network-first avoids mixing a fresh runtime
+  // with stale chunks cached by the PWA.
+  if (NEXT_STATIC_PATTERN.test(url.pathname)) {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        try {
+          const response = await fetch(request)
+          if (response.ok) cache.put(request, response.clone())
+          return response
+        } catch {
+          const cached = await cache.match(request)
+          return cached ?? Response.error()
+        }
       })
     )
     return

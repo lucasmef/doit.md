@@ -5,6 +5,15 @@ import type { Project, CreateProjectInput, UpdateProjectInput } from '@doit/type
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
+async function readError(res: Response, fallback: string) {
+  try {
+    const data = (await res.json()) as { error?: string }
+    return data.error ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
 export function useProjects() {
   const { data, error, isLoading } = useSWR<{ projects: Project[] }>('/api/projects', fetcher)
   return { 
@@ -20,17 +29,18 @@ export async function createProject(input: CreateProjectInput): Promise<Project>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
-  if (!res.ok) throw new Error('Falha ao criar projeto')
+  if (!res.ok) throw new Error(await readError(res, 'Falha ao criar projeto'))
   const { project } = await res.json()
   await globalMutate('/api/projects')
   return project
 }
 
 export async function updateProject(id: string, input: UpdateProjectInput): Promise<void> {
-  await fetch(`/api/projects/${id}`, {
+  const res = await fetch(`/api/projects/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
   })
+  if (!res.ok) throw new Error(await readError(res, 'Falha ao atualizar projeto'))
   await globalMutate('/api/projects')
 }

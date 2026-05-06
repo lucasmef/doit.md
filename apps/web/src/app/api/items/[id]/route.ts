@@ -4,11 +4,17 @@ import { ItemModel } from '@doit/db'
 import type { UpdateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
+export const dynamic = 'force-dynamic'
+
 type Params = { params: Promise<{ id: string }> }
 
 function mapDocToItem(doc: unknown): Item {
   const { _id, ...rest } = doc as { _id: string; [key: string]: unknown }
   return { id: _id, ...rest } as unknown as Item
+}
+
+function validateItemState() {
+  return null
 }
 
 export async function GET(_req: NextRequest, { params }: Params) {
@@ -37,10 +43,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     await ensureDB()
     const { id } = await params
     const body = (await req.json()) as UpdateItemInput
+    const current = await ItemModel.findOne({ _id: id, userId }).lean()
+    if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const merged = { ...mapDocToItem(current), ...body }
+    if (merged.complexity === 'note') {
+      merged.priority = undefined
+    }
+
+    const validationError = validateItemState()
+    if (validationError) {
+      return NextResponse.json({ error: validationError }, { status: 400 })
+    }
 
     const item = await ItemModel.findOneAndUpdate(
       { _id: id, userId },
-      { ...body, updatedAt: new Date().toISOString() },
+      {
+        $set: { ...body, updatedAt: new Date().toISOString() },
+        ...(merged.complexity === 'note' ? { $unset: { priority: '' } } : {}),
+      },
       { new: true },
     ).lean()
 

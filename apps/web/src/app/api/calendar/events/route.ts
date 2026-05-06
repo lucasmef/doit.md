@@ -5,6 +5,8 @@ import { ensureDB } from '@/lib/db'
 import { getCalendarClient, refreshAccessToken } from '@/lib/google'
 import { newEventId } from '@doit/core'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()

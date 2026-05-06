@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@doit/types": "workspace:*",
+    "aws4": "^1.13.2",
     "mongoose": "^8.5.0"
   }
 }

@@ -1,6 +1,8 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ size: string }> }) {
   const { size } = await params
   const dim = size === '512' ? 512 : 192

@@ -4,6 +4,8 @@ import { PendingChangeModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 import type { PendingChange } from '@doit/types'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await auth()

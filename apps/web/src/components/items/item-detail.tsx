@@ -36,6 +36,7 @@ export function ItemDetail() {
   const [dueDate, setDueDate] = useState('')
   const [priority, setPriority] = useState<Priority>(4)
   const [dirty, setDirty] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [creatingEvent, setCreatingEvent] = useState(false)
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -48,14 +49,25 @@ export function ItemDetail() {
       setDueDate(item.dueDate ?? '')
       setPriority((item.priority as Priority) ?? 4)
       setDirty(false)
+      setIsSaving(false)
     }
   }, [item?.id])
 
   function scheduleAutosave(patch: Parameters<typeof updateItem>[1]) {
     if (!selectedItemId) return
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
-    saveTimeout.current = setTimeout(() => updateItem(selectedItemId, patch), 800)
     setDirty(true)
+    setIsSaving(true)
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        await updateItem(selectedItemId, patch)
+        setDirty(false)
+      } catch {
+        toast('Erro ao salvar alteracoes.', 'error')
+      } finally {
+        setIsSaving(false)
+      }
+    }, 800)
   }
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -70,6 +82,7 @@ export function ItemDetail() {
 
   function handleComplexityChange(complexity: ItemComplexity) {
     if (!selectedItemId) return
+    if (complexity === 'note') setPriority(4)
     updateItem(selectedItemId, { complexity })
   }
 
@@ -176,7 +189,7 @@ export function ItemDetail() {
             </span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-400">{dirty ? 'Salvando...' : 'Salvo'}</span>
+            <span className="text-xs text-slate-400">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
             <button 
               onClick={handleArchive} 
               className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
@@ -214,11 +227,12 @@ export function ItemDetail() {
               <StatusSelect value={item.status} onChange={handleStatusChange} />
             </div>
 
-            {/* Prioridade */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
-              <PrioritySelect value={priority} onChange={handlePriorityChange} />
-            </div>
+            {!isNote && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
+                <PrioritySelect value={priority} onChange={handlePriorityChange} />
+              </div>
+            )}
 
             {/* Complexidade */}
             <div className="flex flex-col gap-1.5">

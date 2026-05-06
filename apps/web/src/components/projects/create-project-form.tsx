@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createProject } from '@/hooks/use-projects'
+import { useToast } from '@/components/ui/toast'
 
 const COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
@@ -11,6 +12,7 @@ const COLORS = [
 type Props = { onDone?: () => void }
 
 export function CreateProjectForm({ onDone }: Props) {
+  const { toast } = useToast()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [color, setColor] = useState(COLORS[0]!)
@@ -25,6 +27,9 @@ export function CreateProjectForm({ onDone }: Props) {
       setName('')
       setDescription('')
       onDone?.()
+      toast('Projeto criado com sucesso', 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao criar projeto.', 'error')
     } finally {
       setSaving(false)
     }
