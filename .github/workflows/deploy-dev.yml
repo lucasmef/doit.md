@@ -46,7 +46,7 @@ jobs:
 
       - name: Sincronizar checkout dev no VPS
         run: |
-          sudo install -d -o salomao -g salomao /srv/doit/dev/app
+          install -d /srv/doit/dev/app
           rsync -a --delete \
             --exclude='.env' \
             --exclude='.env.local' \

@@ -44,6 +44,10 @@ sudo systemctl daemon-reload
 sudo systemctl enable doit.service
 sudo systemctl enable doit-dev.service
 
+echo "Installing limited sudoers rule for GitHub Actions deploy..."
+sudo install -m 440 infra/sudoers/doit-actions /etc/sudoers.d/doit-actions
+sudo visudo -cf /etc/sudoers.d/doit-actions
+
 echo "Preparing Nginx site files..."
 tmp_prod="$(mktemp)"
 tmp_dev="$(mktemp)"

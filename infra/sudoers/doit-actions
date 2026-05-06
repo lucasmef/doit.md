@@ -1,0 +1,7 @@
+salomao ALL=(root) NOPASSWD: /usr/bin/systemctl daemon-reload
+salomao ALL=(root) NOPASSWD: /usr/bin/systemctl restart doit.service
+salomao ALL=(root) NOPASSWD: /usr/bin/systemctl restart doit-dev.service
+salomao ALL=(root) NOPASSWD: /usr/bin/systemctl is-active --quiet doit.service
+salomao ALL=(root) NOPASSWD: /usr/bin/systemctl is-active --quiet doit-dev.service
+salomao ALL=(root) NOPASSWD: /usr/bin/journalctl -u doit.service -n 80 --no-pager
+salomao ALL=(root) NOPASSWD: /usr/bin/journalctl -u doit-dev.service -n 80 --no-pager
