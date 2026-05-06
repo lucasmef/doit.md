@@ -28,4 +28,8 @@ for f in $FILES; do
   LINT_ARGS="$LINT_ARGS --file $REL_FILE"
 done
 
-pnpm --filter @doit/web exec next lint $LINT_ARGS
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm --filter @doit/web exec next lint $LINT_ARGS
+else
+  corepack pnpm --filter @doit/web exec next lint $LINT_ARGS
+fi

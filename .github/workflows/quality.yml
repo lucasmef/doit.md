@@ -18,17 +18,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        run: |
-          command -v pnpm || npm install -g pnpm@9
+        run: corepack prepare pnpm@9.0.0 --activate
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Type Check
-        run: pnpm --filter @doit/web exec tsc --noEmit
+        run: corepack pnpm --filter @doit/web exec tsc --noEmit
 
       - name: Lint
         run: bash scripts/lint-incremental.sh
 
       - name: Build
-        run: pnpm --filter @doit/web build
+        run: corepack pnpm --filter @doit/web build

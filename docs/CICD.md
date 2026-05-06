@@ -1,95 +1,94 @@
-# CI/CD — Doit
+# CI/CD - Doit
 
-## Arquitetura: Self-Hosted Runner + Systemd
+## Arquitetura
 
-Os workflows rodam **diretamente na VPS KingHost** por meio de um GitHub Actions Self-Hosted Runner.
-A gestão de processos foi migrada de PM2/Docker para **Systemd** para maior robustez e integração com o sistema operacional.
+O Doit roda no mesmo VPS do Salomao usando o self-hosted runner do GitHub Actions, systemd e o Nginx do host.
 
+Nao usar o `docker-compose.yml` para producao neste VPS compartilhado, porque ele tenta subir um Nginx proprio nas portas `80/443`.
+
+## Ambientes
+
+| Ambiente | Checkout | Service | Porta local | Exposicao |
+| --- | --- | --- | --- | --- |
+| prod | `/srv/doit/prod/app` | `doit.service` | `8110` | publico via dominio Doit |
+| dev | `/srv/doit/dev/app` | `doit-dev.service` | `8111` | somente Tailscale |
+
+O ambiente dev nao deve ter dominio publico. O acesso esperado e via Tailscale, por exemplo:
+
+```text
+https://salomao-vps.tail2033b8.ts.net:8444
 ```
-GitHub Actions (workflow trigger)
-        ↓
-  Self-Hosted Runner (VPS)
-        ↓
-  scripts/deploy.sh (Executado localmente na VPS)
-        ↓
-  Systemd reinicia o serviço (doit-web ou doit-web-dev)
-```
-
----
 
 ## Fluxo
 
+```text
+push dev
+  -> quality gate
+  -> security gate
+  -> rsync para /srv/doit/dev/app
+  -> scripts/deploy.sh dev
+  -> systemd restart doit-dev.service
+  -> healthcheck http://127.0.0.1:8111/api/health
+
+workflow_dispatch Deploy PROD
+  -> confirmacao manual
+  -> quality gate na branch dev
+  -> security gate na branch dev
+  -> rsync para /srv/doit/prod/app
+  -> scripts/deploy.sh prod
+  -> systemd restart doit.service
+  -> healthcheck http://127.0.0.1:8110/api/health
+  -> tag prod-YYYY.MM.DD-rN
 ```
-local → push dev
-           ↓
-    Quality Gate (tsc, lint incremental, build)
-    Security Gate (pnpm audit)
-           ↓ OK
-    Deploy DEV  → /var/www/doit-dev  → Systemd (doit-web-dev) → :3001
-           ↓
-    testes manuais em dev.seudominio.com.br
-           ↓ OK
-    GitHub Actions → Deploy PROD (workflow_dispatch)
-    (digita "deploy" para confirmar)
-           ↓
-    Quality + Security Gate (na branch dev)
-           ↓
-    rsync /var/www/doit  → Systemd (doit-web) → :3000
-           ↓
-    tag prod-YYYY.MM.DD-rN criada automaticamente
+
+## Arquivos de runtime
+
+Os valores reais ficam fora do repositorio:
+
+```text
+/srv/doit/prod/doit-config/web.env
+/srv/doit/dev/doit-config/web.env
 ```
 
----
+Use `infra/env/web.env.example` como referencia. Nao commitar valores reais de `MONGODB_URI`, Clerk ou Google OAuth.
 
-## Workflows
+## Systemd
 
-| Arquivo | Trigger | Roda em | O que faz |
-|---------|---------|---------|-----------|
-| `quality.yml` | Push/PR + `workflow_dispatch` | self-hosted | tsc + lint incremental + build |
-| `security.yml` | Push/PR + schedule + `workflow_dispatch` | self-hosted | pnpm audit |
-| `deploy-dev.yml` | Push `dev` + `workflow_dispatch` | self-hosted | quality + security + deploy.sh dev |
-| `deploy-prod.yml` | `workflow_dispatch` (manual) | self-hosted | confirmação + quality + security + deploy.sh prod + tag |
+Units versionadas:
 
----
+```text
+infra/systemd/doit.service
+infra/systemd/doit-dev.service
+```
 
-## Script de Deploy (`scripts/deploy.sh`)
-
-O script unificado gerencia o ciclo de vida do deploy na VPS:
-1. `pnpm install` e `pnpm build` no diretório alvo.
-2. Limpeza de processos órfãos na porta alvo (evita conflitos de bind).
-3. Reinício do serviço via `systemctl restart`.
-4. Healthcheck robusto (polling de 10 tentativas) no endpoint `/api/health`.
-
----
-
-## Configuração do Systemd (Manual na VPS)
-
-Para configurar os serviços na VPS pela primeira vez:
+Instalacao no VPS:
 
 ```bash
-# 1. Copie os arquivos de serviço para o sistema
-sudo cp infra/systemd/*.service /etc/systemd/system/
-
-# 2. Recarregue o daemon do systemd
+sudo install -m 644 infra/systemd/doit.service /etc/systemd/system/doit.service
+sudo install -m 644 infra/systemd/doit-dev.service /etc/systemd/system/doit-dev.service
 sudo systemctl daemon-reload
-
-# 3. Habilite os serviços para iniciar no boot
-sudo systemctl enable doit-web
-sudo systemctl enable doit-web-dev
-
-# 4. (Opcional) Inicie manualmente se necessário
-sudo systemctl start doit-web
+sudo systemctl enable doit.service doit-dev.service
 ```
 
----
+Logs:
 
-## Logs
-
-Para visualizar os logs dos serviços:
 ```bash
-# Produção
-sudo journalctl -u doit-web -f
-
-# Desenvolvimento
-sudo journalctl -u doit-web-dev -f
+sudo journalctl -u doit.service -f
+sudo journalctl -u doit-dev.service -f
 ```
+
+## Nginx
+
+Templates versionados:
+
+```text
+infra/nginx/sites-available/doit.conf
+infra/nginx/sites-available/doit-dev-tailscale.conf
+```
+
+Regras:
+
+- `doit.conf` e publico e aponta para `127.0.0.1:8110`.
+- `doit-dev-tailscale.conf` escuta somente no IP Tailscale e aponta para `127.0.0.1:8111`.
+- Nao criar host publico para dev.
+- Sempre rodar `nginx -t` antes de `systemctl reload nginx`.

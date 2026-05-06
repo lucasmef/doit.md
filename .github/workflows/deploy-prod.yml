@@ -4,12 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Digite "deploy" para confirmar o deploy em produção'
+        description: 'Digite "deploy" para confirmar o deploy em producao'
         required: true
         default: ''
 
 concurrency:
-  group: deploy-prod
+  group: doit-deploy-prod
   cancel-in-progress: false
 
 jobs:
@@ -17,13 +17,13 @@ jobs:
     name: Confirmar deploy
     runs-on: self-hosted
     steps:
-      - name: Checar confirmação
+      - name: Checar confirmacao
         run: |
           if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
-            echo "❌ Confirmação inválida. Digite exatamente 'deploy'."
+            echo "Confirmacao invalida. Digite exatamente 'deploy'."
             exit 1
           fi
-          echo "✅ Confirmado por: ${{ github.actor }}"
+          echo "Confirmado por: ${{ github.actor }}"
 
   quality:
     name: Quality Gate
@@ -34,10 +34,11 @@ jobs:
         with:
           ref: dev
           fetch-depth: 0
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @doit/web exec tsc --noEmit
+      - run: corepack prepare pnpm@9.0.0 --activate
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm --filter @doit/web exec tsc --noEmit
       - run: bash scripts/lint-incremental.sh
-      - run: pnpm --filter @doit/web build
+      - run: corepack pnpm --filter @doit/web build
 
   security:
     name: Security Gate
@@ -47,8 +48,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: dev
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --audit-level high
+      - run: corepack prepare pnpm@9.0.0 --activate
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm audit --audit-level high
 
   deploy:
     name: Deploy PROD
@@ -56,22 +58,27 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout branch dev → PROD
+      - name: Checkout branch dev para PROD
         uses: actions/checkout@v4
         with:
           ref: dev
           clean: true
 
-      - name: Sincronizar /var/www/doit com código do checkout
+      - name: Sincronizar /srv/doit/prod/app com codigo do checkout
         run: |
+          sudo install -d -o salomao -g salomao /srv/doit/prod/app
           rsync -a --delete \
+            --exclude='.env' \
             --exclude='.env.local' \
+            --exclude='apps/web/.env.local' \
             --exclude='node_modules' \
+            --exclude='apps/web/node_modules' \
             --exclude='.next' \
-            $GITHUB_WORKSPACE/ /var/www/doit/
+            --exclude='apps/web/.next' \
+            "$GITHUB_WORKSPACE/" /srv/doit/prod/app/
 
       - name: Executar script de deploy
-        run: bash scripts/deploy.sh prod 3000
+        run: bash /srv/doit/prod/app/scripts/deploy.sh prod
 
       - name: Criar tag de release
         uses: actions/github-script@v7
@@ -86,4 +93,4 @@ jobs:
               ref: `refs/tags/${tag}`,
               sha: context.sha,
             })
-            core.notice(`🏷️  Tag criada: ${tag}`)
+            core.notice(`Tag criada: ${tag}`)

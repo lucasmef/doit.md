@@ -1,0 +1,23 @@
+[Unit]
+Description=Doit Web Application (Production)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=salomao
+Group=salomao
+WorkingDirectory=/srv/doit/prod/app
+EnvironmentFile=/srv/doit/prod/doit-config/web.env
+Environment=NODE_ENV=production
+Environment=PORT=8110
+Environment=HOSTNAME=127.0.0.1
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/corepack pnpm --filter @doit/web start -- -H 127.0.0.1 -p 8110
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

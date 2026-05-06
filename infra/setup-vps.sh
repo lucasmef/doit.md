@@ -1,126 +1,68 @@
 #!/usr/bin/env bash
-# Setup inicial do VPS KingHost para o doit.md
-# Execute como root: bash setup-vps.sh SEU_DOMINIO.com.br
+# Initial VPS setup for doit.md on the shared Salomao/Doit host.
+# Run on the VPS after the public domain DNS points to the server.
 
 set -euo pipefail
 
-DOMAIN="${1:?Uso: bash setup-vps.sh SEU_DOMINIO.com.br}"
-APP_DIR="/opt/doitmd"
-REPO_URL="${2:-}" # opcional: URL do repositório Git
+DOIT_PUBLIC_DOMAIN="${1:?Usage: bash infra/setup-vps.sh <doit-public-domain>}"
+TAILSCALE_HOST="${TAILSCALE_HOST:-salomao-vps.tail2033b8.ts.net}"
+TAILSCALE_IPV4="${TAILSCALE_IPV4:-100.81.12.64}"
+TAILSCALE_IPV6="${TAILSCALE_IPV6:-fd7a:115c:a1e0::6236:c40}"
 
-echo "======================================================"
-echo " doit.md — Setup VPS"
-echo " Domínio: $DOMAIN"
-echo "======================================================"
-
-# ── 1. Atualiza sistema ────────────────────────────────────
-echo ""
-echo "→ Atualizando sistema..."
-apt-get update -qq && apt-get upgrade -y -qq
-
-# ── 2. Instala Docker ─────────────────────────────────────
-if ! command -v docker &>/dev/null; then
-  echo "→ Instalando Docker..."
-  curl -fsSL https://get.docker.com | sh
-  systemctl enable docker
-  systemctl start docker
-else
-  echo "→ Docker já instalado: $(docker --version)"
-fi
-
-# ── 3. Instala Certbot (Let's Encrypt) ────────────────────
-if ! command -v certbot &>/dev/null; then
-  echo "→ Instalando Certbot..."
-  apt-get install -y -qq certbot
-fi
-
-# ── 4. Cria diretório do app ──────────────────────────────
-echo "→ Criando $APP_DIR..."
-mkdir -p "$APP_DIR"
-
-if [ -n "$REPO_URL" ]; then
-  if [ ! -d "$APP_DIR/.git" ]; then
-    git clone "$REPO_URL" "$APP_DIR"
-  else
-    echo "→ Repositório já clonado."
+require_command() {
+  local command_name="$1"
+  if ! command -v "$command_name" >/dev/null 2>&1; then
+    echo "Required command not found: $command_name"
+    exit 1
   fi
-fi
+}
 
-# ── 5. Cria .env de produção ──────────────────────────────
-ENV_FILE="$APP_DIR/.env"
-if [ ! -f "$ENV_FILE" ]; then
-  echo "→ Criando .env (preencha os valores)..."
-  cat > "$ENV_FILE" <<EOF
-MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/clarity?retryWrites=true&w=majority
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-...
-GOOGLE_REDIRECT_URI=https://${DOMAIN}/api/google/callback
-EOF
-  echo ""
-  echo "⚠️  IMPORTANTE: edite $ENV_FILE com os valores reais antes de continuar."
-  echo "   nano $ENV_FILE"
-  echo ""
-fi
+require_command sudo
+require_command rsync
+require_command sed
+require_command systemctl
+require_command nginx
 
-# ── 6. Substitui domínio no Nginx ────────────────────────
-NGINX_CONF="$APP_DIR/infra/nginx/conf.d/clarity.conf"
-if [ -f "$NGINX_CONF" ]; then
-  sed -i "s/SEU_DOMINIO.com.br/$DOMAIN/g" "$NGINX_CONF"
-  echo "→ Nginx configurado para $DOMAIN"
-fi
+echo "Preparing Doit directories..."
+sudo install -d -o salomao -g salomao /srv/doit/prod/app
+sudo install -d -o salomao -g salomao /srv/doit/dev/app
+sudo install -d -m 700 -o salomao -g salomao /srv/doit/prod/doit-config
+sudo install -d -m 700 -o salomao -g salomao /srv/doit/dev/doit-config
 
-# ── 7. Obtém certificado SSL ─────────────────────────────
-if [ ! -d "/etc/letsencrypt/live/$DOMAIN" ]; then
-  echo "→ Obtendo certificado SSL para $DOMAIN..."
-  # Para o nginx antes de obter o cert (porta 80 precisa estar livre)
-  docker compose -f "$APP_DIR/docker-compose.yml" stop nginx 2>/dev/null || true
-  certbot certonly --standalone \
-    -d "$DOMAIN" -d "www.$DOMAIN" \
-    --non-interactive --agree-tos \
-    --email "admin@$DOMAIN"
-  echo "→ Certificado obtido."
-else
-  echo "→ Certificado SSL já existe."
-fi
+for env_name in prod dev; do
+  env_path="/srv/doit/$env_name/doit-config/web.env"
+  if [[ ! -f "$env_path" ]]; then
+    sudo install -m 600 -o salomao -g salomao infra/env/web.env.example "$env_path"
+    echo "Created $env_path from example. Fill it with real secrets before deploy."
+  fi
+done
 
-# ── 8. Configura renovação automática ────────────────────
-if ! crontab -l 2>/dev/null | grep -q certbot; then
-  (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet && docker compose -C $APP_DIR restart nginx") | crontab -
-  echo "→ Renovação automática de SSL configurada."
-fi
+echo "Installing systemd units..."
+sudo install -m 644 infra/systemd/doit.service /etc/systemd/system/doit.service
+sudo install -m 644 infra/systemd/doit-dev.service /etc/systemd/system/doit-dev.service
+sudo systemctl daemon-reload
+sudo systemctl enable doit.service
+sudo systemctl enable doit-dev.service
 
-# ── 9. Configura chave SSH para GitHub Actions ───────────
-SSH_KEY_FILE="/root/.ssh/doitmd_deploy"
-if [ ! -f "$SSH_KEY_FILE" ]; then
-  echo "→ Gerando chave SSH para CI/CD..."
-  ssh-keygen -t ed25519 -C "doitmd-deploy" -f "$SSH_KEY_FILE" -N ""
-  cat "$SSH_KEY_FILE.pub" >> /root/.ssh/authorized_keys
-  echo ""
-  echo "======================================================"
-  echo " Chave privada para adicionar em GitHub Actions Secrets"
-  echo " (Settings → Secrets → VPS_SSH_KEY):"
-  echo "======================================================"
-  cat "$SSH_KEY_FILE"
-  echo "======================================================"
-fi
+echo "Preparing Nginx site files..."
+tmp_prod="$(mktemp)"
+tmp_dev="$(mktemp)"
+sed "s/DOIT_PUBLIC_DOMAIN/$DOIT_PUBLIC_DOMAIN/g" infra/nginx/sites-available/doit.conf > "$tmp_prod"
+sed \
+  -e "s/salomao-vps.tail2033b8.ts.net/$TAILSCALE_HOST/g" \
+  -e "s/100.81.12.64/$TAILSCALE_IPV4/g" \
+  -e "s/fd7a:115c:a1e0::6236:c40/$TAILSCALE_IPV6/g" \
+  infra/nginx/sites-available/doit-dev-tailscale.conf > "$tmp_dev"
+sudo install -m 644 "$tmp_prod" /etc/nginx/sites-available/doit
+sudo install -m 644 "$tmp_dev" /etc/nginx/sites-available/doit-dev-tailscale
+rm -f "$tmp_prod" "$tmp_dev"
 
-echo ""
-echo "======================================================"
-echo " Setup concluído! Próximos passos:"
-echo ""
-echo " 1. Preencha as variáveis: nano $ENV_FILE"
-echo " 2. Configure os secrets no GitHub Actions:"
-echo "    VPS_HOST = IP do VPS"
-echo "    VPS_USER = root"
-echo "    VPS_SSH_KEY = (conteúdo exibido acima)"
-echo "    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = pk_live_..."
-echo ""
-echo " 3. Primeiro deploy manual:"
-echo "    cd $APP_DIR"
-echo "    docker compose build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_... app"
-echo "    docker compose up -d"
-echo ""
-echo " Após isso, todo push para master faz deploy automático."
-echo "======================================================"
+echo "Doit Nginx files installed but not enabled."
+echo "Before enabling production, issue TLS for $DOIT_PUBLIC_DOMAIN."
+echo "Before enabling dev, allow TCP 8444 only on tailscale0 if UFW is active."
+echo
+echo "Suggested follow-up commands after env files and TLS are ready:"
+echo "  sudo ln -s /etc/nginx/sites-available/doit /etc/nginx/sites-enabled/doit"
+echo "  sudo ln -s /etc/nginx/sites-available/doit-dev-tailscale /etc/nginx/sites-enabled/doit-dev-tailscale"
+echo "  sudo nginx -t"
+echo "  sudo systemctl reload nginx"

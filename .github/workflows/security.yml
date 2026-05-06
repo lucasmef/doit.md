@@ -20,18 +20,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup pnpm
-        run: |
-          command -v pnpm || npm install -g pnpm@9
+        run: corepack prepare pnpm@9.0.0 --activate
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: corepack pnpm install --frozen-lockfile
 
       - name: Audit (high severity)
-        run: pnpm audit --audit-level high
+        run: corepack pnpm audit --audit-level high
 
   scan-secrets:
     name: Secret Scan
-    # TruffleHog pode rodar no runner da VPS sem secrets externos
     runs-on: self-hosted
 
     steps:
@@ -40,9 +38,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: TruffleHog scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          extra_args: --only-verified
+      - name: Secret pattern scan
+        run: |
+          if git grep -n -I -E '(sk_live_|sk_test_|pk_live_|pk_test_|GOCSPX-|mongodb\\+srv://[^[:space:]]+:[^[:space:]@]+@)' -- ':!*.example' ':!pnpm-lock.yaml' ':!.github/workflows/security.yml'; then
+            echo "Potential committed secret found."
+            exit 1
+          fi
