@@ -49,7 +49,7 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
 
   function itemsForDay(d: number) {
     const ds = dayStr(d)
-    return items.filter((i) => i.dueDate === ds || i.scheduledDate === ds)
+    return (items || []).filter((i) => i && (i.dueDate === ds || i.scheduledDate === ds))
   }
 
   const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]

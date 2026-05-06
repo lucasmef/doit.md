@@ -3,6 +3,7 @@ import { Topbar } from '@/components/layout/topbar'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { ItemDetail } from '@/components/items/item-detail'
 import { QuickCapture } from '@/components/items/quick-capture'
+import { CalendarSidebar } from '@/components/layout/calendar-sidebar'
 import { UIProvider } from '@/store/ui-provider'
 import { ToastProvider } from '@/components/ui/toast'
 
@@ -22,15 +23,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex flex-1 overflow-hidden">
               {/* Conteúdo principal — padding extra no mobile para o bottom nav */}
               <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-surface-window px-4 lg:px-8">{children}</main>
-              <ItemDetail />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom nav — só mobile */}
+      {/* Overlays e Modais */}
+      <ItemDetail />
       <BottomNav />
       <QuickCapture />
+      <CalendarSidebar />
     </UIProvider>
     </ToastProvider>
   )

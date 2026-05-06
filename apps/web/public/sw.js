@@ -10,7 +10,7 @@ const STATIC_PATTERNS = [
 ]
 
 // Páginas do app — network-first com fallback para cache
-const APP_PAGES = ['/today', '/inbox', '/upcoming', '/projects', '/areas', '/calendar', '/audit', '/settings']
+const APP_PAGES = ['/today', '/inbox', '/upcoming', '/projects', '/areas', '/audit', '/settings']
 
 // Rotas de API — sempre network, nunca cache
 const API_PATTERN = /^\/api\//

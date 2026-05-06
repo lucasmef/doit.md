@@ -6,9 +6,9 @@ import { ensureDB } from '@/lib/db'
 
 type Params = { params: Promise<{ id: string }> }
 
-function mapDocToItem(doc: any): Item {
-  const { _id, ...rest } = doc
-  return { id: _id, ...rest }
+function mapDocToItem(doc: unknown): Item {
+  const { _id, ...rest } = doc as { _id: string; [key: string]: unknown }
+  return { id: _id, ...rest } as unknown as Item
 }
 
 export async function GET(_req: NextRequest, { params }: Params) {

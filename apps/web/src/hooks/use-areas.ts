@@ -7,7 +7,11 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function useAreas() {
   const { data, error, isLoading } = useSWR<{ areas: Area[] }>('/api/areas', fetcher)
-  return { areas: data?.areas ?? [], isLoading, isError: !!error }
+  return { 
+    areas: Array.isArray(data?.areas) ? data.areas : [], 
+    isLoading, 
+    isError: !!error 
+  }
 }
 
 export async function createArea(input: CreateAreaInput): Promise<Area> {

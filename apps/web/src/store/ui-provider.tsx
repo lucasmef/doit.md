@@ -8,6 +8,7 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   const navigateList = useCallback((direction: 'up' | 'down') => {
     const items = Array.from(document.querySelectorAll<HTMLElement>('[data-item-id]'))
@@ -32,8 +33,13 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       key: 'Escape',
       handler: () => {
         if (quickCaptureOpen) { setQuickCaptureOpen(false); return }
+        if (calendarOpen) { setCalendarOpen(false); return }
         if (selectedItemId) setSelectedItemId(null)
       },
+    },
+    {
+      key: 'c',
+      handler: (e) => { e.preventDefault(); setCalendarOpen(!calendarOpen) },
     },
     {
       key: 'j',
@@ -62,7 +68,16 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
 
   return (
     <UIContext.Provider
-      value={{ selectedItemId, setSelectedItemId, quickCaptureOpen, setQuickCaptureOpen, editingItemId, setEditingItemId }}
+      value={{ 
+        selectedItemId, 
+        setSelectedItemId, 
+        quickCaptureOpen, 
+        setQuickCaptureOpen, 
+        editingItemId, 
+        setEditingItemId,
+        calendarOpen,
+        setCalendarOpen
+      }}
     >
       {children}
     </UIContext.Provider>

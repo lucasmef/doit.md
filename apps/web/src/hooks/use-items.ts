@@ -14,7 +14,7 @@ export function useItems(params?: { status?: string; projectId?: string }) {
   const { data, error, isLoading } = useSWR<{ items: Item[] }>(url, fetcher)
 
   return {
-    items: data?.items ?? [],
+    items: Array.isArray(data?.items) ? data.items : [],
     isLoading,
     isError: !!error,
   }
@@ -27,7 +27,7 @@ export function useItem(id: string | null) {
   )
 
   return {
-    item: data?.item ?? null,
+    item: data?.item || null,
     isLoading,
     isError: !!error,
   }

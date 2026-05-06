@@ -7,7 +7,11 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
 export function useProjects() {
   const { data, error, isLoading } = useSWR<{ projects: Project[] }>('/api/projects', fetcher)
-  return { projects: data?.projects ?? [], isLoading, isError: !!error }
+  return { 
+    projects: Array.isArray(data?.projects) ? data.projects : [], 
+    isLoading, 
+    isError: !!error 
+  }
 }
 
 export async function createProject(input: CreateProjectInput): Promise<Project> {

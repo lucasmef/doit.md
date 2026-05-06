@@ -65,37 +65,56 @@ export function QuickCapture() {
     }
   }
 
-  if (!quickCaptureOpen) return null
+  const isNote = complexity === 'note'
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/30 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/30 backdrop-blur-sm p-4"
       onClick={(e) => e.target === e.currentTarget && setQuickCaptureOpen(false)}
     >
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-        <form onSubmit={handleSubmit}>
-          <div className="px-4 pt-4 pb-3">
+      <div 
+        className={`bg-white shadow-2xl border border-slate-200 overflow-hidden flex flex-col transition-all duration-300 ${
+          isNote 
+            ? 'w-full max-w-4xl h-[70vh] rounded-2xl' 
+            : 'w-full max-w-lg rounded-2xl'
+        }`}
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          <div className="px-6 pt-6 pb-4">
             <input
               ref={inputRef}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="O que você está pensando?"
-              className="w-full text-lg text-slate-900 placeholder:text-slate-300 border-none outline-none bg-transparent"
+              placeholder={isNote ? "Título da nota..." : "O que você está pensando?"}
+              className={`w-full text-slate-900 placeholder:text-slate-300 border-none outline-none bg-transparent font-bold ${
+                isNote ? 'text-2xl' : 'text-lg'
+              }`}
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 px-4 pb-4 border-t border-slate-100 pt-3">
+          {isNote && (
+            <div className="flex-1 px-6 overflow-y-auto">
+              <textarea
+                placeholder="Comece a escrever sua nota..."
+                className="w-full h-full text-slate-700 placeholder:text-slate-300 border-none outline-none bg-transparent resize-none py-2"
+                // Nota: Poderíamos usar o MarkdownEditor aqui, mas para QuickCapture um textarea simples ou um editor simplificado é melhor.
+                // Se quisermos o MarkdownEditor completo, precisaríamos adicionar um estado para o conteúdo.
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
             {/* Complexidade */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 p-1 bg-slate-100 rounded-lg">
               {COMPLEXITIES.map((c) => (
                 <button
                   key={c}
                   type="button"
                   onClick={() => setComplexity(c)}
-                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                  className={`text-[11px] px-3 py-1.5 rounded-md font-bold uppercase tracking-wider transition-all ${
                     complexity === c
-                      ? 'bg-brand-600 text-white'
-                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                      ? 'bg-white text-brand-600 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   {COMPLEXITY_LABELS[c]}
@@ -104,7 +123,7 @@ export function QuickCapture() {
             </div>
 
             {/* Separador */}
-            <span className="text-slate-200 select-none">|</span>
+            <div className="w-px h-6 bg-slate-200 hidden sm:block" />
 
             {/* Prioridade */}
             <div className="flex gap-1">
@@ -117,14 +136,14 @@ export function QuickCapture() {
                     type="button"
                     title={cfg.title}
                     onClick={() => setPriority(p)}
-                    className={`flex items-center gap-0.5 text-xs px-2 py-1 rounded-full font-semibold transition-colors ${
+                    className={`flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg font-bold transition-all ${
                       active
-                        ? `${cfg.bg} text-white`
+                        ? `${cfg.bg} text-white shadow-sm`
                         : `bg-slate-100 ${cfg.color} hover:bg-slate-200`
                     }`}
                   >
                     <PriorityFlag priority={p} size={10} />
-                    {cfg.label}
+                    <span className="hidden sm:inline">{cfg.label}</span>
                   </button>
                 )
               })}
@@ -133,32 +152,34 @@ export function QuickCapture() {
             {/* Data (só tasks) */}
             {(complexity === 'task') && (
               <>
-                <span className="text-slate-200 select-none">|</span>
+                <div className="w-px h-6 bg-slate-200 hidden sm:block" />
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="text-xs border border-slate-200 rounded-md px-2 py-1 text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  className="text-xs font-medium border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
                 />
               </>
             )}
 
             <div className="flex-1" />
 
-            <button
-              type="button"
-              onClick={() => setQuickCaptureOpen(false)}
-              className="text-xs text-slate-400 hover:text-slate-600"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={!title.trim() || saving}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-40 transition-colors"
-            >
-              {saving ? 'Salvando...' : 'Salvar'}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setQuickCaptureOpen(false)}
+                className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2 py-1 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={!title.trim() || saving}
+                className="text-xs font-bold px-5 py-2 rounded-xl bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-40 transition-all shadow-md hover:shadow-lg transform active:scale-95"
+              >
+                {saving ? '...' : 'Salvar'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

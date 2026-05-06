@@ -14,7 +14,7 @@ function formatDate(dateStr: string) {
 }
 
 export function DayAgenda({ date, items }: Props) {
-  const dayItems = items.filter((i) => i.dueDate === date || i.scheduledDate === date)
+  const dayItems = (items || []).filter((i) => i && (i.dueDate === date || i.scheduledDate === date))
 
   return (
     <div className="bg-surface-panel border border-ui-border-panel rounded-[16px] p-6 shadow-sm h-fit">

@@ -1,8 +1,9 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 
-export function GET(_req: NextRequest, { params }: { params: { size: string } }) {
-  const dim = params.size === '512' ? 512 : 192
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ size: string }> }) {
+  const { size } = await params
+  const dim = size === '512' ? 512 : 192
   const radius = Math.round(dim * 0.2)
   const fontSize = Math.round(dim * 0.52)
   const letterSpacing = Math.round(dim * -0.01)

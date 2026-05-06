@@ -8,7 +8,6 @@ const TOP_NAV = [
   { href: '/inbox', label: 'Inbox' },
   { href: '/today', label: 'Hoje' },
   { href: '/upcoming', label: 'Próximos' },
-  { href: '/calendar', label: 'Calendário' },
 ]
 
 const BOTTOM_NAV = [

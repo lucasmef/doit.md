@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import type { Project } from '@doit/types'
-import { updateProject } from '@/hooks/use-projects'
 
 const STATUS_LABEL: Record<Project['status'], string> = {
   active: 'Ativo',

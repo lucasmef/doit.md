@@ -1,4 +1,15 @@
 services:
+  mongodb:
+    image: mongo:latest
+    container_name: doitmd-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - doitmd-net
+
   app:
     build:
       context: .
@@ -8,6 +19,8 @@ services:
     image: doitmd-web:latest
     container_name: doitmd-app
     restart: unless-stopped
+    depends_on:
+      - mongodb
     environment:
       NODE_ENV: production
       MONGODB_URI: ${MONGODB_URI}
@@ -50,3 +63,4 @@ networks:
 
 volumes:
   nginx-cache:
+  mongodb-data:

@@ -46,7 +46,7 @@ const TABS = [
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { setQuickCaptureOpen } = useUI()
+  const { setQuickCaptureOpen, calendarOpen, setCalendarOpen } = useUI()
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 flex items-center safe-area-bottom">
@@ -63,6 +63,21 @@ export function BottomNav() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
+            </button>
+          )
+        }
+
+        if (tab.href === '/calendar') {
+          return (
+            <button
+              key="calendar"
+              onClick={() => setCalendarOpen(!calendarOpen)}
+              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${
+                calendarOpen ? 'text-brand-600' : 'text-slate-400'
+              }`}
+            >
+              {tab.icon}
+              <span className="text-[9px] font-medium">{tab.label}</span>
             </button>
           )
         }

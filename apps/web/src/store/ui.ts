@@ -9,6 +9,8 @@ export type UIState = {
   setQuickCaptureOpen: (open: boolean) => void
   editingItemId: string | null
   setEditingItemId: (id: string | null) => void
+  calendarOpen: boolean
+  setCalendarOpen: (open: boolean) => void
 }
 
 export const UIContext = createContext<UIState>({
@@ -18,6 +20,8 @@ export const UIContext = createContext<UIState>({
   setQuickCaptureOpen: () => {},
   editingItemId: null,
   setEditingItemId: () => {},
+  calendarOpen: false,
+  setCalendarOpen: () => {},
 })
 
 export const useUI = () => useContext(UIContext)

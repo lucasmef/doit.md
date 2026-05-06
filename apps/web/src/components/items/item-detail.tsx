@@ -133,174 +133,191 @@ export function ItemDetail() {
     }
   }
 
-  if (!selectedItemId) {
-    return (
-      <div className="flex-1 hidden lg:flex items-center justify-center text-sm text-slate-400 border-l border-slate-200">
-        Selecione um item para ver o detalhe
-      </div>
-    )
-  }
+  if (!selectedItemId) return null
 
   if (isLoading || !item) {
     return (
-      <>
-        {/* Mobile overlay backdrop */}
-        <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSelectedItemId(null)} />
-        <div className="fixed bottom-0 left-0 right-0 z-50 lg:static w-full lg:w-80 xl:w-96 lg:shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 p-6 bg-white lg:bg-surface-window rounded-t-2xl lg:rounded-none max-h-[85dvh] lg:max-h-none">
-          <div className="h-6 bg-slate-100 rounded animate-pulse mb-4 w-3/4" />
-          <div className="h-4 bg-slate-100 rounded animate-pulse mb-2" />
-          <div className="h-4 bg-slate-100 rounded animate-pulse w-2/3" />
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl p-8 animate-pulse">
+          <div className="h-6 bg-slate-100 rounded mb-4 w-48" />
+          <div className="h-4 bg-slate-100 rounded mb-2 w-32" />
         </div>
-      </>
+      </div>
     )
   }
 
+  const isNote = item.complexity === 'note'
+
   return (
-    <>
-      {/* Mobile overlay backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSelectedItemId(null)} />
-      <aside className="fixed bottom-0 left-0 right-0 z-50 lg:static w-full lg:w-[380px] xl:w-[420px] lg:shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-ui-border overflow-y-auto bg-white lg:bg-surface-window rounded-t-2xl lg:rounded-none max-h-[85dvh] lg:max-h-none">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 shrink-0">
-        <span className="text-xs text-slate-400">{dirty ? 'Salvando...' : 'Salvo'}</span>
-        <div className="flex items-center gap-3">
-          <button onClick={handleArchive} className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-            Arquivar
-          </button>
-          <button onClick={() => setSelectedItemId(null)} className="text-slate-400 hover:text-slate-700">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div 
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
+    >
+      <div 
+        className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+          isNote 
+            ? 'w-full h-full max-w-5xl rounded-2xl' 
+            : 'w-full max-w-lg rounded-2xl max-h-[85vh]'
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-soft shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setSelectedItemId(null)}
+              className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <span className="text-sm font-medium text-slate-500">
+              {isNote ? 'Nota' : 'Tarefa'}
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-slate-400">{dirty ? 'Salvando...' : 'Salvo'}</span>
+            <button 
+              onClick={handleArchive} 
+              className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
+            >
+              Arquivar
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="flex-1 px-6 pb-6 space-y-6 overflow-y-auto">
-        {/* Título */}
-        <input
-          value={title}
-          onChange={handleTitleChange}
-          placeholder="Título do item"
-          className="w-full text-[22px] font-bold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300"
-        />
+        <div className={`flex-1 overflow-y-auto ${isNote ? 'flex flex-col lg:flex-row' : ''}`}>
+          {/* Main Content Area */}
+          <div className={`p-6 space-y-6 ${isNote ? 'flex-1 lg:border-r border-ui-border-soft' : ''}`}>
+            {/* Título */}
+            <input
+              value={title}
+              onChange={handleTitleChange}
+              placeholder="Título"
+              className={`w-full font-bold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300 ${
+                isNote ? 'text-3xl' : 'text-xl'
+              }`}
+            />
 
-        <div className="space-y-4">
-          {/* Status */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Status</label>
-            <StatusSelect value={item.status} onChange={handleStatusChange} />
+            {/* Editor Markdown */}
+            <div className="min-h-[200px]">
+              <label className="text-xs text-slate-400 font-medium block mb-2">Conteúdo</label>
+              <MarkdownEditor value={content} onChange={handleContentChange} />
+            </div>
           </div>
 
-          {/* Prioridade */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
-            <PrioritySelect value={priority} onChange={handlePriorityChange} />
-          </div>
+          {/* Sidebar Properties (only visible or layouted differently for notes) */}
+          <div className={`${isNote ? 'w-full lg:w-80 p-6 space-y-6 bg-slate-50/50' : 'px-6 pb-6 space-y-4'}`}>
+            {/* Status */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Status</label>
+              <StatusSelect value={item.status} onChange={handleStatusChange} />
+            </div>
 
-          {/* Complexidade */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Complexidade</label>
-            <ComplexitySelect value={item.complexity} onChange={handleComplexityChange} />
-          </div>
+            {/* Prioridade */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
+              <PrioritySelect value={priority} onChange={handlePriorityChange} />
+            </div>
 
-          {/* Prazo */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Data</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={dueDate}
-                onChange={handleDueDateChange}
-                className="flex-1 text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-              />
+            {/* Complexidade */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Complexidade</label>
+              <ComplexitySelect value={item.complexity} onChange={handleComplexityChange} />
+            </div>
+
+            {/* Prazo (Mainly for tasks) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Prazo</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={handleDueDateChange}
+                  className="flex-1 text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+                />
+                {dueDate && (
+                  <span className={`text-[13px] font-medium shrink-0 ${
+                    dueDate < new Date().toISOString().slice(0, 10) ? 'text-red-500' : 'text-brand-600'
+                  }`}>
+                    {formatDueDate(dueDate)}
+                  </span>
+                )}
+              </div>
               {dueDate && (
-                <span className={`text-[13px] font-medium shrink-0 ${
-                  dueDate < new Date().toISOString().slice(0, 10) ? 'text-red-500' : 'text-brand-600'
-                }`}>
-                  {formatDueDate(dueDate)}
-                </span>
+                <button
+                  onClick={handleCreateCalendarEvent}
+                  disabled={creatingEvent}
+                  className="flex items-center gap-1.5 text-[12px] text-brand-600 hover:text-brand-700 disabled:opacity-50 transition-colors w-fit"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                    <path d="M16 2v4M8 2v4M3 10h18" />
+                    <path d="M12 14v4M10 16h4" strokeLinecap="round" />
+                  </svg>
+                  {creatingEvent ? 'Criando...' : 'Google Calendar'}
+                </button>
               )}
             </div>
-            {dueDate && (
-              <button
-                onClick={handleCreateCalendarEvent}
-                disabled={creatingEvent}
-                className="flex items-center gap-1.5 text-[12px] text-brand-600 hover:text-brand-700 disabled:opacity-50 transition-colors w-fit"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <rect x="3" y="4" width="18" height="18" rx="2" />
-                  <path d="M16 2v4M8 2v4M3 10h18" />
-                  <path d="M12 14v4M10 16h4" strokeLinecap="round" />
-                </svg>
-                {creatingEvent ? 'Criando...' : 'Criar evento no Google Calendar'}
-              </button>
+
+            {/* Projeto e Área */}
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-medium text-slate-500">Projeto</label>
+                <select
+                  value={item.projectId ?? ''}
+                  onChange={(e) => handleProjectChange(e.target.value)}
+                  className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+                >
+                  <option value="">Nenhum</option>
+                  {projects.filter((p) => p.status !== 'archived').map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-medium text-slate-500">Área</label>
+                <select
+                  value={item.areaId ?? ''}
+                  onChange={(e) => handleAreaChange(e.target.value)}
+                  className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+                >
+                  <option value="">Nenhuma</option>
+                  {areas.map((a) => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Tags */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Etiquetas</label>
+              <input
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                onBlur={handleTagsBlur}
+                placeholder="ex: trabalho, urgente"
+                className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+              />
+            </div>
+
+            {/* Versions only in Note mode or at the bottom */}
+            {isNote && (
+              <div className="pt-4 border-t border-slate-100">
+                <ItemVersions itemId={item.id} />
+              </div>
             )}
           </div>
-
-          {/* Projeto */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Projeto</label>
-            <select
-              value={item.projectId ?? ''}
-              onChange={(e) => handleProjectChange(e.target.value)}
-              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-            >
-              <option value="">Sem projeto</option>
-              {projects.filter((p) => p.status !== 'archived').map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Área */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Área</label>
-            <select
-              value={item.areaId ?? ''}
-              onChange={(e) => handleAreaChange(e.target.value)}
-              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-            >
-              <option value="">Sem área</option>
-              {areas.map((a) => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Tags */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-slate-500">Etiquetas</label>
-            <input
-              value={tags}
-              onChange={(e) => setTags(e.target.value)}
-              onBlur={handleTagsBlur}
-              placeholder="ex: trabalho, urgente"
-              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-            />
-          </div>
         </div>
 
-        <div className="border-t border-ui-border-soft" />
-
-        {/* Editor Markdown */}
-        <div>
-          <label className="text-xs text-slate-400 font-medium block mb-2">Conteúdo</label>
-          <MarkdownEditor value={content} onChange={handleContentChange} />
-        </div>
-
-        {/* Histórico de versões */}
-        <div className="border-t border-slate-100 pt-3">
-          <ItemVersions itemId={item.id} />
-        </div>
-
-        {/* Metadados */}
-        <div className="text-[10px] text-slate-300 space-y-0.5 pb-4">
-          <p>ID: {item.id}</p>
-          <p>Criado: {new Date(item.createdAt).toLocaleString('pt-BR')}</p>
-          <p>Atualizado: {new Date(item.updatedAt).toLocaleString('pt-BR')}</p>
+        {/* Footer info */}
+        <div className="px-6 py-3 bg-slate-50 border-t border-ui-border-soft text-[10px] text-slate-400 flex justify-between">
+          <span>Criado em {new Date(item.createdAt).toLocaleString('pt-BR')}</span>
+          <span>Atualizado em {new Date(item.updatedAt).toLocaleString('pt-BR')}</span>
         </div>
       </div>
-    </aside>
-    </>
+    </div>
   )
 }

@@ -9,7 +9,7 @@ import type { Item } from '@doit/types'
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export function Topbar() {
-  const { setQuickCaptureOpen, setSelectedItemId } = useUI()
+  const { setQuickCaptureOpen, setSelectedItemId, calendarOpen, setCalendarOpen } = useUI()
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [open, setOpen] = useState(false)
@@ -76,6 +76,17 @@ export function Topbar() {
         )}
       </div>
       <div className="flex items-center gap-3">
+        <button
+          onClick={() => setCalendarOpen(!calendarOpen)}
+          className={`p-2 rounded-xl transition-colors ${
+            calendarOpen ? 'bg-brand-100 text-brand-700' : 'text-slate-500 hover:bg-slate-100'
+          }`}
+          title="Alternar Calendário (C)"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </button>
         <button
           onClick={() => setQuickCaptureOpen(true)}
           className="text-[13px] font-medium px-4 py-1.5 rounded-xl bg-brand-600 text-white hover:bg-brand-700 transition-colors shadow-sm"
