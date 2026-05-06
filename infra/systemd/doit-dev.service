@@ -13,7 +13,7 @@ Environment=NODE_ENV=production
 Environment=PORT=8111
 Environment=HOSTNAME=127.0.0.1
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStart=/usr/bin/corepack pnpm --filter @doit/web start -- -H 127.0.0.1 -p 8111
+ExecStart=/usr/bin/corepack pnpm --filter @doit/web exec next start -H 127.0.0.1 -p 8111
 Restart=always
 RestartSec=10
 StandardOutput=journal
