@@ -1,0 +1,89 @@
+name: Deploy PROD
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Digite "deploy" para confirmar o deploy em produção'
+        required: true
+        default: ''
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Confirmar deploy
+    runs-on: self-hosted
+    steps:
+      - name: Checar confirmação
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
+            echo "❌ Confirmação inválida. Digite exatamente 'deploy'."
+            exit 1
+          fi
+          echo "✅ Confirmado por: ${{ github.actor }}"
+
+  quality:
+    name: Quality Gate
+    needs: validate
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @doit/web exec tsc --noEmit
+      - run: bash scripts/lint-incremental.sh
+      - run: pnpm --filter @doit/web build
+
+  security:
+    name: Security Gate
+    needs: validate
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
+
+  deploy:
+    name: Deploy PROD
+    needs: [quality, security]
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout branch dev → PROD
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          clean: true
+
+      - name: Sincronizar /var/www/doit com código do checkout
+        run: |
+          rsync -a --delete \
+            --exclude='.env.local' \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            $GITHUB_WORKSPACE/ /var/www/doit/
+
+      - name: Executar script de deploy
+        run: bash scripts/deploy.sh prod 3000
+
+      - name: Criar tag de release
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const date = new Date().toISOString().slice(0, 10).replace(/-/g, '.')
+            const tag = `prod-${date}-r${{ github.run_number }}`
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: `refs/tags/${tag}`,
+              sha: context.sha,
+            })
+            core.notice(`🏷️  Tag criada: ${tag}`)

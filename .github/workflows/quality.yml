@@ -1,0 +1,34 @@
+name: Quality
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev, main, master]
+  pull_request:
+    branches: [dev, main, master]
+
+jobs:
+  quality:
+    name: Type Check, Lint & Build
+    # Roda no runner da própria VPS
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        run: |
+          command -v pnpm || npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type Check
+        run: pnpm --filter @doit/web exec tsc --noEmit
+
+      - name: Lint
+        run: bash scripts/lint-incremental.sh
+
+      - name: Build
+        run: pnpm --filter @doit/web build

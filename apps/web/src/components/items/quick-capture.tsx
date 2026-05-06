@@ -4,10 +4,13 @@ import { useState, useEffect, useRef } from 'react'
 import { createItem } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
+import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
+import type { Priority } from './priority-select'
 import type { ItemComplexity } from '@doit/types'
 import { COMPLEXITY_LABELS } from '@doit/core'
 
 const COMPLEXITIES: ItemComplexity[] = ['capture', 'task', 'note']
+const PRIORITIES: Priority[] = [1, 2, 3, 4]
 
 export function QuickCapture() {
   const { quickCaptureOpen, setQuickCaptureOpen, setSelectedItemId } = useUI()
@@ -15,6 +18,7 @@ export function QuickCapture() {
   const [title, setTitle] = useState('')
   const [complexity, setComplexity] = useState<ItemComplexity>('capture')
   const [dueDate, setDueDate] = useState('')
+  const [priority, setPriority] = useState<Priority>(4)
   const [saving, setSaving] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -37,6 +41,7 @@ export function QuickCapture() {
       setTitle('')
       setComplexity('capture')
       setDueDate('')
+      setPriority(4)
     }
   }, [quickCaptureOpen])
 
@@ -50,6 +55,7 @@ export function QuickCapture() {
         complexity,
         status: 'inbox',
         dueDate: dueDate || undefined,
+        priority: priority < 4 ? priority : undefined,
       })
       setQuickCaptureOpen(false)
       setSelectedItemId(item.id)
@@ -78,8 +84,8 @@ export function QuickCapture() {
             />
           </div>
 
-          <div className="flex items-center gap-3 px-4 pb-4 border-t border-slate-100 pt-3">
-            {/* Seletor de complexidade */}
+          <div className="flex flex-wrap items-center gap-2 px-4 pb-4 border-t border-slate-100 pt-3">
+            {/* Complexidade */}
             <div className="flex gap-1">
               {COMPLEXITIES.map((c) => (
                 <button
@@ -97,14 +103,44 @@ export function QuickCapture() {
               ))}
             </div>
 
-            {/* Data */}
-            {complexity === 'task' && (
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="text-xs border border-slate-200 rounded-md px-2 py-1 text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
+            {/* Separador */}
+            <span className="text-slate-200 select-none">|</span>
+
+            {/* Prioridade */}
+            <div className="flex gap-1">
+              {PRIORITIES.map((p) => {
+                const cfg = PRIORITY_CONFIG[p]
+                const active = priority === p
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    title={cfg.title}
+                    onClick={() => setPriority(p)}
+                    className={`flex items-center gap-0.5 text-xs px-2 py-1 rounded-full font-semibold transition-colors ${
+                      active
+                        ? `${cfg.bg} text-white`
+                        : `bg-slate-100 ${cfg.color} hover:bg-slate-200`
+                    }`}
+                  >
+                    <PriorityFlag priority={p} size={10} />
+                    {cfg.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Data (só tasks) */}
+            {(complexity === 'task') && (
+              <>
+                <span className="text-slate-200 select-none">|</span>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-md px-2 py-1 text-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+              </>
             )}
 
             <div className="flex-1" />

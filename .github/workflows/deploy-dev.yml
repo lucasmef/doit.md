@@ -1,0 +1,46 @@
+name: Deploy DEV
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality Gate
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @doit/web exec tsc --noEmit
+      - run: bash scripts/lint-incremental.sh
+      - run: pnpm --filter @doit/web build
+
+  security:
+    name: Security Gate
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level high
+
+  deploy:
+    name: Deploy DEV
+    needs: [quality, security]
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout branch dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          clean: true
+
+      - name: Executar script de deploy
+        run: bash scripts/deploy.sh dev 3001

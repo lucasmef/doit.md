@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { UIContext } from './ui'
+import { UIContext } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {

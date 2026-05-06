@@ -8,8 +8,20 @@ import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
 import { StatusSelect } from './status-select'
 import { ItemVersions } from './item-versions'
+import { MarkdownEditor } from './markdown-editor'
+import { PrioritySelect } from './priority-select'
+import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
 import type { ItemComplexity, ItemStatus } from '@doit/types'
+
+function formatDueDate(dateStr: string): string {
+  const today = new Date().toISOString().slice(0, 10)
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  if (dateStr === today) return 'Hoje'
+  if (dateStr === tomorrow) return 'Amanhã'
+  const d = new Date(dateStr + 'T12:00:00')
+  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+}
 
 export function ItemDetail() {
   const { selectedItemId, setSelectedItemId } = useUI()
@@ -22,6 +34,7 @@ export function ItemDetail() {
   const [content, setContent] = useState('')
   const [tags, setTags] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [priority, setPriority] = useState<Priority>(4)
   const [dirty, setDirty] = useState(false)
   const [creatingEvent, setCreatingEvent] = useState(false)
 
@@ -33,6 +46,7 @@ export function ItemDetail() {
       setContent(item.contentMd ?? '')
       setTags(item.tags.join(', '))
       setDueDate(item.dueDate ?? '')
+      setPriority((item.priority as Priority) ?? 4)
       setDirty(false)
     }
   }, [item?.id])
@@ -49,9 +63,9 @@ export function ItemDetail() {
     scheduleAutosave({ title: e.target.value })
   }
 
-  function handleContentChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
-    setContent(e.target.value)
-    scheduleAutosave({ contentMd: e.target.value })
+  function handleContentChange(value: string) {
+    setContent(value)
+    scheduleAutosave({ contentMd: value })
   }
 
   function handleComplexityChange(complexity: ItemComplexity) {
@@ -73,6 +87,12 @@ export function ItemDetail() {
   function handleDueDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     setDueDate(e.target.value)
     scheduleAutosave({ dueDate: e.target.value || undefined })
+  }
+
+  function handlePriorityChange(p: Priority) {
+    setPriority(p)
+    if (!selectedItemId) return
+    updateItem(selectedItemId, { priority: p === 4 ? undefined : p })
   }
 
   function handleProjectChange(projectId: string) {
@@ -123,16 +143,23 @@ export function ItemDetail() {
 
   if (isLoading || !item) {
     return (
-      <div className="w-80 xl:w-96 shrink-0 hidden lg:block border-l border-slate-200 p-6">
-        <div className="h-6 bg-slate-100 rounded animate-pulse mb-4 w-3/4" />
-        <div className="h-4 bg-slate-100 rounded animate-pulse mb-2" />
-        <div className="h-4 bg-slate-100 rounded animate-pulse w-2/3" />
-      </div>
+      <>
+        {/* Mobile overlay backdrop */}
+        <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSelectedItemId(null)} />
+        <div className="fixed bottom-0 left-0 right-0 z-50 lg:static w-full lg:w-80 xl:w-96 lg:shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-slate-200 p-6 bg-white lg:bg-surface-window rounded-t-2xl lg:rounded-none max-h-[85dvh] lg:max-h-none">
+          <div className="h-6 bg-slate-100 rounded animate-pulse mb-4 w-3/4" />
+          <div className="h-4 bg-slate-100 rounded animate-pulse mb-2" />
+          <div className="h-4 bg-slate-100 rounded animate-pulse w-2/3" />
+        </div>
+      </>
     )
   }
 
   return (
-    <aside className="w-[380px] xl:w-[420px] shrink-0 hidden lg:flex flex-col border-l border-ui-border overflow-y-auto bg-surface-window">
+    <>
+      {/* Mobile overlay backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/30 lg:hidden" onClick={() => setSelectedItemId(null)} />
+      <aside className="fixed bottom-0 left-0 right-0 z-50 lg:static w-full lg:w-[380px] xl:w-[420px] lg:shrink-0 flex flex-col border-t lg:border-t-0 lg:border-l border-ui-border overflow-y-auto bg-white lg:bg-surface-window rounded-t-2xl lg:rounded-none max-h-[85dvh] lg:max-h-none">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 shrink-0">
         <span className="text-xs text-slate-400">{dirty ? 'Salvando...' : 'Salvo'}</span>
@@ -164,6 +191,12 @@ export function ItemDetail() {
             <StatusSelect value={item.status} onChange={handleStatusChange} />
           </div>
 
+          {/* Prioridade */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
+            <PrioritySelect value={priority} onChange={handlePriorityChange} />
+          </div>
+
           {/* Complexidade */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-slate-500">Complexidade</label>
@@ -173,12 +206,21 @@ export function ItemDetail() {
           {/* Prazo */}
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-medium text-slate-500">Data</label>
-            <input
-              type="date"
-              value={dueDate}
-              onChange={handleDueDateChange}
-              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-            />
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={dueDate}
+                onChange={handleDueDateChange}
+                className="flex-1 text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-surface-soft text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+              />
+              {dueDate && (
+                <span className={`text-[13px] font-medium shrink-0 ${
+                  dueDate < new Date().toISOString().slice(0, 10) ? 'text-red-500' : 'text-brand-600'
+                }`}>
+                  {formatDueDate(dueDate)}
+                </span>
+              )}
+            </div>
             {dueDate && (
               <button
                 onClick={handleCreateCalendarEvent}
@@ -243,13 +285,7 @@ export function ItemDetail() {
         {/* Editor Markdown */}
         <div>
           <label className="text-xs text-slate-400 font-medium block mb-2">Conteúdo</label>
-          <textarea
-            value={content}
-            onChange={handleContentChange}
-            placeholder="Escreva em Markdown..."
-            rows={14}
-            className="w-full text-sm font-mono text-slate-700 border border-slate-200 rounded-lg px-3 py-2.5 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 leading-relaxed"
-          />
+          <MarkdownEditor value={content} onChange={handleContentChange} />
         </div>
 
         {/* Histórico de versões */}
@@ -265,5 +301,6 @@ export function ItemDetail() {
         </div>
       </div>
     </aside>
+    </>
   )
 }

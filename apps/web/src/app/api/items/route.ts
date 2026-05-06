@@ -2,8 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { ItemModel } from '@doit/db'
 import { newItemId } from '@doit/core'
-import type { CreateItemInput } from '@doit/types'
+import type { CreateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
+
+function mapDocToItem(doc: any): Item {
+  const { _id, ...rest } = doc
+  return { id: _id, ...rest }
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,7 +27,7 @@ export async function GET(req: NextRequest) {
 
     const items = await ItemModel.find(query).sort({ updatedAt: -1 }).lean()
 
-    return NextResponse.json({ items })
+    return NextResponse.json({ items: items.map(mapDocToItem) })
   } catch (err) {
     console.error('[GET /api/items]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
@@ -62,7 +67,7 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
     })
 
-    return NextResponse.json({ item }, { status: 201 })
+    return NextResponse.json({ item: mapDocToItem(item.toObject()) }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/items]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

@@ -1,0 +1,48 @@
+name: Security
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev, main, master]
+  pull_request:
+    branches: [dev, main, master]
+  schedule:
+    # Toda segunda às 08:00 UTC
+    - cron: '0 8 * * 1'
+
+jobs:
+  audit:
+    name: Dependency Audit
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        run: |
+          command -v pnpm || npm install -g pnpm@9
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Audit (high severity)
+        run: pnpm audit --audit-level high
+
+  scan-secrets:
+    name: Secret Scan
+    # TruffleHog pode rodar no runner da VPS sem secrets externos
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          extra_args: --only-verified

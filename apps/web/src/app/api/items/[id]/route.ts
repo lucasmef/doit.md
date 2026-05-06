@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@clerk/nextjs/server'
 import { ItemModel } from '@doit/db'
-import type { UpdateItemInput } from '@doit/types'
+import type { UpdateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
 type Params = { params: Promise<{ id: string }> }
+
+function mapDocToItem(doc: any): Item {
+  const { _id, ...rest } = doc
+  return { id: _id, ...rest }
+}
 
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
@@ -17,7 +22,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
     const item = await ItemModel.findOne({ _id: id, userId }).lean()
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    return NextResponse.json({ item })
+    return NextResponse.json({ item: mapDocToItem(item) })
   } catch (err) {
     console.error('[GET /api/items/:id]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
@@ -41,7 +46,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    return NextResponse.json({ item })
+    return NextResponse.json({ item: mapDocToItem(item) })
   } catch (err) {
     console.error('[PATCH /api/items/:id]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
