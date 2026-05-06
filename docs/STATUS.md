@@ -9,7 +9,7 @@
 
 | Fase | Descrição | Status |
 |------|-----------|--------|
-| 0 | Setup: monorepo, packages, Tailwind, Clerk | ✅ Completo |
+| 0 | Setup: monorepo, packages, Tailwind, NextAuth | ✅ Completo |
 | 1 | Core CRUD: Items, Projects, Areas | ✅ Completo |
 | 2 | UI completa: layout, views, componentes | ✅ Completo |
 | 3 | Sync Agent CLI + Auditoria | ✅ Completo |
@@ -27,8 +27,8 @@
 - [x] `packages/types` — tipos Item, Project, Area, CalendarEvent, Audit
 - [x] `packages/core` — `generateId()`, `isToday()`, `isOverdue()`, labels
 - [x] Tailwind com cores customizadas (brand, surface) e animações (slide-up, fade-in)
-- [x] Clerk middleware protegendo todas as rotas não-públicas
-- [x] Layout raiz com `ClerkProvider` e PWA metadata
+- [x] NextAuth middleware protegendo todas as rotas não-públicas
+- [x] Layout raiz com PWA metadata
 
 ### Fase 1 — Core CRUD
 - [x] `packages/db` — connection singleton, todos os schemas Mongoose
@@ -119,13 +119,13 @@
 
 - [ ] Criar `apps/web/.env.local` com todas as variáveis de ambiente
   - `MONGODB_URI`
-  - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
-  - `CLERK_SECRET_KEY`
+  - `NEXTAUTH_SECRET`
+  - `NEXTAUTH_URL`
   - `GOOGLE_CLIENT_ID`
   - `GOOGLE_CLIENT_SECRET`
   - `GOOGLE_REDIRECT_URI`
 - [ ] Criar projeto no MongoDB Atlas e obter connection string
-- [ ] Criar aplicação no Clerk e obter chaves
+- [x] Login local via NextAuth Credentials
 - [ ] Criar projeto no Google Cloud Console, habilitar Calendar API, obter credenciais OAuth2
 - [ ] Rodar `pnpm install` e `pnpm --filter @doit/web dev` para validar
 

@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from 'next'
-import { ClerkProvider } from '@clerk/nextjs'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import './globals.css'
 
@@ -24,13 +23,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="pt-BR">
-        <body className="bg-surface text-slate-900 antialiased">
-          {children}
-          <ServiceWorkerRegister />
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="pt-BR">
+      <body className="bg-surface text-slate-900 antialiased">
+        {children}
+        <ServiceWorkerRegister />
+      </body>
+    </html>
   )
 }

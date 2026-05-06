@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth'
 import { ItemModel } from '@doit/db'
 import { newItemId } from '@doit/core'
 import type { CreateItemInput, Item } from '@doit/types'

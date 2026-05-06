@@ -9,7 +9,11 @@
   },
   "dependencies": {
     "@doit/types": "workspace:*",
-    "aws4": "^1.13.2",
-    "mongoose": "^8.5.0"
+    "better-sqlite3": "^12.9.0",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/pg": "^8.20.0"
   }
 }

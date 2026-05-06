@@ -50,7 +50,7 @@ Os valores reais ficam fora do repositorio:
 /srv/doit/dev/doit-config/web.env
 ```
 
-Use `infra/env/web.env.example` como referencia. Nao commitar valores reais de `MONGODB_URI`, Clerk ou Google OAuth.
+Use `infra/env/web.env.example` como referencia. Nao commitar valores reais de `DATABASE_URL`, `NEXTAUTH_SECRET` ou Google OAuth.
 
 ## Systemd
 

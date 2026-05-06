@@ -22,7 +22,7 @@ Este setup assume que o Doit vai rodar no mesmo VPS do Salomao.
 
 ## Dependencias
 
-O servidor precisa de Node.js, pnpm, rsync, Nginx, Certbot e systemd.
+O servidor precisa de Node.js, pnpm, rsync, Nginx, Certbot, PostgreSQL client/libs e systemd.
 
 ```bash
 command -v node
@@ -30,6 +30,7 @@ command -v pnpm
 command -v rsync
 command -v nginx
 command -v certbot
+command -v psql
 ```
 
 ## Arquivos de ambiente
@@ -46,9 +47,9 @@ sudo install -m 600 -o salomao -g salomao infra/env/web.env.example /srv/doit/de
 Depois preencher os valores reais no VPS:
 
 ```text
-MONGODB_URI
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-CLERK_SECRET_KEY
+DATABASE_URL
+NEXTAUTH_SECRET
+NEXTAUTH_URL
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI

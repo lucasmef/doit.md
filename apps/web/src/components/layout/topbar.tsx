@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { UserButton } from '@clerk/nextjs'
 import { useUI } from '@/store/ui'
 import useSWR from 'swr'
 import type { Item } from '@doit/types'
+import { SignOutButton } from '@/components/auth/sign-out-button'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -94,7 +94,7 @@ export function Topbar() {
           + Novo
           <span className="ml-2 text-[10px] opacity-60 hidden sm:inline">⌘K</span>
         </button>
-        <UserButton />
+        <SignOutButton />
       </div>
     </header>
   )

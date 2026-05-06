@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth'
 import { CalendarEventModel, GoogleAccountModel, ItemModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 import { getCalendarClient, refreshAccessToken } from '@/lib/google'

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth'
 import { AreaModel } from '@doit/db'
 import { newAreaId } from '@doit/core'
 import type { CreateAreaInput } from '@doit/types'

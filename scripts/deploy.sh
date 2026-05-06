@@ -180,9 +180,9 @@ require_file "$APP_DIR/package.json" "repository package.json"
 require_file "$APP_DIR/apps/web/package.json" "web package.json"
 require_file "$ENV_FILE" "runtime env file"
 
-require_env_key MONGODB_URI
-require_env_key NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-require_env_key CLERK_SECRET_KEY
+require_env_key DATABASE_URL
+require_env_key NEXTAUTH_SECRET
+require_env_key NEXTAUTH_URL
 require_env_key GOOGLE_REDIRECT_URI
 
 echo "======================================================"

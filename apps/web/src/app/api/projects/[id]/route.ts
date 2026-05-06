@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/lib/auth'
 import { ProjectModel } from '@doit/db'
 import type { UpdateProjectInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'

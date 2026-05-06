@@ -4,8 +4,8 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "pnpm --filter web dev",
-    "build": "pnpm --filter web build",
+    "dev": "pnpm --filter @doit/web dev",
+    "build": "pnpm --filter @doit/web build",
     "lint": "pnpm -r lint",
     "type-check": "pnpm -r type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\" --ignore-path .gitignore"

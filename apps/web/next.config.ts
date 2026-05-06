@@ -2,7 +2,7 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['mongoose', 'mongodb'],
+  serverExternalPackages: ['better-sqlite3', 'pg'],
   transpilePackages: ['@doit/core', '@doit/types', '@doit/db', '@doit/sync', '@doit/ui'],
 }
 

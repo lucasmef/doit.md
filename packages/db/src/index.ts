@@ -1,9 +1,46 @@
+import { SqlModel } from './model'
+
 export { connectDB } from './connection'
-export { ItemModel } from './schemas/item.schema'
-export { ProjectModel } from './schemas/project.schema'
-export { AreaModel } from './schemas/area.schema'
-export { CalendarEventModel } from './schemas/calendar-event.schema'
-export { AuditLogModel } from './schemas/audit-log.schema'
-export { PendingChangeModel } from './schemas/pending-change.schema'
-export { ItemVersionModel } from './schemas/item-version.schema'
-export { GoogleAccountModel } from './schemas/google-account.schema'
+
+export const ItemModel = new SqlModel({
+  table: 'items',
+  jsonFields: ['tags', 'backlinks'],
+})
+
+export const ProjectModel = new SqlModel({
+  table: 'projects',
+})
+
+export const AreaModel = new SqlModel({
+  table: 'areas',
+})
+
+export const CalendarEventModel = new SqlModel({
+  table: 'calendar_events',
+  jsonFields: ['linkedItemIds'],
+  booleanFields: ['allDay'],
+})
+
+export const AuditLogModel = new SqlModel({
+  table: 'audit_logs',
+  jsonFields: ['fieldChanges'],
+})
+
+export const PendingChangeModel = new SqlModel({
+  table: 'pending_changes',
+  jsonFields: ['frontmatterChanges'],
+  booleanFields: ['approved'],
+})
+
+export const ItemVersionModel = new SqlModel({
+  table: 'item_versions',
+  jsonFields: ['snapshotData'],
+})
+
+export const GoogleAccountModel = new SqlModel({
+  table: 'google_accounts',
+})
+
+export const UserModel = new SqlModel({
+  table: 'users',
+})

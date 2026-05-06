@@ -4,6 +4,7 @@ RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 # ── deps: instala apenas dependências de produção ──────────────────────────────
 FROM base AS deps
 WORKDIR /app
+RUN apk add --no-cache python3 make g++ sqlite-libs
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
@@ -24,15 +25,12 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY . .
 
-# Variáveis necessárias apenas para o build (Clerk exige NEXT_PUBLIC_ em build time)
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-
 RUN pnpm --filter @doit/web build
 
 # ── runner: imagem final mínima ────────────────────────────────────────────────
 FROM node:22-alpine AS runner
 WORKDIR /app
+RUN apk add --no-cache sqlite-libs libstdc++
 
 ENV NODE_ENV=production
 ENV PORT=3000

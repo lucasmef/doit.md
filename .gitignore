@@ -9,3 +9,7 @@ build
 .turbo
 .vercel
 coverage
+.data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

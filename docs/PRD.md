@@ -47,7 +47,7 @@ capture → task → project → area
 - `dueDate` — ISO date (YYYY-MM-DD)
 - `tags` — array de strings
 - `projectId` / `areaId` — referência
-- `userId` — Clerk user ID
+- `userId` — ID local do usuario autenticado
 - `createdAt` / `updatedAt`
 
 ---
@@ -102,7 +102,7 @@ capture → task → project → area
 
 ### Stack
 - **Frontend:** Next.js 15 App Router, React 19, Tailwind CSS v3, SWR
-- **Auth:** Clerk
+- **Auth:** NextAuth com Credentials
 - **Database:** MongoDB Atlas via Mongoose
 - **Monorepo:** pnpm workspaces
 - **CLI:** Node.js ESM, commander, ora, chalk, conf
@@ -133,7 +133,7 @@ packages/
 ## 5. Fases de Desenvolvimento
 
 ### Fase 0 — Setup ✅
-Monorepo, packages base, TypeScript, Tailwind, Clerk, variáveis de ambiente
+Monorepo, packages base, TypeScript, Tailwind, NextAuth, variáveis de ambiente
 
 ### Fase 1 — Core CRUD ✅
 Schemas Mongoose, API REST para Items/Projects/Areas, hooks SWR, páginas base

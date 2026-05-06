@@ -10,14 +10,15 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.0.0",
     "@doit/core": "workspace:*",
     "@doit/db": "workspace:*",
     "@doit/sync": "workspace:*",
     "@doit/types": "workspace:*",
     "@doit/ui": "workspace:*",
+    "bcryptjs": "^3.0.3",
     "googleapis": "^171.4.0",
     "next": "^15.3.0",
+    "next-auth": "^4.24.14",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
