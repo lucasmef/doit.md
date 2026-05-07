@@ -107,7 +107,11 @@ ensure_dev_default_url_env() {
     return
   fi
 
-  local dev_url="${DOIT_DEV_PUBLIC_URL:-https://salomao-vps.tail2033b8.ts.net:8444}"
+  local dev_url="${DOIT_DEV_PUBLIC_URL:-}"
+  if [[ -z "$dev_url" ]]; then
+    echo "DOIT_DEV_PUBLIC_URL is required for dev deploy when NEXTAUTH_URL or GOOGLE_REDIRECT_URI are missing."
+    exit 1
+  fi
 
   if [[ -z "$(read_env_value NEXTAUTH_URL)" ]]; then
     echo "NEXTAUTH_URL missing in dev env; using $dev_url."

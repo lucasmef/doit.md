@@ -13,3 +13,11 @@ coverage
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.db
+*.tsbuildinfo
+.claude/
+.agents/
+.doitmd/
+brain/
+replace*.js
+get-docker.sh

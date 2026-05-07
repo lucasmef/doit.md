@@ -16,7 +16,7 @@ Nao usar o `docker-compose.yml` para producao neste VPS compartilhado, porque el
 O ambiente dev nao deve ter dominio publico. O acesso esperado e via Tailscale, por exemplo:
 
 ```text
-https://salomao-vps.tail2033b8.ts.net:8444
+https://TAILSCALE_HOST:8444
 ```
 
 ## Fluxo

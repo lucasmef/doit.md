@@ -77,6 +77,10 @@ sudo nginx -t
 Dev privado via Tailscale:
 
 ```bash
+export TAILSCALE_HOST=seu-host.example.invalid
+export TAILSCALE_IPV4=100.x.y.z
+export TAILSCALE_IPV6=fd7a:...
+export TAILSCALE_ALLOWED_CIDR=<tailscale-allowed-cidr>
 sudo install -m 644 infra/nginx/sites-available/doit-dev-tailscale.conf /etc/nginx/sites-available/doit-dev-tailscale
 sudo ln -s /etc/nginx/sites-available/doit-dev-tailscale /etc/nginx/sites-enabled/doit-dev-tailscale
 sudo nginx -t
@@ -94,7 +98,7 @@ sudo ufw allow in on tailscale0 to any port 8444 proto tcp
 ```bash
 curl --fail http://127.0.0.1:8110/api/health
 curl --fail http://127.0.0.1:8111/api/health
-curl --fail https://salomao-vps.tail2033b8.ts.net:8444/api/health
+curl --fail https://TAILSCALE_HOST:8444/api/health
 ```
 
 ## Rollback

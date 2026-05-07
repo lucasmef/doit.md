@@ -5,9 +5,10 @@
 set -euo pipefail
 
 DOIT_PUBLIC_DOMAIN="${1:?Usage: bash infra/setup-vps.sh <doit-public-domain>}"
-TAILSCALE_HOST="${TAILSCALE_HOST:-salomao-vps.tail2033b8.ts.net}"
-TAILSCALE_IPV4="${TAILSCALE_IPV4:-100.81.12.64}"
-TAILSCALE_IPV6="${TAILSCALE_IPV6:-fd7a:115c:a1e0::6236:c40}"
+TAILSCALE_HOST="${TAILSCALE_HOST:?Set TAILSCALE_HOST before running setup}"
+TAILSCALE_IPV4="${TAILSCALE_IPV4:?Set TAILSCALE_IPV4 before running setup}"
+TAILSCALE_IPV6="${TAILSCALE_IPV6:?Set TAILSCALE_IPV6 before running setup}"
+TAILSCALE_ALLOWED_CIDR="${TAILSCALE_ALLOWED_CIDR:?Set TAILSCALE_ALLOWED_CIDR before running setup}"
 
 require_command() {
   local command_name="$1"
@@ -53,9 +54,10 @@ tmp_prod="$(mktemp)"
 tmp_dev="$(mktemp)"
 sed "s/DOIT_PUBLIC_DOMAIN/$DOIT_PUBLIC_DOMAIN/g" infra/nginx/sites-available/doit.conf > "$tmp_prod"
 sed \
-  -e "s/salomao-vps.tail2033b8.ts.net/$TAILSCALE_HOST/g" \
-  -e "s/100.81.12.64/$TAILSCALE_IPV4/g" \
-  -e "s/fd7a:115c:a1e0::6236:c40/$TAILSCALE_IPV6/g" \
+  -e "s/TAILSCALE_HOST/$TAILSCALE_HOST/g" \
+  -e "s/TAILSCALE_IPV4/$TAILSCALE_IPV4/g" \
+  -e "s/TAILSCALE_IPV6/$TAILSCALE_IPV6/g" \
+  -e "s|TAILSCALE_ALLOWED_CIDR|$TAILSCALE_ALLOWED_CIDR|g" \
   infra/nginx/sites-available/doit-dev-tailscale.conf > "$tmp_dev"
 sudo install -m 644 "$tmp_prod" /etc/nginx/sites-available/doit
 sudo install -m 644 "$tmp_dev" /etc/nginx/sites-available/doit-dev-tailscale
