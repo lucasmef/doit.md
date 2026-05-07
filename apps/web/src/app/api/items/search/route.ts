@@ -18,7 +18,12 @@ export async function GET(req: Request) {
     const items = await ItemModel.find({
       userId,
       status: { $ne: 'archived' },
-      title: { $regex: q, $options: 'i' }
+      deletedAt: null,
+      $or: [
+        { title: { $regex: q, $options: 'i' } },
+        { contentMd: { $regex: q, $options: 'i' } },
+        { tags: { $regex: q, $options: 'i' } },
+      ],
     })
       .sort({ updatedAt: -1 })
       .limit(10)

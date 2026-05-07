@@ -19,6 +19,11 @@ function validateItemInput(input: Pick<CreateItemInput, 'complexity'> & Partial<
   return null
 }
 
+function titleFromNoteContent(contentMd: string | undefined) {
+  const firstLine = contentMd?.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
+  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
@@ -29,10 +34,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const projectId = searchParams.get('projectId')
+    const q = searchParams.get('q')?.trim()
 
-    const query: Record<string, unknown> = { userId, deletedAt: null }
-    if (status) query['status'] = status
+    const query: Record<string, unknown> = { userId }
+    if (status === 'archived') query['status'] = 'archived'
+    else if (status === 'closed') query['status'] = { $in: ['done', 'archived'] }
+    else {
+      query['deletedAt'] = null
+      if (status) query['status'] = status
+    }
     if (projectId) query['projectId'] = projectId
+    if (q) {
+      query['$or'] = [
+        { title: { $regex: q, $options: 'i' } },
+        { contentMd: { $regex: q, $options: 'i' } },
+        { tags: { $regex: q, $options: 'i' } },
+      ]
+    }
 
     const items = await ItemModel.find(query).sort({ updatedAt: -1 }).lean()
 
@@ -51,7 +69,9 @@ export async function POST(req: NextRequest) {
     await ensureDB()
 
     const body = (await req.json()) as CreateItemInput
-    if (!body.title?.trim()) {
+    const complexity = body.complexity ?? 'task'
+    const title = complexity === 'note' ? titleFromNoteContent(body.contentMd) : body.title?.trim()
+    if (!title) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })
     }
     const validationError = validateItemInput(body)
@@ -60,19 +80,20 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString()
-    const complexity = body.complexity ?? 'task'
     const hasInboxContext = !body.projectId && !body.dueDate && !body.scheduledDate
 
     const item = await ItemModel.create({
       _id: newItemId(),
       userId,
-      title: body.title.trim(),
+      title,
       complexity,
       status: body.status ?? (hasInboxContext ? 'inbox' : 'todo'),
       tags: body.tags ?? [],
       backlinks: [],
       priority: complexity === 'note' ? undefined : body.priority,
       dueDate: body.dueDate,
+      dueTime: complexity === 'note' ? undefined : body.dueTime,
+      recurrence: complexity === 'note' ? undefined : body.recurrence,
       startDate: body.startDate,
       scheduledDate: body.scheduledDate,
       projectId: body.projectId,

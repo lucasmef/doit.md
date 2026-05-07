@@ -14,10 +14,11 @@ async function readError(res: Response, fallback: string) {
   }
 }
 
-export function useItems(params?: { status?: string; projectId?: string }) {
+export function useItems(params?: { status?: string; projectId?: string; q?: string }) {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.projectId) query.set('projectId', params.projectId)
+  if (params?.q) query.set('q', params.q)
   const url = `/api/items${query.size ? '?' + query.toString() : ''}`
 
   const { data, error, isLoading } = useSWR<{ items: Item[] }>(url, fetcher)

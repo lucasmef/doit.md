@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Item } from '@doit/types'
+import type { Item, ItemRecurrence } from '@doit/types'
 import { ComplexityBadge } from './complexity-badge'
 import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
 import type { Priority } from './priority-select'
@@ -17,6 +17,52 @@ function formatDueDate(dateStr: string): string {
   return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
 }
 
+function formatDue(item: Item): string {
+  const date = item.dueDate ? formatDueDate(item.dueDate) : ''
+  if (!item.dueTime) return date
+  return date ? `${date} ${item.dueTime}` : item.dueTime
+}
+
+const RECURRENCE_LABELS: Record<ItemRecurrence, string> = {
+  daily: 'Todo dia',
+  weekdays: 'Dias úteis',
+  weekly: 'Toda semana',
+  monthly: 'Todo mês',
+  yearly: 'Todo ano',
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
+function toDateString(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function nextRecurringDate(current: string | undefined, recurrence: ItemRecurrence): string {
+  const today = new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00`)
+  const base = current ? new Date(`${current}T12:00:00`) : today
+  if (base < today) base.setTime(today.getTime())
+
+  if (recurrence === 'daily') return toDateString(addDays(base, 1))
+  if (recurrence === 'weekdays') {
+    let next = addDays(base, 1)
+    while (next.getDay() === 0 || next.getDay() === 6) next = addDays(next, 1)
+    return toDateString(next)
+  }
+  if (recurrence === 'weekly') return toDateString(addDays(base, 7))
+  if (recurrence === 'monthly') {
+    const next = new Date(base)
+    next.setMonth(next.getMonth() + 1)
+    return toDateString(next)
+  }
+  const next = new Date(base)
+  next.setFullYear(next.getFullYear() + 1)
+  return toDateString(next)
+}
+
 type Props = {
   item: Item
   active?: boolean
@@ -29,6 +75,21 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
 
   async function toggleDone(e: React.MouseEvent) {
     e.stopPropagation()
+    if (item.status === 'archived') {
+      await updateItem(item.id, { status: 'todo' })
+      return
+    }
+
+    if (item.status !== 'done' && item.recurrence) {
+      setJustCompleted(true)
+      setTimeout(() => setJustCompleted(false), 600)
+      await updateItem(item.id, {
+        status: 'todo',
+        dueDate: nextRecurringDate(item.dueDate, item.recurrence),
+      })
+      return
+    }
+
     const next = item.status === 'done' ? 'todo' : 'done'
     if (next === 'done') {
       setJustCompleted(true)
@@ -48,6 +109,8 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
   const priorityCfg = PRIORITY_CONFIG[p]
   const checkboxBorder = item.status === 'done'
     ? 'border-slate-400'
+    : item.status === 'archived'
+    ? 'border-slate-300'
     : p < 4
     ? priorityCfg.border
     : 'border-[#b0a79d]'
@@ -117,7 +180,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
         <div className="flex items-center gap-1.5 mt-1">
           {item.dueDate && (
             <span className={`text-[12px] font-medium ${overdue ? 'text-red-500' : item.dueDate === today ? 'text-green-600' : 'text-slate-500'}`}>
-              {overdue ? `Atrasado · ${formatDueDate(item.dueDate)}` : formatDueDate(item.dueDate)}
+              {overdue ? `Atrasado · ${formatDue(item)}` : formatDue(item)}
             </span>
           )}
           {item.dueDate && item.tags.length > 0 && (
@@ -128,13 +191,32 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
               {item.tags.slice(0, 3).join(', ')}
             </span>
           )}
+          {(item.dueDate || item.tags.length > 0) && item.recurrence && (
+            <span className="text-slate-300">·</span>
+          )}
+          {item.recurrence && (
+            <span className="text-[12px] text-slate-400 truncate">
+              {RECURRENCE_LABELS[item.recurrence]}
+            </span>
+          )}
         </div>
       </div>
       
-      <div className="shrink-0">
-        <ComplexityBadge complexity={item.complexity} />
-      </div>
+      {item.complexity !== 'task' && item.complexity !== 'capture' && (
+        <div className="shrink-0">
+          <ComplexityBadge complexity={item.complexity} />
+        </div>
+      )}
+
+      {item.status === 'archived' && (
+        <button
+          type="button"
+          onClick={toggleDone}
+          className="shrink-0 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 py-1 text-[12px] font-medium text-slate-500 hover:bg-white hover:text-brand-700"
+        >
+          Restaurar
+        </button>
+      )}
     </div>
   )
 }
-

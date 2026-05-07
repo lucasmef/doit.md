@@ -17,6 +17,11 @@ function validateItemState() {
   return null
 }
 
+function titleFromNoteContent(contentMd: string | undefined) {
+  const firstLine = contentMd?.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
+  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+}
+
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const { userId } = await auth()
@@ -49,6 +54,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const merged = { ...mapDocToItem(current), ...body }
     if (merged.complexity === 'note') {
       merged.priority = undefined
+      merged.recurrence = undefined
+      merged.dueTime = undefined
+      const title = titleFromNoteContent(merged.contentMd)
+      if (title) merged.title = title
     }
 
     const validationError = validateItemState()
@@ -59,8 +68,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const item = await ItemModel.findOneAndUpdate(
       { _id: id, userId },
       {
-        $set: { ...body, updatedAt: new Date().toISOString() },
-        ...(merged.complexity === 'note' ? { $unset: { priority: '' } } : {}),
+        $set: {
+          ...body,
+          ...(merged.complexity === 'note' ? { title: merged.title } : {}),
+          ...(body.status && body.status !== 'archived' ? { deletedAt: null } : {}),
+          updatedAt: new Date().toISOString(),
+        },
+        ...(merged.complexity === 'note' ? { $unset: { priority: '', recurrence: '', dueTime: '' } } : {}),
       },
       { new: true },
     ).lean()

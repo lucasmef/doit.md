@@ -43,5 +43,7 @@ export const EDITABLE_BY_AI_FIELDS = [
   'areaId',
   'tags',
   'dueDate',
+  'dueTime',
+  'recurrence',
   'localPath',
 ] as const

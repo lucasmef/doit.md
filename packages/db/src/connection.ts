@@ -1,7 +1,23 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import Database from 'better-sqlite3'
+import type Database from 'better-sqlite3'
 import pg from 'pg'
+
+function loadSqliteDatabase(): typeof Database {
+  const module = (
+    process as typeof process & { getBuiltinModule?: (id: 'module') => typeof import('node:module') }
+  ).getBuiltinModule?.('module')
+  if (!module) throw new Error('Node module loader is unavailable')
+
+  const requirePaths = [
+    path.resolve(process.cwd(), 'packages/db/package.json'),
+    path.resolve(process.cwd(), '../../packages/db/package.json'),
+    path.resolve(process.cwd(), 'package.json'),
+  ]
+  const requirePath = requirePaths.find((candidate) => fs.existsSync(candidate)) ?? path.resolve(process.cwd(), 'package.json')
+  const requireFromDb = module.createRequire(requirePath)
+  return requireFromDb('better-sqlite3') as typeof Database
+}
 
 type SqliteClient = {
   kind: 'sqlite'
@@ -42,7 +58,7 @@ export function getClient(): DBClient {
   fs.mkdirSync(path.dirname(sqlitePath), { recursive: true })
   client = {
     kind: 'sqlite',
-    db: new Database(sqlitePath),
+    db: new (loadSqliteDatabase())(sqlitePath),
   }
   client.db.pragma('journal_mode = WAL')
   client.db.pragma('foreign_keys = ON')
@@ -60,9 +76,13 @@ async function migrate(db: DBClient): Promise<void> {
   const statements = db.kind === 'postgres' ? postgresSchema : sqliteSchema
   if (db.kind === 'postgres') {
     for (const sql of statements) await db.pool.query(sql)
+    await ensureColumn(db, 'items', 'recurrence', 'TEXT')
+    await ensureColumn(db, 'items', 'dueTime', 'TEXT')
     return
   }
   for (const sql of statements) db.db.exec(sql)
+  await ensureColumn(db, 'items', 'recurrence', 'TEXT')
+  await ensureColumn(db, 'items', 'dueTime', 'TEXT')
 }
 
 const sqliteSchema = [
@@ -75,6 +95,8 @@ const sqliteSchema = [
     status TEXT NOT NULL,
     priority INTEGER,
     dueDate TEXT,
+    dueTime TEXT,
+    recurrence TEXT,
     startDate TEXT,
     scheduledDate TEXT,
     projectId TEXT,
@@ -208,6 +230,8 @@ const postgresIdentifiers = [
   'localPathBefore',
   'localPathAfter',
   'scheduledDate',
+  'recurrence',
+  'dueTime',
   'googleEventId',
   'refreshToken',
   'snapshotData',
@@ -242,3 +266,19 @@ const postgresSchema = sqliteSchema.map((sql) => {
   }
   return out
 })
+
+async function ensureColumn(db: DBClient, table: string, column: string, definition: string): Promise<void> {
+  if (db.kind === 'postgres') {
+    const result = await db.pool.query(
+      `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+      [table, column],
+    )
+    if (result.rowCount === 0) await db.pool.query(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`)
+    return
+  }
+
+  const rows = db.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  if (!rows.some((row) => row.name === column)) {
+    db.db.prepare(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`).run()
+  }
+}

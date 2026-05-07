@@ -25,11 +25,11 @@ const TABS = [
   },
   { href: '#capture', label: 'Novo', icon: null },
   {
-    href: '/calendar',
-    label: 'Calendário',
+    href: '/archive',
+    label: 'Arquivo',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 8h14M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm3 8h4" />
       </svg>
     ),
   },
@@ -46,7 +46,7 @@ const TABS = [
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { setQuickCaptureOpen, calendarOpen, setCalendarOpen } = useUI()
+  const { setQuickCaptureOpen } = useUI()
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 flex items-center safe-area-bottom">
@@ -63,21 +63,6 @@ export function BottomNav() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-            </button>
-          )
-        }
-
-        if (tab.href === '/calendar') {
-          return (
-            <button
-              key="calendar"
-              onClick={() => setCalendarOpen(!calendarOpen)}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${
-                calendarOpen ? 'text-brand-600' : 'text-slate-400'
-              }`}
-            >
-              {tab.icon}
-              <span className="text-[9px] font-medium">{tab.label}</span>
             </button>
           )
         }

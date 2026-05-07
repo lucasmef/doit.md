@@ -1,6 +1,7 @@
 export type ItemComplexity = 'capture' | 'task' | 'note' | 'project' | 'document'
 
 export type ItemStatus = 'inbox' | 'todo' | 'doing' | 'waiting' | 'done' | 'archived'
+export type ItemRecurrence = 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'yearly'
 
 export type Item = {
   id: string
@@ -15,6 +16,8 @@ export type Item = {
   priority?: 1 | 2 | 3 | 4
 
   dueDate?: string
+  dueTime?: string
+  recurrence?: ItemRecurrence
   startDate?: string
   scheduledDate?: string
 
@@ -44,6 +47,8 @@ export type CreateItemInput = Pick<Item, 'title' | 'complexity'> &
       | 'status'
       | 'priority'
       | 'dueDate'
+      | 'dueTime'
+      | 'recurrence'
       | 'startDate'
       | 'scheduledDate'
       | 'projectId'
@@ -62,6 +67,8 @@ export type UpdateItemInput = Partial<
     | 'status'
     | 'priority'
     | 'dueDate'
+    | 'dueTime'
+    | 'recurrence'
     | 'startDate'
     | 'scheduledDate'
     | 'projectId'

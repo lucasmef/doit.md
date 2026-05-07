@@ -9,11 +9,10 @@ const TOP_NAV = [
   { href: '/inbox', label: 'Inbox' },
   { href: '/today', label: 'Hoje' },
   { href: '/upcoming', label: 'Proximos' },
-  { href: '/tags', label: 'Tags' },
+  { href: '/archive', label: 'Concluidos e arquivados' },
 ]
 
 const BOTTOM_NAV = [
-  { href: '/areas', label: 'Areas' },
   { href: '/audit', label: 'Auditoria' },
   { href: '/settings', label: 'Configuracoes' },
 ]

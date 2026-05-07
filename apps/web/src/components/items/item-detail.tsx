@@ -1,18 +1,32 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { useItem, updateItem, archiveItem } from '@/hooks/use-items'
-import { useProjects } from '@/hooks/use-projects'
-import { useAreas } from '@/hooks/use-areas'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { useItem, updateItem, archiveItem, useItems } from '@/hooks/use-items'
+import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
 import { StatusSelect } from './status-select'
 import { ItemVersions } from './item-versions'
 import { MarkdownEditor } from './markdown-editor'
-import { PrioritySelect } from './priority-select'
+import { PRIORITY_CONFIG, PrioritySelect } from './priority-select'
 import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
-import type { ItemComplexity, ItemStatus } from '@doit/types'
+import type { ItemComplexity, ItemRecurrence, ItemStatus, Project, UpdateItemInput } from '@doit/types'
+
+type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
+const PRIORITIES: Priority[] = [1, 2, 3, 4]
+const RECURRENCE_OPTIONS: Array<{ value: ItemRecurrence | ''; label: string }> = [
+  { value: '', label: 'Sem recorrência' },
+  { value: 'daily', label: 'Todo dia' },
+  { value: 'weekdays', label: 'Dias úteis' },
+  { value: 'weekly', label: 'Toda semana' },
+  { value: 'monthly', label: 'Todo mês' },
+  { value: 'yearly', label: 'Todo ano' },
+]
+
+function nullablePatch<T extends Record<string, unknown>>(patch: T): UpdateItemInput {
+  return patch as unknown as UpdateItemInput
+}
 
 function formatDueDate(dateStr: string): string {
   const today = new Date().toISOString().slice(0, 10)
@@ -23,21 +37,182 @@ function formatDueDate(dateStr: string): string {
   return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
 }
 
+function formatTimeLabel(time: string) {
+  if (!time) return ''
+  const [hour, minute] = time.split(':')
+  const date = new Date()
+  date.setHours(Number(hour), Number(minute), 0, 0)
+  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function dateAfter(days: number) {
+  const date = new Date()
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function nextWeekday(targetDay: number, minimumDays = 1) {
+  const date = new Date()
+  let days = (targetDay - date.getDay() + 7) % 7
+  if (days < minimumDays) days += 7
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
+function laterThisWeekDate() {
+  const day = new Date().getDay()
+  if (day <= 3) return nextWeekday(5)
+  return dateAfter(1)
+}
+
+const DATE_SUGGESTIONS = [
+  { label: 'Hoje', getValue: todayDate },
+  { label: 'Amanhã', getValue: () => dateAfter(1) },
+  { label: 'Mais tarde essa semana', getValue: laterThisWeekDate },
+  { label: 'Final de semana', getValue: () => nextWeekday(6) },
+  { label: 'Semana que vem', getValue: () => nextWeekday(1) },
+]
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const hour = Math.floor(index / 2).toString().padStart(2, '0')
+  const minute = index % 2 === 0 ? '00' : '30'
+  return `${hour}:${minute}`
+})
+const TIME_SUGGESTIONS = ['09:00', '12:00', '18:00', '20:00']
+
+function normalizeToken(value: string) {
+  return value.trim().toLocaleLowerCase('pt-BR')
+}
+
+function projectIdOf(project: Project) {
+  return project.id ?? ((project as unknown as { _id?: string })._id ?? '')
+}
+
+function parseTags(value: string) {
+  return value.split(',').map((tag) => normalizeToken(tag)).filter(Boolean)
+}
+
+function titleFromNoteContent(content: string) {
+  const firstLine = content.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
+  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+}
+
+function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="M6 3h9l3 3v15H6z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 16h4" />
+    </svg>
+  )
+}
+
+function IconCalendar({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" />
+    </svg>
+  )
+}
+
+function IconFlag({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="M5 21V4" />
+      <path d="M5 5s2-1 5-1 5 2 8 1v9c-3 1-5-1-8-1s-5 1-5 1" />
+    </svg>
+  )
+}
+
+function IconTag({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="M20 13 13 20 4 11V4h7z" />
+      <path d="M8 8h.01" />
+    </svg>
+  )
+}
+
+function IconInbox({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="M4 5h16l-2 10H6z" />
+      <path d="M8 15c.6 1.5 1.8 2 4 2s3.4-.5 4-2" />
+      <path d="M4 15v4h16v-4" />
+    </svg>
+  )
+}
+
+function IconCheck({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="m5 12 4 4L19 6" />
+    </svg>
+  )
+}
+
+function IconRepeat({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+      <path d="m17 2 4 4-4 4" />
+      <path d="M3 11V9a3 3 0 0 1 3-3h15" />
+      <path d="m7 22-4-4 4-4" />
+      <path d="M21 13v2a3 3 0 0 1-3 3H3" />
+    </svg>
+  )
+}
+
+function ToolButton({
+  children,
+  active,
+  onClick,
+  title,
+}: {
+  children: React.ReactNode
+  active?: boolean
+  onClick: () => void
+  title: string
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      className={`inline-flex h-7 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
+        active
+          ? 'border-ui-border-selected bg-surface-selected text-brand-700'
+          : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+      }`}
+    >
+      {children}
+    </button>
+  )
+}
+
 export function ItemDetail() {
   const { selectedItemId, setSelectedItemId } = useUI()
   const { item, isLoading } = useItem(selectedItemId)
   const { projects } = useProjects()
-  const { areas } = useAreas()
+  const { items } = useItems()
   const { toast } = useToast()
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [tags, setTags] = useState('')
   const [dueDate, setDueDate] = useState('')
+  const [dueTime, setDueTime] = useState('')
   const [priority, setPriority] = useState<Priority>(4)
+  const [recurrence, setRecurrence] = useState<ItemRecurrence | ''>('')
   const [dirty, setDirty] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [creatingEvent, setCreatingEvent] = useState(false)
+  const [tagQuery, setTagQuery] = useState('')
+  const [projectQuery, setProjectQuery] = useState('')
+  const [creatingProject, setCreatingProject] = useState(false)
+  const [popover, setPopover] = useState<Popover>(null)
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -47,11 +222,32 @@ export function ItemDetail() {
       setContent(item.contentMd ?? '')
       setTags(item.tags.join(', '))
       setDueDate(item.dueDate ?? '')
+      setDueTime(item.dueTime ?? '')
       setPriority((item.priority as Priority) ?? 4)
+      setRecurrence(item.recurrence ?? '')
       setDirty(false)
       setIsSaving(false)
+      setTagQuery('')
+      setProjectQuery('')
+      setPopover(null)
     }
   }, [item?.id])
+
+  const activeProjects = projects.filter((p) => p.status !== 'archived')
+  const tagList = useMemo(() => parseTags(tags), [tags])
+  const knownTags = useMemo(() => {
+    return Array.from(new Set(items.flatMap((current) => current.tags ?? []).map(normalizeToken))).sort()
+  }, [items])
+
+  const filteredTags = knownTags.filter((tag) => {
+    const query = normalizeToken(tagQuery)
+    return !tagList.includes(tag) && (!query || tag.includes(query))
+  })
+
+  const filteredProjects = activeProjects.filter((project) => {
+    const query = normalizeToken(projectQuery)
+    return !query || normalizeToken(project.name).includes(query)
+  })
 
   function scheduleAutosave(patch: Parameters<typeof updateItem>[1]) {
     if (!selectedItemId) return
@@ -77,12 +273,18 @@ export function ItemDetail() {
 
   function handleContentChange(value: string) {
     setContent(value)
-    scheduleAutosave({ contentMd: value })
+    const nextTitle = item?.complexity === 'note' ? titleFromNoteContent(value) : ''
+    if (nextTitle) setTitle(nextTitle)
+    scheduleAutosave(item?.complexity === 'note' && nextTitle ? { contentMd: value, title: nextTitle } : { contentMd: value })
   }
 
   function handleComplexityChange(complexity: ItemComplexity) {
     if (!selectedItemId) return
-    if (complexity === 'note') setPriority(4)
+    if (complexity === 'note') {
+      setPriority(4)
+      setRecurrence('')
+      setDueTime('')
+    }
     updateItem(selectedItemId, { complexity })
   }
 
@@ -93,13 +295,36 @@ export function ItemDetail() {
 
   function handleTagsBlur() {
     if (!selectedItemId) return
-    const parsed = tags.split(',').map((t) => t.trim()).filter(Boolean)
-    updateItem(selectedItemId, { tags: parsed })
+    updateItem(selectedItemId, { tags: parseTags(tags) })
+  }
+
+  function updateTags(nextTags: string[]) {
+    const next = Array.from(new Set(nextTags.map(normalizeToken).filter(Boolean)))
+    setTags(next.join(', '))
+    if (selectedItemId) updateItem(selectedItemId, { tags: next })
+  }
+
+  function addTag(value: string) {
+    const tag = normalizeToken(value).replace(/^@/, '')
+    if (!tag) return
+    updateTags([...tagList, tag])
+    setTagQuery('')
   }
 
   function handleDueDateChange(e: React.ChangeEvent<HTMLInputElement>) {
     setDueDate(e.target.value)
     scheduleAutosave({ dueDate: e.target.value || undefined })
+  }
+
+  function handleDueTimeChange(next: string) {
+    setDueTime(next)
+    const nextDueDate = dueDate || todayDate()
+    if (!dueDate) setDueDate(nextDueDate)
+    if (!selectedItemId) return
+    updateItem(selectedItemId, nullablePatch({
+      dueDate: nextDueDate,
+      dueTime: next || null,
+    }))
   }
 
   function handlePriorityChange(p: Priority) {
@@ -108,14 +333,47 @@ export function ItemDetail() {
     updateItem(selectedItemId, { priority: p === 4 ? undefined : p })
   }
 
+  function handleRecurrenceChange(next: ItemRecurrence | '') {
+    setRecurrence(next)
+    const nextDueDate = next && !dueDate ? todayDate() : dueDate
+    if (nextDueDate !== dueDate) setDueDate(nextDueDate)
+    if (!selectedItemId) return
+    updateItem(selectedItemId, nullablePatch({
+      recurrence: next || null,
+      ...(next && !dueDate ? { dueDate: nextDueDate } : {}),
+    }))
+    setPopover(null)
+  }
+
   function handleProjectChange(projectId: string) {
     if (!selectedItemId) return
     updateItem(selectedItemId, { projectId: projectId || undefined })
   }
 
-  function handleAreaChange(areaId: string) {
-    if (!selectedItemId) return
-    updateItem(selectedItemId, { areaId: areaId || undefined })
+  async function addProject(value: string) {
+    const name = value.trim()
+    if (!name || !selectedItemId) return
+
+    const existing = activeProjects.find((project) => normalizeToken(project.name) === normalizeToken(name))
+    if (existing) {
+      handleProjectChange(projectIdOf(existing))
+      setProjectQuery('')
+      setPopover(null)
+      return
+    }
+
+    setCreatingProject(true)
+    try {
+      const project = await createProject({ name })
+      const id = projectIdOf(project)
+      if (id) handleProjectChange(id)
+      setProjectQuery('')
+      setPopover(null)
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao criar projeto.', 'error')
+    } finally {
+      setCreatingProject(false)
+    }
   }
 
   async function handleArchive() {
@@ -160,6 +418,589 @@ export function ItemDetail() {
   }
 
   const isNote = item.complexity === 'note'
+  const today = todayDate()
+  const isTodaySelected = dueDate === today
+  const selectedProject = activeProjects.find((project) => projectIdOf(project) === item.projectId)
+  const priorityConfig = PRIORITY_CONFIG[priority]
+  const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
+
+  if (isNote) {
+    return (
+      <div
+        className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
+        onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
+      >
+        <div className="w-full max-w-[720px] overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
+          <div className="flex flex-col">
+            <div className="px-5 pb-4 pt-5">
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  title="Trocar para tarefa"
+                  onClick={() => handleComplexityChange('task')}
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-selected bg-surface-selected px-2 text-[12px] font-medium text-brand-700 transition-colors hover:bg-white"
+                >
+                  <IconNote className="h-3.5 w-3.5" />
+                  Nota
+                </button>
+              </div>
+
+              <div className="mt-3">
+                <MarkdownEditor
+                  value={content}
+                  onChange={handleContentChange}
+                  placeholder="Escreva em Markdown..."
+                />
+              </div>
+
+              <div className="relative mt-3 flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <ToolButton
+                    title="Selecionar ou criar tag"
+                    active={tagList.length > 0}
+                    onClick={() => setPopover(popover === 'tags' ? null : 'tags')}
+                  >
+                    <IconTag className="h-3.5 w-3.5" />
+                    {tagList.length > 0 ? tagList.length : ''}
+                  </ToolButton>
+                  {popover === 'tags' && (
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                      {tagList.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          {tagList.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => updateTags(tagList.filter((current) => current !== tag))}
+                              className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
+                            >
+                              @{tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <input
+                        value={tagQuery}
+                        onChange={(e) => setTagQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            addTag(tagQuery)
+                          }
+                        }}
+                        placeholder="Buscar ou criar tag"
+                        className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                        autoFocus
+                      />
+                      <div className="mt-1 max-h-44 overflow-y-auto">
+                        {filteredTags.slice(0, 8).map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => addTag(tag)}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                          >
+                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                            @{tag}
+                          </button>
+                        ))}
+                        {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
+                          <button
+                            type="button"
+                            onClick={() => addTag(tagQuery)}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected"
+                          >
+                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                            Criar @{normalizeToken(tagQuery)}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-ui-border-soft bg-surface-soft/60 px-5 py-3">
+              <div className="relative min-w-0 flex-1">
+                <button
+                  type="button"
+                  title="Selecionar ou criar projeto"
+                  onClick={() => setPopover(popover === 'project' ? null : 'project')}
+                  className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                >
+                  <IconInbox className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
+                </button>
+                {popover === 'project' && (
+                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                    <input
+                      value={projectQuery}
+                      onChange={(e) => setProjectQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void addProject(projectQuery)
+                        }
+                      }}
+                      placeholder="Buscar ou criar projeto"
+                      className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                      autoFocus
+                    />
+                    <div className="mt-1 max-h-52 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleProjectChange('')
+                          setPopover(null)
+                        }}
+                        className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                      >
+                        <IconInbox className="h-3.5 w-3.5 text-slate-400" />
+                        Inbox
+                        {!item.projectId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                      </button>
+                      {filteredProjects.map((project) => {
+                        const id = projectIdOf(project)
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              handleProjectChange(id)
+                              setProjectQuery('')
+                              setPopover(null)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                          >
+                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
+                            <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                            {item.projectId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          </button>
+                        )
+                      })}
+                      {projectQuery.trim() && !activeProjects.some((project) => normalizeToken(project.name) === normalizeToken(projectQuery)) && (
+                        <button
+                          type="button"
+                          disabled={creatingProject}
+                          onClick={() => void addProject(projectQuery)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
+                        >
+                          <span className="text-base leading-none">+</span>
+                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <span className="hidden text-[11px] text-slate-400 sm:inline">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+              <button
+                type="button"
+                onClick={handleArchive}
+                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-400 hover:bg-white hover:text-red-500"
+              >
+                Arquivar
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedItemId(null)}
+                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedItemId(null)}
+                className="h-8 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isNote && (item.complexity === 'task' || item.complexity === 'capture')) {
+    return (
+      <div
+        className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
+        onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
+      >
+        <div className="w-full max-w-[560px] overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
+          <div className="flex flex-col">
+            <div className="px-5 pb-4 pt-5">
+              <div className="flex items-center gap-3">
+                <input
+                  value={title}
+                  onChange={handleTitleChange}
+                  placeholder="Nome da tarefa"
+                  className="min-w-0 flex-1 border-none bg-transparent text-[16px] font-semibold leading-6 text-slate-900 outline-none placeholder:text-slate-300"
+                />
+                <button
+                  type="button"
+                  title="Trocar para nota"
+                  onClick={() => handleComplexityChange('note')}
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                >
+                  <IconNote className="h-3.5 w-3.5" />
+                  Nota
+                </button>
+              </div>
+
+              <textarea
+                value={content}
+                onChange={(e) => handleContentChange(e.target.value)}
+                placeholder="Descrição"
+                rows={2}
+                className="mt-1 block max-h-28 min-h-[48px] w-full resize-y border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
+              />
+
+              <div className="relative mt-2 flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <ToolButton
+                    title="Selecionar data"
+                    active={!!dueDate}
+                    onClick={() => setPopover(popover === 'date' ? null : 'date')}
+                  >
+                    <IconCalendar className="h-3.5 w-3.5" />
+                    {isTodaySelected ? 'Hoje' : dueDate ? formatDueDate(dueDate) : 'Hoje'}
+                  </ToolButton>
+                  {popover === 'date' && (
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                      {DATE_SUGGESTIONS.map((suggestion) => {
+                        const value = suggestion.getValue()
+                        return (
+                          <button
+                            key={suggestion.label}
+                            type="button"
+                            onClick={() => {
+                              setDueDate(value)
+                              if (selectedItemId) updateItem(selectedItemId, { dueDate: value })
+                              setPopover(null)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                          >
+                            <IconCalendar className="h-3.5 w-3.5 text-brand-600" />
+                            <span className="flex-1">{suggestion.label}</span>
+                            <span className="text-[11px] font-normal text-slate-400">{formatDueDate(value)}</span>
+                            {dueDate === value && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          </button>
+                        )
+                      })}
+                      <input
+                        type="date"
+                        value={dueDate}
+                        onChange={(e) => {
+                          setDueDate(e.target.value)
+                          if (selectedItemId) updateItem(selectedItemId, nullablePatch({ dueDate: e.target.value || null }))
+                        }}
+                        className="mt-1 h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                      <div className="mt-2 border-t border-ui-border-soft pt-2">
+                        <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">Horário</div>
+                        <button
+                          type="button"
+                          onClick={() => handleDueTimeChange(dueTime || '09:00')}
+                          className={`flex h-8 w-full items-center gap-2 rounded-[10px] border px-2 text-left text-[12px] outline-none transition-colors ${
+                            dueTime
+                              ? 'border-ui-border-selected bg-surface-selected text-brand-700'
+                              : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+                          }`}
+                        >
+                          <IconCalendar className="h-3.5 w-3.5" />
+                          <span className="flex-1">{dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}</span>
+                          {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                        </button>
+                        <div className="mt-1 grid grid-cols-2 gap-1">
+                          {TIME_SUGGESTIONS.map((time) => (
+                            <button
+                              key={time}
+                              type="button"
+                              onClick={() => handleDueTimeChange(time)}
+                              className={`flex items-center justify-between rounded-[10px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
+                                dueTime === time ? 'bg-surface-selected text-brand-700' : 'bg-surface-soft text-slate-700'
+                              }`}
+                            >
+                              {formatTimeLabel(time)}
+                              {dueTime === time && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="mt-1 max-h-36 overflow-y-auto rounded-[10px] border border-ui-border-soft bg-white p-1">
+                          {TIME_OPTIONS.map((time) => (
+                            <button
+                              key={time}
+                              type="button"
+                              onClick={() => handleDueTimeChange(time)}
+                              className={`flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
+                                dueTime === time ? 'bg-surface-selected text-brand-700' : 'text-slate-700'
+                              }`}
+                            >
+                              <span className="flex-1">{formatTimeLabel(time)}</span>
+                              {dueTime === time && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            </button>
+                          ))}
+                        </div>
+                        {dueTime && (
+                          <button
+                            type="button"
+                            onClick={() => handleDueTimeChange('')}
+                            className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
+                          >
+                            Remover horário
+                          </button>
+                        )}
+                      </div>
+                      {dueDate && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                          setDueDate('')
+                            setDueTime('')
+                            if (selectedItemId) updateItem(selectedItemId, nullablePatch({ dueDate: null, dueTime: null }))
+                            setPopover(null)
+                          }}
+                          className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
+                        >
+                          Remover data
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <ToolButton
+                    title="Editar prioridade"
+                    active={priority < 4}
+                    onClick={() => setPopover(popover === 'priority' ? null : 'priority')}
+                  >
+                    <IconFlag className={`h-3.5 w-3.5 ${priorityConfig.color}`} />
+                  </ToolButton>
+                  {popover === 'priority' && (
+                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                      {PRIORITIES.map((p) => {
+                        const cfg = PRIORITY_CONFIG[p]
+                        return (
+                          <button
+                            key={p}
+                            type="button"
+                            onClick={() => {
+                              handlePriorityChange(p)
+                              setPopover(null)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                          >
+                            <IconFlag className={`h-3.5 w-3.5 ${cfg.color}`} />
+                            <span className="flex-1">{cfg.label} - {cfg.title}</span>
+                            {priority === p && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <ToolButton
+                    title="Selecionar recorrência"
+                    active={!!recurrence}
+                    onClick={() => setPopover(popover === 'recurrence' ? null : 'recurrence')}
+                  >
+                    <IconRepeat className="h-3.5 w-3.5" />
+                    {recurrence ? recurrenceLabel : ''}
+                  </ToolButton>
+                  {popover === 'recurrence' && (
+                    <div className="absolute left-0 top-9 z-10 w-48 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                      {RECURRENCE_OPTIONS.map((option) => (
+                        <button
+                          key={option.value || 'none'}
+                          type="button"
+                          onClick={() => handleRecurrenceChange(option.value)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconRepeat className="h-3.5 w-3.5 text-slate-400" />
+                          <span className="flex-1">{option.label}</span>
+                          {recurrence === option.value && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <ToolButton
+                    title="Selecionar ou criar tag"
+                    active={tagList.length > 0}
+                    onClick={() => setPopover(popover === 'tags' ? null : 'tags')}
+                  >
+                    <IconTag className="h-3.5 w-3.5" />
+                    {tagList.length > 0 ? tagList.length : ''}
+                  </ToolButton>
+                  {popover === 'tags' && (
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                      {tagList.length > 0 && (
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          {tagList.map((tag) => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => updateTags(tagList.filter((current) => current !== tag))}
+                              className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
+                            >
+                              @{tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <input
+                        value={tagQuery}
+                        onChange={(e) => setTagQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            addTag(tagQuery)
+                          }
+                        }}
+                        placeholder="Buscar ou criar tag"
+                        className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                        autoFocus
+                      />
+                      <div className="mt-1 max-h-44 overflow-y-auto">
+                        {filteredTags.slice(0, 8).map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => addTag(tag)}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                          >
+                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                            @{tag}
+                          </button>
+                        ))}
+                        {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
+                          <button
+                            type="button"
+                            onClick={() => addTag(tagQuery)}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected"
+                          >
+                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                            Criar @{normalizeToken(tagQuery)}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-ui-border-soft bg-surface-soft/60 px-5 py-3">
+              <div className="relative min-w-0 flex-1">
+                <button
+                  type="button"
+                  title="Selecionar ou criar projeto"
+                  onClick={() => setPopover(popover === 'project' ? null : 'project')}
+                  className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                >
+                  <IconInbox className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
+                </button>
+                {popover === 'project' && (
+                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                    <input
+                      value={projectQuery}
+                      onChange={(e) => setProjectQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void addProject(projectQuery)
+                        }
+                      }}
+                      placeholder="Buscar ou criar projeto"
+                      className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                      autoFocus
+                    />
+                    <div className="mt-1 max-h-52 overflow-y-auto">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleProjectChange('')
+                          setPopover(null)
+                        }}
+                        className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                      >
+                        <IconInbox className="h-3.5 w-3.5 text-slate-400" />
+                        Inbox
+                        {!item.projectId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                      </button>
+                      {filteredProjects.map((project) => {
+                        const id = projectIdOf(project)
+                        return (
+                          <button
+                            key={id}
+                            type="button"
+                            onClick={() => {
+                              handleProjectChange(id)
+                              setProjectQuery('')
+                              setPopover(null)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                          >
+                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
+                            <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                            {item.projectId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          </button>
+                        )
+                      })}
+                      {projectQuery.trim() && !activeProjects.some((project) => normalizeToken(project.name) === normalizeToken(projectQuery)) && (
+                        <button
+                          type="button"
+                          disabled={creatingProject}
+                          onClick={() => void addProject(projectQuery)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
+                        >
+                          <span className="text-base leading-none">+</span>
+                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <span className="hidden text-[11px] text-slate-400 sm:inline">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+              <button
+                type="button"
+                onClick={handleArchive}
+                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-400 hover:bg-white hover:text-red-500"
+              >
+                Arquivar
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedItemId(null)}
+                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedItemId(null)}
+                className="h-8 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+              >
+                Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div 
@@ -274,8 +1115,8 @@ export function ItemDetail() {
               )}
             </div>
 
-            {/* Projeto e Área */}
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+            {/* Projeto */}
+            <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[13px] font-medium text-slate-500">Projeto</label>
                 <select
@@ -290,19 +1131,6 @@ export function ItemDetail() {
                 </select>
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-slate-500">Área</label>
-                <select
-                  value={item.areaId ?? ''}
-                  onChange={(e) => handleAreaChange(e.target.value)}
-                  className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-                >
-                  <option value="">Nenhuma</option>
-                  {areas.map((a) => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             {/* Tags */}
