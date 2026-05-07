@@ -102,6 +102,24 @@ ensure_dev_nextauth_secret() {
   write_env_key NEXTAUTH_SECRET "$(generate_secret)"
 }
 
+ensure_dev_default_url_env() {
+  if [[ "$TARGET_ENV" != "dev" ]]; then
+    return
+  fi
+
+  local dev_url="${DOIT_DEV_PUBLIC_URL:-https://salomao-vps.tail2033b8.ts.net:8444}"
+
+  if [[ -z "$(read_env_value NEXTAUTH_URL)" ]]; then
+    echo "NEXTAUTH_URL missing in dev env; using $dev_url."
+    write_env_key NEXTAUTH_URL "$dev_url"
+  fi
+
+  if [[ -z "$(read_env_value GOOGLE_REDIRECT_URI)" ]]; then
+    echo "GOOGLE_REDIRECT_URI missing in dev env; using $dev_url/api/google/callback."
+    write_env_key GOOGLE_REDIRECT_URI "$dev_url/api/google/callback"
+  fi
+}
+
 current_systemd_main_pid() {
   systemctl show "$SERVICE_NAME" -p MainPID --value 2>/dev/null \
     || sudo systemctl show "$SERVICE_NAME" -p MainPID --value 2>/dev/null \
@@ -226,6 +244,7 @@ require_file "$APP_DIR/apps/web/package.json" "web package.json"
 require_file "$ENV_FILE" "runtime env file"
 
 ensure_dev_nextauth_secret
+ensure_dev_default_url_env
 require_env_key DATABASE_URL
 require_env_key NEXTAUTH_SECRET
 require_env_key NEXTAUTH_URL
