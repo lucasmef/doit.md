@@ -9,6 +9,7 @@ import { StatusSelect } from './status-select'
 import { ItemVersions } from './item-versions'
 import { MarkdownEditor } from './markdown-editor'
 import { PRIORITY_CONFIG, PrioritySelect } from './priority-select'
+import { DueDatePicker } from './due-date-picker'
 import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
 import type { ItemComplexity, ItemRecurrence, ItemStatus, Project, UpdateItemInput } from '@doit/types'
@@ -311,9 +312,9 @@ export function ItemDetail() {
     setTagQuery('')
   }
 
-  function handleDueDateChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setDueDate(e.target.value)
-    scheduleAutosave({ dueDate: e.target.value || undefined })
+  function handleDueDateChange(value: string) {
+    setDueDate(value)
+    scheduleAutosave({ dueDate: value || undefined })
   }
 
   function handleDueTimeChange(next: string) {
@@ -1084,21 +1085,7 @@ export function ItemDetail() {
             {/* Prazo (Mainly for tasks) */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[13px] font-medium text-slate-500">Prazo</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={handleDueDateChange}
-                  className="flex-1 text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-                />
-                {dueDate && (
-                  <span className={`text-[13px] font-medium shrink-0 ${
-                    dueDate < new Date().toISOString().slice(0, 10) ? 'text-red-500' : 'text-brand-600'
-                  }`}>
-                    {formatDueDate(dueDate)}
-                  </span>
-                )}
-              </div>
+              <DueDatePicker value={dueDate} onChange={handleDueDateChange} />
               {dueDate && (
                 <button
                   onClick={handleCreateCalendarEvent}
