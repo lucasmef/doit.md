@@ -5,6 +5,17 @@ import { ensureDB } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
+function matchesSearch(item: Record<string, unknown>, q: string) {
+  const needle = q.toLocaleLowerCase('pt-BR')
+  const tags = Array.isArray(item['tags']) ? item['tags'].join(' ') : ''
+  const haystack = [
+    item['title'],
+    item['contentMd'],
+    tags,
+  ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+  return haystack.includes(needle)
+}
+
 export async function GET(req: Request) {
   const { userId } = await auth()
   if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -19,18 +30,13 @@ export async function GET(req: Request) {
       userId,
       status: { $ne: 'archived' },
       deletedAt: null,
-      $or: [
-        { title: { $regex: q, $options: 'i' } },
-        { contentMd: { $regex: q, $options: 'i' } },
-        { tags: { $regex: q, $options: 'i' } },
-      ],
     })
       .sort({ updatedAt: -1 })
-      .limit(10)
       .lean()
+    const results = items.filter((item: Record<string, unknown>) => matchesSearch(item, q)).slice(0, 10)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mapped = items.map((i: any) => ({
+    const mapped = results.map((i: any) => ({
       ...i,
       id: i._id,
       _id: undefined,

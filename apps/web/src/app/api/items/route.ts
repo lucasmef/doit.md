@@ -24,6 +24,17 @@ function titleFromNoteContent(contentMd: string | undefined) {
   return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
 }
 
+function matchesSearch(item: Record<string, unknown>, q: string) {
+  const needle = q.toLocaleLowerCase('pt-BR')
+  const tags = Array.isArray(item['tags']) ? item['tags'].join(' ') : ''
+  const haystack = [
+    item['title'],
+    item['contentMd'],
+    tags,
+  ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+  return haystack.includes(needle)
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
@@ -38,23 +49,22 @@ export async function GET(req: NextRequest) {
 
     const query: Record<string, unknown> = { userId }
     if (status === 'archived') query['status'] = 'archived'
-    else if (status === 'closed') query['status'] = { $in: ['done', 'archived'] }
-    else {
+    else if (status === 'closed') {
+      // Filter below; the local SQL adapter does not support Mongo's $in operator.
+    } else {
       query['deletedAt'] = null
       if (status) query['status'] = status
     }
     if (projectId) query['projectId'] = projectId
-    if (q) {
-      query['$or'] = [
-        { title: { $regex: q, $options: 'i' } },
-        { contentMd: { $regex: q, $options: 'i' } },
-        { tags: { $regex: q, $options: 'i' } },
-      ]
-    }
 
-    const items = await ItemModel.find(query).sort({ updatedAt: -1 }).lean()
+    const rows = await ItemModel.find(query).sort({ updatedAt: -1 }).lean()
+    const filtered = rows.filter((item: Record<string, unknown>) => {
+      if (status === 'closed' && item['status'] !== 'done' && item['status'] !== 'archived') return false
+      if (q && !matchesSearch(item, q)) return false
+      return true
+    })
 
-    return NextResponse.json({ items: items.map(mapDocToItem) })
+    return NextResponse.json({ items: filtered.map(mapDocToItem) })
   } catch (err) {
     console.error('[GET /api/items]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
