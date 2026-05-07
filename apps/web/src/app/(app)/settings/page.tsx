@@ -27,6 +27,12 @@ export default function SettingsPage() {
     if (params.get('google') === 'connected') {
       addToast('Google Calendar conectado com sucesso!', 'success')
       window.history.replaceState({}, '', '/settings')
+    } else if (params.get('google') === 'config-error') {
+      addToast('Google Calendar não está configurado no servidor.', 'error')
+      window.history.replaceState({}, '', '/settings')
+    } else if (params.get('google') === 'error') {
+      addToast('Erro ao conectar Google Calendar.', 'error')
+      window.history.replaceState({}, '', '/settings')
     }
   }, [addToast])
 
