@@ -274,6 +274,14 @@ echo "Installing dependencies..."
 echo "Building application..."
 "${PNPM_CMD[@]}" --filter @doit/web build
 
+echo "Preparing standalone static assets..."
+rm -rf apps/web/.next/standalone/apps/web/.next/static
+cp -R apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+if [[ -d apps/web/public ]]; then
+  rm -rf apps/web/.next/standalone/apps/web/public
+  cp -R apps/web/public apps/web/.next/standalone/apps/web/public
+fi
+
 echo "Cleaning orphan listeners on port $PORT..."
 cleanup_orphan_listener "$PORT"
 
