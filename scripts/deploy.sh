@@ -57,6 +57,51 @@ require_env_key() {
   fi
 }
 
+generate_secret() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -base64 48
+    return
+  fi
+
+  if command -v node >/dev/null 2>&1; then
+    node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64'))"
+    return
+  fi
+
+  echo "Required command not found: openssl or node"
+  exit 1
+}
+
+write_env_key() {
+  local key="$1"
+  local value="$2"
+  local temp_file
+  temp_file="$(mktemp)"
+
+  if grep -q "^${key}=" "$ENV_FILE"; then
+    awk -v key="$key" -v value="$value" 'BEGIN { FS = OFS = "=" } $1 == key { $0 = key "=" value } { print }' "$ENV_FILE" > "$temp_file"
+  else
+    cat "$ENV_FILE" > "$temp_file"
+    printf '\n%s=%s\n' "$key" "$value" >> "$temp_file"
+  fi
+
+  cat "$temp_file" > "$ENV_FILE"
+  rm -f "$temp_file"
+}
+
+ensure_dev_nextauth_secret() {
+  if [[ "$TARGET_ENV" != "dev" ]]; then
+    return
+  fi
+
+  if [[ -n "$(read_env_value NEXTAUTH_SECRET)" ]]; then
+    return
+  fi
+
+  echo "NEXTAUTH_SECRET missing in dev env; generating a persistent secret."
+  write_env_key NEXTAUTH_SECRET "$(generate_secret)"
+}
+
 current_systemd_main_pid() {
   systemctl show "$SERVICE_NAME" -p MainPID --value 2>/dev/null \
     || sudo systemctl show "$SERVICE_NAME" -p MainPID --value 2>/dev/null \
@@ -180,6 +225,7 @@ require_file "$APP_DIR/package.json" "repository package.json"
 require_file "$APP_DIR/apps/web/package.json" "web package.json"
 require_file "$ENV_FILE" "runtime env file"
 
+ensure_dev_nextauth_secret
 require_env_key DATABASE_URL
 require_env_key NEXTAUTH_SECRET
 require_env_key NEXTAUTH_URL
