@@ -35,7 +35,7 @@ function formatDueDate(dateStr: string): string {
   if (dateStr === today) return 'Hoje'
   if (dateStr === tomorrow) return 'Amanhã'
   const d = new Date(dateStr + 'T12:00:00')
-  return d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
 function formatTimeLabel(time: string) {
@@ -431,9 +431,9 @@ export function ItemDetail() {
         className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
       >
-        <div className="w-full max-w-[720px] overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
-          <div className="flex flex-col">
-            <div className="px-5 pb-4 pt-5">
+        <div className="w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] flex-col">
+            <div className="overflow-y-auto px-5 pb-4 pt-5">
               <div className="flex items-center justify-end gap-3">
                 <button
                   type="button"
@@ -451,7 +451,24 @@ export function ItemDetail() {
                   value={content}
                   onChange={handleContentChange}
                   placeholder="Escreva em Markdown..."
+                  minHeight="min-h-[520px]"
                 />
+              </div>
+
+              <div className="mt-3 rounded-xl border border-dashed border-ui-border-soft bg-surface-soft/70 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
+                    <p className="text-[12px] text-slate-400">Espaco reservado para upload de arquivos.</p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled
+                    className="h-8 rounded-[10px] border border-ui-border-soft bg-white px-3 text-[12px] font-semibold text-slate-300"
+                  >
+                    Upload em breve
+                  </button>
+                </div>
               </div>
 
               <div className="relative mt-3 flex flex-wrap items-center gap-2">

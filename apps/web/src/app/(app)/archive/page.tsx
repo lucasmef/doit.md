@@ -25,11 +25,11 @@ export default function ArchivePage() {
   const archived = filtered.filter((item) => item.status === 'archived')
 
   return (
-    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-      <div className="mb-6 border-b border-ui-border-soft pb-4">
+    <div className="p-3 max-w-3xl mx-auto pb-24 lg:pb-4">
+      <div className="mb-4 border-b border-ui-border-soft pb-3">
         <div className="flex items-baseline justify-between gap-4">
-          <h1 className="text-[28px] font-bold text-slate-900">Concluidos e arquivados</h1>
-          <p className="text-[14px] text-slate-500 font-medium">{filtered.length} itens</p>
+          <h1 className="text-[26px] font-bold text-slate-900">Concluidos e arquivados</h1>
+          <p className="text-[13px] text-slate-500 font-medium">{filtered.length} itens</p>
         </div>
         <input
           type="search"
@@ -40,15 +40,15 @@ export default function ArchivePage() {
         />
       </div>
 
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+      <section className="mb-4">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
           Concluidos · {done.length}
         </h2>
         <ItemList items={done} isLoading={isLoading} emptyMessage="Nenhum item concluido." />
       </section>
 
       <section>
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
           Arquivados · {archived.length}
         </h2>
         <ItemList items={archived} isLoading={isLoading} emptyMessage="Nenhum item arquivado." />

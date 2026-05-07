@@ -18,7 +18,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
     return (
       <div className="space-y-1">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+          <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
             <div className="w-4 h-4 shrink-0 rounded-full bg-slate-200 animate-pulse" />
             <div className="flex-1 space-y-1.5">
               <div
@@ -43,7 +43,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
   }
 
   return (
-    <div className="space-y-3 pt-4">
+    <div className="space-y-1.5 pt-2">
       {items.map((item, index) => (
         <ItemRow key={item.id} item={item} active={item.id === selectedItemId} index={index} />
       ))}

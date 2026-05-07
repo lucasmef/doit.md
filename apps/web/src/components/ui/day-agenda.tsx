@@ -17,17 +17,17 @@ export function DayAgenda({ date, items }: Props) {
   const dayItems = (items || []).filter((i) => i && (i.dueDate === date || i.scheduledDate === date))
 
   return (
-    <div className="bg-surface-panel border border-ui-border-panel rounded-[16px] p-6 shadow-sm h-fit">
-      <h3 className="text-[18px] font-bold text-slate-900 mb-6 capitalize pb-4 border-b border-ui-border-soft">
+    <div className="bg-surface-panel border border-ui-border-panel rounded-[12px] p-3 shadow-sm h-fit">
+      <h3 className="text-[15px] font-bold text-slate-900 mb-3 capitalize pb-3 border-b border-ui-border-soft">
         Agenda - {formatDate(date)}
       </h3>
 
-      <div className="mb-6">
-        <h4 className="text-[16px] font-bold text-slate-800 mb-4">Tarefas do dia</h4>
+      <div>
+        <h4 className="text-[13px] font-bold text-slate-800 mb-2">Itens do dia</h4>
         {dayItems.length === 0 ? (
           <p className="text-sm text-slate-400">Nenhum item para este dia.</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-1.5">
             {dayItems.map((item) => (
               <ItemRow key={item.id} item={item} />
             ))}

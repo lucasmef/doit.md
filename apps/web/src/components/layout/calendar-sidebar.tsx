@@ -27,8 +27,8 @@ export function CalendarSidebar() {
         onClick={() => setCalendarOpen?.(false)} 
       />
       
-      <aside className="fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[320px] lg:w-[380px] bg-white border-l border-ui-border flex flex-col shadow-2xl lg:shadow-none animate-in slide-in-from-right duration-300">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-soft">
+      <aside className="fixed top-0 right-0 bottom-0 z-50 w-full sm:w-[420px] lg:w-[560px] xl:w-[640px] bg-white border-l border-ui-border flex flex-col shadow-2xl lg:shadow-none animate-in slide-in-from-right duration-300">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-ui-border-soft">
           <h2 className="font-bold text-slate-900">Calendário</h2>
           <button 
             onClick={() => setCalendarOpen?.(false)}
@@ -40,18 +40,15 @@ export function CalendarSidebar() {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          <div className="bg-slate-50 rounded-2xl p-2">
-            <CalendarGrid
-              items={activeItems}
-              selectedDate={selectedDate}
-              onDayClick={setSelectedDate}
-              // We might need to adjust CalendarGrid to be more compact
-            />
-          </div>
+        <div className="flex-1 overflow-y-auto p-3 space-y-4">
+          <CalendarGrid
+            items={activeItems}
+            selectedDate={selectedDate}
+            onDayClick={setSelectedDate}
+          />
 
-          <div className="px-2">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+          <div>
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
               Agenda do dia
             </h3>
             <DayAgenda date={selectedDate} items={activeItems} />

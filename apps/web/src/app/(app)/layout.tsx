@@ -11,8 +11,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
     <UIProvider>
-      <div className="flex h-screen overflow-hidden bg-surface lg:p-4 xl:p-8">
-        <div className="flex h-full w-full overflow-hidden bg-surface-window lg:rounded-[24px] lg:border lg:border-ui-border lg:shadow-sm">
+      <div className="flex h-screen overflow-hidden bg-surface-window">
+        <div className="flex h-full w-full overflow-hidden bg-surface-window">
           {/* Sidebar — oculta em mobile */}
           <div className="hidden lg:block">
             <Sidebar />
@@ -22,7 +22,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Topbar />
             <div className="flex flex-1 overflow-hidden">
               {/* Conteúdo principal — padding extra no mobile para o bottom nav */}
-              <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-surface-window px-4 lg:px-8">{children}</main>
+              <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-surface-window px-3 lg:px-5">{children}</main>
             </div>
           </div>
         </div>

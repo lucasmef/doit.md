@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import type { Item, ItemRecurrence } from '@doit/types'
-import { ComplexityBadge } from './complexity-badge'
 import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
 import type { Priority } from './priority-select'
 import { updateItem } from '@/hooks/use-items'
@@ -21,6 +20,14 @@ function formatDue(item: Item): string {
   const date = item.dueDate ? formatDueDate(item.dueDate) : ''
   if (!item.dueTime) return date
   return date ? `${date} ${item.dueTime}` : item.dueTime
+}
+
+function IconNoteFilled({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M6 2.75A2.25 2.25 0 0 0 3.75 5v14A2.25 2.25 0 0 0 6 21.25h12A2.25 2.25 0 0 0 20.25 19V8.12a2.25 2.25 0 0 0-.66-1.59l-3.12-3.12a2.25 2.25 0 0 0-1.59-.66H6Zm8.25 1.81 4.19 4.19H15a.75.75 0 0 1-.75-.75V4.56ZM7.5 11.75a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1-.75-.75Zm0 4a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5h-5.5a.75.75 0 0 1-.75-.75Z" />
+    </svg>
+  )
 }
 
 const RECURRENCE_LABELS: Record<ItemRecurrence, string> = {
@@ -125,7 +132,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
       onKeyDown={(e) => e.key === 'Enter' && setSelectedItemId(item.id)}
       data-item-id={item.id}
       style={{ animationDelay: staggerDelay }}
-      className={`w-full text-left flex items-center gap-4 px-5 py-4 rounded-[14px] transition-all group border animate-stagger-item cursor-pointer ${
+      className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-[10px] transition-all group border animate-stagger-item cursor-pointer ${
         active
           ? 'bg-surface-selected border-ui-border-selected shadow-sm'
           : 'bg-surface-panel border-ui-border-panel hover:border-slate-300 hover:shadow-sm'
@@ -135,7 +142,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
       {(item.complexity === 'task' || item.complexity === 'capture') ? (
         <button
           onClick={toggleDone}
-          className={`shrink-0 w-[22px] h-[22px] rounded-full border-2 flex items-center justify-center transition-all ${
+          className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all ${
             item.status === 'done'
               ? 'bg-slate-400 border-slate-400'
               : justCompleted
@@ -145,7 +152,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
         >
           {item.status === 'done' && (
             <svg
-              className={`w-3.5 h-3.5 text-white ${justCompleted ? 'animate-check-pop' : ''}`}
+              className={`w-3 h-3 text-white ${justCompleted ? 'animate-check-pop' : ''}`}
               fill="none"
               viewBox="0 0 12 12"
             >
@@ -160,26 +167,27 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
           )}
         </button>
       ) : (
-        <div className="shrink-0 w-[22px] h-[22px] flex items-center justify-center">
-          {p < 4
-            ? <PriorityFlag priority={p} size={14} />
-            : <div className="w-2 h-2 rounded-full bg-[#b0a79d]" />
-          }
+        <div className="shrink-0 w-[18px] h-[18px] flex items-center justify-center text-[#9a8f83]">
+          {item.complexity === 'note'
+            ? <IconNoteFilled className="h-4 w-4" />
+            : p < 4
+            ? <PriorityFlag priority={p} size={13} />
+            : <div className="w-2 h-2 rounded-full bg-[#b0a79d]" />}
         </div>
       )}
 
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
-          className={`text-[16px] leading-tight font-medium truncate transition-all ${
+          className={`text-[14px] leading-5 font-medium truncate transition-all ${
             item.status === 'done' ? 'line-through text-slate-400' : 'text-slate-800'
           }`}
         >
           {item.title}
         </p>
 
-        <div className="flex items-center gap-1.5 mt-1">
+        <div className="flex items-center gap-1.5">
           {item.dueDate && (
-            <span className={`text-[12px] font-medium ${overdue ? 'text-red-500' : item.dueDate === today ? 'text-green-600' : 'text-slate-500'}`}>
+            <span className={`text-[11px] font-medium ${overdue ? 'text-red-500' : item.dueDate === today ? 'text-green-600' : 'text-slate-500'}`}>
               {overdue ? `Atrasado · ${formatDue(item)}` : formatDue(item)}
             </span>
           )}
@@ -187,7 +195,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
             <span className="text-slate-300">·</span>
           )}
           {item.tags.length > 0 && (
-            <span className="text-[12px] text-slate-400 truncate">
+            <span className="text-[11px] text-slate-400 truncate">
               {item.tags.slice(0, 3).join(', ')}
             </span>
           )}
@@ -195,19 +203,12 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
             <span className="text-slate-300">·</span>
           )}
           {item.recurrence && (
-            <span className="text-[12px] text-slate-400 truncate">
+            <span className="text-[11px] text-slate-400 truncate">
               {RECURRENCE_LABELS[item.recurrence]}
             </span>
           )}
         </div>
       </div>
-      
-      {item.complexity !== 'task' && item.complexity !== 'capture' && (
-        <div className="shrink-0">
-          <ComplexityBadge complexity={item.complexity} />
-        </div>
-      )}
-
       {item.status === 'archived' && (
         <button
           type="button"

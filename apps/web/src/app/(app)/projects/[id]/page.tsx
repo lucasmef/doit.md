@@ -63,16 +63,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
   }
 
   const open = items.filter((i) => i.status !== 'done' && i.status !== 'archived')
-  const tasks = open.filter((i) => i.complexity === 'task' || i.complexity === 'capture')
-  const notes = open.filter((i) => i.complexity === 'note')
   const closed = items.filter((i) => i.status === 'done' || i.status === 'archived')
   const projectTags = Array.from(
     new Set(open.flatMap((item) => item.tags ?? []).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <div className="flex items-start gap-3 mb-6">
+    <div className="p-3 max-w-3xl mx-auto">
+      <div className="flex items-start gap-3 mb-4">
         <div
           className="w-4 h-4 rounded-full mt-1.5 shrink-0"
           style={{ backgroundColor: project.color ?? '#94a3b8' }}
@@ -107,7 +105,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 mb-8 pb-6 border-b border-slate-100">
+      <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400">Status:</span>
           <select
@@ -139,7 +137,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </span>
       </div>
 
-      <div className="mb-6 inline-flex rounded-lg border border-slate-200 bg-white p-1">
+      <div className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-1">
         {([
           ['list', 'Lista'],
           ['kanban', 'Kanban'],
@@ -161,25 +159,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
       {viewMode === 'list' ? (
         <>
-          <section className="mb-6">
+          <section className="mb-4">
             <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Tarefas
+              Itens / {open.length}
             </h2>
             <ItemList
-              items={tasks}
+              items={open}
               isLoading={isLoading}
-              emptyMessage="Nenhuma tarefa neste projeto."
-            />
-          </section>
-
-          <section className="mb-6">
-            <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-              Notas
-            </h2>
-            <ItemList
-              items={notes}
-              isLoading={isLoading}
-              emptyMessage="Nenhuma nota neste projeto."
+              emptyMessage="Nenhum item neste projeto."
             />
           </section>
 

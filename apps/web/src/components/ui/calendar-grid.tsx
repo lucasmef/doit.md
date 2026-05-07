@@ -55,20 +55,20 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
   const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
 
   return (
-    <div className="select-none bg-surface-panel border border-ui-border-panel rounded-[16px] p-6 shadow-sm">
+    <div className="select-none bg-surface-panel border border-ui-border-panel rounded-[12px] p-3 shadow-sm">
       {/* Navegação */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-slate-900">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-lg font-bold text-slate-900">
           {MONTHS[month]} {year}
         </h2>
-        <div className="flex items-center gap-2 bg-surface-soft p-1 rounded-xl">
-          <button onClick={prevMonth} className="px-3 py-1.5 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-sm font-medium transition-all">
+        <div className="flex items-center gap-1 bg-surface-soft p-1 rounded-xl">
+          <button onClick={prevMonth} className="px-2 py-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-xs font-medium transition-all">
             Anterior
           </button>
-          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()) }} className="px-3 py-1.5 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-sm font-medium transition-all">
+          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()) }} className="px-2 py-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-xs font-medium transition-all">
             Hoje
           </button>
-          <button onClick={nextMonth} className="px-3 py-1.5 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-sm font-medium transition-all">
+          <button onClick={nextMonth} className="px-2 py-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-xs font-medium transition-all">
             Próximo
           </button>
         </div>
@@ -86,7 +86,7 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
       {/* Grade */}
       <div className="grid grid-cols-7 gap-px bg-ui-border-soft border border-ui-border-soft overflow-hidden rounded-xl">
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} className="bg-white h-24 lg:h-32" />
+          if (!day) return <div key={`empty-${i}`} className="bg-white h-20 lg:h-24 xl:h-28" />
 
           const ds = dayStr(day)
           const dayItems = itemsForDay(day)
@@ -97,7 +97,7 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
             <button
               key={ds}
               onClick={() => onDayClick?.(ds)}
-              className={`bg-white h-24 lg:h-32 p-1.5 flex flex-col items-start hover:bg-slate-50 transition-colors relative ${isSelected ? 'ring-2 ring-inset ring-brand-400 z-10' : ''}`}
+              className={`bg-white h-20 lg:h-24 xl:h-28 p-1.5 flex flex-col items-start hover:bg-slate-50 transition-colors relative ${isSelected ? 'ring-2 ring-inset ring-brand-400 z-10' : ''}`}
             >
               <div className="flex justify-between w-full items-start">
                 <span

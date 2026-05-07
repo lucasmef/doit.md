@@ -18,13 +18,13 @@ function getGroup(item: Item): string {
   const d = item.dueDate ?? item.scheduledDate
   if (!d) return 'Sem data'
 
-  if (d === tomorrow.toISOString().slice(0, 10)) return 'Amanhã'
+  if (d === tomorrow.toISOString().slice(0, 10)) return 'Amanha'
   if (d <= endOfWeek.toISOString().slice(0, 10)) return 'Esta semana'
-  if (d <= endOfNextWeek.toISOString().slice(0, 10)) return 'Próxima semana'
+  if (d <= endOfNextWeek.toISOString().slice(0, 10)) return 'Proxima semana'
   return 'Mais tarde'
 }
 
-const GROUP_ORDER = ['Amanhã', 'Esta semana', 'Próxima semana', 'Mais tarde', 'Sem data']
+const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde', 'Sem data']
 
 export default function UpcomingPage() {
   const { items, isLoading } = useItems()
@@ -45,15 +45,15 @@ export default function UpcomingPage() {
   }, {})
 
   return (
-    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-      <div className="flex items-baseline justify-between mb-8 border-b border-ui-border-soft pb-4">
-        <h1 className="text-[28px] font-bold text-slate-900">Próximos</h1>
+    <div className="p-3 max-w-3xl mx-auto pb-24 lg:pb-4">
+      <div className="flex items-baseline justify-between mb-4 border-b border-ui-border-soft pb-3">
+        <h1 className="text-[26px] font-bold text-slate-900">Proximos</h1>
       </div>
 
       {isLoading && (
         <div className="space-y-1">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />
+            <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />
           ))}
         </div>
       )}
@@ -63,9 +63,9 @@ export default function UpcomingPage() {
           const groupItems = grouped[group] ?? []
           if (groupItems.length === 0) return null
           return (
-            <section key={group} className="mb-6">
-              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
-                {group} · {groupItems.length}
+            <section key={group} className="mb-4">
+              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                {group} - {groupItems.length}
               </h2>
               <ItemList items={groupItems} />
             </section>

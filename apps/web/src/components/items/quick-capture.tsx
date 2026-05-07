@@ -13,6 +13,10 @@ import type { ItemComplexity, ItemRecurrence, Project } from '@doit/types'
 
 type ItemMode = Extract<ItemComplexity, 'task' | 'note'>
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
+type ActiveShortcut =
+  | { kind: 'tag'; query: string; start: number; end: number }
+  | { kind: 'project'; query: string; start: number; end: number }
+  | { kind: 'priority'; query: string; start: number; end: number }
 
 const PRIORITY_SHORTCUT = /(?:^|\s)!P([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
@@ -37,7 +41,7 @@ function formatDueDate(dateStr: string) {
   if (dateStr === today) return 'Hoje'
   if (dateStr === tomorrow) return 'Amanhã'
   const date = new Date(`${dateStr}T12:00:00`)
-  return date.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
 
 function formatTimeLabel(time: string) {
@@ -101,11 +105,29 @@ function normalizeToken(value: string) {
 }
 
 function isCategorizerToken(value: string) {
-  return /^!P[1-4]$/i.test(value) || /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value)
+  return /^!P?[1-4]?$/i.test(value) || /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value)
 }
 
 function projectIdOf(project: Project) {
   return project.id ?? ((project as unknown as { _id?: string })._id ?? '')
+}
+
+function slugToken(value: string) {
+  return normalizeToken(value)
+    .replace(/\s+/g, '-')
+    .replace(/[^\p{L}\p{N}_-]/giu, '')
+}
+
+function activeShortcut(value: string, cursor: number): ActiveShortcut | null {
+  const beforeCursor = value.slice(0, cursor)
+  const match = beforeCursor.match(/(^|\s)([@#][\p{L}\p{N}_-]*|!P?[1-4]?)$/iu)
+  if (!match?.[2]) return null
+
+  const token = match[2]
+  const start = beforeCursor.length - token.length
+  if (token.startsWith('@')) return { kind: 'tag', query: normalizeToken(token.slice(1)), start, end: cursor }
+  if (token.startsWith('#')) return { kind: 'project', query: normalizeToken(token.slice(1)), start, end: cursor }
+  return { kind: 'priority', query: token.toUpperCase(), start, end: cursor }
 }
 
 function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
@@ -203,11 +225,13 @@ function ToolButton({
 function HighlightedTitleInput({
   value,
   onChange,
+  onCursorChange,
   placeholder,
   inputRef,
 }: {
   value: string
   onChange: (value: string) => void
+  onCursorChange: (cursor: number) => void
   placeholder: string
   inputRef?: React.RefObject<HTMLInputElement | null>
 }) {
@@ -234,7 +258,12 @@ function HighlightedTitleInput({
       <input
         ref={inputRef}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => {
+          onChange(e.target.value)
+          onCursorChange(e.target.selectionStart ?? e.target.value.length)
+        }}
+        onClick={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
+        onKeyUp={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
         placeholder={placeholder}
         className="relative w-full border-none bg-transparent text-[16px] font-semibold leading-6 text-transparent caret-slate-900 outline-none placeholder:text-slate-300 selection:bg-brand-100"
       />
@@ -259,6 +288,7 @@ export function QuickCapture() {
   const [recurrence, setRecurrence] = useState<ItemRecurrence | ''>('')
   const [tagQuery, setTagQuery] = useState('')
   const [projectQuery, setProjectQuery] = useState('')
+  const [titleCursor, setTitleCursor] = useState(0)
   const [saving, setSaving] = useState(false)
   const [creatingProject, setCreatingProject] = useState(false)
   const [popover, setPopover] = useState<Popover>(null)
@@ -268,8 +298,6 @@ export function QuickCapture() {
   const selectedProject = activeProjects.find((p) => projectIdOf(p) === projectId)
   const isTodayContext = pathname === '/today'
   const isNote = complexity === 'note'
-  const today = todayDate()
-  const isTodaySelected = dueDate === today
 
   const knownTags = useMemo(() => {
     return Array.from(new Set(items.flatMap((item) => item.tags ?? []).map(normalizeToken))).sort()
@@ -284,6 +312,22 @@ export function QuickCapture() {
     const query = normalizeToken(projectQuery)
     return !query || normalizeToken(project.name).includes(query)
   })
+
+  const shortcut = !isNote ? activeShortcut(title, titleCursor) : null
+  const shortcutTags = shortcut?.kind === 'tag'
+    ? knownTags.filter((tag) => !tags.includes(tag) && (!shortcut.query || tag.includes(shortcut.query))).slice(0, 8)
+    : []
+  const shortcutProjects = shortcut?.kind === 'project'
+    ? activeProjects.filter((project) => {
+        const query = shortcut.query
+        const name = normalizeToken(project.name)
+        const slug = slugToken(project.name)
+        return !query || name.includes(query) || slug.includes(query)
+      }).slice(0, 8)
+    : []
+  const shortcutPriorities = shortcut?.kind === 'priority'
+    ? PRIORITIES.filter((p) => `!P${p}`.startsWith(shortcut.query || '!')).map((p) => ({ value: p, config: PRIORITY_CONFIG[p] }))
+    : []
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -317,6 +361,7 @@ export function QuickCapture() {
       setRecurrence('')
       setTagQuery('')
       setProjectQuery('')
+      setTitleCursor(0)
       setPopover(null)
     }
   }, [quickCaptureOpen, isTodayContext])
@@ -371,6 +416,36 @@ export function QuickCapture() {
     if (!tag) return
     setTags((current) => Array.from(new Set([...current, tag])))
     setTagQuery('')
+  }
+
+  function replaceShortcut(token: string) {
+    if (!shortcut) return
+    const nextTitle = `${title.slice(0, shortcut.start)}${token}${title.slice(shortcut.end)}`
+    const insertAt = shortcut.start + token.length
+    const spacer = nextTitle[insertAt] === ' ' ? '' : ' '
+    const finalTitle = `${nextTitle.slice(0, insertAt)}${spacer}${nextTitle.slice(insertAt)}`
+    const nextCursor = insertAt + spacer.length
+    setTitle(finalTitle)
+    setTitleCursor(nextCursor)
+    setTimeout(() => {
+      inputRef.current?.focus()
+      inputRef.current?.setSelectionRange(nextCursor, nextCursor)
+    }, 0)
+  }
+
+  function selectShortcutTag(tag: string) {
+    addTag(tag)
+    replaceShortcut(`@${tag}`)
+  }
+
+  function selectShortcutProject(project: Project) {
+    setProjectId(projectIdOf(project))
+    replaceShortcut(`#${slugToken(project.name)}`)
+  }
+
+  function selectShortcutPriority(next: Priority) {
+    setPriority(next)
+    replaceShortcut(`!P${next}`)
   }
 
   async function addProject(value: string) {
@@ -439,7 +514,7 @@ export function QuickCapture() {
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && setQuickCaptureOpen(false)}
     >
-      <div className="w-full max-w-[560px] overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
+      <div className={`w-full overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl ${isNote ? 'max-w-4xl' : 'max-w-[560px]'}`}>
         <form onSubmit={handleSubmit} className="flex flex-col">
           <div className="px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
@@ -448,6 +523,7 @@ export function QuickCapture() {
                   inputRef={inputRef}
                   value={title}
                   onChange={applyTitleShortcuts}
+                  onCursorChange={setTitleCursor}
                   placeholder="Nome da tarefa"
                 />
               )}
@@ -467,6 +543,46 @@ export function QuickCapture() {
                 <IconNote className="h-3.5 w-3.5" />
                 Nota
               </button>
+              {shortcut && (shortcutTags.length > 0 || shortcutProjects.length > 0 || shortcutPriorities.length > 0) && (
+                <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                  {shortcut.kind === 'tag' && shortcutTags.map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectShortcutTag(tag)}
+                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                    >
+                      <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                      @{tag}
+                    </button>
+                  ))}
+                  {shortcut.kind === 'project' && shortcutProjects.map((project) => (
+                    <button
+                      key={projectIdOf(project)}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectShortcutProject(project)}
+                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
+                      <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                    </button>
+                  ))}
+                  {shortcut.kind === 'priority' && shortcutPriorities.map(({ value, config }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectShortcutPriority(value)}
+                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                    >
+                      <IconFlag className={`h-3.5 w-3.5 ${config.color}`} />
+                      <span className="flex-1">{config.label} - {config.title}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {isNote ? (
@@ -475,7 +591,23 @@ export function QuickCapture() {
                   value={contentMd}
                   onChange={setContentMd}
                   placeholder="Escreva em Markdown..."
+                  minHeight="min-h-[440px]"
                 />
+                <div className="mt-3 rounded-xl border border-dashed border-ui-border-soft bg-surface-soft/70 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
+                      <p className="text-[12px] text-slate-400">Espaco reservado para upload de arquivos.</p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled
+                      className="h-8 rounded-[10px] border border-ui-border-soft bg-white px-3 text-[12px] font-semibold text-slate-300"
+                    >
+                      Upload em breve
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : (
               <textarea
@@ -496,7 +628,7 @@ export function QuickCapture() {
                     onClick={() => setPopover(popover === 'date' ? null : 'date')}
                   >
                     <IconCalendar className="h-3.5 w-3.5" />
-                    {isTodaySelected ? 'Hoje' : dueDate ? 'Com data' : 'Hoje'}
+                    {dueDate ? formatDueDate(dueDate) : 'Hoje'}
                   </ToolButton>
                   {popover === 'date' && (
                     <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">

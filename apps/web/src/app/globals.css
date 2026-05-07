@@ -21,4 +21,23 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  .ProseMirror p.is-editor-empty:first-child::before {
+    color: #cbd5e1;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .ProseMirror ul,
+  .ProseMirror ol {
+    padding-left: 1.25rem;
+  }
+
+  .ProseMirror h1,
+  .ProseMirror h2,
+  .ProseMirror h3 {
+    letter-spacing: 0;
+  }
 }
