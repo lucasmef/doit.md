@@ -261,11 +261,16 @@ const postgresIdentifiers = [
 
 const postgresSchema = sqliteSchema.map((sql) => {
   let out = sql
-  for (const identifier of postgresIdentifiers) {
-    out = out.replaceAll(identifier, `"${identifier}"`)
+  for (const identifier of [...postgresIdentifiers].sort((a, b) => b.length - a.length)) {
+    out = quotePostgresIdentifier(out, identifier)
   }
   return out
 })
+
+function quotePostgresIdentifier(sql: string, identifier: string): string {
+  const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return sql.replace(new RegExp(`(?<![A-Za-z0-9_"])${escaped}(?![A-Za-z0-9_"])`, 'g'), `"${identifier}"`)
+}
 
 async function ensureColumn(db: DBClient, table: string, column: string, definition: string): Promise<void> {
   if (db.kind === 'postgres') {
