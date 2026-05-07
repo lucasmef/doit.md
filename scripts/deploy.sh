@@ -107,18 +107,27 @@ ensure_dev_default_url_env() {
     return
   fi
 
+  local nextauth_url
+  local google_redirect_uri
+  nextauth_url="$(read_env_value NEXTAUTH_URL)"
+  google_redirect_uri="$(read_env_value GOOGLE_REDIRECT_URI)"
+
+  if [[ -n "$nextauth_url" && -n "$google_redirect_uri" ]]; then
+    return
+  fi
+
   local dev_url="${DOIT_DEV_PUBLIC_URL:-}"
   if [[ -z "$dev_url" ]]; then
     echo "DOIT_DEV_PUBLIC_URL is required for dev deploy when NEXTAUTH_URL or GOOGLE_REDIRECT_URI are missing."
     exit 1
   fi
 
-  if [[ -z "$(read_env_value NEXTAUTH_URL)" ]]; then
+  if [[ -z "$nextauth_url" ]]; then
     echo "NEXTAUTH_URL missing in dev env; using $dev_url."
     write_env_key NEXTAUTH_URL "$dev_url"
   fi
 
-  if [[ -z "$(read_env_value GOOGLE_REDIRECT_URI)" ]]; then
+  if [[ -z "$google_redirect_uri" ]]; then
     echo "GOOGLE_REDIRECT_URI missing in dev env; using $dev_url/api/google/callback."
     write_env_key GOOGLE_REDIRECT_URI "$dev_url/api/google/callback"
   fi
