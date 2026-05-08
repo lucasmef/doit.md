@@ -1,0 +1,353 @@
+import type { CreateItemInput, Item, UpdateItemInput } from '@doit/types'
+
+const QUEUE_KEY = 'doitmd.offline.items.queue.v1'
+const CHANGE_EVENT = 'doitmd:offline-items-changed'
+
+type CreateOperation = {
+  id: string
+  type: 'create'
+  tempId: string
+  input: CreateItemInput
+  createdAt: string
+}
+
+type UpdateOperation = {
+  id: string
+  type: 'update'
+  itemId: string
+  input: UpdateItemInput
+  createdAt: string
+}
+
+type ArchiveOperation = {
+  id: string
+  type: 'archive'
+  itemId: string
+  createdAt: string
+}
+
+export type OfflineItemOperation = CreateOperation | UpdateOperation | ArchiveOperation
+
+type ItemFilters = {
+  status?: string
+  projectId?: string
+  q?: string
+}
+
+function storageAvailable() {
+  return typeof window !== 'undefined' && 'localStorage' in window
+}
+
+function nowIso() {
+  return new Date().toISOString()
+}
+
+function newLocalId(prefix: string) {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
+}
+
+function readQueue(): OfflineItemOperation[] {
+  if (!storageAvailable()) return []
+
+  try {
+    const raw = window.localStorage.getItem(QUEUE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? (parsed as OfflineItemOperation[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeQueue(queue: OfflineItemOperation[]) {
+  if (!storageAvailable()) return
+  window.localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
+  window.dispatchEvent(new CustomEvent(CHANGE_EVENT))
+}
+
+function normalizeCreatedItem(tempId: string, input: CreateItemInput, createdAt: string): Item {
+  const complexity = input.complexity ?? 'task'
+  const hasInboxContext = !input.projectId && !input.dueDate && !input.scheduledDate
+  const title =
+    complexity === 'note'
+      ? titleFromNoteContent(input.contentMd) || input.title || 'Nota offline'
+      : input.title
+
+  return {
+    id: tempId,
+    userId: 'offline',
+    title,
+    contentMd: input.contentMd,
+    complexity,
+    status: input.status ?? (hasInboxContext ? 'inbox' : 'todo'),
+    priority: complexity === 'note' ? undefined : input.priority,
+    dueDate: input.dueDate,
+    dueTime: complexity === 'note' ? undefined : input.dueTime,
+    recurrence: complexity === 'note' ? undefined : input.recurrence,
+    startDate: input.startDate,
+    scheduledDate: input.scheduledDate,
+    projectId: input.projectId,
+    areaId: input.areaId,
+    parentId: input.parentId,
+    tags: input.tags ?? [],
+    backlinks: [],
+    createdAt,
+    updatedAt: createdAt,
+  }
+}
+
+function titleFromNoteContent(contentMd: string | undefined) {
+  const firstLine =
+    contentMd
+      ?.split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
+}
+
+function applyUpdate(item: Item, input: UpdateItemInput, updatedAt: string): Item {
+  const merged: Item = { ...item, ...input, updatedAt }
+  if (merged.complexity === 'note') {
+    merged.priority = undefined
+    merged.recurrence = undefined
+    merged.dueTime = undefined
+    const title = titleFromNoteContent(merged.contentMd)
+    if (title) merged.title = title
+  }
+  if (input.status && input.status !== 'archived') {
+    merged.deletedAt = undefined
+  }
+  return merged
+}
+
+function matchesFilters(item: Item, filters?: ItemFilters) {
+  if (filters?.status === 'closed') {
+    if (item.status !== 'done' && item.status !== 'archived') return false
+  } else if (filters?.status) {
+    if (item.status !== filters.status) return false
+  } else if (item.deletedAt || item.status === 'archived') {
+    return false
+  }
+
+  if (filters?.projectId && item.projectId !== filters.projectId) return false
+
+  const q = filters?.q?.trim().toLocaleLowerCase('pt-BR')
+  if (q) {
+    const haystack = [item.title, item.contentMd, item.tags.join(' ')]
+      .filter(Boolean)
+      .join(' ')
+      .toLocaleLowerCase('pt-BR')
+    if (!haystack.includes(q)) return false
+  }
+
+  return true
+}
+
+function sortItems(items: Item[]) {
+  return [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+}
+
+export function onOfflineItemsChanged(listener: () => void) {
+  if (typeof window === 'undefined') return () => {}
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === QUEUE_KEY) listener()
+  }
+
+  window.addEventListener(CHANGE_EVENT, listener)
+  window.addEventListener('storage', handleStorage)
+
+  return () => {
+    window.removeEventListener(CHANGE_EVENT, listener)
+    window.removeEventListener('storage', handleStorage)
+  }
+}
+
+export function getOfflineItemQueue() {
+  return readQueue()
+}
+
+export function hasOfflineItemQueue() {
+  return readQueue().length > 0
+}
+
+export function overlayOfflineItems(items: Item[], filters?: ItemFilters) {
+  const byId = new Map(items.map((item) => [item.id, item]))
+  const queue = readQueue()
+
+  for (const operation of queue) {
+    if (operation.type === 'create') {
+      byId.set(
+        operation.tempId,
+        normalizeCreatedItem(operation.tempId, operation.input, operation.createdAt),
+      )
+      continue
+    }
+
+    const item = byId.get(operation.itemId)
+    if (!item) continue
+
+    if (operation.type === 'update') {
+      byId.set(operation.itemId, applyUpdate(item, operation.input, operation.createdAt))
+    } else {
+      byId.set(operation.itemId, {
+        ...item,
+        status: 'archived',
+        deletedAt: operation.createdAt,
+        updatedAt: operation.createdAt,
+      })
+    }
+  }
+
+  return sortItems([...byId.values()].filter((item) => matchesFilters(item, filters)))
+}
+
+export function overlayOfflineItem(item: Item | null, id: string | null) {
+  const queue = readQueue()
+  let current = item
+
+  for (const operation of queue) {
+    if (operation.type === 'create' && operation.tempId === id) {
+      current = normalizeCreatedItem(operation.tempId, operation.input, operation.createdAt)
+      continue
+    }
+    if (operation.type === 'create') continue
+
+    if (!current || operation.itemId !== current.id) continue
+
+    if (operation.type === 'update') {
+      current = applyUpdate(current, operation.input, operation.createdAt)
+    } else {
+      current = {
+        ...current,
+        status: 'archived',
+        deletedAt: operation.createdAt,
+        updatedAt: operation.createdAt,
+      }
+    }
+  }
+
+  return current
+}
+
+export function queueCreateItem(input: CreateItemInput): Item {
+  const createdAt = nowIso()
+  const tempId = newLocalId('local_item')
+  const operation: CreateOperation = {
+    id: newLocalId('op'),
+    type: 'create',
+    tempId,
+    input,
+    createdAt,
+  }
+
+  writeQueue([...readQueue(), operation])
+  return normalizeCreatedItem(tempId, input, createdAt)
+}
+
+export function queueUpdateItem(itemId: string, input: UpdateItemInput, fallbackItem?: Item): Item {
+  const queue = readQueue()
+  const createdAt = nowIso()
+  const pendingCreate = queue.find(
+    (operation): operation is CreateOperation =>
+      operation.type === 'create' && operation.tempId === itemId,
+  )
+
+  if (pendingCreate) {
+    pendingCreate.input = { ...pendingCreate.input, ...input }
+    pendingCreate.createdAt = createdAt
+    writeQueue(queue)
+    return normalizeCreatedItem(pendingCreate.tempId, pendingCreate.input, pendingCreate.createdAt)
+  }
+
+  const operation: UpdateOperation = {
+    id: newLocalId('op'),
+    type: 'update',
+    itemId,
+    input,
+    createdAt,
+  }
+
+  writeQueue([...queue, operation])
+
+  if (fallbackItem) return applyUpdate(fallbackItem, input, createdAt)
+  return {
+    id: itemId,
+    userId: 'offline',
+    title: input.title ?? 'Item offline',
+    complexity: input.complexity ?? 'task',
+    status: input.status ?? 'todo',
+    tags: input.tags ?? [],
+    backlinks: input.backlinks ?? [],
+    createdAt,
+    updatedAt: createdAt,
+    ...input,
+  }
+}
+
+export function queueArchiveItem(itemId: string) {
+  const queue = readQueue()
+  const pendingCreate = queue.find(
+    (operation): operation is CreateOperation =>
+      operation.type === 'create' && operation.tempId === itemId,
+  )
+
+  if (pendingCreate) {
+    writeQueue(queue.filter((operation) => operation.id !== pendingCreate.id))
+    return
+  }
+
+  const createdAt = nowIso()
+  writeQueue([
+    ...queue,
+    {
+      id: newLocalId('op'),
+      type: 'archive',
+      itemId,
+      createdAt,
+    },
+  ])
+}
+
+export async function flushOfflineItemQueue() {
+  const queue = readQueue()
+  if (!queue.length) return false
+
+  const idMap = new Map<string, string>()
+
+  for (const operation of queue) {
+    const remaining = readQueue()
+    const current = remaining.find((entry) => entry.id === operation.id)
+    if (!current) continue
+
+    if (current.type === 'create') {
+      const response = await fetch('/api/items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(current.input),
+      })
+      if (!response.ok) throw new Error('Falha ao sincronizar item offline')
+      const { item } = (await response.json()) as { item: Item }
+      idMap.set(current.tempId, item.id)
+    } else if (current.type === 'update') {
+      const itemId = idMap.get(current.itemId) ?? current.itemId
+      const response = await fetch(`/api/items/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(current.input),
+      })
+      if (!response.ok) throw new Error('Falha ao sincronizar edicao offline')
+    } else {
+      const itemId = idMap.get(current.itemId) ?? current.itemId
+      const response = await fetch(`/api/items/${itemId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Falha ao sincronizar arquivamento offline')
+    }
+
+    writeQueue(readQueue().filter((entry) => entry.id !== current.id))
+  }
+
+  return true
+}

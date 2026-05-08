@@ -4,12 +4,19 @@ import bcrypt from 'bcryptjs'
 import { UserModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 
+const FIFTEEN_DAYS_IN_SECONDS = 15 * 24 * 60 * 60
+
 export const authOptions: AuthOptions = {
   pages: {
     signIn: '/sign-in',
   },
   session: {
     strategy: 'jwt',
+    maxAge: FIFTEEN_DAYS_IN_SECONDS,
+    updateAge: 24 * 60 * 60,
+  },
+  jwt: {
+    maxAge: FIFTEEN_DAYS_IN_SECONDS,
   },
   providers: [
     CredentialsProvider({
@@ -19,7 +26,9 @@ export const authOptions: AuthOptions = {
         password: { label: 'Senha', type: 'password' },
       },
       async authorize(credentials) {
-        const email = String(credentials?.email ?? '').trim().toLowerCase()
+        const email = String(credentials?.email ?? '')
+          .trim()
+          .toLowerCase()
         const password = String(credentials?.password ?? '')
         if (!email || !password) return null
 

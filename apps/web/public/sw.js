@@ -1,37 +1,102 @@
-const CACHE_VERSION = 'clarity-v2'
+const CACHE_VERSION = 'clarity-v3'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
+const API_CACHE = `${CACHE_VERSION}-api`
 
-// Assets estáticos — cache-first
-const STATIC_PATTERNS = [
-  /^\/fonts\//,
-  /\.(ico|png|svg|webp|woff2?)$/,
-]
+// Static assets: cache-first.
+const STATIC_PATTERNS = [/^\/fonts\//, /\.(ico|png|svg|webp|woff2?)$/]
 const NEXT_STATIC_PATTERN = /^\/_next\/static\//
 
-// Páginas do app — network-first com fallback para cache
+// App pages: network-first with cached fallback for installed/offline use.
 const APP_PAGES = ['/today', '/inbox', '/upcoming', '/projects', '/areas', '/audit', '/settings']
+const APP_SHELL_URLS = ['/', ...APP_PAGES]
 
-// Rotas de API — sempre network, nunca cache
+// Read APIs that are useful offline. Mutating APIs stay network-only.
 const API_PATTERN = /^\/api\//
+const READ_API_PATTERNS = [
+  /^\/api\/areas(?:\/[^/]+)?$/,
+  /^\/api\/projects(?:\/[^/]+)?$/,
+  /^\/api\/items(?:\/[^/]+)?$/,
+  /^\/api\/items\/search$/,
+  /^\/api\/items\/[^/]+\/versions$/,
+  /^\/api\/calendar\/events$/,
+  /^\/api\/google\/account$/,
+  /^\/api\/notifications\/failures$/,
+  /^\/api\/push\/status$/,
+  /^\/api\/audit\/logs$/,
+  /^\/api\/sync\/pending$/,
+  /^\/api\/sync\/log$/,
+]
+
+function isAppPage(pathname) {
+  return (
+    pathname === '/' ||
+    APP_PAGES.some((page) => pathname === page || pathname.startsWith(`${page}/`))
+  )
+}
+
+function isReadApi(pathname) {
+  return READ_API_PATTERNS.some((pattern) => pattern.test(pathname))
+}
+
+function isCacheablePageResponse(response) {
+  return (
+    response.ok &&
+    !response.redirected &&
+    (response.headers.get('content-type') || '').includes('text/html')
+  )
+}
+
+function isCacheableJsonResponse(response) {
+  return (
+    response.ok &&
+    !response.redirected &&
+    (response.headers.get('content-type') || '').includes('application/json')
+  )
+}
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) =>
-      cache.addAll(['/manifest.json'])
-    ).then(() => self.skipWaiting())
+    caches
+      .open(STATIC_CACHE)
+      .then((cache) => cache.addAll(['/manifest.json', '/api/icon/192', '/api/icon/512']))
+      .then(() => self.skipWaiting()),
   )
 })
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k.startsWith('clarity-') && k !== STATIC_CACHE && k !== PAGES_CACHE)
-          .map((k) => caches.delete(k))
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter(
+              (key) =>
+                key.startsWith('clarity-') &&
+                key !== STATIC_CACHE &&
+                key !== PAGES_CACHE &&
+                key !== API_CACHE,
+            )
+            .map((key) => caches.delete(key)),
+        ),
       )
-    ).then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
+  )
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data?.type !== 'CACHE_APP_SHELL') return
+
+  event.waitUntil(
+    caches.open(PAGES_CACHE).then(async (cache) => {
+      await Promise.allSettled(
+        APP_SHELL_URLS.map(async (url) => {
+          const response = await fetch(url, { credentials: 'same-origin' })
+          if (isCacheablePageResponse(response)) await cache.put(url, response)
+        }),
+      )
+    }),
   )
 })
 
@@ -46,8 +111,8 @@ self.addEventListener('push', (event) => {
   const title = payload.title || 'doit.md'
   const options = {
     body: payload.body || 'Voce tem uma nova notificacao.',
-    icon: payload.icon || '/icon/192',
-    badge: payload.badge || '/icon/192',
+    icon: payload.icon || '/api/icon/192',
+    badge: payload.badge || '/api/icon/192',
     tag: payload.tag || 'doitmd',
     renotify: Boolean(payload.renotify),
     data: {
@@ -67,7 +132,7 @@ self.addEventListener('notificationclick', (event) => {
       const existing = clients.find((client) => client.url === targetUrl)
       if (existing) return existing.focus()
       return self.clients.openWindow(targetUrl)
-    })
+    }),
   )
 })
 
@@ -75,14 +140,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Ignora requests não-GET e cross-origin
   if (request.method !== 'GET' || url.origin !== self.location.origin) return
 
-  // API — sempre rede, sem cache
-  if (API_PATTERN.test(url.pathname)) return
-
-  // Assets estáticos — cache-first
-  if (STATIC_PATTERNS.some((p) => p.test(url.pathname))) {
+  if (url.pathname.startsWith('/api/icon/')) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
         const cached = await cache.match(request)
@@ -90,7 +150,44 @@ self.addEventListener('fetch', (event) => {
         const response = await fetch(request)
         if (response.ok) cache.put(request, response.clone())
         return response
-      })
+      }),
+    )
+    return
+  }
+
+  if (API_PATTERN.test(url.pathname)) {
+    if (!isReadApi(url.pathname)) return
+
+    event.respondWith(
+      caches.open(API_CACHE).then(async (cache) => {
+        try {
+          const response = await fetch(request)
+          if (isCacheableJsonResponse(response)) cache.put(request, response.clone())
+          return response
+        } catch {
+          const cached = await cache.match(request)
+          return (
+            cached ??
+            new Response(JSON.stringify({ error: 'Offline' }), {
+              status: 503,
+              headers: { 'content-type': 'application/json' },
+            })
+          )
+        }
+      }),
+    )
+    return
+  }
+
+  if (STATIC_PATTERNS.some((pattern) => pattern.test(url.pathname))) {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        const cached = await cache.match(request)
+        if (cached) return cached
+        const response = await fetch(request)
+        if (response.ok) cache.put(request, response.clone())
+        return response
+      }),
     )
     return
   }
@@ -108,27 +205,25 @@ self.addEventListener('fetch', (event) => {
           const cached = await cache.match(request)
           return cached ?? Response.error()
         }
-      })
+      }),
     )
     return
   }
 
-  // Páginas do app — network-first, fallback para cache
-  if (request.mode === 'navigate' || APP_PAGES.some((p) => url.pathname.startsWith(p))) {
+  if (request.mode === 'navigate' || isAppPage(url.pathname)) {
     event.respondWith(
       caches.open(PAGES_CACHE).then(async (cache) => {
         try {
           const response = await fetch(request)
-          if (response.ok) cache.put(request, response.clone())
+          if (isCacheablePageResponse(response)) cache.put(request, response.clone())
           return response
         } catch {
           const cached = await cache.match(request)
           if (cached) return cached
-          // Fallback para página raiz se offline e não há cache
           const root = await cache.match('/today')
-          return root ?? Response.error()
+          return root ?? cache.match('/') ?? Response.error()
         }
-      })
+      }),
     )
   }
 })
