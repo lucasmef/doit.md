@@ -41,7 +41,8 @@ jobs:
           fetch-depth: 0
       - name: Secret pattern scan
         run: |
-          if git grep -n -I -E '(sk_live_|sk_test_|pk_live_|pk_test_|GOCSPX-|mongodb\+srv://[^[:space:]]+:[^[:space:]@]+@)' -- ':!*.example' ':!pnpm-lock.yaml' ':!.github/workflows/deploy-dev.yml'; then
+          SECRET_PATTERN='(s[k]_live_|s[k]_test_|p[k]_live_|p[k]_test_|GOCSP[X]-|mongo[d]b\+srv://[^[:space:]]+:[^[:space:]@]+@)'
+          if git grep -n -I -E "$SECRET_PATTERN" -- ':!*.example' ':!pnpm-lock.yaml'; then
             echo "Potential committed secret found."
             exit 1
           fi
