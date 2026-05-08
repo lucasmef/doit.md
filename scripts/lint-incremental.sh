@@ -1,13 +1,21 @@
 #!/usr/bin/env bash
 # scripts/lint-incremental.sh
-# Lints only changed files in apps/web since origin/master or last commit
+# Lints only changed files in apps/web since origin/main or the previous commit
 
 set -euo pipefail
 
-# Find changed files in apps/web
-# We filter for .ts and .tsx files
+if git rev-parse --verify origin/main >/dev/null 2>&1; then
+  BASE_REF="origin/main...HEAD"
+elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+  BASE_REF="HEAD~1...HEAD"
+else
+  BASE_REF="HEAD"
+fi
+
+# Find changed files in apps/web.
+# We filter for .ts and .tsx files.
 FILES=$(
-  git diff --name-only origin/master...HEAD \
+  git diff --name-only "$BASE_REF" \
     | grep -E '^apps/web/.*\.(ts|tsx)$' \
     | grep -v '^apps/web/next-env\.d\.ts$' \
     || true

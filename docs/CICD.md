@@ -31,11 +31,11 @@ push dev
   -> healthcheck http://127.0.0.1:8111/api/health
 
 workflow_dispatch Deploy PROD
-  -> confirmacao manual
   -> quality gate na branch dev
   -> security gate na branch dev
+  -> promove dev para main
   -> rsync para /srv/doit/prod/app
-  -> scripts/deploy.sh prod
+  -> scripts/deploy.sh prod a partir da branch main
   -> systemd restart doit.service
   -> healthcheck http://127.0.0.1:8110/api/health
   -> tag prod-YYYY.MM.DD-rN

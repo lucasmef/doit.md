@@ -3,9 +3,9 @@ name: Security
 on:
   workflow_dispatch:
   push:
-    branches: [dev, main, master]
+    branches: [dev, main]
   pull_request:
-    branches: [dev, main, master]
+    branches: [dev, main]
   schedule:
     # Toda segunda às 08:00 UTC
     - cron: '0 8 * * 1'

@@ -2,32 +2,17 @@ name: Deploy PROD
 
 on:
   workflow_dispatch:
-    inputs:
-      confirm:
-        description: 'Digite "deploy" para confirmar o deploy em producao'
-        required: true
-        default: ''
+
+permissions:
+  contents: write
 
 concurrency:
   group: doit-deploy-prod
   cancel-in-progress: false
 
 jobs:
-  validate:
-    name: Confirmar deploy
-    runs-on: self-hosted
-    steps:
-      - name: Checar confirmacao
-        run: |
-          if [ "${{ github.event.inputs.confirm }}" != "deploy" ]; then
-            echo "Confirmacao invalida. Digite exatamente 'deploy'."
-            exit 1
-          fi
-          echo "Confirmado por: ${{ github.actor }}"
-
   quality:
     name: Quality Gate
-    needs: validate
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +27,6 @@ jobs:
 
   security:
     name: Security Gate
-    needs: validate
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
@@ -52,19 +36,47 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm audit --audit-level high
 
-  deploy:
-    name: Deploy PROD
+  promote:
+    name: Promote dev to main
     needs: [quality, security]
     runs-on: self-hosted
-
+    outputs:
+      sha: ${{ steps.promote.outputs.sha }}
     steps:
-      - name: Checkout branch dev para PROD
+      - name: Checkout branch dev
         uses: actions/checkout@v4
         with:
           ref: dev
+          fetch-depth: 0
+
+      - name: Promover dev para main
+        id: promote
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git push origin HEAD:main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    name: Deploy PROD
+    needs: promote
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout branch main para PROD
+        uses: actions/checkout@v4
+        with:
+          ref: main
           clean: true
 
-      - name: Sincronizar /srv/doit/prod/app com codigo do checkout
+      - name: Validar commit promovido
+        run: |
+          if [ "$(git rev-parse HEAD)" != "${{ needs.promote.outputs.sha }}" ]; then
+            echo "O checkout de main nao corresponde ao commit promovido de dev."
+            exit 1
+          fi
+
+      - name: Sincronizar /srv/doit/prod/app com codigo do main
         run: |
           install -d /srv/doit/prod/app
           rsync -a --delete \
@@ -91,6 +103,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: `refs/tags/${tag}`,
-              sha: context.sha,
+              sha: '${{ needs.promote.outputs.sha }}',
             })
             core.notice(`Tag criada: ${tag}`)
