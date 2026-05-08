@@ -3,6 +3,11 @@
   "version": "0.0.1",
   "private": true,
   "packageManager": "pnpm@9.0.0",
+  "pnpm": {
+    "overrides": {
+      "fast-uri": "3.1.2"
+    }
+  },
   "scripts": {
     "dev": "pnpm --filter @doit/web dev",
     "build": "pnpm --filter @doit/web build",
