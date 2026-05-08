@@ -21,6 +21,11 @@ type ActiveShortcut =
 const PRIORITY_SHORTCUT = /(?:^|\s)!P([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
+const INLINE_METADATA_PATTERN = /(!P[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|\b(?:hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|às\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
+const DATE_WORD_SHORTCUT = /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
+const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
+const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
 const RECURRENCE_OPTIONS: Array<{ value: ItemRecurrence | ''; label: string }> = [
   { value: '', label: 'Sem recorrência' },
@@ -31,8 +36,15 @@ const RECURRENCE_OPTIONS: Array<{ value: ItemRecurrence | ''; label: string }> =
   { value: 'yearly', label: 'Todo ano' },
 ]
 
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function todayDate() {
-  return new Date().toISOString().slice(0, 10)
+  return toDateInputValue(new Date())
 }
 
 function formatDueDate(dateStr: string) {
@@ -55,7 +67,7 @@ function formatTimeLabel(time: string) {
 function dateAfter(days: number) {
   const date = new Date()
   date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  return toDateInputValue(date)
 }
 
 function nextWeekday(targetDay: number, minimumDays = 1) {
@@ -63,7 +75,7 @@ function nextWeekday(targetDay: number, minimumDays = 1) {
   let days = (targetDay - date.getDay() + 7) % 7
   if (days < minimumDays) days += 7
   date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  return toDateInputValue(date)
 }
 
 function laterThisWeekDate() {
@@ -91,6 +103,10 @@ function cleanTitle(value: string) {
     .replace(/(?:^|\s)!P[1-4]\b/gi, ' ')
     .replace(/(?:^|\s)#[\p{L}\p{N}][\p{L}\p{N}_-]*/giu, ' ')
     .replace(/(?:^|\s)@[\p{L}\p{N}][\p{L}\p{N}_-]*/giu, ' ')
+    .replace(DATE_WORD_SHORTCUT, ' ')
+    .replace(SLASH_DATE_SHORTCUT, ' ')
+    .replace(ISO_DATE_SHORTCUT, ' ')
+    .replace(TIME_SHORTCUT, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -105,7 +121,12 @@ function normalizeToken(value: string) {
 }
 
 function isCategorizerToken(value: string) {
-  return /^!P?[1-4]?$/i.test(value) || /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value)
+  return /^!P?[1-4]?$/i.test(value) ||
+    /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value) ||
+    DATE_WORD_SHORTCUT.test(` ${value}`) ||
+    SLASH_DATE_SHORTCUT.test(` ${value}`) ||
+    ISO_DATE_SHORTCUT.test(` ${value}`) ||
+    TIME_SHORTCUT.test(` ${value}`)
 }
 
 function projectIdOf(project: Project) {
@@ -116,6 +137,72 @@ function slugToken(value: string) {
   return normalizeToken(value)
     .replace(/\s+/g, '-')
     .replace(/[^\p{L}\p{N}_-]/giu, '')
+}
+
+function parseSlashDate(dayText: string, monthText: string, yearText?: string) {
+  const day = Number(dayText)
+  const month = Number(monthText)
+  const now = new Date()
+  let year = yearText ? Number(yearText) : now.getFullYear()
+  if (yearText?.length === 2) year += 2000
+  if (!day || !month || month > 12 || day > 31) return ''
+
+  let date = new Date(year, month - 1, day)
+  if (!yearText && toDateInputValue(date) < todayDate()) {
+    date = new Date(year + 1, month - 1, day)
+  }
+  if (date.getDate() !== day || date.getMonth() !== month - 1) return ''
+  return toDateInputValue(date)
+}
+
+function parseDateWord(value: string) {
+  const token = normalizeToken(value)
+  if (token === 'hoje') return todayDate()
+  if (token === 'amanha' || token === 'amanhã') return dateAfter(1)
+  if (token === 'depois de amanha' || token === 'depois de amanhã') return dateAfter(2)
+  if (token === 'fim de semana' || token === 'final de semana') return nextWeekday(6)
+  if (token === 'semana que vem') return nextWeekday(1)
+
+  const weekdays: Record<string, number> = {
+    domingo: 0,
+    segunda: 1,
+    'segunda-feira': 1,
+    terca: 2,
+    terça: 2,
+    'terca-feira': 2,
+    'terça-feira': 2,
+    quarta: 3,
+    'quarta-feira': 3,
+    quinta: 4,
+    'quinta-feira': 4,
+    sexta: 5,
+    'sexta-feira': 5,
+    sabado: 6,
+    sábado: 6,
+  }
+  const weekday = weekdays[token]
+  return weekday === undefined ? '' : nextWeekday(weekday)
+}
+
+function parseInlineDueDate(value: string) {
+  const wordMatch = value.match(DATE_WORD_SHORTCUT)
+  if (wordMatch?.[1]) return parseDateWord(wordMatch[1])
+
+  const slashMatch = value.match(SLASH_DATE_SHORTCUT)
+  if (slashMatch?.[1] && slashMatch[2]) return parseSlashDate(slashMatch[1], slashMatch[2], slashMatch[3])
+
+  const isoMatch = value.match(ISO_DATE_SHORTCUT)
+  if (isoMatch?.[1] && !Number.isNaN(new Date(`${isoMatch[1]}T12:00:00`).getTime())) return isoMatch[1]
+
+  return ''
+}
+
+function parseInlineDueTime(value: string) {
+  const match = value.match(TIME_SHORTCUT)
+  if (!match?.[1]) return ''
+  const hour = match[1].padStart(2, '0')
+  const minute = match[2] ?? match[3] ?? '00'
+  return `${hour}:${minute.padStart(2, '0')}`
 }
 
 function activeShortcut(value: string, cursor: number): ActiveShortcut | null {
@@ -235,7 +322,7 @@ function HighlightedTitleInput({
   placeholder: string
   inputRef?: React.RefObject<HTMLInputElement | null>
 }) {
-  const parts = value.split(/(!P[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*)/giu)
+  const parts = value.split(INLINE_METADATA_PATTERN)
 
   return (
     <div className="relative min-w-0 flex-1">
@@ -387,6 +474,17 @@ export function QuickCapture() {
     const foundTags = Array.from(value.matchAll(TAG_SHORTCUT)).map((m) => m[1]).filter(Boolean) as string[]
     if (foundTags.length > 0) {
       setTags(Array.from(new Set(foundTags.map((tag) => normalizeToken(tag)))))
+    }
+
+    const inlineDueDate = parseInlineDueDate(value)
+    if (inlineDueDate && complexity === 'task') {
+      setDueDate(inlineDueDate)
+    }
+
+    const inlineDueTime = parseInlineDueTime(value)
+    if (inlineDueTime && complexity === 'task') {
+      setDueTime(inlineDueTime)
+      if (!inlineDueDate && !dueDate) setDueDate(todayDate())
     }
   }
 

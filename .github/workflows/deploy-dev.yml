@@ -32,9 +32,23 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm audit --audit-level high
 
+  scan-secrets:
+    name: Secret Scan
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Secret pattern scan
+        run: |
+          if git grep -n -I -E '(sk_live_|sk_test_|pk_live_|pk_test_|GOCSPX-|mongodb\+srv://[^[:space:]]+:[^[:space:]@]+@)' -- ':!*.example' ':!pnpm-lock.yaml' ':!.github/workflows/deploy-dev.yml'; then
+            echo "Potential committed secret found."
+            exit 1
+          fi
+
   deploy:
     name: Deploy DEV
-    needs: [quality, security]
+    needs: [quality, security, scan-secrets]
     runs-on: self-hosted
 
     steps:

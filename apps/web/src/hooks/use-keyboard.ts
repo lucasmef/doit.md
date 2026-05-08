@@ -17,9 +17,9 @@ export function useKeyboard(shortcuts: Shortcut[]) {
       for (const s of shortcuts) {
         if (s.when === false) continue
         if (s.key !== e.key) continue
-        if (s.meta !== undefined && s.meta !== e.metaKey) continue
-        if (s.ctrl !== undefined && s.ctrl !== e.ctrlKey) continue
-        if (s.shift !== undefined && s.shift !== e.shiftKey) continue
+        if ((s.meta ?? false) !== e.metaKey) continue
+        if ((s.ctrl ?? false) !== e.ctrlKey) continue
+        if ((s.shift ?? false) !== e.shiftKey) continue
 
         const target = e.target as HTMLElement
         const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)

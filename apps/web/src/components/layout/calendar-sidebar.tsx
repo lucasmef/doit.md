@@ -56,7 +56,7 @@ export function CalendarSidebar() {
         </div>
 
         <div className="p-4 border-t border-ui-border-soft bg-slate-50 text-[10px] text-slate-400">
-          Dica: Pressione <kbd className="font-sans px-1 py-0.5 rounded bg-white border border-slate-200">C</kbd> para alternar o calendário.
+          Dica: Pressione <kbd className="font-sans px-1 py-0.5 rounded bg-white border border-slate-200">Shift</kbd> + <kbd className="font-sans px-1 py-0.5 rounded bg-white border border-slate-200">C</kbd> para alternar o calendário.
         </div>
       </aside>
     </>

@@ -38,7 +38,12 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       },
     },
     {
-      key: 'c',
+      key: 'q',
+      handler: (e) => { e.preventDefault(); setQuickCaptureOpen(true) },
+    },
+    {
+      key: 'C',
+      shift: true,
       handler: (e) => { e.preventDefault(); setCalendarOpen(!calendarOpen) },
     },
     {
@@ -87,4 +92,3 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
 export function UIProvider({ children }: { children: React.ReactNode }) {
   return <UIProviderInner>{children}</UIProviderInner>
 }
-
