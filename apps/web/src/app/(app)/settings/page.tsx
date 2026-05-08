@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useToast } from '@/components/ui/toast'
 import { syncGoogleCalendar } from '@/hooks/use-calendar-events'
+import { usePushNotifications } from '@/hooks/use-push-notifications'
 
 interface GoogleAccount {
   email: string
@@ -15,6 +16,8 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [syncing, setSyncing] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [pushBusy, setPushBusy] = useState<'enable' | 'disable' | 'test' | null>(null)
+  const push = usePushNotifications()
 
   useEffect(() => {
     fetch('/api/google/account')
@@ -62,6 +65,48 @@ export default function SettingsPage() {
       setDisconnecting(false)
     }
   }
+
+  async function handleEnablePush() {
+    setPushBusy('enable')
+    try {
+      await push.enable()
+      addToast('Notificacoes ativadas.', 'success')
+    } catch (e: unknown) {
+      addToast(e instanceof Error ? e.message : 'Erro ao ativar notificacoes', 'error')
+    } finally {
+      setPushBusy(null)
+    }
+  }
+
+  async function handleDisablePush() {
+    setPushBusy('disable')
+    try {
+      await push.disable()
+      addToast('Notificacoes desativadas.', 'info')
+    } catch (e: unknown) {
+      addToast(e instanceof Error ? e.message : 'Erro ao desativar notificacoes', 'error')
+    } finally {
+      setPushBusy(null)
+    }
+  }
+
+  async function handleTestPush() {
+    setPushBusy('test')
+    try {
+      const result = await push.sendTest()
+      if (result.sent > 0) addToast(`Teste enviado para ${result.sent} dispositivo(s).`, 'success')
+      else addToast('Nenhum dispositivo ativo recebeu o teste.', 'info')
+    } catch (e: unknown) {
+      addToast(e instanceof Error ? e.message : 'Erro ao enviar teste', 'error')
+    } finally {
+      setPushBusy(null)
+    }
+  }
+
+  const pushSupported = push.support !== 'unsupported'
+  const needsIosInstall = push.support === 'needs-install-ios'
+  const pushConfigured = push.status?.configured ?? true
+  const pushSubscribed = Boolean(push.status?.currentDeviceEnabled)
 
   return (
     <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
@@ -142,6 +187,67 @@ export default function SettingsPage() {
               </a>
             </div>
           )}
+        </div>
+      </section>
+
+      <section className="mt-6 bg-surface-panel border border-ui-border-panel shadow-sm rounded-[16px] divide-y divide-ui-border-soft">
+        <div className="px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Notificacoes</h2>
+        </div>
+        <div className="px-5 py-5">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <p className="text-sm font-medium text-slate-800">
+                {pushSubscribed ? 'Notificacoes ativas neste dispositivo' : 'Notificacoes desativadas neste dispositivo'}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {push.status?.activeDeviceCount ?? 0} dispositivo(s) ativo(s) na sua conta.
+              </p>
+              {!pushConfigured ? (
+                <p className="text-xs text-red-500 mt-2">Web Push nao esta configurado no servidor.</p>
+              ) : null}
+              {!pushSupported ? (
+                <p className="text-xs text-red-500 mt-2">Este navegador nao suporta notificacoes push.</p>
+              ) : null}
+              {needsIosInstall ? (
+                <p className="text-xs text-slate-500 mt-2">
+                  No iPhone, abra no Safari, toque em Compartilhar, escolha Adicionar a Tela de Inicio e abra pelo icone instalado.
+                </p>
+              ) : null}
+              {push.support === 'denied' ? (
+                <p className="text-xs text-red-500 mt-2">A permissao foi bloqueada no navegador. Altere nas configuracoes do site.</p>
+              ) : null}
+            </div>
+
+            <div className="flex gap-2">
+              {pushSubscribed ? (
+                <>
+                  <button
+                    onClick={handleTestPush}
+                    disabled={pushBusy !== null || !pushConfigured}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                  >
+                    {pushBusy === 'test' ? 'Enviando...' : 'Enviar teste'}
+                  </button>
+                  <button
+                    onClick={handleDisablePush}
+                    disabled={pushBusy !== null}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
+                  >
+                    {pushBusy === 'disable' ? 'Desativando...' : 'Desativar'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleEnablePush}
+                  disabled={pushBusy !== null || push.isLoading || !pushConfigured || !pushSupported || needsIosInstall || push.support === 'denied'}
+                  className="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                >
+                  {pushBusy === 'enable' ? 'Ativando...' : 'Ativar notificacoes'}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 

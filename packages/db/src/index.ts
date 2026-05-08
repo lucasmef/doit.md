@@ -44,3 +44,8 @@ export const GoogleAccountModel = new SqlModel({
 export const UserModel = new SqlModel({
   table: 'users',
 })
+
+export const PushSubscriptionModel = new SqlModel({
+  table: 'push_subscriptions',
+  booleanFields: ['enabled'],
+})
