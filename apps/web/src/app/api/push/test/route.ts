@@ -19,7 +19,8 @@ export async function POST() {
       title: 'doit.md',
       body: 'Notificacoes ativadas.',
       url: '/today',
-      tag: 'doit-test',
+      tag: `doit-test-${Date.now()}`,
+      renotify: true,
     }
 
     const results = await Promise.all(rows.map((row) => sendPush(row, payload)))

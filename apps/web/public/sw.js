@@ -49,6 +49,7 @@ self.addEventListener('push', (event) => {
     icon: payload.icon || '/icon/192',
     badge: payload.badge || '/icon/192',
     tag: payload.tag || 'doitmd',
+    renotify: Boolean(payload.renotify),
     data: {
       url: payload.url || '/today',
     },
