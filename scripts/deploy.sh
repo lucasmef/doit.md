@@ -262,9 +262,11 @@ require_env_key DATABASE_URL
 require_env_key NEXTAUTH_SECRET
 require_env_key NEXTAUTH_URL
 require_env_key GOOGLE_REDIRECT_URI
-require_env_key NEXT_PUBLIC_VAPID_PUBLIC_KEY
-require_env_key VAPID_PRIVATE_KEY
-require_env_key VAPID_EMAIL
+if [[ "$TARGET_ENV" == "prod" ]]; then
+  require_env_key NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  require_env_key VAPID_PRIVATE_KEY
+  require_env_key VAPID_EMAIL
+fi
 
 echo "======================================================"
 echo "Deploying doit.md to $TARGET_ENV"
