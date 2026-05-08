@@ -57,15 +57,6 @@ require_env_key() {
   fi
 }
 
-require_google_client_id() {
-  local value
-  value="$(read_env_value GOOGLE_CLIENT_ID)"
-  if [[ "$value" != *.apps.googleusercontent.com ]]; then
-    echo "GOOGLE_CLIENT_ID in $ENV_FILE does not look like a Google OAuth web client ID."
-    exit 1
-  fi
-}
-
 generate_secret() {
   if command -v openssl >/dev/null 2>&1; then
     openssl rand -base64 48
@@ -270,10 +261,7 @@ ensure_dev_default_url_env
 require_env_key DATABASE_URL
 require_env_key NEXTAUTH_SECRET
 require_env_key NEXTAUTH_URL
-require_env_key GOOGLE_CLIENT_ID
-require_env_key GOOGLE_CLIENT_SECRET
 require_env_key GOOGLE_REDIRECT_URI
-require_google_client_id
 
 echo "======================================================"
 echo "Deploying doit.md to $TARGET_ENV"
