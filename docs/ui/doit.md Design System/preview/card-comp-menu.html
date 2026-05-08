@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 22px; box-sizing: border-box; font-family: var(--font-sans); display: flex; gap: 22px; align-items: flex-start; }
+  .menu {
+    width: 280px;
+    background: var(--c-white);
+    border: 1px solid var(--border);
+    border-radius: var(--r-12);
+    box-shadow: var(--ev-2);
+    padding: 6px;
+    overflow: hidden;
+  }
+  .search {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    border-bottom: 1px solid var(--divider); margin: -6px -6px 6px;
+  }
+  .search input { flex: 1; border: none; outline: none; font-size: 13px; font-family: var(--font-sans); color: var(--fg); background: transparent; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: var(--r-6); cursor: pointer; font-size: 13px; color: var(--fg); }
+  .item:hover, .item.active { background: var(--bg-sunken); }
+  .item.active { background: rgba(47,107,255,.08); color: var(--c-vivid-blue); }
+  .ic { width: 16px; color: var(--fg-2); display: inline-flex; }
+  .item.active .ic { color: var(--c-vivid-blue); }
+  .kbd { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+  .label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .04em; padding: 6px 10px; }
+  .toast {
+    background: var(--c-navy-900); color: white; padding: 10px 14px; border-radius: var(--r-8);
+    box-shadow: var(--ev-3); display: flex; align-items: center; gap: 10px; font-size: 13px;
+    align-self: flex-end;
+  }
+  .toast .check { width: 18px; height: 18px; border-radius: 999px; background: var(--c-teal); display: inline-flex; align-items: center; justify-content: center; }
+</style></head>
+<body>
+  <div class="menu">
+    <div class="search">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--fg-3)"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input placeholder="Type a command…">
+      <span class="kbd">⌘ K</span>
+    </div>
+    <div class="label">Actions</div>
+    <div class="item active">
+      <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+      New task
+      <span class="kbd">⌘ N</span>
+    </div>
+    <div class="item">
+      <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 3h7v7M21 3l-9 9M5 21h7M5 21V14"/></svg></span>
+      Open note…
+      <span class="kbd">⌘ O</span>
+    </div>
+    <div class="item">
+      <span class="ic"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg></span>
+      Toggle Today view
+      <span class="kbd">⌘ 1</span>
+    </div>
+  </div>
+  <div class="toast">
+    <span class="check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 9 17 20 6"/></svg></span>
+    Synced 2 minutes ago
+  </div>
+</body></html>

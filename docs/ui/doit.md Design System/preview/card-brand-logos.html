@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 14px; box-sizing: border-box; font-family: var(--font-sans); display: grid; grid-template-columns: 1.4fr 1fr 1.4fr 1.4fr; gap: 10px; }
+  .panel { border-radius: var(--r-12); display: flex; align-items: center; justify-content: center; padding: 14px; min-height: 88px; box-sizing: border-box; position: relative; }
+  .light { background: var(--c-white); border: 1px solid var(--border); }
+  .dark { background: var(--c-navy-900); }
+  .ow { background: var(--bg); border: 1px solid var(--border); }
+  .panel img { max-height: 56px; max-width: 100%; }
+  .col { display: flex; flex-direction: column; gap: 6px; }
+  .lbl { font-size: 11px; font-weight: 600; color: var(--fg-2); text-align: center; }
+  .meta { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-align: center; }
+</style></head>
+<body>
+  <div class="col">
+    <div class="panel light"><img src="../assets/logo-primary.svg" alt="logo"></div>
+    <div class="lbl">Primary</div>
+    <div class="meta">on white</div>
+  </div>
+  <div class="col">
+    <div class="panel light"><img src="../assets/logo-icon.svg" alt="icon" style="max-height:64px; border-radius: 14px;"></div>
+    <div class="lbl">Icon only</div>
+    <div class="meta">app icon</div>
+  </div>
+  <div class="col">
+    <div class="panel ow"><img src="../assets/logo-monochrome.svg" alt="logo"></div>
+    <div class="lbl">Monochrome</div>
+    <div class="meta">single-color navy</div>
+  </div>
+  <div class="col">
+    <div class="panel dark"><img src="../assets/logo-reversed.svg" alt="logo"></div>
+    <div class="lbl">Reversed</div>
+    <div class="meta">light on dark</div>
+  </div>
+</body></html>

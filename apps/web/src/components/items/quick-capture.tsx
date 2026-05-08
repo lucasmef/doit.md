@@ -609,10 +609,10 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && setQuickCaptureOpen(false)}
     >
-      <div className={`w-full overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl ${isNote ? 'max-w-4xl' : 'max-w-[560px]'}`}>
+      <div className={`w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg ${isNote ? 'max-w-4xl' : 'max-w-[560px]'}`}>
         <form onSubmit={handleSubmit} className="flex flex-col">
           <div className="px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
@@ -642,7 +642,7 @@ export function QuickCapture() {
                 Nota
               </button>
               {shortcut && (shortcutTags.length > 0 || shortcutProjects.length > 0 || shortcutPriorities.length > 0) && (
-                <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
                   {shortcut.kind === 'tag' && shortcutTags.map((tag) => (
                     <button
                       key={tag}
@@ -691,7 +691,7 @@ export function QuickCapture() {
                   placeholder="Escreva em Markdown..."
                   minHeight="min-h-[440px]"
                 />
-                <div className="mt-3 rounded-xl border border-dashed border-ui-border-soft bg-surface-soft/70 p-4">
+                <div className="mt-3 rounded-xl border border-dashed border-ui-border-strong bg-surface-soft p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
@@ -729,7 +729,7 @@ export function QuickCapture() {
                     {dueDate ? formatDueDate(dueDate) : 'Hoje'}
                   </ToolButton>
                   {popover === 'date' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                       {DATE_SUGGESTIONS.map((suggestion) => {
                         const value = suggestion.getValue()
                         return (
@@ -839,7 +839,7 @@ export function QuickCapture() {
                     {recurrence ? recurrenceLabel : ''}
                   </ToolButton>
                   {popover === 'recurrence' && (
-                    <div className="absolute left-0 top-9 z-10 w-48 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-48 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
                       {RECURRENCE_OPTIONS.map((option) => (
                         <button
                           key={option.value || 'none'}
@@ -867,7 +867,7 @@ export function QuickCapture() {
                     <IconFlag className={`h-3.5 w-3.5 ${priorityConfig.color}`} />
                   </ToolButton>
                   {popover === 'priority' && (
-                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
                       {PRIORITIES.map((p) => {
                         const cfg = PRIORITY_CONFIG[p]
                         return (
@@ -901,7 +901,7 @@ export function QuickCapture() {
                   {tags.length > 0 ? tags.length : ''}
                 </ToolButton>
                 {popover === 'tags' && (
-                  <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                  <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     {tags.length > 0 && (
                       <div className="mb-2 flex flex-wrap gap-1">
                         {tags.map((tag) => (
@@ -958,7 +958,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border-t border-ui-border-soft bg-surface-soft/60 px-5 py-3">
+          <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3">
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"
@@ -970,7 +970,7 @@ export function QuickCapture() {
                 <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
               </button>
               {popover === 'project' && (
-                <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                   <input
                     value={projectQuery}
                     onChange={(e) => setProjectQuery(e.target.value)}

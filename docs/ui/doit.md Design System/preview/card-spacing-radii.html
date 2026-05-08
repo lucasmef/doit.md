@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 18px; box-sizing: border-box; font-family: var(--font-sans); display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .box { width: 64px; height: 64px; background: var(--c-vivid-blue); }
+  .label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-2); }
+  .name { font-size: 11px; font-weight: 600; color: var(--fg); }
+</style></head>
+<body>
+  <div class="item"><div class="box" style="border-radius:4px"></div><div class="name">4 · chip</div><div class="label">--r-4</div></div>
+  <div class="item"><div class="box" style="border-radius:6px"></div><div class="name">6 · button</div><div class="label">--r-6</div></div>
+  <div class="item"><div class="box" style="border-radius:8px"></div><div class="name">8 · input</div><div class="label">--r-8</div></div>
+  <div class="item"><div class="box" style="border-radius:12px"></div><div class="name">12 · card</div><div class="label">--r-12</div></div>
+  <div class="item"><div class="box" style="border-radius:16px"></div><div class="name">16 · sheet</div><div class="label">--r-16</div></div>
+  <div class="item"><div class="box" style="border-radius:24px"></div><div class="name">24 · hero</div><div class="label">--r-24</div></div>
+  <div class="item"><div class="box" style="border-radius:999px"></div><div class="name">pill</div><div class="label">--r-pill</div></div>
+</body></html>

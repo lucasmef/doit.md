@@ -1,0 +1,247 @@
+/* ==========================================================================
+   doit.md — design tokens
+   Loaded everywhere. Pulls Inter + JetBrains Mono from Google Fonts.
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+:root {
+  /* -----------------------------------------------------------------
+     Brand colors — these are the only chromatic values in the system.
+     Scales below are derived from them; do not invent new hues.
+     ----------------------------------------------------------------- */
+  --c-deep-navy: #0F2342;
+  --c-vivid-blue: #2F6BFF;
+  --c-teal: #28C7B7;
+  --c-cool-gray: #D9E1EA;
+  --c-off-white: #F8FAFC;
+  --c-white: #FFFFFF;
+
+  /* Brand gradient — vivid-blue → teal. Always at ~45°. */
+  --brand-gradient: linear-gradient(135deg, #2F6BFF 0%, #28C7B7 100%);
+
+  /* In-between hues used by the dotted completion arc. */
+  --c-blue-steel: #238AF0;
+  --c-cyan-2: #1AAED7;
+
+  /* Semantic accents (used sparingly; status only). */
+  --c-success: #28C7B7;     /* same as teal */
+  --c-warning: #F5A524;
+  --c-danger:  #F04438;
+
+  /* -----------------------------------------------------------------
+     Neutrals — derived from cool-gray ↔ deep-navy. Cool, never warm.
+     ----------------------------------------------------------------- */
+  --c-navy-900: #0F2342;
+  --c-navy-700: #1F3559;
+  --c-navy-500: #46587A;
+  --c-navy-300: #7B89A4;
+  --c-gray-200: #B6C2D2;
+  --c-gray-100: #D9E1EA;
+  --c-gray-50:  #ECF0F5;
+  --c-bg:       #F8FAFC;
+
+  /* -----------------------------------------------------------------
+     Semantic surface tokens. Use these in components, not raw colors.
+     ----------------------------------------------------------------- */
+  --bg:        var(--c-off-white);   /* page background */
+  --bg-elev:   var(--c-white);       /* cards, panels */
+  --bg-sunken: var(--c-gray-50);     /* code blocks, input wells */
+  --bg-inverse: var(--c-navy-900);   /* dark surface (today panel, footers) */
+
+  --fg:        var(--c-navy-900);    /* primary text */
+  --fg-2:      var(--c-navy-500);    /* secondary text / metadata */
+  --fg-3:      var(--c-navy-300);    /* placeholder / muted */
+  --fg-on-dark: var(--c-white);
+  --fg-on-dark-2: rgba(255,255,255,.72);
+
+  --link:      var(--c-vivid-blue);
+  --accent:    var(--c-vivid-blue);
+  --accent-2:  var(--c-teal);
+
+  --border:    var(--c-gray-100);
+  --border-strong: var(--c-gray-200);
+  --divider:   var(--c-gray-100);
+
+  /* -----------------------------------------------------------------
+     Type — Inter for UI, JetBrains Mono for code/markdown.
+     ----------------------------------------------------------------- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Sizes — modest, dense scale. App-first, so we keep things tight. */
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-15: 15px;
+  --fs-16: 16px;
+  --fs-18: 18px;
+  --fs-20: 20px;
+  --fs-24: 24px;
+  --fs-30: 30px;
+  --fs-36: 36px;
+  --fs-48: 48px;
+  --fs-64: 64px;
+
+  /* Weights — Inter ships 400/500/600/700/800 in this build. */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-black: 800;
+
+  /* Line heights */
+  --lh-tight: 1.1;
+  --lh-snug: 1.25;
+  --lh-normal: 1.45;
+  --lh-relaxed: 1.6;
+
+  /* Tracking — display sizes get tighter. */
+  --tr-tight: -0.02em;
+  --tr-snug: -0.01em;
+  --tr-normal: 0;
+  --tr-wide: 0.04em;
+
+  /* -----------------------------------------------------------------
+     Spacing — 4px base. Use these instead of arbitrary px.
+     ----------------------------------------------------------------- */
+  --s-0: 0;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --s-10: 40px;
+  --s-12: 48px;
+  --s-16: 64px;
+  --s-20: 80px;
+
+  /* -----------------------------------------------------------------
+     Radii — soft but not bubbly. 8/12/16 cover most components.
+     ----------------------------------------------------------------- */
+  --r-2: 2px;
+  --r-4: 4px;
+  --r-6: 6px;   /* buttons, chips */
+  --r-8: 8px;   /* inputs, small cards */
+  --r-12: 12px; /* cards, menus */
+  --r-16: 16px; /* large cards / sheets */
+  --r-24: 24px; /* hero panels */
+  --r-pill: 999px;
+
+  /* -----------------------------------------------------------------
+     Elevation — light, cool-tinted shadows. Never warm/black.
+     Most components use border + ev-1; ev-2 for menus & overlays.
+     ----------------------------------------------------------------- */
+  --ev-0: none;
+  --ev-1: 0 1px 2px rgba(15,35,66,.06), 0 1px 1px rgba(15,35,66,.04);
+  --ev-2: 0 6px 16px rgba(15,35,66,.08), 0 2px 4px rgba(15,35,66,.04);
+  --ev-3: 0 18px 40px rgba(15,35,66,.14), 0 4px 10px rgba(15,35,66,.06);
+  --ev-focus: 0 0 0 3px rgba(47,107,255,.25);
+
+  /* Motion */
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 280ms;
+
+  /* Misc */
+  --maxw-prose: 68ch;
+  --maxw-app: 1280px;
+}
+
+/* ==========================================================================
+   Semantic typography
+   Use these classes (or @apply-style copy) on real components.
+   ========================================================================== */
+
+html { color: var(--fg); background: var(--bg); }
+body { font-family: var(--font-sans); font-size: var(--fs-15); line-height: var(--lh-normal); color: var(--fg); -webkit-font-smoothing: antialiased; }
+
+.h-display {
+  font-family: var(--font-sans);
+  font-weight: var(--fw-black);
+  font-size: var(--fs-64);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  color: var(--fg);
+}
+.h1 {
+  font-weight: var(--fw-black);
+  font-size: var(--fs-48);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tr-tight);
+  color: var(--fg);
+}
+.h2 {
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-30);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tr-snug);
+  color: var(--fg);
+}
+.h3 {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-20);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+}
+.h4 {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-16);
+  line-height: var(--lh-snug);
+  color: var(--fg);
+}
+.eyebrow {
+  font-weight: var(--fw-bold);
+  font-size: var(--fs-12);
+  line-height: 1;
+  letter-spacing: var(--tr-wide);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.p {
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-15);
+  line-height: var(--lh-relaxed);
+  color: var(--fg);
+}
+.p-sm {
+  font-size: var(--fs-13);
+  line-height: var(--lh-normal);
+  color: var(--fg-2);
+}
+.meta {
+  font-size: var(--fs-12);
+  color: var(--fg-3);
+}
+.code, code, kbd, pre {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+.code-block {
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--r-8);
+  padding: var(--s-3) var(--s-4);
+  color: var(--fg);
+}
+.kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-12);
+  background: var(--bg-elev);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--r-4);
+  padding: 2px 6px;
+  color: var(--fg-2);
+}
+.brand-text {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+          background-clip: text;
+  color: transparent;
+}

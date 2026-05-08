@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 20px; box-sizing: border-box; font-family: var(--font-sans); }
+  .row { display: flex; gap: 14px; }
+  .item { flex: 1; padding: 14px 16px; border-radius: var(--r-12); background: var(--bg-elev); border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+  .dot { width: 12px; height: 12px; border-radius: 999px; flex-shrink: 0; }
+  .name { font-size: 13px; font-weight: 600; color: var(--fg); }
+  .role { font-size: 11px; color: var(--fg-2); margin-top: 2px; font-family: var(--font-mono); }
+</style></head>
+<body>
+  <div class="row" style="margin-bottom: 12px;">
+    <div class="item"><div class="dot" style="background:#2F6BFF"></div><div><div class="name">Action</div><div class="role">--accent</div></div></div>
+    <div class="item"><div class="dot" style="background:#28C7B7"></div><div><div class="name">Success / Done</div><div class="role">--c-success</div></div></div>
+  </div>
+  <div class="row">
+    <div class="item"><div class="dot" style="background:#F5A524"></div><div><div class="name">Warning</div><div class="role">--c-warning</div></div></div>
+    <div class="item"><div class="dot" style="background:#F04438"></div><div><div class="name">Danger</div><div class="role">--c-danger</div></div></div>
+  </div>
+</body></html>

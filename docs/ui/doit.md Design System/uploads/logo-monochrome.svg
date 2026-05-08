@@ -1,0 +1,14 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  
+  <rect width="1200" height="320" fill="white"></rect>
+  <g transform="translate(50,35)">
+    <path d="M209 65 A105 105 0 1 0 204 205" stroke="#0F2342" stroke-width="20" stroke-linecap="round"></path>
+    <circle cx="214" cy="67" r="8.8" fill="#0F2342"></circle>
+    <circle cx="238" cy="82" r="8.2" fill="#0F2342"></circle>
+    <circle cx="256" cy="103" r="7.6" fill="#0F2342"></circle>
+    <circle cx="268" cy="129" r="7" fill="#0F2342"></circle>
+    <circle cx="273" cy="157" r="6.4" fill="#0F2342"></circle>
+    <path d="M84 137 L121 174 L185 101" stroke="#0F2342" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+  <text x="360" y="215" class="word" font-size="145" fill="#0F2342">doit.md</text>
+</svg>

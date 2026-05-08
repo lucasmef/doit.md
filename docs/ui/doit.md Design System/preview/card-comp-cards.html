@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 22px; box-sizing: border-box; font-family: var(--font-sans); display: flex; gap: 14px; align-items: stretch; }
+  .card {
+    flex: 1;
+    background: var(--c-white);
+    border: 1px solid var(--border);
+    border-radius: var(--r-12);
+    padding: 14px 16px;
+    box-shadow: var(--ev-1);
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .head { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+  .head .ext { color: var(--c-vivid-blue); }
+  .title { font-weight: 700; font-size: 16px; color: var(--fg); margin-top: 2px; }
+  .body { font-size: 13px; line-height: 1.5; color: var(--fg-2); }
+  .foot { display: flex; align-items: center; gap: 10px; margin-top: auto; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); padding-top: 6px; }
+  .meter { width: 60px; height: 5px; border-radius: 999px; background: var(--c-gray-100); overflow: hidden; }
+  .meter-fill { height: 100%; background: var(--brand-gradient); width: 60%; }
+  .pin { background: rgba(47,107,255,.10); color: var(--c-vivid-blue); padding: 1px 6px; border-radius: 4px; }
+</style></head>
+<body>
+  <div class="card">
+    <div class="head"><span class="ext">M↓</span><span>release-notes.md</span><span class="pin">pinned</span></div>
+    <div class="title">Ship v0.4</div>
+    <div class="body">Inline checkboxes, command palette, and faster sync. Final polish before Friday.</div>
+    <div class="foot"><div class="meter"><div class="meter-fill"></div></div>3 / 5 done · 2d</div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="ext">M↓</span><span>q3-plan.md</span></div>
+    <div class="title">Q3 plan</div>
+    <div class="body">Targets, owners, and the one risk we're willing to accept this quarter.</div>
+    <div class="foot">edited 12m ago · @sam</div>
+  </div>
+</body></html>

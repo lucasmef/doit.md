@@ -14,10 +14,13 @@ export default function InboxPage() {
   })
 
   return (
-    <div className="p-3 max-w-3xl mx-auto pb-24 lg:pb-4">
-      <div className="flex items-baseline justify-between mb-4 border-b border-ui-border-soft pb-3">
-        <h1 className="text-[26px] font-bold text-slate-900">Inbox</h1>
-        <p className="text-[13px] text-slate-500 font-medium capitalize">{inboxItems.length} itens</p>
+    <div className="mx-auto w-full max-w-[760px] px-5 py-8 pb-24 lg:pb-8">
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="mb-1 font-mono text-[12px] text-navy-300">doit.md / inbox</p>
+          <h1 className="text-[36px] font-extrabold leading-tight tracking-normal text-navy-900">Inbox</h1>
+        </div>
+        <p className="font-mono text-[12px] font-medium text-navy-500">{inboxItems.length} itens</p>
       </div>
       <ItemList
         items={inboxItems}

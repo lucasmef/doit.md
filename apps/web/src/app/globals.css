@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --brand-gradient: linear-gradient(135deg, #2f6bff 0%, #28c7b7 100%);
+  }
+
   * {
     box-sizing: border-box;
   }
@@ -11,9 +15,38 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+
+  body {
+    background: #f8fafc;
+    color: #0f2342;
+  }
+
+  ::selection {
+    background: rgba(47, 107, 255, 0.18);
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(47, 107, 255, 0.25);
+  }
 }
 
 @layer utilities {
+  .brand-gradient {
+    background-image: var(--brand-gradient);
+  }
+
   .scrollbar-none {
     scrollbar-width: none;
     -ms-overflow-style: none;

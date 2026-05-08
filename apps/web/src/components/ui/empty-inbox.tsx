@@ -1,7 +1,6 @@
 export function EmptyInbox() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center animate-fade-in">
-      {/* Illustrated SVG */}
+    <div className="flex animate-fade-in flex-col items-center justify-center px-4 py-16 text-center">
       <svg
         width="140"
         height="120"
@@ -11,36 +10,25 @@ export function EmptyInbox() {
         className="mb-6 opacity-80"
         aria-hidden="true"
       >
-        {/* Shadow */}
-        <ellipse cx="70" cy="108" rx="42" ry="6" fill="#ebe4da" />
-
-        {/* Inbox box body */}
-        <rect x="18" y="48" width="104" height="60" rx="12" fill="#ffffff" stroke="#e7e1d8" strokeWidth="1.5" />
-
-        {/* Inbox box lid */}
-        <path d="M18 68 L42 48 L98 48 L122 68" stroke="#e7e1d8" strokeWidth="1.5" fill="none" />
-        <path d="M18 68 Q70 88 122 68" fill="#f8f5f1" stroke="#ddd7cf" strokeWidth="1.5" />
-
-        {/* Checkmark circle — subtle, in the center of the box */}
-        <circle cx="70" cy="76" r="18" fill="#f0f7ff" stroke="#bfdbfe" strokeWidth="1.5" />
-        <path d="M62 76 l5 5 9-10" stroke="#2f80ed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-        {/* Small sparkle dots */}
-        <circle cx="28" cy="36" r="3" fill="#bfdbfe" />
-        <circle cx="112" cy="30" r="2" fill="#e4d8ff" />
-        <circle cx="100" cy="14" r="4" fill="#fde4c2" />
-        <circle cx="38" cy="18" r="2.5" fill="#d7ecd9" />
-
-        {/* Lines suggesting list items — above the box */}
-        <rect x="48" y="10" width="44" height="5" rx="2.5" fill="#ebe4da" />
-        <rect x="54" y="20" width="32" height="5" rx="2.5" fill="#f0ece6" />
+        <ellipse cx="70" cy="108" rx="42" ry="6" fill="#D9E1EA" opacity="0.55" />
+        <rect x="18" y="48" width="104" height="60" rx="12" fill="#FFFFFF" stroke="#D9E1EA" strokeWidth="1.5" />
+        <path d="M18 68 L42 48 L98 48 L122 68" stroke="#D9E1EA" strokeWidth="1.5" fill="none" />
+        <path d="M18 68 Q70 88 122 68" fill="#ECF0F5" stroke="#B6C2D2" strokeWidth="1.5" />
+        <circle cx="70" cy="76" r="18" fill="#EEF4FF" stroke="#B8CFFD" strokeWidth="1.5" />
+        <path d="M62 76 l5 5 9-10" stroke="#2F6BFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="28" cy="36" r="3" fill="#B8CFFD" />
+        <circle cx="112" cy="30" r="2" fill="#28C7B7" />
+        <circle cx="100" cy="14" r="4" fill="#2F6BFF" opacity="0.18" />
+        <circle cx="38" cy="18" r="2.5" fill="#28C7B7" opacity="0.3" />
+        <rect x="48" y="10" width="44" height="5" rx="2.5" fill="#D9E1EA" />
+        <rect x="54" y="20" width="32" height="5" rx="2.5" fill="#ECF0F5" />
       </svg>
 
-      <h3 className="text-[18px] font-semibold text-slate-800 mb-2">Inbox limpo! 🎉</h3>
-      <p className="text-[14px] text-slate-500 max-w-xs leading-relaxed">
+      <h3 className="mb-2 text-[18px] font-semibold text-navy-900">Inbox limpo</h3>
+      <p className="max-w-xs text-[14px] leading-relaxed text-navy-500">
         Nenhum item aqui. Use{' '}
-        <kbd className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[11px] font-medium bg-surface-soft border border-ui-border-soft text-slate-600">
-          ⌘K
+        <kbd className="inline-flex items-center rounded-md border border-ui-border-strong bg-surface-soft px-1.5 py-0.5 font-mono text-[11px] font-medium text-navy-600">
+          q
         </kbd>{' '}
         para capturar algo novo.
       </p>

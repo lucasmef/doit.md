@@ -12,7 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
     <UIProvider>
-      <div className="flex h-screen overflow-hidden bg-surface-window">
+      <div className="flex h-screen overflow-hidden bg-surface-window text-navy-900">
         <div className="flex h-full w-full overflow-hidden bg-surface-window">
           {/* Sidebar — oculta em mobile */}
           <div className="hidden lg:block">
@@ -24,7 +24,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NotificationFailureBanner />
             <div className="flex flex-1 overflow-hidden">
               {/* Conteúdo principal — padding extra no mobile para o bottom nav */}
-              <main className="flex-1 overflow-y-auto pb-20 lg:pb-0 bg-surface-window px-3 lg:px-5">{children}</main>
+              <main className="flex-1 overflow-y-auto bg-surface-window pb-20 lg:pb-0">{children}</main>
+              <CalendarSidebar />
             </div>
           </div>
         </div>
@@ -34,7 +35,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ItemDetail />
       <BottomNav />
       <QuickCapture />
-      <CalendarSidebar />
     </UIProvider>
     </ToastProvider>
   )

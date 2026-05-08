@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 20px; box-sizing: border-box; font-family: var(--font-sans); }
+  .row { display: flex; align-items: flex-end; gap: 18px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .bar { background: var(--brand-gradient); border-radius: 4px; width: 32px; }
+  .label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-2); }
+  .name { font-size: 11px; font-weight: 600; color: var(--fg); }
+</style></head>
+<body>
+  <div class="row">
+    <div class="item"><div class="bar" style="height:4px"></div><div class="name">1</div><div class="label">4px</div></div>
+    <div class="item"><div class="bar" style="height:8px"></div><div class="name">2</div><div class="label">8px</div></div>
+    <div class="item"><div class="bar" style="height:12px"></div><div class="name">3</div><div class="label">12px</div></div>
+    <div class="item"><div class="bar" style="height:16px"></div><div class="name">4</div><div class="label">16px</div></div>
+    <div class="item"><div class="bar" style="height:20px"></div><div class="name">5</div><div class="label">20px</div></div>
+    <div class="item"><div class="bar" style="height:24px"></div><div class="name">6</div><div class="label">24px</div></div>
+    <div class="item"><div class="bar" style="height:32px"></div><div class="name">8</div><div class="label">32px</div></div>
+    <div class="item"><div class="bar" style="height:40px"></div><div class="name">10</div><div class="label">40px</div></div>
+    <div class="item"><div class="bar" style="height:48px"></div><div class="name">12</div><div class="label">48px</div></div>
+    <div class="item"><div class="bar" style="height:64px"></div><div class="name">16</div><div class="label">64px</div></div>
+  </div>
+  <div style="margin-top:14px; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3);">--s-* · 4px base</div>
+</body></html>

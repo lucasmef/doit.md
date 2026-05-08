@@ -12,17 +12,17 @@ function EventCard({ title, start, end, allDay }: { title: string; start: string
   }
 
   return (
-    <div className="flex items-center gap-3 py-1.5 group">
-      <div className="w-1 h-8 rounded-full bg-brand-500 shrink-0" />
+    <div className="group flex items-center gap-3 border-b border-ui-border-soft py-2">
+      <div className="h-8 w-1 shrink-0 rounded-full bg-brand-500" />
       <div className="w-14 shrink-0">
-        <span className="text-[13px] font-medium text-slate-600">
+        <span className="font-mono text-[12px] font-medium text-navy-500">
           {allDay ? 'Dia todo' : fmt(start)}
         </span>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[14px] font-medium text-slate-900 truncate">{title}</p>
+        <p className="truncate text-[14px] font-medium text-navy-900">{title}</p>
         {!allDay && (
-          <p className="text-[11px] text-slate-500 truncate">Termina as {fmt(end)}</p>
+          <p className="truncate font-mono text-[11px] text-navy-300">Termina as {fmt(end)}</p>
         )}
       </div>
     </div>
@@ -48,16 +48,19 @@ export default function TodayPage() {
   }).sort((a, b) => a.start.localeCompare(b.start))
 
   return (
-    <div className="p-3 max-w-3xl mx-auto pb-24 lg:pb-4">
-      <div className="flex items-baseline justify-between mb-4 border-b border-ui-border-soft pb-3">
-        <h1 className="text-[26px] font-bold text-slate-900">Hoje</h1>
-        <p className="text-[13px] text-slate-500 font-medium capitalize">{todayLabel}</p>
+    <div className="mx-auto w-full max-w-[760px] px-5 py-8 pb-24 lg:pb-8">
+      <div className="mb-6 flex items-end justify-between">
+        <div>
+          <p className="mb-1 font-mono text-[12px] text-navy-300">doit.md / today</p>
+          <h1 className="text-[36px] font-extrabold leading-tight tracking-normal text-navy-900">Hoje</h1>
+        </div>
+        <p className="font-mono text-[12px] font-medium capitalize text-navy-500">{todayLabel}</p>
       </div>
 
       {todayEvents.length > 0 && (
-        <section className="mb-4">
-          <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-            Eventos - {todayEvents.length}
+        <section className="mb-6 rounded-xl border border-ui-border bg-white p-4 shadow-cool-sm">
+          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+            Eventos / {todayEvents.length}
           </h2>
           <div className="space-y-1">
             {todayEvents.map((e) => (
@@ -68,8 +71,8 @@ export default function TodayPage() {
       )}
 
       <section className="mb-4">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-          Itens - {todayItems.length}
+        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+          Itens / {todayItems.length}
         </h2>
         <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
       </section>

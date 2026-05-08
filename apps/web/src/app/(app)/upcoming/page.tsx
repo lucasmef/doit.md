@@ -45,15 +45,16 @@ export default function UpcomingPage() {
   }, {})
 
   return (
-    <div className="p-3 max-w-3xl mx-auto pb-24 lg:pb-4">
-      <div className="flex items-baseline justify-between mb-4 border-b border-ui-border-soft pb-3">
-        <h1 className="text-[26px] font-bold text-slate-900">Proximos</h1>
+    <div className="mx-auto w-full max-w-[760px] px-5 py-8 pb-24 lg:pb-8">
+      <div className="mb-6">
+        <p className="mb-1 font-mono text-[12px] text-navy-300">doit.md / upcoming</p>
+        <h1 className="text-[36px] font-extrabold leading-tight tracking-normal text-navy-900">Proximos</h1>
       </div>
 
       {isLoading && (
         <div className="space-y-1">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-10 bg-slate-100 rounded-lg animate-pulse" />
+            <div key={i} className="h-10 animate-pulse rounded-lg bg-navy-50" />
           ))}
         </div>
       )}
@@ -63,9 +64,9 @@ export default function UpcomingPage() {
           const groupItems = grouped[group] ?? []
           if (groupItems.length === 0) return null
           return (
-            <section key={group} className="mb-4">
-              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                {group} - {groupItems.length}
+            <section key={group} className="mb-6">
+              <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                {group} / {groupItems.length}
               </h2>
               <ItemList items={groupItems} />
             </section>
@@ -73,7 +74,7 @@ export default function UpcomingPage() {
         })}
 
       {!isLoading && future.length === 0 && (
-        <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
+        <div className="rounded-lg border border-dashed border-ui-border-strong px-4 py-8 text-center font-mono text-sm text-navy-300">
           Nenhum item futuro.
         </div>
       )}

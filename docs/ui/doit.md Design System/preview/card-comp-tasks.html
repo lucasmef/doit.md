@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 18px 20px; box-sizing: border-box; font-family: var(--font-sans); }
+  .task { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: var(--r-8); }
+  .task:hover { background: var(--bg-sunken); }
+  .cb {
+    width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid var(--c-gray-200);
+    background: var(--c-white); display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 180ms;
+  }
+  .cb.done { background: var(--c-teal); border-color: var(--c-teal); }
+  .cb svg { color: white; }
+  .label { font-size: 14px; color: var(--fg); }
+  .label.done { color: var(--fg-3); text-decoration: line-through; }
+  .meta { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); }
+  .tag { font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: var(--r-4); background: rgba(47,107,255,.10); color: var(--c-vivid-blue); }
+</style></head>
+<body>
+  <div class="task">
+    <div class="cb done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 9 17 20 6"/></svg></div>
+    <div class="label done">Write README</div>
+    <span class="tag">#docs</span>
+    <div class="meta">10:42</div>
+  </div>
+  <div class="task">
+    <div class="cb"></div>
+    <div class="label">Ship v0.4</div>
+    <span class="tag">#release</span>
+    <div class="meta">today</div>
+  </div>
+  <div class="task">
+    <div class="cb"></div>
+    <div class="label">Review PRs from @sam</div>
+    <div class="meta">2h</div>
+  </div>
+  <div class="task">
+    <div class="cb"></div>
+    <div class="label">- [ ] Outline Q3 plan</div>
+    <div class="meta">tomorrow</div>
+  </div>
+</body></html>

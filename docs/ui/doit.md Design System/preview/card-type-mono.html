@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 22px 24px; box-sizing: border-box; }
+  .row { display: flex; align-items: baseline; gap: 14px; }
+  .name { font-family: var(--font-mono); font-weight: 700; font-size: 40px; color: var(--fg); line-height: 1; }
+  .meta { font-family: var(--font-sans); font-size: 12px; color: var(--fg-2); }
+  pre { margin: 14px 0 0; font-family: var(--font-mono); font-size: 14px; line-height: 1.7; color: var(--fg); background: transparent; }
+  .h { color: var(--c-teal); }
+  .acc { color: var(--c-vivid-blue); }
+  .check { color: var(--c-teal); }
+</style></head>
+<body>
+  <div class="row">
+    <div class="name">JetBrains&nbsp;Mono</div>
+    <div class="meta">Code · Markdown · Timestamps · ⌘K</div>
+  </div>
+<pre><span class="h"># Today</span>
+- [<span class="check">x</span>] write README
+- [ ] ship <span class="acc">v0.4</span>
+> sync 2m ago · `<span class="acc">⌘</span>` <span class="acc">↵</span></pre>
+</body></html>

@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="724" viewBox="0 0 780 724" role="img" aria-label="doit.md logo">
+  <defs>
+    <linearGradient id="ringGradient" x1="190" y1="120" x2="660" y2="610" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#115AF5"/>
+      <stop offset="0.32" stop-color="#0984E6"/>
+      <stop offset="0.68" stop-color="#06AFCB"/>
+      <stop offset="1" stop-color="#39D0B9"/>
+    </linearGradient>
+
+    <linearGradient id="dotBlue" x1="472" y1="110" x2="505" y2="145" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1267F7"/>
+      <stop offset="1" stop-color="#0495DF"/>
+    </linearGradient>
+
+    <linearGradient id="dotCyan" x1="580" y1="172" x2="618" y2="210" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08AAC7"/>
+      <stop offset="1" stop-color="#2DD1BE"/>
+    </linearGradient>
+
+    <linearGradient id="dotCyanBlue" x1="618" y1="224" x2="676" y2="318" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0DB7C6"/>
+      <stop offset="0.48" stop-color="#04A9D4"/>
+      <stop offset="1" stop-color="#1166F3"/>
+    </linearGradient>
+
+    <linearGradient id="checkGradient" x1="345" y1="420" x2="545" y2="300" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0A1A43"/>
+      <stop offset="0.55" stop-color="#0B214F"/>
+      <stop offset="1" stop-color="#0A2A62"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M 423 120 A 242 242 0 1 0 668 371"
+        fill="none"
+        stroke="url(#ringGradient)"
+        stroke-width="48"
+        stroke-linecap="round"/>
+
+  <circle cx="489" cy="127" r="17.5" fill="url(#dotBlue)"/>
+  <circle cx="547" cy="153" r="17.5" fill="url(#dotBlue)"/>
+  <circle cx="598" cy="190" r="17.5" fill="url(#dotCyan)"/>
+  <circle cx="636" cy="243" r="17.5" fill="url(#dotCyanBlue)"/>
+  <circle cx="660" cy="300" r="17.5" fill="url(#dotCyanBlue)"/>
+
+  <path d="M 357 374 L 407 421 L 526 307"
+        fill="none"
+        stroke="url(#checkGradient)"
+        stroke-width="43"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>

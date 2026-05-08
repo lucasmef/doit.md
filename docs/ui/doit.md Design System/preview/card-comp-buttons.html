@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 22px 22px; box-sizing: border-box; font-family: var(--font-sans); display: grid; grid-template-columns: auto auto auto auto; gap: 14px 16px; align-items: center; }
+  .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .04em; }
+  button {
+    font-family: var(--font-sans); font-weight: 600; font-size: 14px;
+    border-radius: var(--r-6); padding: 8px 14px; border: 1px solid transparent;
+    cursor: pointer; line-height: 1.2; transition: all 180ms cubic-bezier(.2,.7,.2,1);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .primary { background: var(--c-vivid-blue); color: white; }
+  .primary:hover { background: #2459d6; }
+  .secondary { background: var(--c-white); color: var(--fg); border-color: var(--border-strong); box-shadow: var(--ev-1); }
+  .secondary:hover { background: var(--bg-sunken); }
+  .ghost { background: transparent; color: var(--fg); }
+  .ghost:hover { background: var(--bg-sunken); }
+  .danger { background: var(--c-white); color: var(--c-danger); border-color: rgba(240,68,56,.3); }
+  .danger:hover { background: rgba(240,68,56,.06); }
+</style></head>
+<body>
+  <div class="lbl">Primary</div>
+  <button class="primary">Add task</button>
+  <button class="primary">+ New note</button>
+  <button class="primary" disabled style="opacity:.5; cursor:not-allowed">Saving…</button>
+
+  <div class="lbl">Secondary</div>
+  <button class="secondary">Cancel</button>
+  <button class="secondary">Open file</button>
+  <button class="secondary">Share</button>
+
+  <div class="lbl">Ghost</div>
+  <button class="ghost">Edit</button>
+  <button class="ghost">⌘ K</button>
+  <button class="danger">Delete</button>
+</body></html>

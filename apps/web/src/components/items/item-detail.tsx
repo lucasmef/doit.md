@@ -409,8 +409,8 @@ export function ItemDetail() {
 
   if (isLoading || !item) {
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl p-8 animate-pulse">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/40 backdrop-blur-sm">
+        <div className="animate-pulse rounded-xl bg-white p-8 shadow-cool-lg">
           <div className="h-6 bg-slate-100 rounded mb-4 w-48" />
           <div className="h-4 bg-slate-100 rounded mb-2 w-32" />
         </div>
@@ -428,10 +428,10 @@ export function ItemDetail() {
   if (isNote) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
       >
-        <div className="w-full max-w-5xl max-h-[92vh] overflow-hidden rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
+        <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-xl border border-ui-border bg-white shadow-cool-lg">
           <div className="flex max-h-[92vh] flex-col">
             <div className="overflow-y-auto px-5 pb-4 pt-5">
               <div className="flex items-center justify-end gap-3">
@@ -455,7 +455,7 @@ export function ItemDetail() {
                 />
               </div>
 
-              <div className="mt-3 rounded-xl border border-dashed border-ui-border-soft bg-surface-soft/70 p-4">
+              <div className="mt-3 rounded-xl border border-dashed border-ui-border-strong bg-surface-soft p-4">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
@@ -482,7 +482,7 @@ export function ItemDetail() {
                     {tagList.length > 0 ? tagList.length : ''}
                   </ToolButton>
                   {popover === 'tags' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                       {tagList.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-1">
                           {tagList.map((tag) => (
@@ -539,7 +539,7 @@ export function ItemDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-ui-border-soft bg-surface-soft/60 px-5 py-3">
+            <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3">
               <div className="relative min-w-0 flex-1">
                 <button
                   type="button"
@@ -551,7 +551,7 @@ export function ItemDetail() {
                   <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
                 </button>
                 {popover === 'project' && (
-                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     <input
                       value={projectQuery}
                       onChange={(e) => setProjectQuery(e.target.value)}
@@ -645,10 +645,10 @@ export function ItemDetail() {
   if (!isNote && (item.complexity === 'task' || item.complexity === 'capture')) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center bg-black/40 p-4 pt-[8vh] backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
       >
-        <div className="w-full max-w-[560px] overflow-visible rounded-2xl border border-ui-border-soft bg-white shadow-2xl">
+        <div className="w-full max-w-[560px] overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg">
           <div className="flex flex-col">
             <div className="px-5 pb-4 pt-5">
               <div className="flex items-center gap-3">
@@ -688,7 +688,7 @@ export function ItemDetail() {
                     {isTodaySelected ? 'Hoje' : dueDate ? formatDueDate(dueDate) : 'Hoje'}
                   </ToolButton>
                   {popover === 'date' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                       {DATE_SUGGESTIONS.map((suggestion) => {
                         const value = suggestion.getValue()
                         return (
@@ -800,7 +800,7 @@ export function ItemDetail() {
                     <IconFlag className={`h-3.5 w-3.5 ${priorityConfig.color}`} />
                   </ToolButton>
                   {popover === 'priority' && (
-                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
                       {PRIORITIES.map((p) => {
                         const cfg = PRIORITY_CONFIG[p]
                         return (
@@ -833,7 +833,7 @@ export function ItemDetail() {
                     {recurrence ? recurrenceLabel : ''}
                   </ToolButton>
                   {popover === 'recurrence' && (
-                    <div className="absolute left-0 top-9 z-10 w-48 rounded-xl border border-ui-border-soft bg-white p-1.5 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-48 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
                       {RECURRENCE_OPTIONS.map((option) => (
                         <button
                           key={option.value || 'none'}
@@ -860,7 +860,7 @@ export function ItemDetail() {
                     {tagList.length > 0 ? tagList.length : ''}
                   </ToolButton>
                   {popover === 'tags' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                       {tagList.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-1">
                           {tagList.map((tag) => (
@@ -917,7 +917,7 @@ export function ItemDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-ui-border-soft bg-surface-soft/60 px-5 py-3">
+            <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3">
               <div className="relative min-w-0 flex-1">
                 <button
                   type="button"
@@ -929,7 +929,7 @@ export function ItemDetail() {
                   <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
                 </button>
                 {popover === 'project' && (
-                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border-soft bg-white p-2 shadow-lg">
+                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     <input
                       value={projectQuery}
                       onChange={(e) => setProjectQuery(e.target.value)}
@@ -1022,14 +1022,14 @@ export function ItemDetail() {
 
   return (
     <div 
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/40 p-4 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
     >
       <div 
-        className={`bg-white shadow-2xl overflow-hidden flex flex-col transition-all duration-300 ${
+        className={`flex flex-col overflow-hidden bg-white shadow-cool-lg transition-all duration-300 ${
           isNote 
-            ? 'w-full h-full max-w-5xl rounded-2xl' 
-            : 'w-full max-w-lg rounded-2xl max-h-[85vh]'
+            ? 'h-full w-full max-w-5xl rounded-xl' 
+            : 'max-h-[85vh] w-full max-w-lg rounded-xl'
         }`}
       >
         {/* Header */}

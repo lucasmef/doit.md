@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 20px 24px; box-sizing: border-box; font-family: var(--font-sans); }
+  .row { display: flex; align-items: baseline; gap: 14px; padding: 4px 0; border-bottom: 1px solid var(--border); }
+  .row:last-child { border-bottom: none; }
+  .sample { color: var(--fg); flex: 1; }
+  .meta { font-family: var(--font-mono); font-size: 11px; color: var(--fg-3); white-space: nowrap; }
+  .display { font-weight: 800; font-size: 48px; line-height: 1.05; letter-spacing: -.02em; }
+  .h1 { font-weight: 800; font-size: 36px; line-height: 1.1; letter-spacing: -.02em; }
+  .h2 { font-weight: 700; font-size: 24px; line-height: 1.2; letter-spacing: -.01em; }
+  .h3 { font-weight: 600; font-size: 18px; line-height: 1.25; }
+  .body { font-weight: 400; font-size: 15px; line-height: 1.45; }
+  .small { font-weight: 400; font-size: 13px; line-height: 1.4; color: var(--fg-2); }
+</style></head>
+<body>
+  <div class="row"><div class="sample display">Display</div><div class="meta">800 · 48 / 53 · −.02</div></div>
+  <div class="row"><div class="sample h1">Heading 1</div><div class="meta">800 · 36 / 40 · −.02</div></div>
+  <div class="row"><div class="sample h2">Heading 2</div><div class="meta">700 · 24 / 29 · −.01</div></div>
+  <div class="row"><div class="sample h3">Heading 3</div><div class="meta">600 · 18 / 23</div></div>
+  <div class="row"><div class="sample body">Body — capture, organize, ship.</div><div class="meta">400 · 15 / 22</div></div>
+  <div class="row"><div class="sample small">Small / metadata · synced 2m ago</div><div class="meta">400 · 13 / 18</div></div>
+</body></html>

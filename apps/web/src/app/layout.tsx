@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#3b82f6',
+  themeColor: '#2f6bff',
   width: 'device-width',
   initialScale: 1,
 }
@@ -24,7 +24,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-surface text-slate-900 antialiased">
+      <body className="bg-surface text-navy-900 antialiased">
         {children}
         <ServiceWorkerRegister />
       </body>

@@ -1,0 +1,16 @@
+{
+  "brand": "doit.md",
+  "colors": {
+    "deep_navy": "#0F2342",
+    "vivid_blue": "#2F6BFF",
+    "teal": "#28C7B7",
+    "cool_gray": "#D9E1EA",
+    "off_white": "#F8FAFC",
+    "white": "#FFFFFF"
+  },
+  "typography": {
+    "primary": "Inter",
+    "secondary_monospace": "JetBrains Mono"
+  },
+  "logo_concept": "Circular progress/check mark with dotted completion arc. Blue-to-teal gradient, dark navy wordmark."
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 20px 22px; box-sizing: border-box; font-family: var(--font-sans); display: flex; flex-direction: column; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 12px; font-weight: 600; color: var(--fg-2); }
+  input, textarea {
+    font-family: var(--font-sans); font-size: 14px; color: var(--fg);
+    background: var(--c-white); border: 1px solid var(--border-strong);
+    border-radius: var(--r-8); padding: 9px 12px; outline: none; width: 100%;
+    box-sizing: border-box; line-height: 1.4;
+    transition: border-color 180ms, box-shadow 180ms;
+  }
+  input::placeholder, textarea::placeholder { color: var(--fg-3); font-family: var(--font-mono); font-size: 13px; }
+  input:focus, textarea:focus { border-color: var(--c-vivid-blue); box-shadow: 0 0 0 3px rgba(47,107,255,.25); }
+  .row { display: flex; gap: 12px; }
+  .grow { flex: 1; }
+  .search { position: relative; }
+  .search input { padding-left: 34px; }
+  .search .ico { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--fg-3); }
+</style></head>
+<body>
+  <div class="field">
+    <div class="field-label">Title</div>
+    <input placeholder="# Title">
+  </div>
+  <div class="row">
+    <div class="field grow search">
+      <div class="field-label">Search</div>
+      <div style="position:relative">
+        <svg class="ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input placeholder="Search notes, tasks, tags…">
+      </div>
+    </div>
+    <div class="field" style="width:160px">
+      <div class="field-label">Due</div>
+      <input value="Tomorrow" style="border-color: var(--c-vivid-blue); box-shadow: 0 0 0 3px rgba(47,107,255,.25);">
+    </div>
+  </div>
+</body></html>

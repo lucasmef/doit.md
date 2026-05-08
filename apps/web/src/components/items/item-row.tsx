@@ -115,12 +115,12 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
   const p = (item.priority as Priority) ?? 4
   const priorityCfg = PRIORITY_CONFIG[p]
   const checkboxBorder = item.status === 'done'
-    ? 'border-slate-400'
+    ? 'border-teal-500'
     : item.status === 'archived'
-    ? 'border-slate-300'
+    ? 'border-navy-100'
     : p < 4
     ? priorityCfg.border
-    : 'border-[#b0a79d]'
+    : 'border-navy-200'
 
   const staggerDelay = `${Math.min(index * 40, 300)}ms`
 
@@ -132,19 +132,19 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
       onKeyDown={(e) => e.key === 'Enter' && setSelectedItemId(item.id)}
       data-item-id={item.id}
       style={{ animationDelay: staggerDelay }}
-      className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-[10px] transition-all group border animate-stagger-item cursor-pointer ${
+      className={`group flex w-full cursor-pointer items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
         active
-          ? 'bg-surface-selected border-ui-border-selected shadow-sm'
-          : 'bg-surface-panel border-ui-border-panel hover:border-slate-300 hover:shadow-sm'
+          ? 'border-ui-border-selected bg-surface-selected'
+          : 'border-ui-border-soft hover:bg-surface-soft'
       }`}
     >
       {/* Checkbox — só task/capture */}
       {(item.complexity === 'task' || item.complexity === 'capture') ? (
         <button
           onClick={toggleDone}
-          className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all ${
+          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-all ${
             item.status === 'done'
-              ? 'bg-slate-400 border-slate-400'
+              ? 'border-teal-500 bg-teal-500'
               : justCompleted
               ? 'border-brand-500 animate-ring-pulse'
               : `${checkboxBorder} hover:border-brand-500`
@@ -167,19 +167,19 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
           )}
         </button>
       ) : (
-        <div className="shrink-0 w-[18px] h-[18px] flex items-center justify-center text-[#9a8f83]">
+        <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center text-navy-300">
           {item.complexity === 'note'
             ? <IconNoteFilled className="h-4 w-4" />
             : p < 4
             ? <PriorityFlag priority={p} size={13} />
-            : <div className="w-2 h-2 rounded-full bg-[#b0a79d]" />}
+            : <div className="h-2 w-2 rounded-full bg-navy-200" />}
         </div>
       )}
 
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
           className={`text-[14px] leading-5 font-medium truncate transition-all ${
-            item.status === 'done' ? 'line-through text-slate-400' : 'text-slate-800'
+            item.status === 'done' ? 'line-through text-navy-300' : 'text-navy-900'
           }`}
         >
           {item.title}
@@ -187,23 +187,23 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
 
         <div className="flex items-center gap-1.5">
           {item.dueDate && (
-            <span className={`text-[11px] font-medium ${overdue ? 'text-red-500' : item.dueDate === today ? 'text-green-600' : 'text-slate-500'}`}>
-              {overdue ? `Atrasado · ${formatDue(item)}` : formatDue(item)}
+            <span className={`font-mono text-[11px] font-medium ${overdue ? 'text-danger' : item.dueDate === today ? 'text-teal-600' : 'text-navy-500'}`}>
+              {overdue ? `Atrasado / ${formatDue(item)}` : formatDue(item)}
             </span>
           )}
           {item.dueDate && item.tags.length > 0 && (
-            <span className="text-slate-300">·</span>
+            <span className="font-mono text-navy-200">/</span>
           )}
           {item.tags.length > 0 && (
-            <span className="text-[11px] text-slate-400 truncate">
-              {item.tags.slice(0, 3).join(', ')}
+            <span className="truncate font-mono text-[11px] text-navy-300">
+              {item.tags.slice(0, 3).map((tag) => `#${tag}`).join(' ')}
             </span>
           )}
           {(item.dueDate || item.tags.length > 0) && item.recurrence && (
-            <span className="text-slate-300">·</span>
+            <span className="font-mono text-navy-200">/</span>
           )}
           {item.recurrence && (
-            <span className="text-[11px] text-slate-400 truncate">
+            <span className="truncate font-mono text-[11px] text-navy-300">
               {RECURRENCE_LABELS[item.recurrence]}
             </span>
           )}
@@ -213,7 +213,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
         <button
           type="button"
           onClick={toggleDone}
-          className="shrink-0 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 py-1 text-[12px] font-medium text-slate-500 hover:bg-white hover:text-brand-700"
+          className="shrink-0 rounded-md border border-ui-border bg-white px-2 py-1 text-[12px] font-medium text-navy-500 hover:bg-surface-soft hover:text-brand-700"
         >
           Restaurar
         </button>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 22px; box-sizing: border-box; font-family: var(--font-sans); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--r-pill); font-size: 12px; font-weight: 600; line-height: 1.2; }
+  .dot { width: 6px; height: 6px; border-radius: 999px; }
+  .b-blue { background: rgba(47,107,255,.10); color: var(--c-vivid-blue); }
+  .b-teal { background: rgba(40,199,183,.14); color: #0f8d80; }
+  .b-warn { background: rgba(245,165,36,.14); color: #b56b00; }
+  .b-danger { background: rgba(240,68,56,.10); color: #b3271d; }
+  .b-gray { background: var(--c-gray-100); color: var(--fg-2); }
+  .b-navy { background: var(--c-navy-900); color: white; }
+  .tag { font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: var(--r-4); background: rgba(47,107,255,.10); color: var(--c-vivid-blue); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; width: 100%; }
+  .label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .04em; width: 80px; }
+</style></head>
+<body>
+  <div class="row">
+    <div class="label">Status</div>
+    <span class="badge b-blue"><span class="dot" style="background:#2F6BFF"></span>Active</span>
+    <span class="badge b-teal"><span class="dot" style="background:#28C7B7"></span>Done</span>
+    <span class="badge b-warn"><span class="dot" style="background:#F5A524"></span>Due soon</span>
+    <span class="badge b-danger"><span class="dot" style="background:#F04438"></span>Overdue</span>
+    <span class="badge b-gray">Draft</span>
+    <span class="badge b-navy">Synced</span>
+  </div>
+  <div class="row">
+    <div class="label">Tags</div>
+    <span class="tag">#docs</span>
+    <span class="tag">#release</span>
+    <span class="tag">#bug</span>
+    <span class="tag">#meeting</span>
+    <span class="tag">#idea</span>
+  </div>
+</body></html>

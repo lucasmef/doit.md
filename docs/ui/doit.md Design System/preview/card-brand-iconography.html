@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 22px; box-sizing: border-box; font-family: var(--font-sans); }
+  .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+  .icon { width: 28px; height: 28px; color: var(--fg); }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 56px; }
+  .name { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); }
+  .label { font-family: var(--font-mono); font-size: 10px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .group { margin-bottom: 14px; }
+  .md-token {
+    font-family: var(--font-mono); font-size: 22px; font-weight: 600;
+    color: var(--fg); display: inline-flex; align-items: center; justify-content: center;
+    min-width: 48px; height: 36px;
+  }
+  .md-token .acc { color: var(--c-vivid-blue); }
+  .md-token .ok { color: var(--c-teal); }
+</style></head>
+<body>
+  <div class="group">
+    <div class="label">Markdown tokens (primary iconography)</div>
+    <div class="row">
+      <div class="item"><div class="md-token"><span class="ok"># </span></div><div class="name">heading</div></div>
+      <div class="item"><div class="md-token">- [ ]</div><div class="name">task</div></div>
+      <div class="item"><div class="md-token"><span class="ok">- [x]</span></div><div class="name">done</div></div>
+      <div class="item"><div class="md-token"><span class="acc">M↓</span></div><div class="name">.md</div></div>
+      <div class="item"><div class="md-token">&gt;</div><div class="name">quote</div></div>
+      <div class="item"><div class="md-token"><span class="acc">`</span>code<span class="acc">`</span></div><div class="name">code</div></div>
+    </div>
+  </div>
+  <div class="group">
+    <div class="label">Lucide outline · 1.75–2px stroke · currentColor</div>
+    <div class="row">
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><div class="name">search</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg><div class="name">plus</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><div class="name">settings</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><div class="name">file</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg><div class="name">chevron</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><div class="name">calendar</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg><div class="name">check</div></div>
+      <div class="item"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg><div class="name">heart</div></div>
+    </div>
+  </div>
+</body></html>

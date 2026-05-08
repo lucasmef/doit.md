@@ -158,7 +158,7 @@ export function DueDatePicker({ value, onChange, className = '', compact = false
       </button>
 
       {open && (
-        <div className={`absolute left-0 z-[80] mt-2 w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white shadow-2xl ${
+        <div className={`absolute left-0 z-[80] mt-2 w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-ui-border bg-white shadow-cool-md ${
           compact ? 'bottom-full mb-2 mt-0' : ''
         }`}>
           <div className="p-2">

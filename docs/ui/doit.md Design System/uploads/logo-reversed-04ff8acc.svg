@@ -1,0 +1,20 @@
+<svg width="1200" height="320" viewBox="0 0 1200 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandGrad" x1="20" y1="40" x2="260" y2="260" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F6BFF"></stop>
+      <stop offset="1" stop-color="#28C7B7"></stop>
+    </linearGradient>
+    
+  </defs>
+  <rect width="1200" height="320" rx="36" fill="#0F2342"></rect>
+  <g transform="translate(50,35)">
+    <path d="M209 65 A105 105 0 1 0 204 205" stroke="url(#brandGrad)" stroke-width="20" stroke-linecap="round"></path>
+    <circle cx="214" cy="67" r="8.8" fill="#2F6BFF"></circle>
+    <circle cx="238" cy="82" r="8.2" fill="#238AF0"></circle>
+    <circle cx="256" cy="103" r="7.6" fill="#1AAED7"></circle>
+    <circle cx="268" cy="129" r="7" fill="#28C7B7"></circle>
+    <circle cx="273" cy="157" r="6.4" fill="#28C7B7"></circle>
+    <path d="M84 137 L121 174 L185 101" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+  <text x="360" y="215" class="word" font-size="145" fill="white">doit.md</text>
+</svg>

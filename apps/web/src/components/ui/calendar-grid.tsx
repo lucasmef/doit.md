@@ -7,6 +7,7 @@ type Props = {
   items: Item[]
   onDayClick?: (date: string) => void
   selectedDate?: string
+  compact?: boolean
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -15,16 +16,16 @@ function getDaysInMonth(year: number, month: number) {
 
 function getFirstDayOfWeek(year: number, month: number) {
   const day = new Date(year, month, 1).getDay()
-  return day === 0 ? 6 : day - 1 // segunda = 0
+  return day === 0 ? 6 : day - 1
 }
 
-const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
 const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ]
 
-export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
+export function CalendarGrid({ items, onDayClick, selectedDate, compact = false }: Props) {
   const today = new Date()
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
@@ -53,40 +54,38 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
   }
 
   const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const cellHeight = compact ? 'h-9' : 'h-20 lg:h-24 xl:h-28'
 
   return (
-    <div className="select-none bg-surface-panel border border-ui-border-panel rounded-[12px] p-3 shadow-sm">
-      {/* Navegação */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-slate-900">
+    <div className="select-none rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className={`${compact ? 'text-[14px]' : 'text-lg'} font-bold text-navy-900`}>
           {MONTHS[month]} {year}
         </h2>
-        <div className="flex items-center gap-1 bg-surface-soft p-1 rounded-xl">
-          <button onClick={prevMonth} className="px-2 py-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-xs font-medium transition-all">
-            Anterior
+        <div className="flex items-center gap-1 rounded-lg bg-surface-soft p-1">
+          <button onClick={prevMonth} className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white">
+            {compact ? '<' : 'Anterior'}
           </button>
-          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()) }} className="px-2 py-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-xs font-medium transition-all">
+          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()) }} className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white">
             Hoje
           </button>
-          <button onClick={nextMonth} className="px-2 py-1 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 text-xs font-medium transition-all">
-            Próximo
+          <button onClick={nextMonth} className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white">
+            {compact ? '>' : 'Proximo'}
           </button>
         </div>
       </div>
 
-      {/* Cabeçalho dias da semana */}
-      <div className="grid grid-cols-7 mb-2">
+      <div className="mb-2 grid grid-cols-7">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="text-center text-[12px] font-semibold text-slate-400 py-2">
-            {d.toUpperCase()}
+          <div key={d} className="py-1.5 text-center font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+            {compact ? d.slice(0, 1) : d.toUpperCase()}
           </div>
         ))}
       </div>
 
-      {/* Grade */}
-      <div className="grid grid-cols-7 gap-px bg-ui-border-soft border border-ui-border-soft overflow-hidden rounded-xl">
+      <div className="grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border">
         {cells.map((day, i) => {
-          if (!day) return <div key={`empty-${i}`} className="bg-white h-20 lg:h-24 xl:h-28" />
+          if (!day) return <div key={`empty-${i}`} className={`${cellHeight} bg-white`} />
 
           const ds = dayStr(day)
           const dayItems = itemsForDay(day)
@@ -97,38 +96,40 @@ export function CalendarGrid({ items, onDayClick, selectedDate }: Props) {
             <button
               key={ds}
               onClick={() => onDayClick?.(ds)}
-              className={`bg-white h-20 lg:h-24 xl:h-28 p-1.5 flex flex-col items-start hover:bg-slate-50 transition-colors relative ${isSelected ? 'ring-2 ring-inset ring-brand-400 z-10' : ''}`}
+              className={`relative flex ${cellHeight} flex-col items-start bg-white p-1.5 transition-colors hover:bg-surface-soft ${isSelected ? 'z-10 ring-2 ring-inset ring-brand-400' : ''}`}
             >
-              <div className="flex justify-between w-full items-start">
-                <span
-                  className={`text-[13px] font-medium w-7 h-7 flex items-center justify-center rounded-full mb-1 ${
-                    isToday ? 'bg-brand-600 text-white' : 'text-slate-700'
-                  }`}
-                >
-                  {day}
-                </span>
-              </div>
-              
-              <div className="flex flex-col gap-1 w-full overflow-hidden">
+              <span
+                className={`${compact ? 'h-6 w-6 text-[11px]' : 'mb-1 h-7 w-7 text-[13px]'} flex items-center justify-center rounded-full font-medium ${
+                  isToday ? 'bg-brand-600 text-white' : 'text-navy-700'
+                }`}
+              >
+                {day}
+              </span>
+
+              <div className={`w-full overflow-hidden ${compact ? 'absolute bottom-1 left-0 flex justify-center' : 'flex flex-col gap-1'}`}>
                 {dayItems.slice(0, 3).map((item) => {
-                  let badgeClass = 'bg-slate-100 text-slate-600'
-                  if (item.complexity === 'task') badgeClass = 'bg-[#e7f1ff] text-[#5a534a]'
-                  if (item.complexity === 'note') badgeClass = 'bg-[#fff1df] text-[#5a534a]'
-                  if (item.complexity === 'project') badgeClass = 'bg-[#f1eaff] text-[#5a534a]'
-                  if (item.complexity === 'document') badgeClass = 'bg-[#e9f7ea] text-[#5a534a]'
-                  
+                  if (compact) {
+                    return <span key={item.id} className="mx-0.5 h-1 w-1 rounded-full bg-teal-500" title={item.title} />
+                  }
+
+                  let badgeClass = 'bg-navy-50 text-navy-500'
+                  if (item.complexity === 'task') badgeClass = 'bg-brand-50 text-navy-700'
+                  if (item.complexity === 'note') badgeClass = 'bg-teal-50 text-navy-700'
+                  if (item.complexity === 'project') badgeClass = 'bg-brand-100 text-navy-700'
+                  if (item.complexity === 'document') badgeClass = 'bg-teal-100 text-navy-700'
+
                   return (
                     <div
                       key={item.id}
-                      className={`w-full truncate text-[10px] font-medium px-1.5 py-0.5 rounded-md text-left ${badgeClass}`}
+                      className={`w-full truncate rounded-md px-1.5 py-0.5 text-left text-[10px] font-medium ${badgeClass}`}
                       title={item.title}
                     >
                       {item.title}
                     </div>
                   )
                 })}
-                {dayItems.length > 3 && (
-                  <span className="text-[10px] font-medium text-slate-400 px-1">+ {dayItems.length - 3} itens</span>
+                {!compact && dayItems.length > 3 && (
+                  <span className="px-1 font-mono text-[10px] font-medium text-navy-300">+ {dayItems.length - 3} itens</span>
                 )}
               </div>
             </button>

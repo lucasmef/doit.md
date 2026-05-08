@@ -1,0 +1,149 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="brandGrad" x1="620" y1="70" x2="840" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F6BFF"></stop>
+      <stop offset="1" stop-color="#28C7B7"></stop>
+    </linearGradient>
+    <linearGradient id="barGrad" x1="0" y1="0" x2="360" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2F6BFF"></stop>
+      <stop offset="1" stop-color="#28C7B7"></stop>
+    </linearGradient>
+    
+  </defs>
+  <rect width="1600" height="1200" rx="28" fill="#F8FAFC"></rect>
+  <line x1="0" y1="310" x2="1600" y2="310" stroke="#D9E1EA"></line>
+  <line x1="0" y1="540" x2="1600" y2="540" stroke="#D9E1EA"></line>
+  <line x1="0" y1="880" x2="1600" y2="880" stroke="#D9E1EA"></line>
+  <line x1="500" y1="540" x2="500" y2="880" stroke="#D9E1EA"></line>
+  <line x1="1040" y1="540" x2="1040" y2="880" stroke="#D9E1EA"></line>
+  <line x1="700" y1="880" x2="700" y2="1200" stroke="#D9E1EA"></line>
+  <line x1="980" y1="880" x2="980" y2="1200" stroke="#D9E1EA"></line>
+
+  <text x="34" y="42" class="label" font-size="18">1. BRAND OVERVIEW</text>
+  <text x="56" y="115" class="text" font-size="34" font-weight="800">Markdown-first</text>
+  <text x="56" y="155" class="text" font-size="34" font-weight="800">notes and tasks.</text>
+  <text x="56" y="205" class="muted" font-size="20">Capture ideas, organize tasks,</text>
+  <text x="56" y="232" class="muted" font-size="20">and ship progress with Markdown.</text>
+
+  <g transform="translate(620,58)">
+    <path d="M209 65 A105 105 0 1 0 204 205" stroke="url(#brandGrad)" stroke-width="20" stroke-linecap="round"></path>
+    <circle cx="214" cy="67" r="8.8" fill="#2F6BFF"></circle>
+    <circle cx="238" cy="82" r="8.2" fill="#238AF0"></circle>
+    <circle cx="256" cy="103" r="7.6" fill="#1AAED7"></circle>
+    <circle cx="268" cy="129" r="7" fill="#28C7B7"></circle>
+    <circle cx="273" cy="157" r="6.4" fill="#28C7B7"></circle>
+    <path d="M84 137 L121 174 L185 101" stroke="#0F2342" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+  <text x="925" y="217" class="text" font-size="140" font-weight="800" letter-spacing="-8">doit.md</text>
+
+  <text x="34" y="350" class="label" font-size="18">2. LOGO SYSTEM</text>
+  <text x="84" y="455" class="text" font-size="54" font-weight="800">doit.md</text>
+  <g transform="translate(42,380) scale(.38)">
+    <path d="M209 65 A105 105 0 1 0 204 205" stroke="url(#brandGrad)" stroke-width="20" stroke-linecap="round"></path>
+    <circle cx="214" cy="67" r="8.8" fill="#2F6BFF"></circle>
+    <circle cx="238" cy="82" r="8.2" fill="#238AF0"></circle>
+    <circle cx="256" cy="103" r="7.6" fill="#1AAED7"></circle>
+    <circle cx="268" cy="129" r="7" fill="#28C7B7"></circle>
+    <circle cx="273" cy="157" r="6.4" fill="#28C7B7"></circle>
+    <path d="M84 137 L121 174 L185 101" stroke="#0F2342" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+
+  <rect x="1160" y="385" width="370" height="92" rx="18" fill="#0F2342"></rect>
+  <text x="1258" y="447" class="text" font-size="44" font-weight="800" fill="white">doit.md</text>
+  <g transform="translate(1182,397) scale(.30)">
+    <path d="M209 65 A105 105 0 1 0 204 205" stroke="url(#brandGrad)" stroke-width="20" stroke-linecap="round"></path>
+    <circle cx="214" cy="67" r="8.8" fill="#2F6BFF"></circle>
+    <circle cx="238" cy="82" r="8.2" fill="#238AF0"></circle>
+    <circle cx="256" cy="103" r="7.6" fill="#1AAED7"></circle>
+    <circle cx="268" cy="129" r="7" fill="#28C7B7"></circle>
+    <circle cx="273" cy="157" r="6.4" fill="#28C7B7"></circle>
+    <path d="M84 137 L121 174 L185 101" stroke="white" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+
+  <text x="34" y="580" class="label" font-size="18">3. COLOR PALETTE</text>
+  <g transform="translate(38,615)">
+    <rect x="0" y="0" width="72" height="72" rx="9" fill="#0F2342"></rect>
+    <rect x="92" y="0" width="72" height="72" rx="9" fill="#2F6BFF"></rect>
+    <rect x="184" y="0" width="72" height="72" rx="9" fill="#28C7B7"></rect>
+    <rect x="276" y="0" width="72" height="72" rx="9" fill="#D9E1EA"></rect>
+    <rect x="368" y="0" width="72" height="72" rx="9" fill="#FFFFFF" stroke="#D9E1EA"></rect>
+    <text x="0" y="100" class="text" font-size="15" font-weight="700">Deep Navy</text>
+    <text x="0" y="122" class="muted" font-size="14">#0F2342</text>
+    <text x="92" y="100" class="text" font-size="15" font-weight="700">Vivid Blue</text>
+    <text x="92" y="122" class="muted" font-size="14">#2F6BFF</text>
+    <text x="184" y="100" class="text" font-size="15" font-weight="700">Teal</text>
+    <text x="184" y="122" class="muted" font-size="14">#28C7B7</text>
+    <text x="276" y="100" class="text" font-size="15" font-weight="700">Cool Gray</text>
+    <text x="276" y="122" class="muted" font-size="14">#D9E1EA</text>
+    <text x="368" y="100" class="text" font-size="15" font-weight="700">Off White</text>
+    <text x="368" y="122" class="muted" font-size="14">#F8FAFC</text>
+    <rect x="0" y="158" width="440" height="16" rx="8" fill="url(#barGrad)"></rect>
+  </g>
+
+  <text x="532" y="580" class="label" font-size="18">4. TYPOGRAPHY</text>
+  <text x="532" y="635" class="text" font-size="34" font-weight="800">Inter</text>
+  <text x="532" y="690" class="text" font-size="26" font-weight="800">Build clarity.</text>
+  <text x="532" y="724" class="text" font-size="26" font-weight="800">Ship progress.</text>
+  <text x="780" y="635" class="text mono" font-size="24" font-weight="700">JetBrains Mono</text>
+  <text x="780" y="682" class="mono" font-size="17" fill="#28C7B7"># Headings</text>
+  <text x="780" y="710" class="text mono" font-size="17">- [x] Tasks</text>
+  <text x="780" y="738" class="text mono" font-size="17">- [ ] Notes</text>
+  <text x="780" y="780" class="text mono" font-size="17">`code` + Markdown</text>
+
+  <text x="1070" y="580" class="label" font-size="18">5. BRAND ELEMENTS</text>
+  <g transform="translate(1095,635)">
+    <circle cx="54" cy="54" r="42" stroke="#0F2342" stroke-width="5"></circle>
+    <path d="M34 54 L49 69 L78 38" stroke="#0F2342" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="92" cy="90" r="18" fill="#28C7B7"></circle>
+    <path d="M84 90 L90 96 L101 83" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+    <text x="0" y="145" class="text" font-size="16" font-weight="700">Tasks</text>
+  </g>
+  <g transform="translate(1245,635)">
+    <rect x="10" y="5" width="82" height="98" rx="10" fill="white" stroke="#0F2342" stroke-width="5"></rect>
+    <path d="M70 5 L92 27" stroke="#0F2342" stroke-width="5"></path>
+    <line x1="31" y1="43" x2="72" y2="43" stroke="#2F6BFF" stroke-width="5" stroke-linecap="round"></line>
+    <line x1="31" y1="63" x2="72" y2="63" stroke="#28C7B7" stroke-width="5" stroke-linecap="round"></line>
+    <text x="8" y="145" class="text" font-size="16" font-weight="700">Notes</text>
+  </g>
+  <g transform="translate(1395,635)">
+    <text x="0" y="72" class="text mono" font-size="64" fill="#2F6BFF">M↓</text>
+    <text x="-10" y="145" class="text" font-size="16" font-weight="700">Markdown</text>
+  </g>
+
+  <text x="34" y="920" class="label" font-size="18">6. USAGE</text>
+  <text x="52" y="970" class="text" font-size="20" font-weight="800" fill="#28C7B7">Do</text>
+  <text x="52" y="1005" class="muted" font-size="16">Maintain clear space</text>
+  <text x="52" y="1030" class="muted" font-size="16">Use approved colors</text>
+  <text x="52" y="1055" class="muted" font-size="16">Preserve contrast</text>
+  <text x="330" y="970" class="text" font-size="20" font-weight="800" fill="#F04438">Don’t</text>
+  <text x="330" y="1005" class="muted" font-size="16">Distort the mark</text>
+  <text x="330" y="1030" class="muted" font-size="16">Change the gradient</text>
+  <text x="330" y="1055" class="muted" font-size="16">Use busy backgrounds</text>
+
+  <text x="730" y="920" class="label" font-size="18">7. APP ICON</text>
+  <rect x="780" y="950" width="110" height="110" rx="28" fill="white" stroke="#D9E1EA"></rect>
+  <g transform="translate(795,965) scale(.35)">
+    <path d="M209 65 A105 105 0 1 0 204 205" stroke="url(#brandGrad)" stroke-width="20" stroke-linecap="round"></path>
+    <circle cx="214" cy="67" r="8.8" fill="#2F6BFF"></circle>
+    <circle cx="238" cy="82" r="8.2" fill="#238AF0"></circle>
+    <circle cx="256" cy="103" r="7.6" fill="#1AAED7"></circle>
+    <circle cx="268" cy="129" r="7" fill="#28C7B7"></circle>
+    <circle cx="273" cy="157" r="6.4" fill="#28C7B7"></circle>
+    <path d="M84 137 L121 174 L185 101" stroke="#0F2342" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"></path>
+  </g>
+
+  <text x="1020" y="920" class="label" font-size="18">8. APPLICATION</text>
+  <rect x="1020" y="950" width="240" height="170" rx="22" fill="white" stroke="#D9E1EA"></rect>
+  <text x="1090" y="996" class="text" font-size="22" font-weight="800">doit.md</text>
+  <rect x="1050" y="1030" width="180" height="14" rx="7" fill="#D9E1EA"></rect>
+  <rect x="1050" y="1060" width="180" height="14" rx="7" fill="#D9E1EA"></rect>
+  <rect x="1050" y="1090" width="180" height="14" rx="7" fill="#2F6BFF"></rect>
+  <rect x="1300" y="950" width="210" height="170" rx="22" fill="#0F2342"></rect>
+  <text x="1330" y="990" class="text" font-size="20" font-weight="800" fill="white">Today</text>
+  <circle cx="1335" cy="1030" r="7" fill="#2F6BFF"></circle>
+  <rect x="1355" y="1023" width="110" height="10" rx="5" fill="white" opacity=".85"></rect>
+  <circle cx="1335" cy="1060" r="7" fill="#28C7B7"></circle>
+  <rect x="1355" y="1053" width="125" height="10" rx="5" fill="white" opacity=".85"></rect>
+  <circle cx="1335" cy="1090" r="7" fill="#D9E1EA"></circle>
+  <rect x="1355" y="1083" width="95" height="10" rx="5" fill="white" opacity=".85"></rect>
+</svg>

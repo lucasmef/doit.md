@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 20px; box-sizing: border-box; font-family: var(--font-sans); }
+  .grad-bar {
+    height: 56px; border-radius: var(--r-12);
+    background: var(--brand-gradient);
+    box-shadow: var(--ev-1);
+    margin-bottom: 14px;
+  }
+  .stops { display: flex; gap: 12px; }
+  .stop { flex: 1; display: flex; align-items: center; gap: 10px; }
+  .dot { width: 18px; height: 18px; border-radius: 999px; flex-shrink: 0; }
+  .stop .label { font-size: 12px; font-weight: 600; color: var(--fg); }
+  .stop .hex { font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); }
+  .css { margin-top: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--fg-2); padding: 8px 10px; background: var(--bg-sunken); border: 1px solid var(--border); border-radius: var(--r-8); overflow: hidden; white-space: nowrap; }
+</style></head>
+<body>
+  <div class="grad-bar"></div>
+  <div class="stops">
+    <div class="stop"><div class="dot" style="background:#2F6BFF"></div><div><div class="label">Vivid Blue</div><div class="hex">#2F6BFF · 0%</div></div></div>
+    <div class="stop"><div class="dot" style="background:#238AF0"></div><div><div class="label">Blue Steel</div><div class="hex">#238AF0 · ~33%</div></div></div>
+    <div class="stop"><div class="dot" style="background:#1AAED7"></div><div><div class="label">Cyan</div><div class="hex">#1AAED7 · ~66%</div></div></div>
+    <div class="stop"><div class="dot" style="background:#28C7B7"></div><div><div class="label">Teal</div><div class="hex">#28C7B7 · 100%</div></div></div>
+  </div>
+  <div class="css">linear-gradient(135deg, #2F6BFF 0%, #28C7B7 100%)</div>
+</body></html>

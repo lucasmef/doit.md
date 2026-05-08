@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>card</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body { padding: 20px; box-sizing: border-box; }
+  .row { display: flex; align-items: stretch; gap: 12px; }
+  .col { display: flex; flex-direction: column; gap: 10px; }
+  .swatch {
+    flex: 1;
+    border-radius: var(--r-12);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 92px;
+    border: 1px solid transparent;
+    box-sizing: border-box;
+  }
+  .swatch .name { font-weight: 700; font-size: 13px; }
+  .swatch .hex  { font-family: var(--font-mono); font-size: 11px; opacity: .8; }
+  .light { color: var(--c-white); }
+  .dark  { color: var(--c-navy-900); }
+</style></head>
+<body>
+  <div class="row">
+    <div class="swatch light" style="background:#0F2342">
+      <div class="name">Deep Navy</div>
+      <div class="hex">#0F2342</div>
+    </div>
+    <div class="swatch light" style="background:#2F6BFF">
+      <div class="name">Vivid Blue</div>
+      <div class="hex">#2F6BFF</div>
+    </div>
+    <div class="swatch light" style="background:#28C7B7">
+      <div class="name">Teal</div>
+      <div class="hex">#28C7B7</div>
+    </div>
+    <div class="swatch dark" style="background:#D9E1EA">
+      <div class="name">Cool Gray</div>
+      <div class="hex">#D9E1EA</div>
+    </div>
+    <div class="swatch dark" style="background:#F8FAFC; border-color: var(--border)">
+      <div class="name">Off White</div>
+      <div class="hex">#F8FAFC</div>
+    </div>
+  </div>
+</body></html>

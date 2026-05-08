@@ -16,16 +16,16 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
 
   if (isLoading) {
     return (
-      <div className="space-y-1">
+      <div className="space-y-px">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
-            <div className="w-4 h-4 shrink-0 rounded-full bg-slate-200 animate-pulse" />
+          <div key={i} className="flex items-center gap-3 border-b border-ui-border-soft px-1 py-3">
+            <div className="h-[18px] w-[18px] shrink-0 animate-pulse rounded-md bg-navy-100" />
             <div className="flex-1 space-y-1.5">
               <div
-                className="h-3.5 bg-slate-200 rounded animate-pulse"
+                className="h-3.5 animate-pulse rounded bg-navy-100"
                 style={{ width: `${60 + (i * 17) % 35}%` }}
               />
-              <div className="h-2.5 w-16 bg-slate-100 rounded animate-pulse" />
+              <div className="h-2.5 w-16 animate-pulse rounded bg-navy-50" />
             </div>
           </div>
         ))}
@@ -36,14 +36,14 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
   if (items.length === 0) {
     if (emptySlot) return <>{emptySlot}</>
     return (
-      <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
+      <div className="rounded-lg border border-dashed border-ui-border-strong px-4 py-8 text-center font-mono text-sm text-navy-300">
         {emptyMessage}
       </div>
     )
   }
 
   return (
-    <div className="space-y-1.5 pt-2">
+    <div className="pt-1">
       {items.map((item, index) => (
         <ItemRow key={item.id} item={item} active={item.id === selectedItemId} index={index} />
       ))}
