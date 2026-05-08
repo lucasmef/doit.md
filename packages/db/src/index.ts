@@ -49,3 +49,7 @@ export const PushSubscriptionModel = new SqlModel({
   table: 'push_subscriptions',
   booleanFields: ['enabled'],
 })
+
+export const NotificationAlertModel = new SqlModel({
+  table: 'notification_alerts',
+})

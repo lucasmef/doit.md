@@ -238,6 +238,22 @@ const sqliteSchema = [
   `CREATE UNIQUE INDEX IF NOT EXISTS push_subscriptions_endpoint_idx ON push_subscriptions (endpoint)`,
   `CREATE INDEX IF NOT EXISTS push_subscriptions_user_enabled_idx ON push_subscriptions (userId, enabled)`,
   `CREATE INDEX IF NOT EXISTS push_subscriptions_user_updated_idx ON push_subscriptions (userId, updatedAt)`,
+  `CREATE TABLE IF NOT EXISTS notification_alerts (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    itemId TEXT,
+    type TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    scheduledFor TEXT,
+    deliveryStatus TEXT NOT NULL,
+    createdAt TEXT NOT NULL,
+    acknowledgedAt TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS notification_alerts_user_ack_idx ON notification_alerts (userId, acknowledgedAt, createdAt)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS notification_alerts_dedupe_idx ON notification_alerts (userId, itemId, type, scheduledFor) WHERE itemId IS NOT NULL AND scheduledFor IS NOT NULL`,
 ]
 
 const postgresIdentifiers = [
@@ -247,6 +263,9 @@ const postgresIdentifiers = [
   'googleCalendarId',
   'calendarEventId',
   'push_subscriptions',
+  'notification_alerts',
+  'deliveryStatus',
+  'acknowledgedAt',
   'contentMdBefore',
   'contentMdAfter',
   'linkedItemIds',

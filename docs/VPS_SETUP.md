@@ -53,6 +53,20 @@ NEXTAUTH_URL
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI
+NEXT_PUBLIC_VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY
+VAPID_EMAIL
+CRON_SECRET
+RESEND_API_KEY
+EMAIL_FROM
+```
+
+`NOTIFICATION_LOOKAHEAD_MINUTES` controla a janela de busca de lembretes com horario; o padrao recomendado e `5`.
+Para disparar lembretes, agende uma chamada autenticada para:
+
+```bash
+curl -X POST https://<doit-public-domain>/api/notifications/reminders \
+  -H "Authorization: Bearer <CRON_SECRET>"
 ```
 
 ## Systemd
