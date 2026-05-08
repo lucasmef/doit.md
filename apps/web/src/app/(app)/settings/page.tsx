@@ -94,8 +94,16 @@ export default function SettingsPage() {
     setPushBusy('test')
     try {
       const result = await push.sendTest()
-      if (result.sent > 0) addToast(`Teste enviado para ${result.sent} dispositivo(s).`, 'success')
-      else addToast('Nenhum dispositivo ativo recebeu o teste.', 'info')
+      const missed = result.invalid + result.failed
+      if (result.sent > 0 && missed > 0) {
+        addToast(`Teste enviado para ${result.sent} dispositivo(s); ${missed} falhou/falharam.`, 'info')
+      } else if (result.sent > 0) {
+        addToast(`Teste enviado para ${result.sent} dispositivo(s).`, 'success')
+      } else if (missed > 0) {
+        addToast(`Nenhum dispositivo recebeu o teste; ${missed} falhou/falharam.`, 'error')
+      } else {
+        addToast('Nenhum dispositivo ativo recebeu o teste.', 'info')
+      }
     } catch (e: unknown) {
       addToast(e instanceof Error ? e.message : 'Erro ao enviar teste', 'error')
     } finally {
