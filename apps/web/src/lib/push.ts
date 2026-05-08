@@ -1,8 +1,11 @@
+import https from 'node:https'
 import webpush from 'web-push'
 import { PushSubscriptionModel } from '@doit/db'
 import type { PushSubscribeRequest } from '@doit/types'
 
 type PushRow = Record<string, unknown>
+
+const applePushAgent = new https.Agent({ family: 4 })
 
 export function isPushConfigured(): boolean {
   return Boolean(
@@ -103,9 +106,13 @@ export async function markPushFailure(row: PushRow, statusCode?: number, now = n
 export async function sendPush(row: PushRow, payload: Record<string, unknown>): Promise<'sent' | 'invalid' | 'failed'> {
   configureWebPush()
   const now = new Date().toISOString()
+  const endpoint = String(row['endpoint'])
+  const options = endpoint.startsWith('https://web.push.apple.com/')
+    ? { agent: applePushAgent, timeout: 15000 }
+    : undefined
   try {
-    await webpush.sendNotification(toWebPushSubscription(row), JSON.stringify(payload))
-    await markPushSuccess(String(row['userId']), String(row['endpoint']), now)
+    await webpush.sendNotification(toWebPushSubscription(row), JSON.stringify(payload), options)
+    await markPushSuccess(String(row['userId']), endpoint, now)
     return 'sent'
   } catch (error) {
     const statusCode = typeof error === 'object' && error ? Number((error as { statusCode?: unknown }).statusCode) : undefined

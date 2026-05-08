@@ -49,6 +49,33 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    if (input.platform || input.deviceLabel) {
+      const staleRows = (await PushSubscriptionModel.find({
+        userId,
+        endpoint: { $ne: input.endpoint },
+        enabled: true,
+        ...(input.platform ? { platform: input.platform } : {}),
+        ...(input.deviceLabel ? { deviceLabel: input.deviceLabel } : {}),
+      }).lean()) as Record<string, unknown>[]
+
+      await Promise.all(staleRows.map((row) =>
+        PushSubscriptionModel.findOneAndUpdate(
+          {
+            userId,
+            endpoint: String(row['endpoint']),
+          },
+          {
+            $set: {
+              enabled: false,
+              disabledAt: now,
+              updatedAt: now,
+            },
+          },
+          { new: true },
+        ).lean(),
+      ))
+    }
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     console.error('[POST /api/push/subscribe]', err)

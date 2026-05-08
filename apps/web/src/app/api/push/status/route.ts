@@ -8,6 +8,18 @@ import { isPushConfigured } from '@/lib/push'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+function dedupeRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  const seen = new Set<string>()
+  const result: Record<string, unknown>[] = []
+  for (const row of rows) {
+    const key = `${String(row['platform'] ?? 'unknown')}:${String(row['deviceLabel'] ?? row['endpoint'])}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(row)
+  }
+  return result
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
@@ -17,13 +29,14 @@ export async function GET(req: NextRequest) {
     const endpoint = new URL(req.url).searchParams.get('endpoint')
     const rows = (await PushSubscriptionModel.find({ userId, enabled: 1 }).sort({ updatedAt: -1 }).lean()) as Record<string, unknown>[]
     const current = endpoint ? rows.find((row) => row['endpoint'] === endpoint) : null
+    const devices = dedupeRows(rows)
 
     const response: PushStatusResponse = {
       configured: isPushConfigured(),
       subscribed: Boolean(current),
-      activeDeviceCount: rows.length,
+      activeDeviceCount: devices.length,
       currentDeviceEnabled: Boolean(current),
-      devices: rows.map((row) => ({
+      devices: devices.map((row) => ({
         id: String(row['_id'] ?? row['id']),
         deviceLabel: (row['deviceLabel'] as string | null | undefined) ?? null,
         platform: (row['platform'] as string | null | undefined) ?? null,
