@@ -49,6 +49,16 @@ function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
   return output
 }
 
+function bytesEqual(left: ArrayBuffer | null, right: Uint8Array<ArrayBuffer>): boolean {
+  if (!left) return false
+  const leftBytes = new Uint8Array(left)
+  if (leftBytes.length !== right.length) return false
+  for (let index = 0; index < leftBytes.length; index += 1) {
+    if (leftBytes[index] !== right[index]) return false
+  }
+  return true
+}
+
 function getClientSupport(): PermissionState {
   if (typeof window === 'undefined') return 'unsupported'
   if (!window.isSecureContext) return 'unsupported'
@@ -78,6 +88,15 @@ async function getCurrentSubscription(): Promise<PushSubscription | null> {
   return registration?.pushManager.getSubscription() ?? null
 }
 
+async function removeSubscription(subscription: PushSubscription): Promise<void> {
+  await fetch('/api/push/unsubscribe', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint: subscription.endpoint }),
+  })
+  await subscription.unsubscribe()
+}
+
 export function usePushNotifications() {
   const support = getClientSupport()
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -85,6 +104,10 @@ export function usePushNotifications() {
 
   const { data, error, isLoading, mutate } = useSWR<PushStatusResponse>(subscriptionKey, async () => {
     const subscription = await getCurrentSubscription()
+    if (subscription && publicKey && !bytesEqual(subscription.options.applicationServerKey, urlBase64ToUint8Array(publicKey))) {
+      await removeSubscription(subscription)
+      return fetcher('/api/push/status')
+    }
     const query = subscription ? `?endpoint=${encodeURIComponent(subscription.endpoint)}` : ''
     return fetcher(`/api/push/status${query}`)
   })
@@ -98,10 +121,15 @@ export function usePushNotifications() {
     if (permission !== 'granted') throw new Error('Permissao de notificacao nao concedida.')
 
     const registration = await getOrRegisterServiceWorker()
+    const applicationServerKey = urlBase64ToUint8Array(publicKey)
     const existing = await registration.pushManager.getSubscription()
-    const subscription = existing ?? await registration.pushManager.subscribe({
+    if (existing && !bytesEqual(existing.options.applicationServerKey, applicationServerKey)) {
+      await removeSubscription(existing)
+    }
+    const current = await registration.pushManager.getSubscription()
+    const subscription = current ?? await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
+      applicationServerKey,
     })
 
     const payload = subscription.toJSON()
@@ -123,12 +151,7 @@ export function usePushNotifications() {
   async function disable() {
     const subscription = await getCurrentSubscription()
     if (subscription) {
-      await fetch('/api/push/unsubscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint: subscription.endpoint }),
-      })
-      await subscription.unsubscribe()
+      await removeSubscription(subscription)
     }
     await mutate()
   }
