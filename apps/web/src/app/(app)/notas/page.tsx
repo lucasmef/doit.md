@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useFolders, buildFolderTree, createFolder, deleteFolder, updateFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
+import { useUI } from '@/store/ui'
 
 function FolderRow({
   node,
@@ -92,6 +93,7 @@ function collectIds(nodes: FolderTreeNode[], acc: string[] = []) {
 export default function NotasPage() {
   const { folders, isLoading } = useFolders()
   const { items } = useItems()
+  const { setSelectedItemId } = useUI()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -108,7 +110,13 @@ export default function NotasPage() {
     return counts
   }, [items])
 
-  const rootNotes = items.filter((i) => i.complexity === 'note' && i.status !== 'archived' && !i.folderId)
+  const rootNotes = items.filter(
+    (i) =>
+      i.complexity === 'note' &&
+      i.status !== 'archived' &&
+      i.status !== 'done' &&
+      !i.folderId,
+  )
 
   function toggle(id: string) {
     setExpanded((current) => {
@@ -167,25 +175,32 @@ export default function NotasPage() {
         </div>
       )}
 
+      {rootNotes.length > 0 && (
+        <section className="mb-4">
+          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+            Notas sem pasta / {rootNotes.length}
+          </h2>
+          <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
+            {rootNotes.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setSelectedItemId(item.id)}
+                className="block w-full px-3 py-2 text-left text-[14px] text-navy-900 hover:bg-surface-soft"
+              >
+                {item.title || 'Sem titulo'}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       {tree.length > 0 && (
         <div className="rounded-xl border border-ui-border bg-white">
           {tree.map((node) => (
             <FolderRow key={node.id} node={node} depth={0} expanded={expanded} toggle={toggle} noteCounts={noteCounts} />
           ))}
         </div>
-      )}
-
-      {rootNotes.length > 0 && (
-        <section className="mt-6">
-          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Notas sem pasta / {rootNotes.length}
-          </h2>
-          <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
-            {rootNotes.map((item) => (
-              <div key={item.id} className="px-3 py-2 text-[14px] text-navy-900">{item.title}</div>
-            ))}
-          </div>
-        </section>
       )}
     </div>
   )

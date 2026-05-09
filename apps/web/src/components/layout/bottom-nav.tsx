@@ -1,13 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUI } from '@/store/ui'
 
 function IconInbox() {
   return (
-    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -20,7 +19,7 @@ function IconInbox() {
 
 function IconToday() {
   return (
-    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -31,9 +30,22 @@ function IconToday() {
   )
 }
 
+function IconUpcoming() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Zm4 9h4m-2-2 2 2-2 2"
+      />
+    </svg>
+  )
+}
+
 function IconCalendar() {
   return (
-    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -44,133 +56,108 @@ function IconCalendar() {
   )
 }
 
-function IconMenu() {
+function IconNotes() {
   return (
-    <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         strokeWidth={1.8}
-        d="M4 7h16M4 12h16M4 17h16"
+        d="M6 3h9l3 3v15H6zM14 3v4h4M9 12h6M9 16h4"
       />
     </svg>
   )
 }
 
-const MENU_LINKS = [
-  { href: '/notas', label: 'Notas' },
-  { href: '/settings', label: 'Configuracoes' },
-  { href: '/settings?tab=tags', label: 'Tags' },
-  { href: '/settings?tab=archive', label: 'Arquivo' },
-  { href: '/settings?tab=audit', label: 'Auditoria' },
+function IconSettings() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
+      />
+    </svg>
+  )
+}
+
+const NAV_LEFT = [
+  { href: '/inbox', label: 'Inbox', icon: <IconInbox /> },
+  { href: '/today', label: 'Hoje', icon: <IconToday /> },
+  { href: '/upcoming', label: 'Proximos', icon: <IconUpcoming /> },
+]
+
+const NAV_RIGHT = [
+  { href: '/calendar', label: 'Calendario', icon: <IconCalendar /> },
+  { href: '/notas', label: 'Notas', icon: <IconNotes /> },
+  { href: '/settings', label: 'Config', icon: <IconSettings /> },
 ]
 
 export function BottomNav() {
   const pathname = usePathname()
   const { setQuickCaptureOpen } = useUI()
-  const [menuOpen, setMenuOpen] = useState(false)
 
   function linkClass(href: string) {
     const path = href.split('?')[0] ?? href
     const active = pathname === path || pathname.startsWith(path + '/')
-    return `flex min-h-[72px] flex-1 flex-col items-center justify-center gap-1 py-2 transition-colors ${
+    return `flex min-h-[68px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${
       active ? 'text-brand-600' : 'text-slate-400'
     }`
   }
 
   return (
-    <>
-      {menuOpen && (
-        <div
-          className="fixed inset-0 z-[70] bg-navy-900/30 lg:hidden"
-          onClick={() => setMenuOpen(false)}
+    <nav className="safe-area-bottom fixed inset-x-0 bottom-0 z-[80] flex min-h-[76px] items-center border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,35,66,0.08)] lg:hidden">
+      {NAV_LEFT.map((link) => (
+        <Link
+          key={link.href}
+          href={link.href}
+          className={linkClass(link.href)}
+          onClick={(event) => event.stopPropagation()}
         >
-          <div
-            className="absolute bottom-[88px] right-3 w-56 overflow-hidden rounded-2xl border border-ui-border bg-white p-1.5 shadow-cool-lg"
-            onClick={(event) => event.stopPropagation()}
+          {link.icon}
+          <span className="text-[9px] font-semibold">{link.label}</span>
+        </Link>
+      ))}
+
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation()
+          setQuickCaptureOpen(true)
+        }}
+        className="flex min-h-[68px] flex-1 flex-col items-center justify-center"
+        title="Novo item"
+      >
+        <div className="-translate-y-3 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-brand-600 shadow-lg shadow-brand-500/30">
+          <svg
+            className="h-6 w-6 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            {MENU_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMenuOpen(false)}
-                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-surface-soft"
-              >
-                {link.label}
-              </Link>
-            ))}
-          </div>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2.5}
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
         </div>
-      )}
+      </button>
 
-      <nav className="safe-area-bottom fixed inset-x-0 bottom-0 z-[80] flex min-h-[80px] items-center border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,35,66,0.08)] lg:hidden">
+      {NAV_RIGHT.map((link) => (
         <Link
-          href="/inbox"
-          className={linkClass('/inbox')}
+          key={link.href}
+          href={link.href}
+          className={linkClass(link.href)}
           onClick={(event) => event.stopPropagation()}
         >
-          <IconInbox />
-          <span className="text-[10px] font-semibold">Inbox</span>
+          {link.icon}
+          <span className="text-[9px] font-semibold">{link.label}</span>
         </Link>
-
-        <Link
-          href="/today"
-          className={linkClass('/today')}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <IconToday />
-          <span className="text-[10px] font-semibold">Hoje</span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation()
-            setQuickCaptureOpen(true)
-          }}
-          className="flex min-h-[72px] flex-1 flex-col items-center justify-center"
-          title="Novo item"
-        >
-          <div className="-translate-y-4 flex h-16 w-16 items-center justify-center rounded-full border-4 border-white bg-brand-600 shadow-lg shadow-brand-500/30">
-            <svg
-              className="h-8 w-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2.5}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          </div>
-        </button>
-
-        <Link
-          href="/calendar"
-          className={linkClass('/calendar')}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <IconCalendar />
-          <span className="text-[10px] font-semibold">Calendario</span>
-        </Link>
-
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation()
-            setMenuOpen((open) => !open)
-          }}
-          className={`flex min-h-[72px] flex-1 flex-col items-center justify-center gap-1 py-2 transition-colors ${
-            menuOpen ? 'text-brand-600' : 'text-slate-400'
-          }`}
-        >
-          <IconMenu />
-          <span className="text-[10px] font-semibold">Menu</span>
-        </button>
-      </nav>
-    </>
+      ))}
+    </nav>
   )
 }

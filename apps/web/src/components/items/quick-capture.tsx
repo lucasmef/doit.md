@@ -33,6 +33,49 @@ const DATE_WORD_SHORTCUT =
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
+const DRAFT_KEY = 'doit:quick-capture-draft'
+
+type QuickCaptureDraft = {
+  title: string
+  contentMd: string
+  complexity: ItemMode
+  dueDate: string
+  dueTime: string
+  projectId: string
+  tags: string[]
+  priority: Priority
+  recurrence: ItemRecurrence | ''
+}
+
+function loadDraft(): Partial<QuickCaptureDraft> | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(DRAFT_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as Partial<QuickCaptureDraft>
+  } catch {
+    return null
+  }
+}
+
+function saveDraft(draft: QuickCaptureDraft) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function clearDraft() {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(DRAFT_KEY)
+  } catch {
+    // ignore
+  }
+}
+
 function toDateInputValue(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -529,13 +572,26 @@ export function QuickCapture() {
 
   useEffect(() => {
     if (quickCaptureOpen) {
-      setComplexity('task')
-      setDueDate(isTodayContext ? todayDate() : '')
-      if (quickCaptureFolderId) {
-        setProjectId(quickCaptureFolderId)
+      const draft = loadDraft()
+      if (draft) {
+        setTitle(draft.title ?? '')
+        setContentMd(draft.contentMd ?? '')
+        setComplexity(draft.complexity ?? 'task')
+        setDueDate(draft.dueDate ?? (isTodayContext ? todayDate() : ''))
+        setDueTime(draft.dueTime ?? '')
+        setProjectId(draft.projectId ?? quickCaptureFolderId ?? '')
+        setTags(draft.tags ?? [])
+        setPriority((draft.priority as Priority) ?? 4)
+        setRecurrence((draft.recurrence as ItemRecurrence | '') ?? '')
       } else {
-        const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
-        if (folderMatch?.[1]) setProjectId(folderMatch[1])
+        setComplexity('task')
+        setDueDate(isTodayContext ? todayDate() : '')
+        if (quickCaptureFolderId) {
+          setProjectId(quickCaptureFolderId)
+        } else {
+          const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
+          if (folderMatch?.[1]) setProjectId(folderMatch[1])
+        }
       }
       setTimeout(() => inputRef.current?.focus(), 50)
     } else {
@@ -555,6 +611,26 @@ export function QuickCapture() {
       setQuickCaptureFolderId(null)
     }
   }, [quickCaptureOpen, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
+
+  useEffect(() => {
+    if (!quickCaptureOpen) return
+    const hasContent = !!title.trim() || !!contentMd.trim()
+    if (hasContent) {
+      saveDraft({
+        title,
+        contentMd,
+        complexity,
+        dueDate,
+        dueTime,
+        projectId,
+        tags,
+        priority,
+        recurrence,
+      })
+    } else {
+      clearDraft()
+    }
+  }, [quickCaptureOpen, title, contentMd, complexity, dueDate, dueTime, projectId, tags, priority, recurrence])
 
   function applyTitleShortcuts(value: string) {
     setTitle(value)
@@ -701,6 +777,7 @@ export function QuickCapture() {
         priority: complexity === 'task' && priority < 4 ? priority : undefined,
         recurrence: complexity === 'task' && recurrence ? recurrence : undefined,
       })
+      clearDraft()
       setQuickCaptureOpen(false)
       toast('Item criado com sucesso', 'success')
     } catch (error) {
@@ -732,6 +809,7 @@ export function QuickCapture() {
           }),
         ),
       )
+      clearDraft()
       setQuickCaptureOpen(false)
       toast(`${lines.length} tarefas criadas`, 'success')
     } catch (error) {
@@ -1237,7 +1315,10 @@ export function QuickCapture() {
 
             <button
               type="button"
-              onClick={() => setQuickCaptureOpen(false)}
+              onClick={() => {
+                clearDraft()
+                setQuickCaptureOpen(false)
+              }}
               className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
             >
               Cancelar

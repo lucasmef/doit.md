@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { useItem, updateItem, archiveItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
@@ -367,6 +368,7 @@ function ToolButton({
 }
 
 export function ItemDetail() {
+  const pathname = usePathname()
   const { selectedItemId, setSelectedItemId } = useUI()
   const { item, isLoading } = useItem(selectedItemId)
   const { projects } = useProjects()
@@ -536,6 +538,17 @@ export function ItemDetail() {
     setDirty(false)
     setSelectedItemId(null)
   }
+
+  const lastPathname = useRef(pathname)
+  useEffect(() => {
+    if (lastPathname.current !== pathname) {
+      lastPathname.current = pathname
+      if (selectedItemId) {
+        void flushAndClose()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const value = e.target.value
