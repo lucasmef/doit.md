@@ -75,7 +75,6 @@ export function RecurrencePopover({ value, dueDate, onChange }: Props) {
     currentRule?.monthMode ?? 'dayOfMonth',
   )
 
-  const unitOption = UNIT_OPTIONS.find((option) => option.value === unit) ?? UNIT_OPTIONS[1]
   const customValue = useMemo(
     () =>
       createCustomRecurrence({

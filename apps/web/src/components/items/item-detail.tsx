@@ -18,7 +18,6 @@ import type {
   ItemComplexity,
   ItemRecurrence,
   ItemStatus,
-  Project,
   UpdateItemInput,
 } from '@doit/types'
 import { formatRecurrenceLabel, toLocalDateKey } from '@doit/core'

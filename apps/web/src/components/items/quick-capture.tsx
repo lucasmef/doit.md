@@ -12,7 +12,7 @@ import { PRIORITY_CONFIG } from './priority-select'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
 import { RecurrencePopover } from './recurrence-popover'
 import type { Priority } from './priority-select'
-import type { ItemComplexity, ItemRecurrence, Project } from '@doit/types'
+import type { ItemComplexity, ItemRecurrence } from '@doit/types'
 import { formatRecurrenceLabel } from '@doit/core'
 
 type ItemMode = Extract<ItemComplexity, 'task' | 'note'>
