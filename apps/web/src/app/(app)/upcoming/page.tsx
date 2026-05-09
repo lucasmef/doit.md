@@ -19,7 +19,7 @@ function getGroup(item: Item): string {
   endOfNextWeek.setDate(endOfWeek.getDate() + 7)
 
   const d = item.dueDate ?? item.scheduledDate
-  if (!d) return 'Sem data'
+  if (!d) return ''
 
   if (d === toLocalDateKey(tomorrow)) return 'Amanha'
   if (d <= toLocalDateKey(endOfWeek)) return 'Esta semana'
@@ -27,7 +27,7 @@ function getGroup(item: Item): string {
   return 'Mais tarde'
 }
 
-const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde', 'Sem data']
+const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde']
 
 export default function UpcomingPage() {
   const { items, isLoading } = useItems()
@@ -39,8 +39,7 @@ export default function UpcomingPage() {
       i.status !== 'archived' &&
       i.status !== 'done' &&
       ((i.dueDate && i.dueDate > todayStr) ||
-        (i.scheduledDate && i.scheduledDate > todayStr) ||
-        (!i.dueDate && !i.scheduledDate)),
+        (i.scheduledDate && i.scheduledDate > todayStr)),
   )
 
   const grouped = GROUP_ORDER.reduce<Record<string, Item[]>>((acc, key) => {
