@@ -15,7 +15,11 @@ import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
 import type { ItemComplexity, ItemRecurrence, ItemStatus, UpdateItemInput } from '@doit/types'
-import { formatRecurrenceLabel, toLocalDateKey } from '@doit/core'
+import {
+  formatRecurrenceLabel,
+  nextRecurringDate as computeNextRecurringDate,
+  toLocalDateKey,
+} from '@doit/core'
 
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
@@ -403,6 +407,14 @@ export function ItemDetail() {
     }
   }, [item?.id])
 
+  useEffect(() => {
+    if (!item || dirty || isSaving) return
+    setDueDate(item.dueDate ?? '')
+    setDueTime(item.dueTime ?? '')
+    setRecurrence(item.recurrence ?? '')
+    setPriority((item.priority as Priority) ?? 4)
+  }, [dirty, isSaving, item?.dueDate, item?.dueTime, item?.id, item?.priority, item?.recurrence])
+
   const activeProjects = projects.filter((p) => p.status !== 'archived')
   const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
   const tagList = useMemo(() => parseTags(tags), [tags])
@@ -588,7 +600,24 @@ export function ItemDetail() {
   }
 
   function handleStatusChange(status: ItemStatus) {
-    if (!selectedItemId) return
+    if (!selectedItemId || !item) return
+    const activeRecurrence = recurrence || item.recurrence
+    if (item.status !== 'done' && status === 'done' && activeRecurrence) {
+      if (saveTimeout.current) {
+        clearTimeout(saveTimeout.current)
+        saveTimeout.current = null
+      }
+      pendingPatch.current = null
+      const nextDueDate = computeNextRecurringDate(dueDate || item.dueDate, activeRecurrence)
+      setDueDate(nextDueDate)
+      setDirty(false)
+      setIsSaving(false)
+      updateItem(selectedItemId, {
+        status: 'todo',
+        dueDate: nextDueDate,
+      })
+      return
+    }
     updateItem(selectedItemId, { status })
   }
 
