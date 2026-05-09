@@ -62,7 +62,8 @@ EMAIL_FROM
 ```
 
 `NOTIFICATION_LOOKAHEAD_MINUTES` controla a janela de busca de lembretes com horario; o padrao recomendado e `5`.
-Para disparar lembretes, agende uma chamada autenticada para:
+
+Os lembretes sao disparados por timers systemd (`doit-reminders.timer` e `doit-dev-reminders.timer`) que executam a cada minuto e chamam `/api/notifications/reminders` localmente usando o `CRON_SECRET` do `web.env`. Veja a secao Systemd abaixo. Caso prefira disparar de outro lugar:
 
 ```bash
 curl -X POST https://<doit-public-domain>/api/notifications/reminders \
@@ -71,11 +72,25 @@ curl -X POST https://<doit-public-domain>/api/notifications/reminders \
 
 ## Systemd
 
+O script `infra/scripts/install-doit-systemd-units-root.sh` instala todos os units (web e timers de lembrete) e habilita os timers. Para fazer manualmente:
+
 ```bash
 sudo install -m 644 infra/systemd/doit.service /etc/systemd/system/doit.service
 sudo install -m 644 infra/systemd/doit-dev.service /etc/systemd/system/doit-dev.service
+sudo install -m 644 infra/systemd/doit-reminders.service /etc/systemd/system/doit-reminders.service
+sudo install -m 644 infra/systemd/doit-reminders.timer /etc/systemd/system/doit-reminders.timer
+sudo install -m 644 infra/systemd/doit-dev-reminders.service /etc/systemd/system/doit-dev-reminders.service
+sudo install -m 644 infra/systemd/doit-dev-reminders.timer /etc/systemd/system/doit-dev-reminders.timer
 sudo systemctl daemon-reload
 sudo systemctl enable doit.service doit-dev.service
+sudo systemctl enable --now doit-reminders.timer doit-dev-reminders.timer
+```
+
+Para inspecionar:
+
+```bash
+systemctl list-timers 'doit*'
+journalctl -u doit-reminders.service -n 50
 ```
 
 ## Nginx

@@ -1,0 +1,13 @@
+[Unit]
+Description=Doit Reminder Dispatcher (Development)
+After=doit-dev.service
+Requires=doit-dev.service
+
+[Service]
+Type=oneshot
+User=salomao
+Group=salomao
+EnvironmentFile=/srv/doit/dev/doit-config/web.env
+ExecStart=/bin/sh -c '/usr/bin/curl -fsS --max-time 30 -X POST -H "Authorization: Bearer $CRON_SECRET" http://127.0.0.1:8111/api/notifications/reminders'
+StandardOutput=journal
+StandardError=journal

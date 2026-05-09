@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Doit reminder dispatcher every minute (Production)
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Unit=doit-reminders.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
