@@ -14,12 +14,7 @@ import { RecurrencePopover } from './recurrence-popover'
 import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
-import type {
-  ItemComplexity,
-  ItemRecurrence,
-  ItemStatus,
-  UpdateItemInput,
-} from '@doit/types'
+import type { ItemComplexity, ItemRecurrence, ItemStatus, UpdateItemInput } from '@doit/types'
 import { formatRecurrenceLabel, toLocalDateKey } from '@doit/core'
 
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
@@ -201,6 +196,29 @@ function titleFromNoteContent(content: string) {
     .replace(/^#{1,6}\s+/, '')
     .replace(/[*_`[\]]/g, '')
     .trim()
+}
+
+function mergeTaskTitleIntoNoteContent(title: string, content: string) {
+  const normalizedTitle = title.trim()
+  const normalizedContent = content.trim()
+  return [normalizedTitle, normalizedContent].filter(Boolean).join('\n\n')
+}
+
+function splitNoteContentForTask(content: string) {
+  const lines = content.split(/\r?\n/)
+  const titleIndex = lines.findIndex((line) => line.trim())
+  if (titleIndex === -1) return { title: '', contentMd: '' }
+
+  const title = (lines[titleIndex] ?? '')
+    .trim()
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
+  const contentMd = lines
+    .slice(titleIndex + 1)
+    .join('\n')
+    .trim()
+  return { title, contentMd }
 }
 
 function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
@@ -531,11 +549,40 @@ export function ItemDetail() {
   }
 
   function handleComplexityChange(complexity: ItemComplexity) {
-    if (!selectedItemId) return
+    if (!selectedItemId || !item) return
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current)
+      saveTimeout.current = null
+    }
+    pendingPatch.current = null
+    setDirty(false)
+    setIsSaving(false)
+
     if (complexity === 'note') {
+      const nextContent =
+        item.complexity === 'note' ? content : mergeTaskTitleIntoNoteContent(title, content)
       setPriority(4)
       setRecurrence('')
       setDueTime('')
+      setContent(nextContent)
+      setTitle(titleFromNoteContent(nextContent) || title)
+      updateItem(selectedItemId, {
+        complexity,
+        contentMd: nextContent || undefined,
+      })
+      return
+    }
+    if (item.complexity === 'note' && complexity === 'task') {
+      const next = splitNoteContentForTask(content)
+      if (!next.title) return
+      setTitle(next.title)
+      setContent(next.contentMd)
+      updateItem(selectedItemId, {
+        complexity,
+        title: next.title,
+        contentMd: next.contentMd || undefined,
+      })
+      return
     }
     updateItem(selectedItemId, { complexity })
   }

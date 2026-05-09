@@ -122,6 +122,19 @@ function titleFromNoteContent(content: string) {
     .trim()
 }
 
+function parseBatchTaskLines(value: string) {
+  return value
+    .split(/\r?\n/)
+    .map((line) => cleanTitle(line))
+    .filter(Boolean)
+}
+
+function insertPastedTitle(current: string, pasted: string, start: number, end: number) {
+  return `${current.slice(0, start)}${pasted.replace(/\s*\r?\n\s*/g, ' ')}${current.slice(end)}`
+    .replace(/\s+/g, ' ')
+    .trimStart()
+}
+
 function normalizeToken(value: string) {
   return value.trim().toLocaleLowerCase('pt-BR')
 }
@@ -376,12 +389,14 @@ function HighlightedTitleInput({
   onCursorChange,
   placeholder,
   inputRef,
+  onPaste,
 }: {
   value: string
   onChange: (value: string) => void
   onCursorChange: (cursor: number) => void
   placeholder: string
   inputRef?: React.RefObject<HTMLInputElement | null>
+  onPaste?: (event: React.ClipboardEvent<HTMLInputElement>) => void
 }) {
   const parts = value.split(INLINE_METADATA_PATTERN)
 
@@ -417,6 +432,7 @@ function HighlightedTitleInput({
           onChange(e.target.value)
           onCursorChange(e.target.selectionStart ?? e.target.value.length)
         }}
+        onPaste={onPaste}
         onClick={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
         onKeyUp={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
         placeholder={placeholder}
@@ -694,6 +710,63 @@ export function QuickCapture() {
     }
   }
 
+  async function createTasksFromLines(lines: string[]) {
+    if (lines.length === 0) return
+
+    setSaving(true)
+    try {
+      const inboxContext = !projectId && !dueDate
+      await Promise.all(
+        lines.map((line) =>
+          createItem({
+            title: line,
+            complexity: 'task',
+            status: inboxContext ? 'inbox' : 'todo',
+            contentMd: contentMd.trim() || undefined,
+            dueDate: dueDate || undefined,
+            dueTime: dueDate && dueTime ? dueTime : undefined,
+            folderId: projectId || undefined,
+            tags,
+            priority: priority < 4 ? priority : undefined,
+            recurrence: recurrence ? recurrence : undefined,
+          }),
+        ),
+      )
+      setQuickCaptureOpen(false)
+      toast(`${lines.length} tarefas criadas`, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao criar tarefas.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleTitlePaste(event: React.ClipboardEvent<HTMLInputElement>) {
+    if (isNote || saving) return
+
+    const pasted = event.clipboardData.getData('text')
+    const lines = parseBatchTaskLines(pasted)
+    if (lines.length <= 1) return
+
+    event.preventDefault()
+    if (window.confirm(`Deseja adicionar ${lines.length} tarefas? Cada linha sera uma tarefa.`)) {
+      void createTasksFromLines(lines)
+      return
+    }
+
+    const start = event.currentTarget.selectionStart ?? title.length
+    const end = event.currentTarget.selectionEnd ?? start
+    const pastedInline = pasted.replace(/\s*\r?\n\s*/g, ' ')
+    const nextTitle = insertPastedTitle(title, pasted, start, end)
+    applyTitleShortcuts(nextTitle)
+    const nextCursor = start + pastedInline.length
+    setTitleCursor(nextCursor)
+    setTimeout(() => {
+      inputRef.current?.focus()
+      inputRef.current?.setSelectionRange(nextCursor, nextCursor)
+    }, 0)
+  }
+
   if (!quickCaptureOpen) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
@@ -718,6 +791,7 @@ export function QuickCapture() {
                   inputRef={inputRef}
                   value={title}
                   onChange={applyTitleShortcuts}
+                  onPaste={handleTitlePaste}
                   onCursorChange={setTitleCursor}
                   placeholder="Nome da tarefa"
                 />

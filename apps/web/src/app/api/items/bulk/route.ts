@@ -16,8 +16,33 @@ function mapDocToItem(doc: unknown): Item {
 }
 
 function titleFromNoteContent(contentMd: string | undefined) {
-  const firstLine = contentMd?.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
-  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+  const firstLine =
+    contentMd
+      ?.split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
+}
+
+function mergeTaskTitleIntoNoteContent(title: unknown, contentMd: unknown) {
+  return [String(title ?? '').trim(), String(contentMd ?? '').trim()].filter(Boolean).join('\n\n')
+}
+
+function splitNoteContentForTask(contentMd: unknown) {
+  const lines = String(contentMd ?? '').split(/\r?\n/)
+  const titleIndex = lines.findIndex((line) => line.trim())
+  if (titleIndex === -1) return { title: '', contentMd: '' }
+
+  return {
+    title: titleFromNoteContent(lines[titleIndex]),
+    contentMd: lines
+      .slice(titleIndex + 1)
+      .join('\n')
+      .trim(),
+  }
 }
 
 function normalizeTag(value: string) {
@@ -33,7 +58,14 @@ function mergeTags(current: unknown, action: BulkItemActionInput['tagAction']) {
   return Array.from(new Set([...existing, ...tags]))
 }
 
-const VERSIONED_NOTE_FIELDS = ['title', 'contentMd', 'tags', 'status', 'folderId', 'areaId'] as const
+const VERSIONED_NOTE_FIELDS = [
+  'title',
+  'contentMd',
+  'tags',
+  'status',
+  'folderId',
+  'areaId',
+] as const
 
 function shouldVersionNote(current: Record<string, unknown>, patch: LoosePatch) {
   if (current['complexity'] !== 'note') return false
@@ -57,7 +89,10 @@ async function createItemVersionIfChanged(item: Record<string, unknown>, userId:
   const itemId = String(item['_id'] ?? item['id'])
   const snapshot = itemSnapshot(item)
   const syncHash = hashContent(JSON.stringify(snapshot))
-  const latest = await ItemVersionModel.find({ itemId, userId }).sort({ createdAt: -1 }).limit(1).lean()
+  const latest = await ItemVersionModel.find({ itemId, userId })
+    .sort({ createdAt: -1 })
+    .limit(1)
+    .lean()
   if (latest[0]?.['syncHash'] === syncHash) return
 
   await ItemVersionModel.create({
@@ -73,6 +108,24 @@ async function createItemVersionIfChanged(item: Record<string, unknown>, userId:
 function buildPatch(current: Record<string, unknown>, body: BulkItemActionInput, now: string) {
   const patch: LoosePatch = { ...(body.patch ?? {}) }
   if (body.tagAction) patch.tags = mergeTags(current['tags'], body.tagAction)
+
+  if (
+    patch.complexity === 'note' &&
+    current['complexity'] !== 'note' &&
+    patch.contentMd === undefined
+  ) {
+    patch.contentMd = mergeTaskTitleIntoNoteContent(current['title'], current['contentMd'])
+  }
+  if (
+    patch.complexity === 'task' &&
+    current['complexity'] === 'note' &&
+    patch.title === undefined &&
+    patch.contentMd === undefined
+  ) {
+    const next = splitNoteContentForTask(current['contentMd'])
+    if (next.title) patch.title = next.title
+    patch.contentMd = next.contentMd || undefined
+  }
 
   const merged = { ...mapDocToItem(current), ...patch }
   const unset: Record<string, ''> = {}
@@ -130,7 +183,8 @@ export async function PATCH(req: NextRequest) {
     const body = (await req.json()) as BulkItemActionInput
     const ids = Array.from(new Set((body.ids ?? []).filter(Boolean)))
     if (ids.length === 0) return NextResponse.json({ error: 'ids are required' }, { status: 400 })
-    if (!body.patch && !body.tagAction) return NextResponse.json({ error: 'patch or tagAction is required' }, { status: 400 })
+    if (!body.patch && !body.tagAction)
+      return NextResponse.json({ error: 'patch or tagAction is required' }, { status: 400 })
 
     const now = new Date().toISOString()
     const updated: Item[] = []

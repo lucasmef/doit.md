@@ -119,8 +119,41 @@ function titleFromNoteContent(contentMd: string | undefined) {
     .trim()
 }
 
+function mergeTaskTitleIntoNoteContent(title: string | undefined, contentMd: string | undefined) {
+  return [title?.trim(), contentMd?.trim()].filter(Boolean).join('\n\n')
+}
+
+function splitNoteContentForTask(contentMd: string | undefined) {
+  const lines = (contentMd ?? '').split(/\r?\n/)
+  const titleIndex = lines.findIndex((line) => line.trim())
+  if (titleIndex === -1) return { title: '', contentMd: '' }
+
+  return {
+    title: titleFromNoteContent(lines[titleIndex]),
+    contentMd: lines
+      .slice(titleIndex + 1)
+      .join('\n')
+      .trim(),
+  }
+}
+
 function applyUpdate(item: Item, input: UpdateItemInput, updatedAt: string): Item {
-  const merged: Item = { ...item, ...input, updatedAt }
+  const patch = { ...input }
+  if (input.complexity === 'note' && item.complexity !== 'note' && patch.contentMd === undefined) {
+    patch.contentMd = mergeTaskTitleIntoNoteContent(item.title, item.contentMd)
+  }
+  if (
+    input.complexity === 'task' &&
+    item.complexity === 'note' &&
+    patch.title === undefined &&
+    patch.contentMd === undefined
+  ) {
+    const next = splitNoteContentForTask(item.contentMd)
+    if (next.title) patch.title = next.title
+    patch.contentMd = next.contentMd || undefined
+  }
+
+  const merged: Item = { ...item, ...patch, updatedAt }
   if (merged.complexity === 'note') {
     merged.priority = undefined
     merged.recurrence = undefined

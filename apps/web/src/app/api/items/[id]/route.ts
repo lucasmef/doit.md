@@ -20,11 +20,43 @@ function validateItemState() {
 }
 
 function titleFromNoteContent(contentMd: string | undefined) {
-  const firstLine = contentMd?.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
-  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+  const firstLine =
+    contentMd
+      ?.split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
 }
 
-const VERSIONED_NOTE_FIELDS = ['title', 'contentMd', 'tags', 'status', 'folderId', 'areaId'] as const
+function mergeTaskTitleIntoNoteContent(title: unknown, contentMd: unknown) {
+  return [String(title ?? '').trim(), String(contentMd ?? '').trim()].filter(Boolean).join('\n\n')
+}
+
+function splitNoteContentForTask(contentMd: unknown) {
+  const lines = String(contentMd ?? '').split(/\r?\n/)
+  const titleIndex = lines.findIndex((line) => line.trim())
+  if (titleIndex === -1) return { title: '', contentMd: '' }
+
+  return {
+    title: titleFromNoteContent(lines[titleIndex]),
+    contentMd: lines
+      .slice(titleIndex + 1)
+      .join('\n')
+      .trim(),
+  }
+}
+
+const VERSIONED_NOTE_FIELDS = [
+  'title',
+  'contentMd',
+  'tags',
+  'status',
+  'folderId',
+  'areaId',
+] as const
 
 function shouldVersionNote(current: Record<string, unknown>, patch: UpdateItemInput) {
   if (current['complexity'] !== 'note') return false
@@ -48,7 +80,10 @@ async function createItemVersionIfChanged(item: Record<string, unknown>, userId:
   const itemId = String(item['_id'] ?? item['id'])
   const snapshot = itemSnapshot(item)
   const syncHash = hashContent(JSON.stringify(snapshot))
-  const latest = await ItemVersionModel.find({ itemId, userId }).sort({ createdAt: -1 }).limit(1).lean()
+  const latest = await ItemVersionModel.find({ itemId, userId })
+    .sort({ createdAt: -1 })
+    .limit(1)
+    .lean()
   if (latest[0]?.['syncHash'] === syncHash) return
 
   await ItemVersionModel.create({
@@ -90,11 +125,30 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const current = await ItemModel.findOne({ _id: id, userId }).lean()
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    if (shouldVersionNote(current, body)) {
+    const patch = { ...body } as UpdateItemInput
+    if (
+      body.complexity === 'note' &&
+      current['complexity'] !== 'note' &&
+      patch.contentMd === undefined
+    ) {
+      patch.contentMd = mergeTaskTitleIntoNoteContent(current['title'], current['contentMd'])
+    }
+    if (
+      body.complexity === 'task' &&
+      current['complexity'] === 'note' &&
+      patch.title === undefined &&
+      patch.contentMd === undefined
+    ) {
+      const next = splitNoteContentForTask(current['contentMd'])
+      if (next.title) patch.title = next.title
+      patch.contentMd = next.contentMd || undefined
+    }
+
+    if (shouldVersionNote(current, patch)) {
       await createItemVersionIfChanged(current, userId)
     }
 
-    const merged = { ...mapDocToItem(current), ...body }
+    const merged = { ...mapDocToItem(current), ...patch }
     if (merged.complexity === 'note') {
       merged.priority = undefined
       merged.recurrence = undefined
@@ -112,12 +166,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       { _id: id, userId },
       {
         $set: {
-          ...body,
+          ...patch,
           ...(merged.complexity === 'note' ? { title: merged.title } : {}),
-          ...(body.status && body.status !== 'archived' ? { deletedAt: null } : {}),
+          ...(patch.status && patch.status !== 'archived' ? { deletedAt: null } : {}),
           updatedAt: new Date().toISOString(),
         },
-        ...(merged.complexity === 'note' ? { $unset: { priority: '', recurrence: '', dueTime: '' } } : {}),
+        ...(merged.complexity === 'note'
+          ? { $unset: { priority: '', recurrence: '', dueTime: '' } }
+          : {}),
       },
       { new: true },
     ).lean()
@@ -141,7 +197,11 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 
     await ItemModel.findOneAndUpdate(
       { _id: id, userId },
-      { status: 'archived', deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      {
+        status: 'archived',
+        deletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     )
 
     return NextResponse.json({ ok: true })
