@@ -361,7 +361,7 @@ function HighlightedTitleInput({
 
 export function QuickCapture() {
   const pathname = usePathname()
-  const { quickCaptureOpen, setQuickCaptureOpen } = useUI()
+  const { quickCaptureOpen, setQuickCaptureOpen, quickCaptureFolderId, setQuickCaptureFolderId } = useUI()
   const { toast } = useToast()
   const { projects } = useProjects()
   const { items } = useItems()
@@ -437,6 +437,12 @@ export function QuickCapture() {
     if (quickCaptureOpen) {
       setComplexity('task')
       setDueDate(isTodayContext ? todayDate() : '')
+      if (quickCaptureFolderId) {
+        setProjectId(quickCaptureFolderId)
+      } else {
+        const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
+        if (folderMatch?.[1]) setProjectId(folderMatch[1])
+      }
       setTimeout(() => inputRef.current?.focus(), 50)
     } else {
       setTitle('')
@@ -452,8 +458,9 @@ export function QuickCapture() {
       setProjectQuery('')
       setTitleCursor(0)
       setPopover(null)
+      setQuickCaptureFolderId(null)
     }
-  }, [quickCaptureOpen, isTodayContext])
+  }, [quickCaptureOpen, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
 
   function applyTitleShortcuts(value: string) {
     setTitle(value)
@@ -568,7 +575,7 @@ export function QuickCapture() {
       setProjectQuery('')
       setPopover(null)
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Erro ao criar projeto.', 'error')
+      toast(error instanceof Error ? error.message : 'Erro ao criar pasta.', 'error')
     } finally {
       setCreatingProject(false)
     }
@@ -967,12 +974,12 @@ export function QuickCapture() {
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"
-                title="Selecionar ou criar projeto"
+                title="Selecionar ou criar pasta"
                 onClick={() => setPopover(popover === 'project' ? null : 'project')}
                 className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
               >
                 <IconInbox className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
+                <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
               </button>
               {popover === 'project' && (
                 <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
@@ -985,7 +992,7 @@ export function QuickCapture() {
                         void addProject(projectQuery)
                       }
                     }}
-                    placeholder="Buscar ou criar projeto"
+                    placeholder="Buscar ou criar pasta"
                     className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                     autoFocus
                   />

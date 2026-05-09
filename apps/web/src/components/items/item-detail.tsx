@@ -522,7 +522,7 @@ export function ItemDetail() {
       setProjectQuery('')
       setPopover(null)
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Erro ao criar projeto.', 'error')
+      toast(error instanceof Error ? error.message : 'Erro ao criar pasta.', 'error')
     } finally {
       setCreatingProject(false)
     }
@@ -687,12 +687,12 @@ export function ItemDetail() {
               <div className="relative min-w-[130px] shrink-0">
                 <button
                   type="button"
-                  title="Selecionar ou criar projeto"
+                  title="Selecionar ou criar pasta"
                   onClick={() => setPopover(popover === 'project' ? null : 'project')}
                   className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
                 >
                   <IconInbox className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
+                  <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
                 </button>
                 {popover === 'project' && (
                   <div className="absolute left-0 top-9 z-20 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
@@ -705,7 +705,7 @@ export function ItemDetail() {
                           void addProject(projectQuery)
                         }
                       }}
-                      placeholder="Buscar ou criar projeto"
+                      placeholder="Buscar ou criar pasta"
                       className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                       autoFocus
                     />
@@ -1064,12 +1064,12 @@ export function ItemDetail() {
               <div className="relative min-w-0 flex-1">
                 <button
                   type="button"
-                  title="Selecionar ou criar projeto"
+                  title="Selecionar ou criar pasta"
                   onClick={() => setPopover(popover === 'project' ? null : 'project')}
                   className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
                 >
                   <IconInbox className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
+                  <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
                 </button>
                 {popover === 'project' && (
                   <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
@@ -1082,7 +1082,7 @@ export function ItemDetail() {
                           void addProject(projectQuery)
                         }
                       }}
-                      placeholder="Buscar ou criar projeto"
+                      placeholder="Buscar ou criar pasta"
                       className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                       autoFocus
                     />
@@ -1262,10 +1262,10 @@ export function ItemDetail() {
               )}
             </div>
 
-            {/* Projeto */}
+            {/* Pasta */}
             <div className="grid grid-cols-1 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-slate-500">Projeto</label>
+                <label className="text-[13px] font-medium text-slate-500">Pasta</label>
                 <select
                   value={item.folderId ?? ''}
                   onChange={(e) => handleProjectChange(e.target.value)}

@@ -101,7 +101,7 @@ export default function NotasPage() {
   const noteCounts = useMemo(() => {
     const counts = new Map<string, number>()
     for (const item of items) {
-      if (item.complexity !== 'note' || item.status === 'archived') continue
+      if (item.status === 'archived' || item.status === 'done') continue
       if (!item.folderId) continue
       counts.set(item.folderId, (counts.get(item.folderId) ?? 0) + 1)
     }

@@ -7,6 +7,7 @@ import { useKeyboard } from '@/hooks/use-keyboard'
 function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
+  const [quickCaptureFolderId, setQuickCaptureFolderId] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -152,8 +153,10 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         contextMenu,
         openContextMenu,
         closeContextMenu,
-        quickCaptureOpen, 
-        setQuickCaptureOpen, 
+        quickCaptureOpen,
+        setQuickCaptureOpen,
+        quickCaptureFolderId,
+        setQuickCaptureFolderId,
         editingItemId, 
         setEditingItemId,
         calendarOpen,

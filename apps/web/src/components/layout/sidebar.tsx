@@ -237,11 +237,15 @@ export function Sidebar() {
     await createFolder({ name: name.trim() })
   }
 
-  const activeItems = items.filter((item) => item.status !== 'archived')
+  const activeItems = items.filter((item) => item.status !== 'archived' && item.status !== 'done')
 
   const counts = {
     '/today': activeItems.filter((item) => item.dueDate === toLocalDateKey()).length,
-    '/inbox': activeItems.filter((item) => item.status === 'inbox' || (!item.folderId && !item.dueDate && !item.scheduledDate)).length,
+    '/inbox': activeItems.filter((item) => {
+      if (item.status === 'inbox') return true
+      if (item.complexity === 'note') return !item.folderId
+      return !item.folderId && !item.dueDate && !item.scheduledDate
+    }).length,
     '/upcoming': activeItems.filter((item) => item.dueDate || item.scheduledDate).length,
   } as Record<string, number>
 

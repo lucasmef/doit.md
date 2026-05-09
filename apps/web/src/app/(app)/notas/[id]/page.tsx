@@ -1,13 +1,16 @@
 'use client'
 
-import { use, useMemo, useState } from 'react'
+import { use, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { useFolders, buildFolderTree, createFolder, deleteFolder, updateFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useItems, updateItem } from '@/hooks/use-items'
+import { useUI } from '@/store/ui'
 import type { Folder, Item } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const VIEW_MODE_KEY = 'doit:notas-view-mode'
+type ViewMode = 'list' | 'kanban'
 
 function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
   for (const node of nodes) {
@@ -29,7 +32,7 @@ function buildBreadcrumb(folders: Folder[], id: string): Folder[] {
   return path
 }
 
-function MoveNoteDialog({
+function MoveItemDialog({
   item,
   folders,
   onClose,
@@ -68,11 +71,119 @@ function MoveNoteDialog({
   )
 }
 
+function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+    </svg>
+  )
+}
+
+function ItemRow({ item, onMove }: { item: Item; onMove: (item: Item) => void }) {
+  return (
+    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] hover:bg-surface-soft">
+      {item.complexity === 'task' ? (
+        <span className="h-3 w-3 shrink-0 rounded-full border border-navy-200" />
+      ) : (
+        <svg className="h-3.5 w-3.5 shrink-0 text-navy-400" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M6 2.75A2.25 2.25 0 0 0 3.75 5v14A2.25 2.25 0 0 0 6 21.25h12A2.25 2.25 0 0 0 20.25 19V8.12a2.25 2.25 0 0 0-.66-1.59l-3.12-3.12a2.25 2.25 0 0 0-1.59-.66H6Z" />
+        </svg>
+      )}
+      <span className={`flex-1 truncate text-navy-900 ${item.status === 'done' ? 'text-navy-400 line-through' : ''}`}>{item.title}</span>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onMove(item) }}
+        className="rounded px-1.5 py-0.5 text-[10px] text-navy-400 opacity-0 transition-opacity hover:bg-surface-soft hover:text-navy-700 group-hover:opacity-100"
+        title="Mover"
+      >
+        Mover
+      </button>
+    </div>
+  )
+}
+
+function KanbanColumn({
+  title,
+  href,
+  items,
+  childFolders,
+  addFolderId,
+  onMove,
+}: {
+  title: string
+  href?: string
+  items: Item[]
+  childFolders: FolderTreeNode[]
+  addFolderId: string | null
+  onMove: (item: Item) => void
+}) {
+  const { setQuickCaptureOpen, setQuickCaptureFolderId } = useUI()
+
+  function handleAdd() {
+    setQuickCaptureFolderId(addFolderId)
+    setQuickCaptureOpen(true)
+  }
+
+  return (
+    <div className="flex w-72 shrink-0 flex-col rounded-xl border border-ui-border bg-surface-soft">
+      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-ui-border-soft">
+        {href ? (
+          <Link href={href} className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-bold text-navy-900 hover:text-brand-600">
+            <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
+            <span className="truncate">{title}</span>
+          </Link>
+        ) : (
+          <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-bold text-navy-900">
+            <span className="truncate">{title}</span>
+          </span>
+        )}
+        <span className="font-mono text-[10px] text-navy-300">{childFolders.length + items.length}</span>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-1 px-2 py-2 overflow-y-auto">
+        {childFolders.map((sub) => (
+          <Link
+            key={sub.id}
+            href={`/notas/${sub.id}`}
+            className="group flex items-center gap-2 rounded-md border border-ui-border bg-white px-2 py-1.5 text-[13px] text-navy-900 hover:border-brand-300 hover:bg-brand-50"
+          >
+            <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
+            <span className="flex-1 truncate font-medium">{sub.name}</span>
+            {sub.children.length > 0 && (
+              <span className="font-mono text-[10px] text-navy-300">{sub.children.length}</span>
+            )}
+          </Link>
+        ))}
+        {items.map((item) => (
+          <div key={item.id} className="group rounded-md border border-ui-border bg-white">
+            <ItemRow item={item} onMove={onMove} />
+          </div>
+        ))}
+        {childFolders.length === 0 && items.length === 0 && (
+          <p className="px-2 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={handleAdd}
+        className="flex items-center gap-1.5 border-t border-ui-border-soft px-3 py-2 text-left text-[12px] text-navy-400 hover:bg-white hover:text-brand-600"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+        </svg>
+        Adicionar
+      </button>
+    </div>
+  )
+}
+
 export default function FolderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { data, mutate } = useSWR<{ folder: Folder }>(`/api/folders/${id}`, fetcher)
   const { folders } = useFolders()
-  const { items } = useItems({ folderId: id })
+  const { items: directItems } = useItems({ folderId: id })
+  const { items: allItems } = useItems()
 
   const folder = data?.folder
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -81,9 +192,33 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
   const [moving, setMoving] = useState<Item | null>(null)
+  const [viewMode, setViewMode] = useState<ViewMode>('list')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const stored = window.localStorage.getItem(VIEW_MODE_KEY)
+    if (stored === 'list' || stored === 'kanban') setViewMode(stored)
+  }, [])
+
+  function changeView(mode: ViewMode) {
+    setViewMode(mode)
+    if (typeof window !== 'undefined') window.localStorage.setItem(VIEW_MODE_KEY, mode)
+  }
 
   const childFolders = node?.children ?? []
-  const notes = items.filter((i) => i.complexity === 'note' && i.status !== 'archived')
+  const directOpenItems = directItems.filter((i) => i.status !== 'archived' && i.status !== 'done')
+
+  const itemsByFolder = useMemo(() => {
+    const map = new Map<string, Item[]>()
+    for (const item of allItems) {
+      if (item.status === 'archived' || item.status === 'done') continue
+      if (!item.folderId) continue
+      const list = map.get(item.folderId) ?? []
+      list.push(item)
+      map.set(item.folderId, list)
+    }
+    return map
+  }, [allItems])
 
   if (!folder) {
     return (
@@ -116,7 +251,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-5 pb-24 pt-3 lg:pb-4">
+    <div className={`${viewMode === 'kanban' ? 'w-full px-4' : 'mx-auto max-w-3xl px-5'} pb-24 pt-3 lg:pb-4`}>
       <nav className="mb-2 flex flex-wrap items-center gap-1 text-[12px] text-navy-400">
         <Link href="/notas" className="hover:text-navy-700">Notas</Link>
         {breadcrumb.map((f, idx) => (
@@ -132,9 +267,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       </nav>
 
       <div className="mb-4 flex items-center gap-3">
-        <svg className="h-6 w-6 shrink-0 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-        </svg>
+        <FolderIcon className="h-6 w-6 shrink-0 text-navy-400" />
         {editingName ? (
           <input
             autoFocus
@@ -155,60 +288,102 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
             {folder.name}
           </h1>
         )}
+        <div className="flex rounded-md border border-ui-border bg-white p-0.5">
+          <button
+            type="button"
+            onClick={() => changeView('list')}
+            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
+          >
+            Lista
+          </button>
+          <button
+            type="button"
+            onClick={() => changeView('kanban')}
+            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
+          >
+            Kanban
+          </button>
+        </div>
         <button onClick={handleNewSub} className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft">+ Subpasta</button>
         <button onClick={handleDelete} className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">Apagar</button>
       </div>
 
-      {childFolders.length > 0 && (
-        <section className="mb-6">
-          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Subpastas / {childFolders.length}
-          </h2>
-          <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
-            {childFolders.map((child) => (
-              <Link
-                key={child.id}
-                href={`/notas/${child.id}`}
-                className="flex items-center gap-2 px-3 py-2 text-[14px] text-navy-900 hover:bg-surface-soft"
-              >
-                <svg className="h-4 w-4 shrink-0 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-                </svg>
-                <span className="truncate">{child.name}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
+      {viewMode === 'list' ? (
+        <>
+          {childFolders.length > 0 && (
+            <section className="mb-6">
+              <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                Subpastas / {childFolders.length}
+              </h2>
+              <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
+                {childFolders.map((child) => (
+                  <Link
+                    key={child.id}
+                    href={`/notas/${child.id}`}
+                    className="flex items-center gap-2 px-3 py-2 text-[14px] text-navy-900 hover:bg-surface-soft"
+                  >
+                    <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
+                    <span className="truncate">{child.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              Itens / {directOpenItems.length}
+            </h2>
+            {directOpenItems.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-8 text-center text-sm text-navy-300">
+                Nenhum item nesta pasta.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
+                {directOpenItems.map((item) => (
+                  <div key={item.id} className="group flex items-center gap-2 px-3 py-2 text-[14px]">
+                    <span className="flex-1 truncate text-navy-900">{item.title}</span>
+                    <button
+                      type="button"
+                      onClick={() => setMoving(item)}
+                      className="rounded-md border border-ui-border px-2 py-0.5 text-[11px] text-navy-500 hover:bg-surface-soft"
+                    >
+                      Mover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto pb-4">
+          {childFolders.length === 0 ? (
+            <KanbanColumn
+              title={folder.name}
+              items={directOpenItems}
+              childFolders={[]}
+              addFolderId={id}
+              onMove={setMoving}
+            />
+          ) : (
+            childFolders.map((sub) => (
+              <KanbanColumn
+                key={sub.id}
+                title={sub.name}
+                href={`/notas/${sub.id}`}
+                items={itemsByFolder.get(sub.id) ?? []}
+                childFolders={sub.children}
+                addFolderId={sub.id}
+                onMove={setMoving}
+              />
+            ))
+          )}
+        </div>
       )}
 
-      <section>
-        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-          Notas / {notes.length}
-        </h2>
-        {notes.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-8 text-center text-sm text-navy-300">
-            Nenhuma nota nesta pasta.
-          </div>
-        ) : (
-          <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
-            {notes.map((item) => (
-              <div key={item.id} className="flex items-center gap-2 px-3 py-2 text-[14px]">
-                <span className="flex-1 truncate text-navy-900">{item.title}</span>
-                <button
-                  type="button"
-                  onClick={() => setMoving(item)}
-                  className="rounded-md border border-ui-border px-2 py-0.5 text-[11px] text-navy-500 hover:bg-surface-soft"
-                >
-                  Mover
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
-
       {moving && (
-        <MoveNoteDialog
+        <MoveItemDialog
           item={moving}
           folders={folders.filter((f) => f.id !== id)}
           onClose={() => setMoving(null)}
