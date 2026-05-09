@@ -12,7 +12,14 @@ import { PRIORITY_CONFIG, PrioritySelect } from './priority-select'
 import { DueDatePicker } from './due-date-picker'
 import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
-import type { ItemComplexity, ItemRecurrence, ItemStatus, Project, UpdateItemInput } from '@doit/types'
+import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
+import type {
+  ItemComplexity,
+  ItemRecurrence,
+  ItemStatus,
+  Project,
+  UpdateItemInput,
+} from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
@@ -81,7 +88,9 @@ const DATE_SUGGESTIONS = [
   { label: 'Semana que vem', getValue: () => nextWeekday(1) },
 ]
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
-  const hour = Math.floor(index / 2).toString().padStart(2, '0')
+  const hour = Math.floor(index / 2)
+    .toString()
+    .padStart(2, '0')
   const minute = index % 2 === 0 ? '00' : '30'
   return `${hour}:${minute}`
 })
@@ -89,7 +98,8 @@ const TIME_SUGGESTIONS = ['09:00', '12:00', '18:00', '20:00']
 const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
-const DATE_WORD_SHORTCUT = /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
+const DATE_WORD_SHORTCUT =
+  /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
@@ -161,10 +171,12 @@ function parseInlineDueDate(value: string) {
   if (wordMatch?.[1]) return parseDateWord(wordMatch[1])
 
   const slashMatch = value.match(SLASH_DATE_SHORTCUT)
-  if (slashMatch?.[1] && slashMatch[2]) return parseSlashDate(slashMatch[1], slashMatch[2], slashMatch[3])
+  if (slashMatch?.[1] && slashMatch[2])
+    return parseSlashDate(slashMatch[1], slashMatch[2], slashMatch[3])
 
   const isoMatch = value.match(ISO_DATE_SHORTCUT)
-  if (isoMatch?.[1] && !Number.isNaN(new Date(`${isoMatch[1]}T12:00:00`).getTime())) return isoMatch[1]
+  if (isoMatch?.[1] && !Number.isNaN(new Date(`${isoMatch[1]}T12:00:00`).getTime()))
+    return isoMatch[1]
 
   return ''
 }
@@ -177,22 +189,39 @@ function parseInlineDueTime(value: string) {
   return `${hour}:${minute.padStart(2, '0')}`
 }
 
-function projectIdOf(project: Project) {
-  return project.id ?? ((project as unknown as { _id?: string })._id ?? '')
+function projectIdOf(project: { id?: string; _id?: string }) {
+  return project.id ?? (project as unknown as { _id?: string })._id ?? ''
 }
 
 function parseTags(value: string) {
-  return value.split(',').map((tag) => normalizeToken(tag)).filter(Boolean)
+  return value
+    .split(',')
+    .map((tag) => normalizeToken(tag))
+    .filter(Boolean)
 }
 
 function titleFromNoteContent(content: string) {
-  const firstLine = content.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
-  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+  const firstLine =
+    content
+      .split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
 }
 
 function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M6 3h9l3 3v15H6z" />
       <path d="M14 3v4h4" />
       <path d="M9 12h6M9 16h4" />
@@ -202,7 +231,14 @@ function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconCalendar({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" />
     </svg>
   )
@@ -210,7 +246,14 @@ function IconCalendar({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconFlag({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M5 21V4" />
       <path d="M5 5s2-1 5-1 5 2 8 1v9c-3 1-5-1-8-1s-5 1-5 1" />
     </svg>
@@ -219,7 +262,14 @@ function IconFlag({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconTag({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M20 13 13 20 4 11V4h7z" />
       <path d="M8 8h.01" />
     </svg>
@@ -228,7 +278,14 @@ function IconTag({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconInbox({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M4 5h16l-2 10H6z" />
       <path d="M8 15c.6 1.5 1.8 2 4 2s3.4-.5 4-2" />
       <path d="M4 15v4h16v-4" />
@@ -238,7 +295,14 @@ function IconInbox({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconCheck({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
       <path d="m5 12 4 4L19 6" />
     </svg>
   )
@@ -246,7 +310,14 @@ function IconCheck({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconRepeat({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="m17 2 4 4-4 4" />
       <path d="M3 11V9a3 3 0 0 1 3-3h15" />
       <path d="m7 22-4-4 4-4" />
@@ -324,9 +395,12 @@ export function ItemDetail() {
   }, [item?.id])
 
   const activeProjects = projects.filter((p) => p.status !== 'archived')
+  const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
   const tagList = useMemo(() => parseTags(tags), [tags])
   const knownTags = useMemo(() => {
-    return Array.from(new Set(items.flatMap((current) => current.tags ?? []).map(normalizeToken))).sort()
+    return Array.from(
+      new Set(items.flatMap((current) => current.tags ?? []).map(normalizeToken)),
+    ).sort()
   }, [items])
 
   const filteredTags = knownTags.filter((tag) => {
@@ -334,7 +408,7 @@ export function ItemDetail() {
     return !tagList.includes(tag) && (!query || tag.includes(query))
   })
 
-  const filteredProjects = activeProjects.filter((project) => {
+  const filteredProjects = folderOptions.filter(({ folder: project }) => {
     const query = normalizeToken(projectQuery)
     return !query || normalizeToken(project.name).includes(query)
   })
@@ -356,7 +430,9 @@ export function ItemDetail() {
     if (projectToken) {
       const wanted = normalizeToken(projectToken.replace(/-/g, ' '))
       const project = activeProjects.find(
-        (p) => normalizeToken(p.name) === wanted || normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
+        (p) =>
+          normalizeToken(p.name) === wanted ||
+          normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
       )
       if (project) {
         patch['folderId'] = projectIdOf(project)
@@ -364,9 +440,13 @@ export function ItemDetail() {
       }
     }
 
-    const foundTags = Array.from(value.matchAll(TAG_SHORTCUT)).map((match) => match[1]).filter(Boolean) as string[]
+    const foundTags = Array.from(value.matchAll(TAG_SHORTCUT))
+      .map((match) => match[1])
+      .filter(Boolean) as string[]
     if (foundTags.length > 0) {
-      const nextTags = Array.from(new Set([...tagList, ...foundTags.map((tag) => normalizeToken(tag))]))
+      const nextTags = Array.from(
+        new Set([...tagList, ...foundTags.map((tag) => normalizeToken(tag))]),
+      )
       setTags(nextTags.join(', '))
       patch['tags'] = nextTags
       hasCategorizer = true
@@ -452,7 +532,11 @@ export function ItemDetail() {
     setContent(value)
     const nextTitle = item?.complexity === 'note' ? titleFromNoteContent(value) : ''
     if (nextTitle) setTitle(nextTitle)
-    scheduleAutosave(item?.complexity === 'note' && nextTitle ? { contentMd: value, title: nextTitle } : { contentMd: value })
+    scheduleAutosave(
+      item?.complexity === 'note' && nextTitle
+        ? { contentMd: value, title: nextTitle }
+        : { contentMd: value },
+    )
   }
 
   function handleComplexityChange(complexity: ItemComplexity) {
@@ -498,10 +582,13 @@ export function ItemDetail() {
     const nextDueDate = dueDate || todayDate()
     if (!dueDate) setDueDate(nextDueDate)
     if (!selectedItemId) return
-    updateItem(selectedItemId, nullablePatch({
-      dueDate: nextDueDate,
-      dueTime: next || null,
-    }))
+    updateItem(
+      selectedItemId,
+      nullablePatch({
+        dueDate: nextDueDate,
+        dueTime: next || null,
+      }),
+    )
   }
 
   function handlePriorityChange(p: Priority) {
@@ -515,10 +602,13 @@ export function ItemDetail() {
     const nextDueDate = next && !dueDate ? todayDate() : dueDate
     if (nextDueDate !== dueDate) setDueDate(nextDueDate)
     if (!selectedItemId) return
-    updateItem(selectedItemId, nullablePatch({
-      recurrence: next || null,
-      ...(next && !dueDate ? { dueDate: nextDueDate } : {}),
-    }))
+    updateItem(
+      selectedItemId,
+      nullablePatch({
+        recurrence: next || null,
+        ...(next && !dueDate ? { dueDate: nextDueDate } : {}),
+      }),
+    )
     setPopover(null)
   }
 
@@ -531,7 +621,9 @@ export function ItemDetail() {
     const name = value.trim()
     if (!name || !selectedItemId) return
 
-    const existing = activeProjects.find((project) => normalizeToken(project.name) === normalizeToken(name))
+    const existing = activeProjects.find(
+      (project) => normalizeToken(project.name) === normalizeToken(name),
+    )
     if (existing) {
       handleProjectChange(projectIdOf(existing))
       setProjectQuery('')
@@ -571,8 +663,13 @@ export function ItemDetail() {
       if (res.ok) {
         toast('Evento criado no Google Calendar!', 'success')
       } else {
-        const { error } = await res.json() as { error: string }
-        toast(error === 'Google account not connected' ? 'Conecte o Google Calendar em Configurações.' : 'Erro ao criar evento.', 'error')
+        const { error } = (await res.json()) as { error: string }
+        toast(
+          error === 'Google account not connected'
+            ? 'Conecte o Google Calendar em Configurações.'
+            : 'Erro ao criar evento.',
+          'error',
+        )
       }
     } catch {
       toast('Erro ao criar evento.', 'error')
@@ -600,7 +697,8 @@ export function ItemDetail() {
   const selectedProject = activeProjects.find((project) => projectIdOf(project) === item.folderId)
   const priorityConfig = PRIORITY_CONFIG[priority]
   const canSwitchNoteToTask = content.split(/\r?\n/).filter((line) => line.trim()).length <= 1
-  const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
+  const recurrenceLabel =
+    RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
 
   if (isNote) {
     return (
@@ -622,7 +720,9 @@ export function ItemDetail() {
             }
           }}
           tabIndex={-1}
-          ref={(el) => { if (el && !el.contains(document.activeElement)) el.focus() }}
+          ref={(el) => {
+            if (el && !el.contains(document.activeElement)) el.focus()
+          }}
         >
           <div className="relative flex min-h-0 flex-1 flex-col">
             <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-ui-border bg-surface-soft px-3 py-2">
@@ -632,11 +732,19 @@ export function ItemDetail() {
                 onClick={() => void flushAndClose()}
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-slate-500 hover:bg-white hover:text-slate-800"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
               </button>
-              <span className="shrink-0 text-[11px] font-medium text-slate-400">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+              <span className="shrink-0 text-[11px] font-medium text-slate-400">
+                {dirty || isSaving ? 'Salvando...' : 'Salvo'}
+              </span>
 
               {canSwitchNoteToTask && (
                 <button
@@ -696,8 +804,7 @@ export function ItemDetail() {
                           onClick={() => addTag(tag)}
                           className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                         >
-                          <IconTag className="h-3.5 w-3.5 text-slate-400" />
-                          @{tag}
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
                         </button>
                       ))}
                       {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
@@ -760,9 +867,11 @@ export function ItemDetail() {
                       >
                         <IconInbox className="h-3.5 w-3.5 text-slate-400" />
                         Inbox
-                        {!item.folderId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                        {!item.folderId && (
+                          <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />
+                        )}
                       </button>
-                      {filteredProjects.map((project) => {
+                      {filteredProjects.map(({ folder: project, depth }) => {
                         const id = projectIdOf(project)
                         return (
                           <button
@@ -775,23 +884,34 @@ export function ItemDetail() {
                             }}
                             className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                           >
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
-                            <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                            {item.folderId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            <span
+                              className="min-w-0 flex-1 truncate"
+                              style={{ paddingLeft: depth ? depth * 12 : 0 }}
+                            >
+                              {project.name}
+                            </span>
+                            {item.folderId === id && (
+                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                            )}
                           </button>
                         )
                       })}
-                      {projectQuery.trim() && !activeProjects.some((project) => normalizeToken(project.name) === normalizeToken(projectQuery)) && (
-                        <button
-                          type="button"
-                          disabled={creatingProject}
-                          onClick={() => void addProject(projectQuery)}
-                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
-                        >
-                          <span className="text-base leading-none">+</span>
-                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
-                        </button>
-                      )}
+                      {projectQuery.trim() &&
+                        !activeProjects.some(
+                          (project) =>
+                            normalizeToken(project.name) === normalizeToken(projectQuery),
+                        ) && (
+                          <button
+                            type="button"
+                            disabled={creatingProject}
+                            onClick={() => void addProject(projectQuery)}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
+                          >
+                            <span className="text-base leading-none">+</span>
+                            {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                          </button>
+                        )}
                     </div>
                   </div>
                 )}
@@ -887,8 +1007,12 @@ export function ItemDetail() {
                           >
                             <IconCalendar className="h-3.5 w-3.5 text-brand-600" />
                             <span className="flex-1">{suggestion.label}</span>
-                            <span className="text-[11px] font-normal text-slate-400">{formatDueDate(value)}</span>
-                            {dueDate === value && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            <span className="text-[11px] font-normal text-slate-400">
+                              {formatDueDate(value)}
+                            </span>
+                            {dueDate === value && (
+                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                            )}
                           </button>
                         )
                       })}
@@ -897,12 +1021,18 @@ export function ItemDetail() {
                         value={dueDate}
                         onChange={(e) => {
                           setDueDate(e.target.value)
-                          if (selectedItemId) updateItem(selectedItemId, nullablePatch({ dueDate: e.target.value || null }))
+                          if (selectedItemId)
+                            updateItem(
+                              selectedItemId,
+                              nullablePatch({ dueDate: e.target.value || null }),
+                            )
                         }}
                         className="mt-1 h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                       />
                       <div className="mt-2 border-t border-ui-border-soft pt-2">
-                        <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">Horário</div>
+                        <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">
+                          Horário
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleDueTimeChange(dueTime || '09:00')}
@@ -913,7 +1043,9 @@ export function ItemDetail() {
                           }`}
                         >
                           <IconCalendar className="h-3.5 w-3.5" />
-                          <span className="flex-1">{dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}</span>
+                          <span className="flex-1">
+                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}
+                          </span>
                           {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                         </button>
                         <div className="mt-1 grid grid-cols-2 gap-1">
@@ -923,11 +1055,15 @@ export function ItemDetail() {
                               type="button"
                               onClick={() => handleDueTimeChange(time)}
                               className={`flex items-center justify-between rounded-[10px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
-                                dueTime === time ? 'bg-surface-selected text-brand-700' : 'bg-surface-soft text-slate-700'
+                                dueTime === time
+                                  ? 'bg-surface-selected text-brand-700'
+                                  : 'bg-surface-soft text-slate-700'
                               }`}
                             >
                               {formatTimeLabel(time)}
-                              {dueTime === time && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                              {dueTime === time && (
+                                <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                              )}
                             </button>
                           ))}
                         </div>
@@ -938,11 +1074,15 @@ export function ItemDetail() {
                               type="button"
                               onClick={() => handleDueTimeChange(time)}
                               className={`flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
-                                dueTime === time ? 'bg-surface-selected text-brand-700' : 'text-slate-700'
+                                dueTime === time
+                                  ? 'bg-surface-selected text-brand-700'
+                                  : 'text-slate-700'
                               }`}
                             >
                               <span className="flex-1">{formatTimeLabel(time)}</span>
-                              {dueTime === time && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                              {dueTime === time && (
+                                <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                              )}
                             </button>
                           ))}
                         </div>
@@ -960,9 +1100,13 @@ export function ItemDetail() {
                         <button
                           type="button"
                           onClick={() => {
-                          setDueDate('')
+                            setDueDate('')
                             setDueTime('')
-                            if (selectedItemId) updateItem(selectedItemId, nullablePatch({ dueDate: null, dueTime: null }))
+                            if (selectedItemId)
+                              updateItem(
+                                selectedItemId,
+                                nullablePatch({ dueDate: null, dueTime: null }),
+                              )
                             setPopover(null)
                           }}
                           className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
@@ -997,7 +1141,9 @@ export function ItemDetail() {
                             className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                           >
                             <IconFlag className={`h-3.5 w-3.5 ${cfg.color}`} />
-                            <span className="flex-1">{cfg.label} - {cfg.title}</span>
+                            <span className="flex-1">
+                              {cfg.label} - {cfg.title}
+                            </span>
                             {priority === p && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                           </button>
                         )
@@ -1026,7 +1172,9 @@ export function ItemDetail() {
                         >
                           <IconRepeat className="h-3.5 w-3.5 text-slate-400" />
                           <span className="flex-1">{option.label}</span>
-                          {recurrence === option.value && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          {recurrence === option.value && (
+                            <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -1050,7 +1198,9 @@ export function ItemDetail() {
                             <button
                               key={tag}
                               type="button"
-                              onClick={() => updateTags(tagList.filter((current) => current !== tag))}
+                              onClick={() =>
+                                updateTags(tagList.filter((current) => current !== tag))
+                              }
                               className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
                             >
                               @{tag}
@@ -1079,8 +1229,7 @@ export function ItemDetail() {
                             onClick={() => addTag(tag)}
                             className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                           >
-                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
-                            @{tag}
+                            <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
                           </button>
                         ))}
                         {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
@@ -1137,9 +1286,11 @@ export function ItemDetail() {
                       >
                         <IconInbox className="h-3.5 w-3.5 text-slate-400" />
                         Inbox
-                        {!item.folderId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                        {!item.folderId && (
+                          <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />
+                        )}
                       </button>
-                      {filteredProjects.map((project) => {
+                      {filteredProjects.map(({ folder: project, depth }) => {
                         const id = projectIdOf(project)
                         return (
                           <button
@@ -1152,29 +1303,42 @@ export function ItemDetail() {
                             }}
                             className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                           >
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
-                            <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                            {item.folderId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            <span
+                              className="min-w-0 flex-1 truncate"
+                              style={{ paddingLeft: depth ? depth * 12 : 0 }}
+                            >
+                              {project.name}
+                            </span>
+                            {item.folderId === id && (
+                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                            )}
                           </button>
                         )
                       })}
-                      {projectQuery.trim() && !activeProjects.some((project) => normalizeToken(project.name) === normalizeToken(projectQuery)) && (
-                        <button
-                          type="button"
-                          disabled={creatingProject}
-                          onClick={() => void addProject(projectQuery)}
-                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
-                        >
-                          <span className="text-base leading-none">+</span>
-                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
-                        </button>
-                      )}
+                      {projectQuery.trim() &&
+                        !activeProjects.some(
+                          (project) =>
+                            normalizeToken(project.name) === normalizeToken(projectQuery),
+                        ) && (
+                          <button
+                            type="button"
+                            disabled={creatingProject}
+                            onClick={() => void addProject(projectQuery)}
+                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
+                          >
+                            <span className="text-base leading-none">+</span>
+                            {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                          </button>
+                        )}
                     </div>
                   </div>
                 )}
               </div>
 
-              <span className="hidden text-[11px] text-slate-400 sm:inline">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+              <span className="hidden text-[11px] text-slate-400 sm:inline">
+                {dirty || isSaving ? 'Salvando...' : 'Salvo'}
+              </span>
               <button
                 type="button"
                 onClick={handleArchive}
@@ -1210,9 +1374,7 @@ export function ItemDetail() {
     >
       <div
         className={`flex flex-col overflow-hidden bg-white shadow-cool-lg transition-all duration-300 ${
-          isNote
-            ? 'h-full w-full max-w-5xl rounded-xl'
-            : 'max-h-[85vh] w-full max-w-lg rounded-xl'
+          isNote ? 'h-full w-full max-w-5xl rounded-xl' : 'max-h-[85vh] w-full max-w-lg rounded-xl'
         }`}
       >
         {/* Header */}
@@ -1223,15 +1385,20 @@ export function ItemDetail() {
               className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
-            <span className="text-sm font-medium text-slate-500">
-              {isNote ? 'Nota' : 'Tarefa'}
-            </span>
+            <span className="text-sm font-medium text-slate-500">{isNote ? 'Nota' : 'Tarefa'}</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-400">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+            <span className="text-xs text-slate-400">
+              {dirty || isSaving ? 'Salvando...' : 'Salvo'}
+            </span>
             <button
               onClick={handleArchive}
               className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
@@ -1243,7 +1410,9 @@ export function ItemDetail() {
 
         <div className={`flex-1 overflow-y-auto ${isNote ? 'flex flex-col lg:flex-row' : ''}`}>
           {/* Main Content Area */}
-          <div className={`p-6 space-y-6 ${isNote ? 'flex-1 lg:border-r border-ui-border-soft' : ''}`}>
+          <div
+            className={`p-6 space-y-6 ${isNote ? 'flex-1 lg:border-r border-ui-border-soft' : ''}`}
+          >
             {/* Título */}
             <input
               value={title}
@@ -1262,7 +1431,9 @@ export function ItemDetail() {
           </div>
 
           {/* Sidebar Properties (only visible or layouted differently for notes) */}
-          <div className={`${isNote ? 'w-full lg:w-80 p-6 space-y-6 bg-slate-50/50' : 'px-6 pb-6 space-y-4'}`}>
+          <div
+            className={`${isNote ? 'w-full lg:w-80 p-6 space-y-6 bg-slate-50/50' : 'px-6 pb-6 space-y-4'}`}
+          >
             {/* Status */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[13px] font-medium text-slate-500">Status</label>
@@ -1292,7 +1463,13 @@ export function ItemDetail() {
                   disabled={creatingEvent}
                   className="flex items-center gap-1.5 text-[12px] text-brand-600 hover:text-brand-700 disabled:opacity-50 transition-colors w-fit"
                 >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <svg
+                    className="w-3.5 h-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
                     <rect x="3" y="4" width="18" height="18" rx="2" />
                     <path d="M16 2v4M8 2v4M3 10h18" />
                     <path d="M12 14v4M10 16h4" strokeLinecap="round" />
@@ -1312,12 +1489,15 @@ export function ItemDetail() {
                   className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
                 >
                   <option value="">Nenhum</option>
-                  {projects.filter((p) => p.status !== 'archived').map((p) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
+                  {projects
+                    .filter((p) => p.status !== 'archived')
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
                 </select>
               </div>
-
             </div>
 
             {/* Tags */}

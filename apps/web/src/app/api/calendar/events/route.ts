@@ -26,8 +26,29 @@ export async function GET(req: NextRequest) {
     }
 
     const events = await CalendarEventModel.find(query).sort({ start: 1 }).lean()
+    const linkedItemIds = new Set<string>()
+    for (const event of events) {
+      const ids = Array.isArray(event['linkedItemIds']) ? event['linkedItemIds'] : []
+      for (const id of ids) {
+        if (typeof id === 'string') linkedItemIds.add(id)
+      }
+    }
 
-    return NextResponse.json({ events })
+    if (linkedItemIds.size === 0) return NextResponse.json({ events })
+
+    const linkedItems = await ItemModel.find({ userId }).lean()
+    const blockedItemIds = new Set(
+      linkedItems
+        .filter((item) => linkedItemIds.has(String(item['_id'] ?? item['id'])))
+        .filter((item) => item['status'] === 'archived' || item['status'] === 'done')
+        .map((item) => String(item['_id'] ?? item['id'])),
+    )
+    const visibleEvents = events.filter((event) => {
+      const ids = Array.isArray(event['linkedItemIds']) ? event['linkedItemIds'] : []
+      return !ids.some((id) => typeof id === 'string' && blockedItemIds.has(id))
+    })
+
+    return NextResponse.json({ events: visibleEvents })
   } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
@@ -43,14 +64,21 @@ export async function POST(req: NextRequest) {
     const { itemId } = (await req.json()) as { itemId: string }
     if (!itemId) return NextResponse.json({ error: 'itemId required' }, { status: 400 })
 
-    const item = await ItemModel.findOne({ _id: itemId, userId }).lean() as Record<string, unknown> | null
+    const item = (await ItemModel.findOne({ _id: itemId, userId }).lean()) as Record<
+      string,
+      unknown
+    > | null
     if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
 
     const dueDate = item['dueDate'] as string | undefined
     if (!dueDate) return NextResponse.json({ error: 'Item has no dueDate' }, { status: 400 })
 
-    const account = await GoogleAccountModel.findOne({ userId }).lean() as Record<string, unknown> | null
-    if (!account) return NextResponse.json({ error: 'Google account not connected' }, { status: 400 })
+    const account = (await GoogleAccountModel.findOne({ userId }).lean()) as Record<
+      string,
+      unknown
+    > | null
+    if (!account)
+      return NextResponse.json({ error: 'Google account not connected' }, { status: 400 })
 
     let accessToken = account['accessToken'] as string
     const expiresAt = account['expiresAt'] as number

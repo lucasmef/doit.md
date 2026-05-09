@@ -5,10 +5,10 @@ import type { BulkItemActionInput, Item, ItemRecurrence, ItemStatus } from '@doi
 import { STATUS_LABELS, toLocalDateKey } from '@doit/core'
 import { bulkUpdateItems, createItem, useItems } from '@/hooks/use-items'
 import { useFolders } from '@/hooks/use-folders'
-import { useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
 import { PRIORITY_CONFIG, type Priority } from './priority-select'
+import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
 
 type Props = {
   mode: 'menu' | 'bar'
@@ -46,10 +46,6 @@ function normalizeTag(value: string) {
   return value.trim().toLocaleLowerCase('pt-BR').replace(/^@/, '')
 }
 
-function projectIdOf(project: { id?: string; _id?: string }) {
-  return project.id ?? project._id ?? ''
-}
-
 function ActionButton({
   children,
   onClick,
@@ -64,9 +60,7 @@ function ActionButton({
       type="button"
       onClick={onClick}
       className={`flex h-8 w-full items-center rounded-[8px] px-2 text-left text-[13px] font-medium transition-colors ${
-        danger
-          ? 'text-red-600 hover:bg-red-50'
-          : 'text-navy-700 hover:bg-surface-selected'
+        danger ? 'text-red-600 hover:bg-red-50' : 'text-navy-700 hover:bg-surface-selected'
       }`}
     >
       {children}
@@ -112,15 +106,12 @@ function useBulkTargets(mode: Props['mode']) {
 }
 
 function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
-  const {
-    clearSelection,
-    closeContextMenu,
-  } = useUI()
+  const { clearSelection, closeContextMenu } = useUI()
   const targetIds = useBulkTargets(mode)
   const { toast } = useToast()
   const { items: activeItems } = useItems()
   const { items: archivedItems } = useItems({ status: 'archived' })
-  const { projects } = useProjects()
+  const { folders } = useFolders()
   const [tagInput, setTagInput] = useState('')
   const [customDate, setCustomDate] = useState('')
 
@@ -130,9 +121,15 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
     return [...byId.values()]
   }, [activeItems, archivedItems])
 
-  const targetItems = useMemo(() => targetIds.map((id) => allItems.find((item) => item.id === id)).filter(Boolean) as Item[], [allItems, targetIds])
-  const knownTags = useMemo(() => Array.from(new Set(allItems.flatMap((item) => item.tags ?? []).map(normalizeTag))).sort(), [allItems])
-  const activeProjects = projects.filter((project) => project.status !== 'archived')
+  const targetItems = useMemo(
+    () => targetIds.map((id) => allItems.find((item) => item.id === id)).filter(Boolean) as Item[],
+    [allItems, targetIds],
+  )
+  const knownTags = useMemo(
+    () => Array.from(new Set(allItems.flatMap((item) => item.tags ?? []).map(normalizeTag))).sort(),
+    [allItems],
+  )
+  const folderOptions = useMemo(() => flattenFolderOptions(folders), [folders])
 
   async function apply(input: Omit<BulkItemActionInput, 'ids'>, message: string) {
     if (targetIds.length === 0) return
@@ -159,10 +156,15 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
         <ActionButton onClick={() => void apply({ patch: { status: 'done' } }, 'Itens concluidos')}>
           Concluir
         </ActionButton>
-        <ActionButton onClick={() => void apply({ patch: { status: 'archived' } }, 'Itens arquivados')} danger>
+        <ActionButton
+          onClick={() => void apply({ patch: { status: 'archived' } }, 'Itens arquivados')}
+          danger
+        >
           Arquivar
         </ActionButton>
-        <ActionButton onClick={() => void apply({ patch: { status: 'todo' } }, 'Itens restaurados')}>
+        <ActionButton
+          onClick={() => void apply({ patch: { status: 'todo' } }, 'Itens restaurados')}
+        >
           Restaurar para todo
         </ActionButton>
       </div>
@@ -171,18 +173,25 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
         <SelectControl
           label="Status"
           value=""
-          onChange={(value) => value && void apply({ patch: { status: value as ItemStatus } }, 'Status atualizado')}
+          onChange={(value) =>
+            value && void apply({ patch: { status: value as ItemStatus } }, 'Status atualizado')
+          }
         >
           <option value="">Alterar status</option>
           {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>{STATUS_LABELS[status]}</option>
+            <option key={status} value={status}>
+              {STATUS_LABELS[status]}
+            </option>
           ))}
         </SelectControl>
 
         <SelectControl
           label="Prioridade"
           value=""
-          onChange={(value) => value && void apply({ patch: { priority: Number(value) as Priority } }, 'Prioridade atualizada')}
+          onChange={(value) =>
+            value &&
+            void apply({ patch: { priority: Number(value) as Priority } }, 'Prioridade atualizada')
+          }
         >
           <option value="">Alterar prioridade</option>
           {PRIORITIES.map((priority) => (
@@ -197,8 +206,18 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
           value=""
           onChange={(value) => {
             if (!value) return
-            const dueDate = value === 'today' ? toDateInputValue(new Date()) : value === 'tomorrow' ? dateAfter(1) : value === 'next-week' ? nextWeek() : ''
-            void apply({ patch: dueDate ? { dueDate } : { dueDate: '' as never, dueTime: '' as never } }, 'Data atualizada')
+            const dueDate =
+              value === 'today'
+                ? toDateInputValue(new Date())
+                : value === 'tomorrow'
+                  ? dateAfter(1)
+                  : value === 'next-week'
+                    ? nextWeek()
+                    : ''
+            void apply(
+              { patch: dueDate ? { dueDate } : { dueDate: '' as never, dueTime: '' as never } },
+              'Data atualizada',
+            )
           }}
         >
           <option value="">Alterar data</option>
@@ -217,7 +236,9 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
           />
           <button
             type="button"
-            onClick={() => customDate && void apply({ patch: { dueDate: customDate } }, 'Data atualizada')}
+            onClick={() =>
+              customDate && void apply({ patch: { dueDate: customDate } }, 'Data atualizada')
+            }
             className="h-8 rounded-[8px] bg-navy-900 px-2 text-[12px] font-semibold text-white"
           >
             OK
@@ -227,25 +248,40 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
         <SelectControl
           label="Recorrencia"
           value=""
-          onChange={(value) => value && void apply({ patch: { recurrence: (value === 'none' ? '' : value) as ItemRecurrence | never } }, 'Recorrencia atualizada')}
+          onChange={(value) =>
+            value &&
+            void apply(
+              { patch: { recurrence: (value === 'none' ? '' : value) as ItemRecurrence | never } },
+              'Recorrencia atualizada',
+            )
+          }
         >
           <option value="">Alterar recorrencia</option>
           {RECURRENCES.map((option) => (
-            <option key={option.value || 'none'} value={option.value || 'none'}>{option.label}</option>
+            <option key={option.value || 'none'} value={option.value || 'none'}>
+              {option.label}
+            </option>
           ))}
         </SelectControl>
 
         <SelectControl
           label="Pasta"
           value=""
-          onChange={(value) => value && void apply({ patch: { folderId: (value === 'inbox' ? '' : value) as never } }, 'Pasta atualizada')}
+          onChange={(value) =>
+            value &&
+            void apply(
+              { patch: { folderId: (value === 'inbox' ? '' : value) as never } },
+              'Pasta atualizada',
+            )
+          }
         >
           <option value="">Mover para pasta</option>
           <option value="inbox">Sem pasta</option>
-          {activeProjects.map((project) => {
-            const id = projectIdOf(project)
-            return <option key={id} value={id}>{project.name}</option>
-          })}
+          {folderOptions.map(({ folder, depth }) => (
+            <option key={folder.id} value={folder.id}>
+              {`${'  '.repeat(depth)}${folder.name}`}
+            </option>
+          ))}
         </SelectControl>
       </div>
 
@@ -257,10 +293,18 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
             placeholder="tag"
             className="h-8 min-w-0 flex-1 rounded-[8px] border border-ui-border-soft bg-white px-2 text-[12px] text-navy-700 outline-none placeholder:text-navy-300 focus:ring-2 focus:ring-brand-500"
           />
-          <button type="button" onClick={() => applyTag('add', tagInput)} className="h-8 rounded-[8px] bg-surface-selected px-2 text-[12px] font-semibold text-brand-700">
+          <button
+            type="button"
+            onClick={() => applyTag('add', tagInput)}
+            className="h-8 rounded-[8px] bg-surface-selected px-2 text-[12px] font-semibold text-brand-700"
+          >
             Add
           </button>
-          <button type="button" onClick={() => applyTag('remove', tagInput)} className="h-8 rounded-[8px] bg-surface-soft px-2 text-[12px] font-semibold text-navy-500">
+          <button
+            type="button"
+            onClick={() => applyTag('remove', tagInput)}
+            className="h-8 rounded-[8px] bg-surface-soft px-2 text-[12px] font-semibold text-navy-500"
+          >
             Rem
           </button>
         </div>
@@ -281,10 +325,18 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
       </div>
 
       <div className="border-t border-ui-border-soft pt-2">
-        <ActionButton onClick={() => void apply({ patch: { complexity: 'task' } }, 'Itens transformados em tarefa')}>
+        <ActionButton
+          onClick={() =>
+            void apply({ patch: { complexity: 'task' } }, 'Itens transformados em tarefa')
+          }
+        >
           Transformar em tarefa
         </ActionButton>
-        <ActionButton onClick={() => void apply({ patch: { complexity: 'note' } }, 'Itens transformados em nota')}>
+        <ActionButton
+          onClick={() =>
+            void apply({ patch: { complexity: 'note' } }, 'Itens transformados em nota')
+          }
+        >
           Transformar em nota
         </ActionButton>
       </div>
@@ -301,7 +353,13 @@ function nextSaturday(): string {
 
 function IconChevron() {
   return (
-    <svg className="h-3 w-3 text-navy-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg
+      className="h-3 w-3 text-navy-300"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
     </svg>
   )
@@ -309,35 +367,77 @@ function IconChevron() {
 
 function IconEdit() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.7}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"
+      />
     </svg>
   )
 }
 function IconCalendar() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.7}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
+      />
     </svg>
   )
 }
 function IconFlag() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.7}
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 21V5m0 0h11l-2 4 2 4H5" />
     </svg>
   )
 }
 function IconFolder() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.7}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+      />
     </svg>
   )
 }
 function IconCopy() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.7}
+    >
       <rect x="9" y="9" width="11" height="11" rx="2" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 15V5a2 2 0 0 1 2-2h10" />
     </svg>
@@ -345,14 +445,30 @@ function IconCopy() {
 }
 function IconTrash() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12Z" />
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.7}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6h12Z"
+      />
     </svg>
   )
 }
 function IconCheck() {
   return (
-    <svg className="ml-auto h-3.5 w-3.5 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+    <svg
+      className="ml-auto h-3.5 w-3.5 text-brand-600"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2.2}
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="m5 13 4 4L19 7" />
     </svg>
   )
@@ -360,7 +476,7 @@ function IconCheck() {
 
 type MenuRowProps = {
   icon?: React.ReactNode
-  label: string
+  label: React.ReactNode
   shortcut?: string
   trailing?: React.ReactNode
   onClick?: () => void
@@ -377,7 +493,13 @@ function MenuRow({ icon, label, shortcut, trailing, onClick, onMouseEnter, dange
         danger ? 'text-red-600 hover:bg-red-50' : 'text-navy-800 hover:bg-surface-soft'
       }`}
     >
-      {icon && <span className={`flex h-4 w-4 items-center justify-center ${danger ? 'text-red-500' : 'text-navy-400'}`}>{icon}</span>}
+      {icon && (
+        <span
+          className={`flex h-4 w-4 items-center justify-center ${danger ? 'text-red-500' : 'text-navy-400'}`}
+        >
+          {icon}
+        </span>
+      )}
       <span className="flex-1 truncate">{label}</span>
       {shortcut && <span className="font-mono text-[10px] text-navy-300">{shortcut}</span>}
       {trailing}
@@ -398,7 +520,13 @@ const PRIORITY_LABEL: Record<Priority, string> = {
   4: 'Sem prioridade',
 }
 
-function ItemContextMenuContent({ targetItem, allTargets }: { targetItem: Item; allTargets: Item[] }) {
+function ItemContextMenuContent({
+  targetItem,
+  allTargets,
+}: {
+  targetItem: Item
+  allTargets: Item[]
+}) {
   const { closeContextMenu, setSingleSelection } = useUI()
   const { folders } = useFolders()
   const { toast } = useToast()
@@ -428,7 +556,10 @@ function ItemContextMenuContent({ targetItem, allTargets }: { targetItem: Item; 
   }
 
   async function setFolder(folderId: string | null) {
-    await applyPatch({ folderId: (folderId ?? '') as never }, folderId ? 'Movido para pasta' : 'Pasta removida')
+    await applyPatch(
+      { folderId: (folderId ?? '') as never },
+      folderId ? 'Movido para pasta' : 'Pasta removida',
+    )
   }
 
   async function duplicate() {
@@ -461,20 +592,39 @@ function ItemContextMenuContent({ targetItem, allTargets }: { targetItem: Item; 
   if (sub === 'date') {
     return (
       <div className="min-w-[220px]">
-        <MenuRow icon={<IconChevron />} label="Voltar" onClick={() => { setSub(null); setShowCustomDate(false) }} />
+        <MenuRow
+          icon={<IconChevron />}
+          label="Voltar"
+          onClick={() => {
+            setSub(null)
+            setShowCustomDate(false)
+          }}
+        />
         <MenuSeparator />
         <MenuRow icon={<IconCalendar />} label="Hoje" onClick={() => setDate(toLocalDateKey())} />
-        <MenuRow icon={<IconCalendar />} label="Amanhã" onClick={() => {
-          const d = new Date()
-          d.setDate(d.getDate() + 1)
-          setDate(toLocalDateKey(d))
-        }} />
-        <MenuRow icon={<IconCalendar />} label="Próxima semana" onClick={() => {
-          const d = new Date()
-          d.setDate(d.getDate() + 7)
-          setDate(toLocalDateKey(d))
-        }} />
-        <MenuRow icon={<IconCalendar />} label="Próximo final de semana" onClick={() => setDate(nextSaturday())} />
+        <MenuRow
+          icon={<IconCalendar />}
+          label="Amanhã"
+          onClick={() => {
+            const d = new Date()
+            d.setDate(d.getDate() + 1)
+            setDate(toLocalDateKey(d))
+          }}
+        />
+        <MenuRow
+          icon={<IconCalendar />}
+          label="Próxima semana"
+          onClick={() => {
+            const d = new Date()
+            d.setDate(d.getDate() + 7)
+            setDate(toLocalDateKey(d))
+          }}
+        />
+        <MenuRow
+          icon={<IconCalendar />}
+          label="Próximo final de semana"
+          onClick={() => setDate(nextSaturday())}
+        />
         <MenuRow icon={<IconCalendar />} label="Sem data" onClick={() => setDate(null)} />
         <MenuSeparator />
         {showCustomDate ? (
@@ -495,7 +645,11 @@ function ItemContextMenuContent({ targetItem, allTargets }: { targetItem: Item; 
             </button>
           </div>
         ) : (
-          <MenuRow icon={<IconCalendar />} label="Escolher data..." onClick={() => setShowCustomDate(true)} />
+          <MenuRow
+            icon={<IconCalendar />}
+            label="Escolher data..."
+            onClick={() => setShowCustomDate(true)}
+          />
         )}
       </div>
     )
@@ -533,13 +687,15 @@ function ItemContextMenuContent({ targetItem, allTargets }: { targetItem: Item; 
         />
         <div className="max-h-64 overflow-y-auto">
           {folders.length === 0 && (
-            <p className="px-2 py-3 text-center font-mono text-[11px] text-navy-300">Nenhuma pasta</p>
+            <p className="px-2 py-3 text-center font-mono text-[11px] text-navy-300">
+              Nenhuma pasta
+            </p>
           )}
-          {folders.map((f) => (
+          {flattenFolderOptions(folders).map(({ folder: f, depth }) => (
             <MenuRow
               key={f.id}
-              icon={<IconFolder />}
-              label={f.name}
+              icon={<FolderGlyph className="h-4 w-4" />}
+              label={<span style={{ paddingLeft: depth ? depth * 12 : 0 }}>{f.name}</span>}
               onClick={() => setFolder(f.id)}
               trailing={targetItem.folderId === f.id ? <IconCheck /> : null}
             />
@@ -577,7 +733,12 @@ function ItemContextMenuContent({ targetItem, allTargets }: { targetItem: Item; 
       />
       <MenuRow icon={<IconCopy />} label="Duplicar" onClick={duplicate} />
       <MenuSeparator />
-      <MenuRow icon={<IconTrash />} label="Excluir" onClick={() => applyPatch({ status: 'archived' }, 'Item excluído')} danger />
+      <MenuRow
+        icon={<IconTrash />}
+        label="Excluir"
+        onClick={() => applyPatch({ status: 'archived' }, 'Item excluído')}
+        danger
+      />
     </div>
   )
 }
@@ -619,9 +780,10 @@ export function ItemContextMenu() {
   const targetItem = allItems.get(contextMenu.itemId)
   if (!targetItem) return null
 
-  const ids = selectedItemIds.includes(contextMenu.itemId) && selectedItemIds.length > 1
-    ? selectedItemIds
-    : [contextMenu.itemId]
+  const ids =
+    selectedItemIds.includes(contextMenu.itemId) && selectedItemIds.length > 1
+      ? selectedItemIds
+      : [contextMenu.itemId]
   const targets = ids.map((id) => allItems.get(id)).filter(Boolean) as Item[]
 
   return (
@@ -631,7 +793,10 @@ export function ItemContextMenu() {
         style={{ left: position.left, top: position.top }}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <ItemContextMenuContent targetItem={targetItem} allTargets={targets.length > 0 ? targets : [targetItem]} />
+        <ItemContextMenuContent
+          targetItem={targetItem}
+          allTargets={targets.length > 0 ? targets : [targetItem]}
+        />
       </div>
     </div>
   )

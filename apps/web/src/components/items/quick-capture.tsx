@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { MarkdownEditor } from './markdown-editor'
 import { isTypingTarget } from '@/hooks/use-keyboard'
 import { PRIORITY_CONFIG } from './priority-select'
+import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
 import type { Priority } from './priority-select'
 import type { ItemComplexity, ItemRecurrence, Project } from '@doit/types'
 
@@ -23,8 +24,10 @@ const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
 const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
-const INLINE_METADATA_PATTERN = /(\bp[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|\b(?:hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|às\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
-const DATE_WORD_SHORTCUT = /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
+const INLINE_METADATA_PATTERN =
+  /(\bp[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|\b(?:hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|às\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
+const DATE_WORD_SHORTCUT =
+  /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
@@ -93,7 +96,9 @@ const DATE_SUGGESTIONS = [
   { label: 'Semana que vem', getValue: () => nextWeekday(1) },
 ]
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
-  const hour = Math.floor(index / 2).toString().padStart(2, '0')
+  const hour = Math.floor(index / 2)
+    .toString()
+    .padStart(2, '0')
   const minute = index % 2 === 0 ? '00' : '30'
   return `${hour}:${minute}`
 })
@@ -113,8 +118,15 @@ function cleanTitle(value: string) {
 }
 
 function titleFromNoteContent(content: string) {
-  const firstLine = content.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
-  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+  const firstLine =
+    content
+      .split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
 }
 
 function normalizeToken(value: string) {
@@ -122,16 +134,18 @@ function normalizeToken(value: string) {
 }
 
 function isCategorizerToken(value: string) {
-  return /^p[1-4]?$/i.test(value) ||
+  return (
+    /^p[1-4]?$/i.test(value) ||
     /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value) ||
     DATE_WORD_SHORTCUT.test(` ${value}`) ||
     SLASH_DATE_SHORTCUT.test(` ${value}`) ||
     ISO_DATE_SHORTCUT.test(` ${value}`) ||
     TIME_SHORTCUT.test(` ${value}`)
+  )
 }
 
-function projectIdOf(project: Project) {
-  return project.id ?? ((project as unknown as { _id?: string })._id ?? '')
+function projectIdOf(project: { id?: string; _id?: string }) {
+  return project.id ?? (project as unknown as { _id?: string })._id ?? ''
 }
 
 function slugToken(value: string) {
@@ -190,10 +204,12 @@ function parseInlineDueDate(value: string) {
   if (wordMatch?.[1]) return parseDateWord(wordMatch[1])
 
   const slashMatch = value.match(SLASH_DATE_SHORTCUT)
-  if (slashMatch?.[1] && slashMatch[2]) return parseSlashDate(slashMatch[1], slashMatch[2], slashMatch[3])
+  if (slashMatch?.[1] && slashMatch[2])
+    return parseSlashDate(slashMatch[1], slashMatch[2], slashMatch[3])
 
   const isoMatch = value.match(ISO_DATE_SHORTCUT)
-  if (isoMatch?.[1] && !Number.isNaN(new Date(`${isoMatch[1]}T12:00:00`).getTime())) return isoMatch[1]
+  if (isoMatch?.[1] && !Number.isNaN(new Date(`${isoMatch[1]}T12:00:00`).getTime()))
+    return isoMatch[1]
 
   return ''
 }
@@ -213,14 +229,23 @@ function activeShortcut(value: string, cursor: number): ActiveShortcut | null {
 
   const token = match[2]
   const start = beforeCursor.length - token.length
-  if (token.startsWith('@')) return { kind: 'tag', query: normalizeToken(token.slice(1)), start, end: cursor }
-  if (token.startsWith('#')) return { kind: 'project', query: normalizeToken(token.slice(1)), start, end: cursor }
+  if (token.startsWith('@'))
+    return { kind: 'tag', query: normalizeToken(token.slice(1)), start, end: cursor }
+  if (token.startsWith('#'))
+    return { kind: 'project', query: normalizeToken(token.slice(1)), start, end: cursor }
   return { kind: 'priority', query: token.toUpperCase(), start, end: cursor }
 }
 
 function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M6 3h9l3 3v15H6z" />
       <path d="M14 3v4h4" />
       <path d="M9 12h6M9 16h4" />
@@ -230,7 +255,14 @@ function IconNote({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconCalendar({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" />
     </svg>
   )
@@ -238,7 +270,14 @@ function IconCalendar({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconFlag({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M5 21V4" />
       <path d="M5 5s2-1 5-1 5 2 8 1v9c-3 1-5-1-8-1s-5 1-5 1" />
     </svg>
@@ -247,7 +286,14 @@ function IconFlag({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconTag({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M20 13 13 20 4 11V4h7z" />
       <path d="M8 8h.01" />
     </svg>
@@ -256,7 +302,14 @@ function IconTag({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconInbox({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="M4 5h16l-2 10H6z" />
       <path d="M8 15c.6 1.5 1.8 2 4 2s3.4-.5 4-2" />
       <path d="M4 15v4h16v-4" />
@@ -266,7 +319,14 @@ function IconInbox({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconCheck({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
       <path d="m5 12 4 4L19 6" />
     </svg>
   )
@@ -274,7 +334,14 @@ function IconCheck({ className = 'h-4 w-4' }: { className?: string }) {
 
 function IconRepeat({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
       <path d="m17 2 4 4-4 4" />
       <path d="M3 11V9a3 3 0 0 1 3-3h15" />
       <path d="m7 22-4-4 4-4" />
@@ -335,12 +402,19 @@ function HighlightedTitleInput({
           if (!part) return null
           if (isCategorizerToken(part)) {
             return (
-              <span key={`${part}-${index}`} className="rounded-[6px] bg-surface-soft px-1 text-slate-700">
+              <span
+                key={`${part}-${index}`}
+                className="rounded-[6px] bg-surface-soft px-1 text-slate-700"
+              >
                 {part}
               </span>
             )
           }
-          return <span key={`${part}-${index}`} className="text-slate-900">{part}</span>
+          return (
+            <span key={`${part}-${index}`} className="text-slate-900">
+              {part}
+            </span>
+          )
         })}
       </div>
       <input
@@ -361,7 +435,8 @@ function HighlightedTitleInput({
 
 export function QuickCapture() {
   const pathname = usePathname()
-  const { quickCaptureOpen, setQuickCaptureOpen, quickCaptureFolderId, setQuickCaptureFolderId } = useUI()
+  const { quickCaptureOpen, setQuickCaptureOpen, quickCaptureFolderId, setQuickCaptureFolderId } =
+    useUI()
   const { toast } = useToast()
   const { projects } = useProjects()
   const { items } = useItems()
@@ -383,6 +458,7 @@ export function QuickCapture() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   const activeProjects = projects.filter((p) => p.status !== 'archived')
+  const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
   const selectedProject = activeProjects.find((p) => projectIdOf(p) === projectId)
   const isTodayContext = pathname === '/today'
   const isNote = complexity === 'note'
@@ -396,26 +472,35 @@ export function QuickCapture() {
     return !tags.includes(tag) && (!query || tag.includes(query))
   })
 
-  const filteredProjects = activeProjects.filter((project) => {
+  const filteredProjects = folderOptions.filter(({ folder: project }) => {
     const query = normalizeToken(projectQuery)
     return !query || normalizeToken(project.name).includes(query)
   })
 
   const shortcut = !isNote ? activeShortcut(title, titleCursor) : null
-  const shortcutTags = shortcut?.kind === 'tag'
-    ? knownTags.filter((tag) => !tags.includes(tag) && (!shortcut.query || tag.includes(shortcut.query))).slice(0, 8)
-    : []
-  const shortcutProjects = shortcut?.kind === 'project'
-    ? activeProjects.filter((project) => {
-        const query = shortcut.query
-        const name = normalizeToken(project.name)
-        const slug = slugToken(project.name)
-        return !query || name.includes(query) || slug.includes(query)
-      }).slice(0, 8)
-    : []
-  const shortcutPriorities = shortcut?.kind === 'priority'
-    ? PRIORITIES.filter((p) => `p${p}`.startsWith(shortcut.query.toLocaleLowerCase('pt-BR') || 'p')).map((p) => ({ value: p, config: PRIORITY_CONFIG[p] }))
-    : []
+  const shortcutTags =
+    shortcut?.kind === 'tag'
+      ? knownTags
+          .filter((tag) => !tags.includes(tag) && (!shortcut.query || tag.includes(shortcut.query)))
+          .slice(0, 8)
+      : []
+  const shortcutProjects =
+    shortcut?.kind === 'project'
+      ? folderOptions
+          .filter(({ folder: project }) => {
+            const query = shortcut.query
+            const name = normalizeToken(project.name)
+            const slug = slugToken(project.name)
+            return !query || name.includes(query) || slug.includes(query)
+          })
+          .slice(0, 8)
+      : []
+  const shortcutPriorities =
+    shortcut?.kind === 'priority'
+      ? PRIORITIES.filter((p) =>
+          `p${p}`.startsWith(shortcut.query.toLocaleLowerCase('pt-BR') || 'p'),
+        ).map((p) => ({ value: p, config: PRIORITY_CONFIG[p] }))
+      : []
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -475,12 +560,16 @@ export function QuickCapture() {
     if (projectToken) {
       const wanted = normalizeToken(projectToken.replace(/-/g, ' '))
       const project = activeProjects.find(
-        (p) => normalizeToken(p.name) === wanted || normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
+        (p) =>
+          normalizeToken(p.name) === wanted ||
+          normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
       )
       if (project) setProjectId(projectIdOf(project))
     }
 
-    const foundTags = Array.from(value.matchAll(TAG_SHORTCUT)).map((m) => m[1]).filter(Boolean) as string[]
+    const foundTags = Array.from(value.matchAll(TAG_SHORTCUT))
+      .map((m) => m[1])
+      .filter(Boolean) as string[]
     if (foundTags.length > 0) {
       setTags(Array.from(new Set(foundTags.map((tag) => normalizeToken(tag)))))
     }
@@ -545,7 +634,7 @@ export function QuickCapture() {
     replaceShortcut(`@${tag}`)
   }
 
-  function selectShortcutProject(project: Project) {
+  function selectShortcutProject(project: { id?: string; _id?: string; name: string }) {
     setProjectId(projectIdOf(project))
     replaceShortcut(`#${slugToken(project.name)}`)
   }
@@ -559,7 +648,9 @@ export function QuickCapture() {
     const name = value.trim()
     if (!name) return
 
-    const existing = activeProjects.find((project) => normalizeToken(project.name) === normalizeToken(name))
+    const existing = activeProjects.find(
+      (project) => normalizeToken(project.name) === normalizeToken(name),
+    )
     if (existing) {
       setProjectId(projectIdOf(existing))
       setProjectQuery('')
@@ -613,16 +704,20 @@ export function QuickCapture() {
   if (!quickCaptureOpen) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
-  const canSwitchMode = !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
+  const canSwitchMode =
+    !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
-  const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
+  const recurrenceLabel =
+    RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && setQuickCaptureOpen(false)}
     >
-      <div className={`w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg ${isNote ? 'max-w-4xl' : 'max-w-[560px]'}`}>
+      <div
+        className={`w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg ${isNote ? 'max-w-4xl' : 'max-w-[560px]'}`}
+      >
         <form onSubmit={handleSubmit} className="flex flex-col">
           <div className="px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
@@ -635,9 +730,7 @@ export function QuickCapture() {
                   placeholder="Nome da tarefa"
                 />
               )}
-              {isNote && (
-                <div className="min-w-0 flex-1" />
-              )}
+              {isNote && <div className="min-w-0 flex-1" />}
               {canSwitchMode && (
                 <button
                   type="button"
@@ -653,46 +746,58 @@ export function QuickCapture() {
                   Nota
                 </button>
               )}
-              {shortcut && (shortcutTags.length > 0 || shortcutProjects.length > 0 || shortcutPriorities.length > 0) && (
-                <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
-                  {shortcut.kind === 'tag' && shortcutTags.map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => selectShortcutTag(tag)}
-                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                    >
-                      <IconTag className="h-3.5 w-3.5 text-slate-400" />
-                      @{tag}
-                    </button>
-                  ))}
-                  {shortcut.kind === 'project' && shortcutProjects.map((project) => (
-                    <button
-                      key={projectIdOf(project)}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => selectShortcutProject(project)}
-                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                    >
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
-                      <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                    </button>
-                  ))}
-                  {shortcut.kind === 'priority' && shortcutPriorities.map(({ value, config }) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => selectShortcutPriority(value)}
-                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                    >
-                      <IconFlag className={`h-3.5 w-3.5 ${config.color}`} />
-                      <span className="flex-1">{config.label} - {config.title}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              {shortcut &&
+                (shortcutTags.length > 0 ||
+                  shortcutProjects.length > 0 ||
+                  shortcutPriorities.length > 0) && (
+                  <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
+                    {shortcut.kind === 'tag' &&
+                      shortcutTags.map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectShortcutTag(tag)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
+                        </button>
+                      ))}
+                    {shortcut.kind === 'project' &&
+                      shortcutProjects.map(({ folder: project, depth }) => (
+                        <button
+                          key={projectIdOf(project)}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectShortcutProject(project)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <span
+                            className="min-w-0 flex-1 truncate"
+                            style={{ paddingLeft: depth ? depth * 12 : 0 }}
+                          >
+                            {project.name}
+                          </span>
+                        </button>
+                      ))}
+                    {shortcut.kind === 'priority' &&
+                      shortcutPriorities.map(({ value, config }) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => selectShortcutPriority(value)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconFlag className={`h-3.5 w-3.5 ${config.color}`} />
+                          <span className="flex-1">
+                            {config.label} - {config.title}
+                          </span>
+                        </button>
+                      ))}
+                  </div>
+                )}
             </div>
 
             {isNote ? (
@@ -707,7 +812,9 @@ export function QuickCapture() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
-                      <p className="text-[12px] text-slate-400">Espaco reservado para upload de arquivos.</p>
+                      <p className="text-[12px] text-slate-400">
+                        Espaco reservado para upload de arquivos.
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -756,8 +863,12 @@ export function QuickCapture() {
                           >
                             <IconCalendar className="h-3.5 w-3.5 text-brand-600" />
                             <span className="flex-1">{suggestion.label}</span>
-                            <span className="text-[11px] font-normal text-slate-400">{formatDueDate(value)}</span>
-                            {dueDate === value && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            <span className="text-[11px] font-normal text-slate-400">
+                              {formatDueDate(value)}
+                            </span>
+                            {dueDate === value && (
+                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                            )}
                           </button>
                         )
                       })}
@@ -768,7 +879,9 @@ export function QuickCapture() {
                         className="mt-1 h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                       />
                       <div className="mt-2 border-t border-ui-border-soft pt-2">
-                        <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">Horário</div>
+                        <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">
+                          Horário
+                        </div>
                         <button
                           type="button"
                           onClick={() => handleDueTimeChange(dueTime || '09:00')}
@@ -779,7 +892,9 @@ export function QuickCapture() {
                           }`}
                         >
                           <IconCalendar className="h-3.5 w-3.5" />
-                          <span className="flex-1">{dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}</span>
+                          <span className="flex-1">
+                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}
+                          </span>
                           {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                         </button>
                         <div className="mt-1 grid grid-cols-2 gap-1">
@@ -789,11 +904,15 @@ export function QuickCapture() {
                               type="button"
                               onClick={() => handleDueTimeChange(time)}
                               className={`flex items-center justify-between rounded-[10px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
-                                dueTime === time ? 'bg-surface-selected text-brand-700' : 'bg-surface-soft text-slate-700'
+                                dueTime === time
+                                  ? 'bg-surface-selected text-brand-700'
+                                  : 'bg-surface-soft text-slate-700'
                               }`}
                             >
                               {formatTimeLabel(time)}
-                              {dueTime === time && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                              {dueTime === time && (
+                                <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                              )}
                             </button>
                           ))}
                         </div>
@@ -804,11 +923,15 @@ export function QuickCapture() {
                               type="button"
                               onClick={() => handleDueTimeChange(time)}
                               className={`flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
-                                dueTime === time ? 'bg-surface-selected text-brand-700' : 'text-slate-700'
+                                dueTime === time
+                                  ? 'bg-surface-selected text-brand-700'
+                                  : 'text-slate-700'
                               }`}
                             >
                               <span className="flex-1">{formatTimeLabel(time)}</span>
-                              {dueTime === time && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                              {dueTime === time && (
+                                <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                              )}
                             </button>
                           ))}
                         </div>
@@ -861,7 +984,9 @@ export function QuickCapture() {
                         >
                           <IconRepeat className="h-3.5 w-3.5 text-slate-400" />
                           <span className="flex-1">{option.label}</span>
-                          {recurrence === option.value && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          {recurrence === option.value && (
+                            <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                          )}
                         </button>
                       ))}
                     </div>
@@ -893,7 +1018,9 @@ export function QuickCapture() {
                             className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                           >
                             <IconFlag className={`h-3.5 w-3.5 ${cfg.color}`} />
-                            <span className="flex-1">{cfg.label} - {cfg.title}</span>
+                            <span className="flex-1">
+                              {cfg.label} - {cfg.title}
+                            </span>
                             {priority === p && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                           </button>
                         )
@@ -920,7 +1047,9 @@ export function QuickCapture() {
                           <button
                             key={tag}
                             type="button"
-                            onClick={() => setTags((current) => current.filter((item) => item !== tag))}
+                            onClick={() =>
+                              setTags((current) => current.filter((item) => item !== tag))
+                            }
                             className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
                           >
                             @{tag}
@@ -949,8 +1078,7 @@ export function QuickCapture() {
                           onClick={() => addTag(tag)}
                           className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                         >
-                          <IconTag className="h-3.5 w-3.5 text-slate-400" />
-                          @{tag}
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
                         </button>
                       ))}
                       {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
@@ -1009,7 +1137,7 @@ export function QuickCapture() {
                       Inbox
                       {!projectId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
                     </button>
-                    {filteredProjects.map((project) => {
+                    {filteredProjects.map(({ folder: project, depth }) => {
                       const id = projectIdOf(project)
                       return (
                         <button
@@ -1022,23 +1150,31 @@ export function QuickCapture() {
                           }}
                           className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                         >
-                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
-                          <span className="min-w-0 flex-1 truncate">{project.name}</span>
+                          <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <span
+                            className="min-w-0 flex-1 truncate"
+                            style={{ paddingLeft: depth ? depth * 12 : 0 }}
+                          >
+                            {project.name}
+                          </span>
                           {projectId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                         </button>
                       )
                     })}
-                    {projectQuery.trim() && !activeProjects.some((project) => normalizeToken(project.name) === normalizeToken(projectQuery)) && (
-                      <button
-                        type="button"
-                        disabled={creatingProject}
-                        onClick={() => void addProject(projectQuery)}
-                        className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
-                      >
-                        <span className="text-base leading-none">+</span>
-                        {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
-                      </button>
-                    )}
+                    {projectQuery.trim() &&
+                      !activeProjects.some(
+                        (project) => normalizeToken(project.name) === normalizeToken(projectQuery),
+                      ) && (
+                        <button
+                          type="button"
+                          disabled={creatingProject}
+                          onClick={() => void addProject(projectQuery)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
+                        >
+                          <span className="text-base leading-none">+</span>
+                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                        </button>
+                      )}
                   </div>
                 </div>
               )}

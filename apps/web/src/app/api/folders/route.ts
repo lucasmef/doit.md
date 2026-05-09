@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
     if (!body.name?.trim()) return NextResponse.json({ error: 'name is required' }, { status: 400 })
 
     const count = await FolderModel.countDocuments({ userId })
+    const parent = body.parentId
+      ? await FolderModel.findOne({ _id: body.parentId, userId }).lean()
+      : null
     const now = new Date().toISOString()
     const folder = await FolderModel.create({
       _id: newFolderId(),
@@ -38,6 +41,8 @@ export async function POST(req: NextRequest) {
       name: body.name.trim(),
       parentId: body.parentId,
       order: body.order ?? count,
+      viewMode: body.viewMode ?? parent?.['viewMode'] ?? 'list',
+      viewModeManual: body.viewModeManual ?? false,
       createdAt: now,
       updatedAt: now,
     })

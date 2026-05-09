@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'clarity-v4'
+const CACHE_VERSION = 'clarity-v5'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 const API_CACHE = `${CACHE_VERSION}-api`
@@ -8,7 +8,16 @@ const STATIC_PATTERNS = [/^\/fonts\//, /\.(ico|png|svg|webp|woff2?)$/]
 const NEXT_STATIC_PATTERN = /^\/_next\/static\//
 
 // App pages: network-first with cached fallback for installed/offline use.
-const APP_PAGES = ['/today', '/inbox', '/upcoming', '/projects', '/areas', '/audit', '/settings']
+const APP_PAGES = [
+  '/today',
+  '/inbox',
+  '/upcoming',
+  '/calendar',
+  '/projects',
+  '/areas',
+  '/audit',
+  '/settings',
+]
 const APP_SHELL_URLS = ['/', ...APP_PAGES]
 
 // Read APIs that are useful offline. Mutating APIs stay network-only.

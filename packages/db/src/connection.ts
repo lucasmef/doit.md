@@ -5,7 +5,9 @@ import pg from 'pg'
 
 function loadSqliteDatabase(): typeof Database {
   const module = (
-    process as typeof process & { getBuiltinModule?: (id: 'module') => typeof import('node:module') }
+    process as typeof process & {
+      getBuiltinModule?: (id: 'module') => typeof import('node:module')
+    }
   ).getBuiltinModule?.('module')
   if (!module) throw new Error('Node module loader is unavailable')
 
@@ -14,7 +16,9 @@ function loadSqliteDatabase(): typeof Database {
     path.resolve(process.cwd(), '../../packages/db/package.json'),
     path.resolve(process.cwd(), 'package.json'),
   ]
-  const requirePath = requirePaths.find((candidate) => fs.existsSync(candidate)) ?? path.resolve(process.cwd(), 'package.json')
+  const requirePath =
+    requirePaths.find((candidate) => fs.existsSync(candidate)) ??
+    path.resolve(process.cwd(), 'package.json')
   const requireFromDb = module.createRequire(requirePath)
   return requireFromDb('better-sqlite3') as typeof Database
 }
@@ -77,13 +81,15 @@ async function migrate(db: DBClient): Promise<void> {
   if (db.kind === 'postgres') {
     for (const sql of statements.filter(isCreateTableStatement)) await db.pool.query(sql)
     await ensureKnownColumns(db)
-    for (const sql of statements.filter((statement) => !isCreateTableStatement(statement))) await db.pool.query(sql)
+    for (const sql of statements.filter((statement) => !isCreateTableStatement(statement)))
+      await db.pool.query(sql)
     await retireProjectsTable(db)
     return
   }
   for (const sql of statements.filter(isCreateTableStatement)) db.db.exec(sql)
   await ensureKnownColumns(db)
-  for (const sql of statements.filter((statement) => !isCreateTableStatement(statement))) db.db.exec(sql)
+  for (const sql of statements.filter((statement) => !isCreateTableStatement(statement)))
+    db.db.exec(sql)
   await retireProjectsTable(db)
 }
 
@@ -162,6 +168,8 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
   await ensureColumn(db, 'items', 'folderId', 'TEXT')
+  await ensureColumn(db, 'folders', 'viewMode', "TEXT NOT NULL DEFAULT 'list'")
+  await ensureColumn(db, 'folders', 'viewModeManual', 'INTEGER NOT NULL DEFAULT 0')
   if (db.kind === 'postgres') {
     await db.pool.query(`DROP INDEX IF EXISTS items_user_project_idx`)
   }
@@ -177,7 +185,7 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'push_subscriptions', 'disabledAt', 'TEXT')
   await ensureColumn(db, 'notification_alerts', 'itemId', 'TEXT')
   await ensureColumn(db, 'notification_alerts', 'scheduledFor', 'TEXT')
-  await ensureColumn(db, 'notification_alerts', 'deliveryStatus', 'TEXT NOT NULL DEFAULT \'pending\'')
+  await ensureColumn(db, 'notification_alerts', 'deliveryStatus', "TEXT NOT NULL DEFAULT 'pending'")
   await ensureColumn(db, 'notification_alerts', 'acknowledgedAt', 'TEXT')
 }
 
@@ -217,6 +225,8 @@ const sqliteSchema = [
     name TEXT NOT NULL,
     parentId TEXT,
     "order" INTEGER NOT NULL DEFAULT 0,
+    viewMode TEXT NOT NULL DEFAULT 'list',
+    viewModeManual INTEGER NOT NULL DEFAULT 0,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
   )`,
@@ -393,6 +403,8 @@ const postgresIdentifiers = [
   'riskLevel',
   'expiresAt',
   'folderId',
+  'viewModeManual',
+  'viewMode',
   'localPath',
   'syncHash',
   'parentId',
@@ -413,16 +425,25 @@ const postgresSchema = sqliteSchema.map((sql) => {
 
 function quotePostgresIdentifier(sql: string, identifier: string): string {
   const escaped = identifier.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return sql.replace(new RegExp(`(?<![A-Za-z0-9_"])${escaped}(?![A-Za-z0-9_"])`, 'g'), `"${identifier}"`)
+  return sql.replace(
+    new RegExp(`(?<![A-Za-z0-9_"])${escaped}(?![A-Za-z0-9_"])`, 'g'),
+    `"${identifier}"`,
+  )
 }
 
-async function ensureColumn(db: DBClient, table: string, column: string, definition: string): Promise<void> {
+async function ensureColumn(
+  db: DBClient,
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
   if (db.kind === 'postgres') {
     const result = await db.pool.query(
       `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
       [table, column],
     )
-    if (result.rowCount === 0) await db.pool.query(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`)
+    if (result.rowCount === 0)
+      await db.pool.query(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`)
     return
   }
 

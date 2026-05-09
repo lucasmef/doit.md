@@ -43,9 +43,13 @@ function isNetworkFailure(error: unknown) {
 }
 
 async function flushAndRevalidateItems() {
-  const changed = await flushOfflineItemQueue()
-  if (changed) {
-    await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+  try {
+    const changed = await flushOfflineItemQueue()
+    if (changed) {
+      await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+    }
+  } catch (error) {
+    console.warn('[offline-sync] flush failed', error)
   }
 }
 
@@ -53,13 +57,25 @@ function useFlushOfflineItems() {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
+    let timer: ReturnType<typeof setTimeout> | null = null
     const sync = () => {
-      if (navigator.onLine) void flushAndRevalidateItems()
+      if (document.visibilityState === 'hidden') return
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(() => {
+        if (navigator.onLine) void flushAndRevalidateItems()
+      }, 200)
     }
 
     sync()
     window.addEventListener('online', sync)
-    return () => window.removeEventListener('online', sync)
+    window.addEventListener('pageshow', sync)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      if (timer) clearTimeout(timer)
+      window.removeEventListener('online', sync)
+      window.removeEventListener('pageshow', sync)
+      document.removeEventListener('visibilitychange', sync)
+    }
   }, [])
 }
 
@@ -180,14 +196,19 @@ function patchWithTags(item: Item | undefined, action: BulkItemActionInput): Upd
   return patch
 }
 
-export async function bulkUpdateItems(input: BulkItemActionInput, fallbackItems: Item[] = []): Promise<Item[]> {
+export async function bulkUpdateItems(
+  input: BulkItemActionInput,
+  fallbackItems: Item[] = [],
+): Promise<Item[]> {
   const ids = Array.from(new Set(input.ids.filter(Boolean)))
   if (ids.length === 0) return []
 
   const fallbackById = new Map(fallbackItems.map((item) => [item.id, item]))
 
   if (ids.every((id) => id.startsWith('local_item_'))) {
-    const items = ids.map((id) => queueUpdateItem(id, patchWithTags(fallbackById.get(id), input), fallbackById.get(id)))
+    const items = ids.map((id) =>
+      queueUpdateItem(id, patchWithTags(fallbackById.get(id), input), fallbackById.get(id)),
+    )
     await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
     return items
   }

@@ -22,8 +22,18 @@ function getFirstDayOfWeek(year: number, month: number) {
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
 const MONTHS = [
-  'Janeiro', 'Fevereiro', 'Marco', 'Abril', 'Maio', 'Junho',
-  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  'Janeiro',
+  'Fevereiro',
+  'Marco',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
 ]
 
 export function CalendarGrid({ items, onDayClick, selectedDate, compact = false }: Props) {
@@ -36,13 +46,17 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
   const todayStr = toLocalDateKey(today)
 
   function prevMonth() {
-    if (month === 0) { setYear(y => y - 1); setMonth(11) }
-    else setMonth(m => m - 1)
+    if (month === 0) {
+      setYear((y) => y - 1)
+      setMonth(11)
+    } else setMonth((m) => m - 1)
   }
 
   function nextMonth() {
-    if (month === 11) { setYear(y => y + 1); setMonth(0) }
-    else setMonth(m => m + 1)
+    if (month === 11) {
+      setYear((y) => y + 1)
+      setMonth(0)
+    } else setMonth((m) => m + 1)
   }
 
   function dayStr(d: number) {
@@ -51,10 +65,19 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
 
   function itemsForDay(d: number) {
     const ds = dayStr(d)
-    return (items || []).filter((i) => i && (i.dueDate === ds || i.scheduledDate === ds))
+    return (items || []).filter(
+      (i) =>
+        i &&
+        i.status !== 'archived' &&
+        i.status !== 'done' &&
+        (i.dueDate === ds || i.scheduledDate === ds),
+    )
   }
 
-  const cells = [...Array(firstDay).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)]
+  const cells = [
+    ...Array(firstDay).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
   const cellHeight = compact ? 'h-9' : 'h-20 lg:h-24 xl:h-28'
 
   return (
@@ -64,13 +87,25 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
           {MONTHS[month]} {year}
         </h2>
         <div className="flex items-center gap-1 rounded-lg bg-surface-soft p-1">
-          <button onClick={prevMonth} className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white">
+          <button
+            onClick={prevMonth}
+            className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
+          >
             {compact ? '<' : 'Anterior'}
           </button>
-          <button onClick={() => { setYear(today.getFullYear()); setMonth(today.getMonth()) }} className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white">
+          <button
+            onClick={() => {
+              setYear(today.getFullYear())
+              setMonth(today.getMonth())
+            }}
+            className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
+          >
             Hoje
           </button>
-          <button onClick={nextMonth} className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white">
+          <button
+            onClick={nextMonth}
+            className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
+          >
             {compact ? '>' : 'Proximo'}
           </button>
         </div>
@@ -78,7 +113,10 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
 
       <div className="mb-2 grid grid-cols-7">
         {WEEKDAYS.map((d) => (
-          <div key={d} className="py-1.5 text-center font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+          <div
+            key={d}
+            className="py-1.5 text-center font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300"
+          >
             {compact ? d.slice(0, 1) : d.toUpperCase()}
           </div>
         ))}
@@ -107,10 +145,18 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
                 {day}
               </span>
 
-              <div className={`w-full overflow-hidden ${compact ? 'absolute bottom-1 left-0 flex justify-center' : 'flex flex-col gap-1'}`}>
+              <div
+                className={`w-full overflow-hidden ${compact ? 'absolute bottom-1 left-0 flex justify-center' : 'flex flex-col gap-1'}`}
+              >
                 {dayItems.slice(0, 3).map((item) => {
                   if (compact) {
-                    return <span key={item.id} className="mx-0.5 h-1 w-1 rounded-full bg-teal-500" title={item.title} />
+                    return (
+                      <span
+                        key={item.id}
+                        className="mx-0.5 h-1 w-1 rounded-full bg-teal-500"
+                        title={item.title}
+                      />
+                    )
                   }
 
                   let badgeClass = 'bg-navy-50 text-navy-500'
@@ -130,7 +176,9 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
                   )
                 })}
                 {!compact && dayItems.length > 3 && (
-                  <span className="px-1 font-mono text-[10px] font-medium text-navy-300">+ {dayItems.length - 3} itens</span>
+                  <span className="px-1 font-mono text-[10px] font-medium text-navy-300">
+                    + {dayItems.length - 3} itens
+                  </span>
                 )}
               </div>
             </button>

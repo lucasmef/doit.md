@@ -1,15 +1,24 @@
 'use client'
 
-import { use, useEffect, useMemo, useState } from 'react'
+import { use, useMemo, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
-import { useFolders, buildFolderTree, createFolder, deleteFolder, updateFolder, type FolderTreeNode } from '@/hooks/use-folders'
-import { useItems, updateItem } from '@/hooks/use-items'
+import {
+  useFolders,
+  buildFolderTree,
+  createFolder,
+  deleteFolder,
+  updateFolder,
+  type FolderTreeNode,
+} from '@/hooks/use-folders'
+import { bulkUpdateItems, useItems } from '@/hooks/use-items'
+import { ItemList } from '@/components/items/item-list'
+import { ItemRow as SharedItemRow } from '@/components/items/item-row'
 import { useUI } from '@/store/ui'
+import { useToast } from '@/components/ui/toast'
 import type { Folder, Item } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
-const VIEW_MODE_KEY = 'doit:notas-view-mode'
 type ViewMode = 'list' | 'kanban'
 
 function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
@@ -32,73 +41,21 @@ function buildBreadcrumb(folders: Folder[], id: string): Folder[] {
   return path
 }
 
-function MoveItemDialog({
-  item,
-  folders,
-  onClose,
-}: {
-  item: Item
-  folders: Folder[]
-  onClose: () => void
-}) {
-  const [target, setTarget] = useState<string>(item.folderId ?? '')
-
-  async function save() {
-    await updateItem(item.id, { folderId: target || undefined })
-    onClose()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-ui-border bg-white p-4 shadow-cool-lg" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-3 text-sm font-bold text-navy-900">Mover &ldquo;{item.title}&rdquo;</h3>
-        <select
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          className="mb-4 w-full rounded-md border border-ui-border bg-white px-2 py-2 text-sm text-navy-900 focus:outline-none focus:ring-1 focus:ring-brand-500"
-        >
-          <option value="">Sem pasta (raiz)</option>
-          {folders.map((f) => (
-            <option key={f.id} value={f.id}>{f.name}</option>
-          ))}
-        </select>
-        <div className="flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md px-3 py-1.5 text-sm text-navy-600 hover:bg-surface-soft">Cancelar</button>
-          <button onClick={save} className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700">Mover</button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+    <svg
+      className={className}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+      />
     </svg>
-  )
-}
-
-function ItemRow({ item, onMove }: { item: Item; onMove: (item: Item) => void }) {
-  return (
-    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] hover:bg-surface-soft">
-      {item.complexity === 'task' ? (
-        <span className="h-3 w-3 shrink-0 rounded-full border border-navy-200" />
-      ) : (
-        <svg className="h-3.5 w-3.5 shrink-0 text-navy-400" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M6 2.75A2.25 2.25 0 0 0 3.75 5v14A2.25 2.25 0 0 0 6 21.25h12A2.25 2.25 0 0 0 20.25 19V8.12a2.25 2.25 0 0 0-.66-1.59l-3.12-3.12a2.25 2.25 0 0 0-1.59-.66H6Z" />
-        </svg>
-      )}
-      <span className={`flex-1 truncate text-navy-900 ${item.status === 'done' ? 'text-navy-400 line-through' : ''}`}>{item.title}</span>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); onMove(item) }}
-        className="rounded px-1.5 py-0.5 text-[10px] text-navy-400 opacity-0 transition-opacity hover:bg-surface-soft hover:text-navy-700 group-hover:opacity-100"
-        title="Mover"
-      >
-        Mover
-      </button>
-    </div>
   )
 }
 
@@ -108,16 +65,26 @@ function KanbanColumn({
   items,
   childFolders,
   addFolderId,
-  onMove,
+  selectedItemIds,
+  orderedIds,
+  dragging,
+  onDragStart,
+  onDragEnd,
+  onDropItems,
 }: {
   title: string
   href?: string
   items: Item[]
   childFolders: FolderTreeNode[]
   addFolderId: string | null
-  onMove: (item: Item) => void
+  selectedItemIds: string[]
+  orderedIds: string[]
+  dragging: boolean
+  onDragStart: (item: Item, event: React.DragEvent) => void
+  onDragEnd: () => void
+  onDropItems: (folderId: string | null, event: React.DragEvent) => void
 }) {
-  const { setQuickCaptureOpen, setQuickCaptureFolderId } = useUI()
+  const { selectedItemId, setQuickCaptureOpen, setQuickCaptureFolderId } = useUI()
 
   function handleAdd() {
     setQuickCaptureFolderId(addFolderId)
@@ -125,10 +92,19 @@ function KanbanColumn({
   }
 
   return (
-    <div className="flex w-72 shrink-0 flex-col rounded-xl border border-ui-border bg-surface-soft">
+    <div
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => onDropItems(addFolderId, event)}
+      className={`flex w-80 shrink-0 flex-col rounded-xl border bg-surface-soft transition-colors ${
+        dragging ? 'border-brand-300' : 'border-ui-border'
+      }`}
+    >
       <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-ui-border-soft">
         {href ? (
-          <Link href={href} className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-bold text-navy-900 hover:text-brand-600">
+          <Link
+            href={href}
+            className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-bold text-navy-900 hover:text-brand-600"
+          >
             <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
             <span className="truncate">{title}</span>
           </Link>
@@ -137,7 +113,9 @@ function KanbanColumn({
             <span className="truncate">{title}</span>
           </span>
         )}
-        <span className="font-mono text-[10px] text-navy-300">{childFolders.length + items.length}</span>
+        <span className="font-mono text-[10px] text-navy-300">
+          {childFolders.length + items.length}
+        </span>
       </div>
 
       <div className="flex flex-1 flex-col gap-1 px-2 py-2 overflow-y-auto">
@@ -155,8 +133,19 @@ function KanbanColumn({
           </Link>
         ))}
         {items.map((item) => (
-          <div key={item.id} className="group rounded-md border border-ui-border bg-white">
-            <ItemRow item={item} onMove={onMove} />
+          <div
+            key={item.id}
+            draggable
+            onDragStart={(event) => onDragStart(item, event)}
+            onDragEnd={onDragEnd}
+            className="rounded-md border border-ui-border bg-white"
+          >
+            <SharedItemRow
+              item={item}
+              active={item.id === selectedItemId}
+              selected={selectedItemIds.includes(item.id)}
+              orderedIds={orderedIds}
+            />
           </div>
         ))}
         {childFolders.length === 0 && items.length === 0 && (
@@ -169,7 +158,13 @@ function KanbanColumn({
         onClick={handleAdd}
         className="flex items-center gap-1.5 border-t border-ui-border-soft px-3 py-2 text-left text-[12px] text-navy-400 hover:bg-white hover:text-brand-600"
       >
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg
+          className="h-3.5 w-3.5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
         </svg>
         Adicionar
@@ -184,6 +179,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const { folders } = useFolders()
   const { items: directItems } = useItems({ folderId: id })
   const { items: allItems } = useItems()
+  const { selectedItemIds, setSingleSelection } = useUI()
+  const { toast } = useToast()
 
   const folder = data?.folder
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -191,22 +188,16 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const breadcrumb = useMemo(() => buildBreadcrumb(folders, id), [folders, id])
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
-  const [moving, setMoving] = useState<Item | null>(null)
-  const [viewMode, setViewMode] = useState<ViewMode>('list')
+  const [draggingIds, setDraggingIds] = useState<string[]>([])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const stored = window.localStorage.getItem(VIEW_MODE_KEY)
-    if (stored === 'list' || stored === 'kanban') setViewMode(stored)
-  }, [])
-
-  function changeView(mode: ViewMode) {
-    setViewMode(mode)
-    if (typeof window !== 'undefined') window.localStorage.setItem(VIEW_MODE_KEY, mode)
+  async function changeView(mode: ViewMode) {
+    await updateFolder(id, { viewMode: mode, viewModeManual: true })
+    await mutate()
   }
 
   const childFolders = node?.children ?? []
   const directOpenItems = directItems.filter((i) => i.status !== 'archived' && i.status !== 'done')
+  const viewMode: ViewMode = folder?.viewMode === 'kanban' ? 'kanban' : 'list'
 
   const itemsByFolder = useMemo(() => {
     const map = new Map<string, Item[]>()
@@ -219,6 +210,39 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     }
     return map
   }, [allItems])
+
+  const activeItemsById = useMemo(() => {
+    const map = new Map<string, Item>()
+    for (const item of allItems) {
+      if (item.status !== 'archived') map.set(item.id, item)
+    }
+    return map
+  }, [allItems])
+
+  function handleDragStart(item: Item, event: React.DragEvent) {
+    const ids =
+      selectedItemIds.includes(item.id) && selectedItemIds.length > 1 ? selectedItemIds : [item.id]
+    if (!selectedItemIds.includes(item.id)) setSingleSelection(item.id)
+    setDraggingIds(ids)
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', ids.join(','))
+  }
+
+  async function handleDropItems(folderId: string | null, event: React.DragEvent) {
+    event.preventDefault()
+    const ids = (event.dataTransfer.getData('text/plain') || draggingIds.join(','))
+      .split(',')
+      .map((itemId) => itemId.trim())
+      .filter(Boolean)
+    setDraggingIds([])
+    const targets = ids.map((itemId) => activeItemsById.get(itemId)).filter(Boolean) as Item[]
+    if (targets.length === 0) return
+    await bulkUpdateItems(
+      { ids: targets.map((item) => item.id), patch: { folderId: (folderId ?? '') as never } },
+      targets,
+    )
+    toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+  }
 
   if (!folder) {
     return (
@@ -245,22 +269,33 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Apagar pasta "${folder?.name}" e todas as subpastas? As notas voltam para a raiz.`)) return
+    if (
+      !window.confirm(
+        `Apagar pasta "${folder?.name}" e todas as subpastas? As notas voltam para a raiz.`,
+      )
+    )
+      return
     await deleteFolder(id)
     if (typeof window !== 'undefined') window.location.href = '/notas'
   }
 
   return (
-    <div className={`${viewMode === 'kanban' ? 'w-full px-4' : 'mx-auto max-w-3xl px-5'} pb-24 pt-3 lg:pb-4`}>
+    <div
+      className={`${viewMode === 'kanban' ? 'w-full px-4' : 'mx-auto max-w-3xl px-5'} pb-24 pt-3 lg:pb-4`}
+    >
       <nav className="mb-2 flex flex-wrap items-center gap-1 text-[12px] text-navy-400">
-        <Link href="/notas" className="hover:text-navy-700">Notas</Link>
+        <Link href="/notas" className="hover:text-navy-700">
+          Notas
+        </Link>
         {breadcrumb.map((f, idx) => (
           <span key={f.id} className="flex items-center gap-1">
             <span>/</span>
             {idx === breadcrumb.length - 1 ? (
               <span className="text-navy-700">{f.name}</span>
             ) : (
-              <Link href={`/notas/${f.id}`} className="hover:text-navy-700">{f.name}</Link>
+              <Link href={`/notas/${f.id}`} className="hover:text-navy-700">
+                {f.name}
+              </Link>
             )}
           </span>
         ))}
@@ -283,7 +318,10 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
         ) : (
           <h1
             className="flex-1 cursor-pointer text-2xl font-semibold text-navy-900 hover:text-brand-700"
-            onClick={() => { setName(folder.name); setEditingName(true) }}
+            onClick={() => {
+              setName(folder.name)
+              setEditingName(true)
+            }}
           >
             {folder.name}
           </h1>
@@ -291,21 +329,31 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
         <div className="flex rounded-md border border-ui-border bg-white p-0.5">
           <button
             type="button"
-            onClick={() => changeView('list')}
+            onClick={() => void changeView('list')}
             className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
           >
             Lista
           </button>
           <button
             type="button"
-            onClick={() => changeView('kanban')}
+            onClick={() => void changeView('kanban')}
             className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
           >
             Kanban
           </button>
         </div>
-        <button onClick={handleNewSub} className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft">+ Subpasta</button>
-        <button onClick={handleDelete} className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50">Apagar</button>
+        <button
+          onClick={handleNewSub}
+          className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft"
+        >
+          + Subpasta
+        </button>
+        <button
+          onClick={handleDelete}
+          className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
+        >
+          Apagar
+        </button>
       </div>
 
       {viewMode === 'list' ? (
@@ -339,19 +387,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                 Nenhum item nesta pasta.
               </div>
             ) : (
-              <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
-                {directOpenItems.map((item) => (
-                  <div key={item.id} className="group flex items-center gap-2 px-3 py-2 text-[14px]">
-                    <span className="flex-1 truncate text-navy-900">{item.title}</span>
-                    <button
-                      type="button"
-                      onClick={() => setMoving(item)}
-                      className="rounded-md border border-ui-border px-2 py-0.5 text-[11px] text-navy-500 hover:bg-surface-soft"
-                    >
-                      Mover
-                    </button>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-ui-border bg-white px-2 pb-2">
+                <ItemList items={directOpenItems} />
               </div>
             )}
           </section>
@@ -364,7 +401,12 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
               items={directOpenItems}
               childFolders={[]}
               addFolderId={id}
-              onMove={setMoving}
+              selectedItemIds={selectedItemIds}
+              orderedIds={directOpenItems.map((item) => item.id)}
+              dragging={draggingIds.length > 0}
+              onDragStart={handleDragStart}
+              onDragEnd={() => setDraggingIds([])}
+              onDropItems={handleDropItems}
             />
           ) : (
             childFolders.map((sub) => (
@@ -375,19 +417,16 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                 items={itemsByFolder.get(sub.id) ?? []}
                 childFolders={sub.children}
                 addFolderId={sub.id}
-                onMove={setMoving}
+                selectedItemIds={selectedItemIds}
+                orderedIds={(itemsByFolder.get(sub.id) ?? []).map((item) => item.id)}
+                dragging={draggingIds.length > 0}
+                onDragStart={handleDragStart}
+                onDragEnd={() => setDraggingIds([])}
+                onDropItems={handleDropItems}
               />
             ))
           )}
         </div>
-      )}
-
-      {moving && (
-        <MoveItemDialog
-          item={moving}
-          folders={folders.filter((f) => f.id !== id)}
-          onClose={() => setMoving(null)}
-        />
       )}
     </div>
   )

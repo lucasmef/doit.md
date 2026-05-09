@@ -9,6 +9,7 @@ export const ItemModel = new SqlModel({
 
 export const FolderModel = new SqlModel({
   table: 'folders',
+  booleanFields: ['viewModeManual'],
 })
 
 export const AreaModel = new SqlModel({

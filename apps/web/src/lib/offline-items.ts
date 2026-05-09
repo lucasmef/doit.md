@@ -2,6 +2,7 @@ import type { CreateItemInput, Item, UpdateItemInput } from '@doit/types'
 
 const QUEUE_KEY = 'doitmd.offline.items.queue.v1'
 const CHANGE_EVENT = 'doitmd:offline-items-changed'
+const FLUSH_TIMEOUT_MS = 10_000
 
 type CreateOperation = {
   id: string
@@ -63,6 +64,16 @@ function writeQueue(queue: OfflineItemOperation[]) {
   if (!storageAvailable()) return
   window.localStorage.setItem(QUEUE_KEY, JSON.stringify(queue))
   window.dispatchEvent(new CustomEvent(CHANGE_EVENT))
+}
+
+async function fetchForOfflineFlush(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController()
+  const timer = window.setTimeout(() => controller.abort(), FLUSH_TIMEOUT_MS)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    window.clearTimeout(timer)
+  }
 }
 
 function normalizeCreatedItem(tempId: string, input: CreateItemInput, createdAt: string): Item {
@@ -331,37 +342,60 @@ async function flushOfflineItemQueueOnce() {
   if (!queue.length) return false
 
   const idMap = new Map<string, string>()
+  let anySuccess = false
 
   for (const operation of queue) {
     const remaining = readQueue()
     const current = remaining.find((entry) => entry.id === operation.id)
     if (!current) continue
 
-    if (current.type === 'create') {
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(current.input),
-      })
-      if (!response.ok) throw new Error('Falha ao sincronizar item offline')
-      const { item } = (await response.json()) as { item: Item }
-      idMap.set(current.tempId, item.id)
-    } else if (current.type === 'update') {
-      const itemId = idMap.get(current.itemId) ?? current.itemId
-      const response = await fetch(`/api/items/${itemId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(current.input),
-      })
-      if (!response.ok) throw new Error('Falha ao sincronizar edicao offline')
-    } else {
-      const itemId = idMap.get(current.itemId) ?? current.itemId
-      const response = await fetch(`/api/items/${itemId}`, { method: 'DELETE' })
-      if (!response.ok) throw new Error('Falha ao sincronizar arquivamento offline')
-    }
+    try {
+      if (current.type === 'create') {
+        const response = await fetchForOfflineFlush('/api/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(current.input),
+        })
+        if (response.status === 401 || response.status >= 500) throw new Error('retry')
+        if (response.ok) {
+          const { item } = (await response.json()) as { item: Item }
+          idMap.set(current.tempId, item.id)
+        } else {
+          console.warn('[offline-sync] dropping create after client error', response.status)
+        }
+      } else if (current.type === 'update') {
+        const itemId = idMap.get(current.itemId) ?? current.itemId
+        const response = await fetchForOfflineFlush(`/api/items/${itemId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(current.input),
+        })
+        if (response.status === 401 || response.status >= 500) throw new Error('retry')
+        if (!response.ok)
+          console.warn('[offline-sync] dropping update after client error', response.status)
+      } else {
+        const itemId = idMap.get(current.itemId) ?? current.itemId
+        const response = await fetchForOfflineFlush(`/api/items/${itemId}`, { method: 'DELETE' })
+        if (response.status === 401 || response.status >= 500) throw new Error('retry')
+        if (!response.ok)
+          console.warn('[offline-sync] dropping archive after client error', response.status)
+      }
 
-    writeQueue(readQueue().filter((entry) => entry.id !== current.id))
+      writeQueue(readQueue().filter((entry) => entry.id !== current.id))
+      anySuccess = true
+    } catch (error) {
+      if (
+        error instanceof TypeError ||
+        error instanceof DOMException ||
+        (error instanceof Error && error.message === 'retry')
+      ) {
+        // Offline, timeout, auth, or server failure: keep operation queued and stop trying for now.
+        throw error
+      }
+      console.warn('[offline-sync] dropping operation after error', current, error)
+      writeQueue(readQueue().filter((entry) => entry.id !== current.id))
+    }
   }
 
-  return true
+  return anySuccess
 }

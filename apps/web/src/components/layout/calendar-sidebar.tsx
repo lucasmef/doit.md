@@ -1,35 +1,25 @@
 'use client'
 
-import { useState } from 'react'
 import { useItems } from '@/hooks/use-items'
-import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useUI } from '@/store/ui'
-import { CalendarGrid } from '@/components/ui/calendar-grid'
-import { DayAgenda } from '@/components/ui/day-agenda'
-import { toLocalDateKey } from '@doit/core'
+import { CalendarBoard } from '@/components/calendar/calendar-board'
 
 function CloseIcon() {
   return (
-    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+    >
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
     </svg>
   )
 }
 
-function formatTime(dt: string, allDay: boolean) {
-  if (allDay) return 'Dia todo'
-  return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-
 function CalendarPanel({ onClose }: { onClose: () => void }) {
-  const today = toLocalDateKey()
-  const [selectedDate, setSelectedDate] = useState(today)
   const { items } = useItems()
-  const { events } = useCalendarEvents(`${selectedDate}T00:00:00Z`, `${selectedDate}T23:59:59Z`)
-  const activeItems = (items || []).filter((i) => i && i.status !== 'archived')
-  const dayEvents = events
-    .filter((event) => event.start.slice(0, 10) === selectedDate)
-    .sort((a, b) => a.start.localeCompare(b.start))
 
   return (
     <div className="flex h-full flex-col">
@@ -47,41 +37,7 @@ function CalendarPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden p-4 lg:flex-row">
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          <CalendarGrid
-            items={activeItems}
-            selectedDate={selectedDate}
-            onDayClick={setSelectedDate}
-          />
-        </div>
-
-        <div className="w-full shrink-0 overflow-y-auto border-t border-ui-border pt-4 lg:w-[300px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-          <section>
-            <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-              Eventos
-            </h3>
-            {dayEvents.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-ui-border-strong px-3 py-3 font-mono text-[11px] text-navy-300">
-                Nenhum evento nesta data.
-              </p>
-            ) : (
-              <div className="space-y-1.5">
-                {dayEvents.map((event) => (
-                  <div key={event.id} className="rounded-lg border border-ui-border bg-white px-3 py-2 shadow-cool-sm">
-                    <p className="truncate text-[13px] font-semibold text-navy-900">{event.title}</p>
-                    <p className="mt-0.5 font-mono text-[11px] text-navy-300">
-                      {formatTime(event.start, event.allDay)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <DayAgenda date={selectedDate} items={activeItems} compact />
-        </div>
-      </div>
+      <CalendarBoard items={items} compactSide />
     </div>
   )
 }
@@ -94,12 +50,9 @@ export function CalendarSidebar() {
   if (!calendarOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/40 p-2 sm:p-6"
-      onClick={() => setCalendarOpen?.(false)}
-    >
+    <div className="fixed inset-0 z-50 pointer-events-none lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[min(52vw,760px)]">
       <div
-        className="flex h-full w-full max-w-[1100px] flex-col overflow-hidden rounded-2xl border border-ui-border bg-white shadow-cool-lg sm:h-[85vh]"
+        className="pointer-events-auto flex h-full w-full flex-col overflow-hidden border-l border-ui-border bg-white shadow-cool-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <CalendarPanel onClose={() => setCalendarOpen?.(false)} />
