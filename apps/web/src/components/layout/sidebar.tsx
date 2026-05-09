@@ -1,13 +1,14 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
-import { useProjects } from '@/hooks/use-projects'
+import { useFolders, buildFolderTree, createFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useUI } from '@/store/ui'
 import { toLocalDateKey } from '@doit/core'
 
-type IconKey = 'today' | 'inbox' | 'upcoming' | 'settings' | 'project' | 'tag'
+type IconKey = 'today' | 'inbox' | 'upcoming' | 'settings' | 'folder' | 'tag'
 
 function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; className?: string }) {
   const common = { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
@@ -42,11 +43,10 @@ function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; cla
       </svg>
     )
   }
-  if (kind === 'tag') {
+  if (kind === 'folder') {
     return (
       <svg className={className} {...common}>
-        <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h7a2 2 0 0 1 1.4.6l7.4 7.4a2 2 0 0 1 0 2.8Z" />
-        <circle cx="8" cy="8" r="1.4" />
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
       </svg>
     )
   }
@@ -124,19 +124,124 @@ function SectionTitle({ children, action }: { children: React.ReactNode; action?
   )
 }
 
+function ChevronRight({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`h-3 w-3 shrink-0 text-navy-400 transition-transform ${open ? 'rotate-90' : ''}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
+    </svg>
+  )
+}
+
+function collectIds(nodes: FolderTreeNode[], acc: string[] = []) {
+  for (const node of nodes) {
+    if (node.children.length > 0) {
+      acc.push(node.id)
+      collectIds(node.children, acc)
+    }
+  }
+  return acc
+}
+
+function FolderTreeRow({
+  node,
+  depth,
+  expanded,
+  toggle,
+  pathname,
+}: {
+  node: FolderTreeNode
+  depth: number
+  expanded: Set<string>
+  toggle: (id: string) => void
+  pathname: string
+}) {
+  const href = `/notas/${node.id}`
+  const active = pathname === href || pathname.startsWith(href + '/')
+  const hasChildren = node.children.length > 0
+  const isOpen = expanded.has(node.id)
+
+  return (
+    <>
+      <div
+        className={`group flex items-center gap-1 rounded-md py-1 pr-1 text-[13px] transition-colors ${
+          active ? 'bg-surface-selected text-brand-600' : 'text-navy-900 hover:bg-surface-soft'
+        }`}
+        style={{ paddingLeft: `${8 + depth * 14}px` }}
+      >
+        {hasChildren ? (
+          <button
+            type="button"
+            onClick={() => toggle(node.id)}
+            className="flex h-4 w-4 shrink-0 items-center justify-center rounded hover:bg-navy-50"
+            aria-label={isOpen ? 'Recolher' : 'Expandir'}
+          >
+            <ChevronRight open={isOpen} />
+          </button>
+        ) : (
+          <span className="h-4 w-4 shrink-0" />
+        )}
+        <Link href={href} className="flex min-w-0 flex-1 items-center gap-2">
+          <span className={`flex h-4 w-4 shrink-0 items-center justify-center ${active ? 'text-brand-600' : 'text-navy-400'}`}>
+            <NavIcon kind="folder" className="h-4 w-4" />
+          </span>
+          <span className="min-w-0 flex-1 truncate">{node.name}</span>
+        </Link>
+      </div>
+      {hasChildren && isOpen && node.children.map((child) => (
+        <FolderTreeRow
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          expanded={expanded}
+          toggle={toggle}
+          pathname={pathname}
+        />
+      ))}
+    </>
+  )
+}
+
 export function Sidebar() {
   const { setQuickCaptureOpen } = useUI()
-  const { projects } = useProjects()
+  const { folders } = useFolders()
   const { items } = useItems()
+  const pathname = usePathname()
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  const tree = useMemo(() => buildFolderTree(folders), [folders])
+  const allParentIds = useMemo(() => collectIds(tree), [tree])
+  const allExpanded = allParentIds.length > 0 && allParentIds.every((id) => expanded.has(id))
+
+  function toggle(id: string) {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function toggleAll() {
+    setExpanded(allExpanded ? new Set() : new Set(allParentIds))
+  }
+
+  async function handleNewFolder() {
+    const name = window.prompt('Nome da pasta')
+    if (!name?.trim()) return
+    await createFolder({ name: name.trim() })
+  }
 
   const activeItems = items.filter((item) => item.status !== 'archived')
-  const tags = Array.from(
-    new Set(activeItems.flatMap((item) => item.tags ?? []).filter(Boolean)),
-  ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
   const counts = {
     '/today': activeItems.filter((item) => item.dueDate === toLocalDateKey()).length,
-    '/inbox': activeItems.filter((item) => item.status === 'inbox' || (!item.projectId && !item.dueDate && !item.scheduledDate)).length,
+    '/inbox': activeItems.filter((item) => item.status === 'inbox' || (!item.folderId && !item.dueDate && !item.scheduledDate)).length,
     '/upcoming': activeItems.filter((item) => item.dueDate || item.scheduledDate).length,
   } as Record<string, number>
 
@@ -170,61 +275,57 @@ export function Sidebar() {
 
       <SectionTitle
         action={
-          <Link href="/projects" className="font-mono text-[10px] text-navy-300 hover:text-navy-700">
-            Todos
-          </Link>
+          <div className="flex items-center gap-1">
+            {allParentIds.length > 0 && (
+              <button
+                type="button"
+                onClick={toggleAll}
+                className="rounded p-1 text-navy-300 hover:bg-surface-soft hover:text-navy-700"
+                title={allExpanded ? 'Recolher tudo' : 'Expandir tudo'}
+                aria-label={allExpanded ? 'Recolher tudo' : 'Expandir tudo'}
+              >
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  {allExpanded ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+                  )}
+                </svg>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handleNewFolder}
+              className="rounded p-1 text-navy-300 hover:bg-surface-soft hover:text-navy-700"
+              title="Nova pasta"
+              aria-label="Nova pasta"
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <Link href="/notas" className="font-mono text-[10px] text-navy-300 hover:text-navy-700">
+              Todas
+            </Link>
+          </div>
         }
       >
-        Projetos
+        Notas
       </SectionTitle>
-      <div className="flex flex-col gap-px px-2">
-        {projects
-          .filter((p) => p.status === 'active')
-          .slice(0, 8)
-          .map((p) => (
-            <NavLink
-              key={p.id}
-              href={`/projects/${p.id}`}
-              label={p.name}
-              iconNode={
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: p.color ?? '#94a3b8' }}
-                />
-              }
-            />
-          ))}
-        {projects.length === 0 && (
-          <span className="px-2.5 py-1 font-mono text-[11px] text-navy-300">Nenhum projeto</span>
+      <div className="flex flex-col px-1">
+        {tree.length === 0 && (
+          <span className="px-2.5 py-1 font-mono text-[11px] text-navy-300">Nenhuma pasta</span>
         )}
-      </div>
-
-      <SectionTitle
-        action={
-          <Link href="/tags" className="font-mono text-[10px] text-navy-300 hover:text-navy-700">
-            Todas
-          </Link>
-        }
-      >
-        Tags
-      </SectionTitle>
-      <div className="flex flex-col gap-px px-2">
-        {tags.slice(0, 10).map((tag, index) => (
-          <Link
-            key={tag}
-            href={`/tags/${encodeURIComponent(tag)}`}
-            className="flex items-center gap-2 rounded-md px-2.5 py-1.5 font-mono text-[12px] text-navy-700 transition-colors hover:bg-surface-soft"
-          >
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: index % 2 === 0 ? '#2f6bff' : '#28c7b7' }}
-            />
-            <span className="min-w-0 flex-1 truncate">#{tag}</span>
-          </Link>
+        {tree.map((node) => (
+          <FolderTreeRow
+            key={node.id}
+            node={node}
+            depth={0}
+            expanded={expanded}
+            toggle={toggle}
+            pathname={pathname}
+          />
         ))}
-        {tags.length === 0 && (
-          <span className="px-2.5 py-1 font-mono text-[11px] text-navy-300">Nenhuma tag</span>
-        )}
       </div>
 
       <div className="flex-1" />

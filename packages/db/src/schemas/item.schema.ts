@@ -21,6 +21,7 @@ const ItemSchema = new Schema(
     startDate: { type: String },
     scheduledDate: { type: String },
     projectId: { type: String, ref: 'Project' },
+    folderId: { type: String, ref: 'Folder' },
     areaId: { type: String, ref: 'Area' },
     parentId: { type: String, ref: 'Item' },
     tags: { type: [String], default: [] },

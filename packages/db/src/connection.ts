@@ -92,6 +92,7 @@ function isCreateTableStatement(sql: string): boolean {
 async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
+  await ensureColumn(db, 'items', 'folderId', 'TEXT')
   await ensureColumn(db, 'push_subscriptions', 'expirationTime', 'INTEGER')
   await ensureColumn(db, 'push_subscriptions', 'userAgent', 'TEXT')
   await ensureColumn(db, 'push_subscriptions', 'deviceLabel', 'TEXT')
@@ -151,6 +152,17 @@ const sqliteSchema = [
     updatedAt TEXT NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS projects_user_order_idx ON projects (userId, "order")`,
+  `CREATE TABLE IF NOT EXISTS folders (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    parentId TEXT,
+    "order" INTEGER NOT NULL DEFAULT 0,
+    createdAt TEXT NOT NULL,
+    updatedAt TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS folders_user_parent_idx ON folders (userId, parentId)`,
+  `CREATE INDEX IF NOT EXISTS folders_user_order_idx ON folders (userId, "order")`,
   `CREATE TABLE IF NOT EXISTS areas (
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
@@ -322,6 +334,7 @@ const postgresIdentifiers = [
   'riskLevel',
   'expiresAt',
   'projectId',
+  'folderId',
   'localPath',
   'syncHash',
   'parentId',

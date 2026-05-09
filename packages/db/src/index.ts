@@ -11,6 +11,10 @@ export const ProjectModel = new SqlModel({
   table: 'projects',
 })
 
+export const FolderModel = new SqlModel({
+  table: 'folders',
+})
+
 export const AreaModel = new SqlModel({
   table: 'areas',
 })

@@ -138,6 +138,27 @@ export class SqlModel<T extends Row = Row> {
     await execute(db, `DELETE FROM ${this.config.table}${where.sql}`, where.values)
   }
 
+  async deleteOne(filter: Filter): Promise<void> {
+    await this.deleteMany(filter)
+  }
+
+  async updateMany(filter: Filter, update: Row): Promise<void> {
+    await connectDB()
+    const normalizedUpdate = normalizeUpdate(update)
+    const patch = { ...normalizedUpdate.set }
+    for (const field of normalizedUpdate.unset) patch[field] = null
+    const entries = Object.entries(this.normalizeInput(patch))
+    if (entries.length === 0) return
+    const db = getClient()
+    const setSql = entries.map(([field], index) => `${quote(field)} = ${placeholder(db, index + 1)}`).join(', ')
+    const where = buildWhere(db, filter, entries.length + 1)
+    await execute(
+      db,
+      `UPDATE ${this.config.table} SET ${setSql}${where.sql}`,
+      [...entries.map(([field, value]) => this.serialize(field, value)), ...where.values],
+    )
+  }
+
   async findRows(filter: Filter, sortSpec: Sort | null, limitCount: number | null): Promise<T[]> {
     await connectDB()
     const db = getClient()

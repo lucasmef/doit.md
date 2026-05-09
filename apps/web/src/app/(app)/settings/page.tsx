@@ -8,22 +8,62 @@ import { usePushNotifications } from '@/hooks/use-push-notifications'
 import { ArchiveSection } from '@/components/archive/archive-section'
 import { AuditSection } from '@/components/audit/audit-section'
 import { ProfileSection } from '@/components/settings/profile-section'
+import { useItems } from '@/hooks/use-items'
+import Link from 'next/link'
 
 interface GoogleAccount {
   email: string
   connectedAt: string
 }
 
-type Tab = 'profile' | 'integrations' | 'notifications' | 'sync' | 'archive' | 'audit'
+type Tab = 'profile' | 'integrations' | 'notifications' | 'sync' | 'tags' | 'archive' | 'audit'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'profile', label: 'Perfil' },
   { id: 'integrations', label: 'Integracoes' },
   { id: 'notifications', label: 'Notificacoes' },
   { id: 'sync', label: 'Sync' },
+  { id: 'tags', label: 'Tags' },
   { id: 'archive', label: 'Arquivo' },
   { id: 'audit', label: 'Auditoria' },
 ]
+
+function TagsSection() {
+  const { items } = useItems()
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    if (item.status === 'archived') continue
+    for (const tag of item.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+  }
+  const tags = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'))
+
+  return (
+    <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+      <div className="px-5 py-4">
+        <h2 className="text-sm font-semibold text-slate-700">Tags</h2>
+        <p className="mt-0.5 text-xs text-slate-400">Tags coletadas dos seus itens ativos.</p>
+      </div>
+      <div className="px-5 py-5">
+        {tags.length === 0 ? (
+          <p className="text-sm text-slate-400">Nenhuma tag em uso.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {tags.map(([tag, count]) => (
+              <Link
+                key={tag}
+                href={`/tags/${encodeURIComponent(tag)}`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-ui-border bg-white px-3 py-1 text-[12px] text-navy-700 hover:bg-surface-soft"
+              >
+                <span>#{tag}</span>
+                <span className="font-mono text-[10px] text-navy-300">{count}</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}
 
 function SettingsContent() {
   const searchParams = useSearchParams()
@@ -310,6 +350,7 @@ function SettingsContent() {
         </section>
       )}
 
+      {tab === 'tags' && <TagsSection />}
       {tab === 'archive' && <ArchiveSection />}
       {tab === 'audit' && <AuditSection />}
     </div>

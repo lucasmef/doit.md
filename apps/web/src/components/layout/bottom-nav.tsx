@@ -38,9 +38,9 @@ function IconMenu() {
 }
 
 const MENU_LINKS = [
-  { href: '/projects', label: 'Projetos' },
-  { href: '/tags', label: 'Tags' },
+  { href: '/notas', label: 'Notas' },
   { href: '/settings', label: 'Configuracoes' },
+  { href: '/settings?tab=tags', label: 'Tags' },
   { href: '/settings?tab=archive', label: 'Arquivo' },
   { href: '/settings?tab=audit', label: 'Auditoria' },
 ]

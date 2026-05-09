@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
     const projectId = searchParams.get('projectId')
+    const folderIdParam = searchParams.get('folderId')
     const q = searchParams.get('q')?.trim()
 
     const query: Record<string, unknown> = { userId }
@@ -56,6 +57,9 @@ export async function GET(req: NextRequest) {
       if (status) query['status'] = status
     }
     if (projectId) query['projectId'] = projectId
+    if (folderIdParam !== null) {
+      query['folderId'] = folderIdParam === 'null' || folderIdParam === '' ? null : folderIdParam
+    }
 
     const rows = await ItemModel.find(query).sort({ updatedAt: -1 }).lean()
     const filtered = rows.filter((item: Record<string, unknown>) => {
@@ -107,6 +111,7 @@ export async function POST(req: NextRequest) {
       startDate: body.startDate,
       scheduledDate: body.scheduledDate,
       projectId: body.projectId,
+      folderId: body.folderId,
       areaId: body.areaId,
       parentId: body.parentId,
       contentMd: body.contentMd,

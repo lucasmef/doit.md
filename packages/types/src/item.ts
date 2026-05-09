@@ -22,6 +22,7 @@ export type Item = {
   scheduledDate?: string
 
   projectId?: string
+  folderId?: string
   areaId?: string
   parentId?: string
 
@@ -52,6 +53,7 @@ export type CreateItemInput = Pick<Item, 'title' | 'complexity'> &
       | 'startDate'
       | 'scheduledDate'
       | 'projectId'
+      | 'folderId'
       | 'areaId'
       | 'parentId'
       | 'tags'
@@ -72,6 +74,7 @@ export type UpdateItemInput = Partial<
     | 'startDate'
     | 'scheduledDate'
     | 'projectId'
+    | 'folderId'
     | 'areaId'
     | 'parentId'
     | 'tags'

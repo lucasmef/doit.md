@@ -63,10 +63,11 @@ function useFlushOfflineItems() {
   }, [])
 }
 
-export function useItems(params?: { status?: string; projectId?: string; q?: string }) {
+export function useItems(params?: { status?: string; projectId?: string; folderId?: string | null; q?: string }) {
   const query = new URLSearchParams()
   if (params?.status) query.set('status', params.status)
   if (params?.projectId) query.set('projectId', params.projectId)
+  if (params?.folderId !== undefined) query.set('folderId', params.folderId ?? 'null')
   if (params?.q) query.set('q', params.q)
   const url = `/api/items${query.size ? '?' + query.toString() : ''}`
 
