@@ -1,12 +1,16 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import type { Item, ItemRecurrence } from '@doit/types'
+import type { Item } from '@doit/types'
 import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
 import type { Priority } from './priority-select'
 import { updateItem } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
-import { toLocalDateKey } from '@doit/core'
+import {
+  formatRecurrenceLabel,
+  nextRecurringDate as computeNextRecurringDate,
+  toLocalDateKey,
+} from '@doit/core'
 
 function formatDueDate(dateStr: string): string {
   const tomorrowDate = new Date()
@@ -31,46 +35,6 @@ function IconNoteFilled({ className = 'h-4 w-4' }: { className?: string }) {
       <path d="M6 2.75A2.25 2.25 0 0 0 3.75 5v14A2.25 2.25 0 0 0 6 21.25h12A2.25 2.25 0 0 0 20.25 19V8.12a2.25 2.25 0 0 0-.66-1.59l-3.12-3.12a2.25 2.25 0 0 0-1.59-.66H6Zm8.25 1.81 4.19 4.19H15a.75.75 0 0 1-.75-.75V4.56ZM7.5 11.75a.75.75 0 0 1 .75-.75h7.5a.75.75 0 0 1 0 1.5h-7.5a.75.75 0 0 1-.75-.75Zm0 4a.75.75 0 0 1 .75-.75h5.5a.75.75 0 0 1 0 1.5h-5.5a.75.75 0 0 1-.75-.75Z" />
     </svg>
   )
-}
-
-const RECURRENCE_LABELS: Record<ItemRecurrence, string> = {
-  daily: 'Todo dia',
-  weekdays: 'Dias úteis',
-  weekly: 'Toda semana',
-  monthly: 'Todo mês',
-  yearly: 'Todo ano',
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date)
-  next.setDate(next.getDate() + days)
-  return next
-}
-
-function toDateString(date: Date) {
-  return toLocalDateKey(date)
-}
-
-function nextRecurringDate(current: string | undefined, recurrence: ItemRecurrence): string {
-  const today = new Date(`${toLocalDateKey()}T12:00:00`)
-  const base = current ? new Date(`${current}T12:00:00`) : today
-  if (base < today) base.setTime(today.getTime())
-
-  if (recurrence === 'daily') return toDateString(addDays(base, 1))
-  if (recurrence === 'weekdays') {
-    let next = addDays(base, 1)
-    while (next.getDay() === 0 || next.getDay() === 6) next = addDays(next, 1)
-    return toDateString(next)
-  }
-  if (recurrence === 'weekly') return toDateString(addDays(base, 7))
-  if (recurrence === 'monthly') {
-    const next = new Date(base)
-    next.setMonth(next.getMonth() + 1)
-    return toDateString(next)
-  }
-  const next = new Date(base)
-  next.setFullYear(next.getFullYear() + 1)
-  return toDateString(next)
 }
 
 type Props = {
@@ -104,7 +68,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
       setTimeout(() => setJustCompleted(false), 600)
       await updateItem(item.id, {
         status: 'todo',
-        dueDate: nextRecurringDate(item.dueDate, item.recurrence),
+        dueDate: computeNextRecurringDate(item.dueDate, item.recurrence),
       })
       return
     }
@@ -269,7 +233,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
           )}
           {item.recurrence && (
             <span className="truncate font-mono text-[11px] text-navy-300">
-              {RECURRENCE_LABELS[item.recurrence]}
+              {formatRecurrenceLabel(item.recurrence, item.dueDate)}
             </span>
           )}
         </div>

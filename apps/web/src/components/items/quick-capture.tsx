@@ -10,8 +10,10 @@ import { MarkdownEditor } from './markdown-editor'
 import { isTypingTarget } from '@/hooks/use-keyboard'
 import { PRIORITY_CONFIG } from './priority-select'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
+import { RecurrencePopover } from './recurrence-popover'
 import type { Priority } from './priority-select'
 import type { ItemComplexity, ItemRecurrence, Project } from '@doit/types'
+import { formatRecurrenceLabel } from '@doit/core'
 
 type ItemMode = Extract<ItemComplexity, 'task' | 'note'>
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
@@ -31,15 +33,6 @@ const DATE_WORD_SHORTCUT =
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
-const RECURRENCE_OPTIONS: Array<{ value: ItemRecurrence | ''; label: string }> = [
-  { value: '', label: 'Sem recorrência' },
-  { value: 'daily', label: 'Todo dia' },
-  { value: 'weekdays', label: 'Dias úteis' },
-  { value: 'weekly', label: 'Toda semana' },
-  { value: 'monthly', label: 'Todo mês' },
-  { value: 'yearly', label: 'Todo ano' },
-]
-
 function toDateInputValue(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -707,8 +700,7 @@ export function QuickCapture() {
   const canSwitchMode =
     !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
-  const recurrenceLabel =
-    RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
+  const recurrenceLabel = formatRecurrenceLabel(recurrence, dueDate)
 
   return (
     <div
@@ -974,22 +966,11 @@ export function QuickCapture() {
                     {recurrence ? recurrenceLabel : ''}
                   </ToolButton>
                   {popover === 'recurrence' && (
-                    <div className="absolute left-0 top-9 z-10 w-48 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
-                      {RECURRENCE_OPTIONS.map((option) => (
-                        <button
-                          key={option.value || 'none'}
-                          type="button"
-                          onClick={() => handleRecurrenceChange(option.value)}
-                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                        >
-                          <IconRepeat className="h-3.5 w-3.5 text-slate-400" />
-                          <span className="flex-1">{option.label}</span>
-                          {recurrence === option.value && (
-                            <IconCheck className="h-3.5 w-3.5 text-slate-500" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                    <RecurrencePopover
+                      value={recurrence}
+                      dueDate={dueDate}
+                      onChange={handleRecurrenceChange}
+                    />
                   )}
                 </div>
               )}

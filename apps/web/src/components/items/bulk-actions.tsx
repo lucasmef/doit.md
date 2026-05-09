@@ -17,11 +17,11 @@ type Props = {
 const STATUS_OPTIONS: ItemStatus[] = ['inbox', 'todo', 'doing', 'waiting', 'done', 'archived']
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
 const RECURRENCES: Array<{ value: ItemRecurrence | ''; label: string }> = [
-  { value: '', label: 'Sem recorrencia' },
-  { value: 'daily', label: 'Todo dia' },
-  { value: 'weekdays', label: 'Dias uteis' },
+  { value: '', label: 'Sem recorrência' },
+  { value: 'daily', label: 'Todos os dias' },
+  { value: 'weekdays', label: 'Dias úteis' },
   { value: 'weekly', label: 'Toda semana' },
-  { value: 'monthly', label: 'Todo mes' },
+  { value: 'monthly', label: 'Todo mês' },
   { value: 'yearly', label: 'Todo ano' },
 ]
 
@@ -256,7 +256,7 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
             )
           }
         >
-          <option value="">Alterar recorrencia</option>
+          <option value="">Alterar recorrência</option>
           {RECURRENCES.map((option) => (
             <option key={option.value || 'none'} value={option.value || 'none'}>
               {option.label}

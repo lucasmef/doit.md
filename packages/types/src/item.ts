@@ -1,7 +1,9 @@
 export type ItemComplexity = 'capture' | 'task' | 'note' | 'project' | 'document'
 
 export type ItemStatus = 'inbox' | 'todo' | 'doing' | 'waiting' | 'done' | 'archived'
-export type ItemRecurrence = 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'yearly'
+export type BuiltInItemRecurrence = 'daily' | 'weekdays' | 'weekly' | 'monthly' | 'yearly'
+export type CustomItemRecurrence = `custom:${string}`
+export type ItemRecurrence = BuiltInItemRecurrence | CustomItemRecurrence
 
 export type Item = {
   id: string
