@@ -15,12 +15,7 @@ export default function TagsPage() {
   ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
   return (
-    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-      <div className="flex items-baseline justify-between mb-8 border-b border-ui-border-soft pb-4">
-        <h1 className="text-[28px] font-bold text-slate-900">Tags</h1>
-        <p className="text-[14px] text-slate-500 font-medium">{tags.length} tags</p>
-      </div>
-
+    <div className="mx-auto max-w-3xl px-5 pb-24 pt-3 lg:pb-4">
       {isLoading && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {[...Array(6)].map((_, i) => (

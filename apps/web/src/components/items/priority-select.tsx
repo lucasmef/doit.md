@@ -3,10 +3,10 @@
 export type Priority = 1 | 2 | 3 | 4
 
 export const PRIORITY_CONFIG = {
-  1: { label: 'P1', title: 'Urgente', color: 'text-red-500', border: 'border-red-500', bg: 'bg-red-500', ring: 'ring-red-200', flagFill: '#ef4444' },
-  2: { label: 'P2', title: 'Alta',    color: 'text-orange-500', border: 'border-orange-400', bg: 'bg-orange-400', ring: 'ring-orange-200', flagFill: '#fb923c' },
-  3: { label: 'P3', title: 'Média',   color: 'text-blue-500', border: 'border-blue-500', bg: 'bg-blue-500', ring: 'ring-blue-200', flagFill: '#3b82f6' },
-  4: { label: 'P4', title: 'Normal',  color: 'text-slate-400', border: 'border-slate-300', bg: 'bg-slate-300', ring: 'ring-slate-200', flagFill: '#94a3b8' },
+  1: { label: 'P1', title: 'Alta', color: 'text-red-500', border: 'border-red-500', bg: 'bg-red-500', ring: 'ring-red-200', flagFill: '#ef4444' },
+  2: { label: 'P2', title: 'Media',    color: 'text-orange-500', border: 'border-orange-400', bg: 'bg-orange-400', ring: 'ring-orange-200', flagFill: '#fb923c' },
+  3: { label: 'P3', title: 'Baixa', color: 'text-blue-500', border: 'border-blue-500', bg: 'bg-blue-500', ring: 'ring-blue-200', flagFill: '#3b82f6' },
+  4: { label: 'P4', title: 'Sem prioridade',  color: 'text-slate-400', border: 'border-slate-300', bg: 'bg-slate-300', ring: 'ring-slate-200', flagFill: '#94a3b8' },
 } as const
 
 export function PriorityFlag({ priority, size = 14 }: { priority?: Priority | null; size?: number }) {

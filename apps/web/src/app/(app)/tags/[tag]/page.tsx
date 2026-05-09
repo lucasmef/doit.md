@@ -11,12 +11,7 @@ export default function TagDetailPage({ params }: { params: Promise<{ tag: strin
   const tagItems = items.filter((item) => item.status !== 'archived' && item.tags?.includes(tag))
 
   return (
-    <div className="p-3 max-w-3xl mx-auto pb-24 lg:pb-4">
-      <div className="flex items-baseline justify-between mb-4 border-b border-ui-border-soft pb-3">
-        <h1 className="text-[26px] font-bold text-slate-900">@{tag}</h1>
-        <p className="text-[13px] text-slate-500 font-medium">{tagItems.length} itens</p>
-      </div>
-
+    <div className="mx-auto max-w-3xl px-5 pb-24 pt-3 lg:pb-4">
       <ItemList items={tagItems} isLoading={isLoading} emptyMessage="Nenhum item com esta tag." />
     </div>
   )

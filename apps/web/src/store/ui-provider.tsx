@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { UIContext } from '@/store/ui'
+import { UIContext, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
@@ -9,32 +9,90 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
+  const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<ItemContextMenuState>(null)
+
+  const setSingleSelection = useCallback((id: string | null) => {
+    setSelectedItemId(id)
+    setSelectedItemIds(id ? [id] : [])
+    setSelectionAnchorId(id)
+  }, [])
+
+  const clearSelection = useCallback(() => {
+    setSelectedItemId(null)
+    setSelectedItemIds([])
+    setSelectionAnchorId(null)
+    setContextMenu(null)
+  }, [])
+
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedItemIds((current) => {
+      const next = current.includes(id) ? current.filter((itemId) => itemId !== id) : [...current, id]
+      setSelectedItemId(next[next.length - 1] ?? null)
+      return next
+    })
+    setSelectionAnchorId(id)
+  }, [])
+
+  const selectRange = useCallback((orderedIds: string[], id: string) => {
+    const anchor = selectionAnchorId && orderedIds.includes(selectionAnchorId) ? selectionAnchorId : selectedItemId
+    const start = anchor ? orderedIds.indexOf(anchor) : -1
+    const end = orderedIds.indexOf(id)
+    if (start < 0 || end < 0) {
+      setSingleSelection(id)
+      return
+    }
+
+    const [from, to] = start <= end ? [start, end] : [end, start]
+    const range = orderedIds.slice(from, to + 1)
+    setSelectedItemIds(range)
+    setSelectedItemId(id)
+    setSelectionAnchorId(anchor)
+  }, [selectedItemId, selectionAnchorId, setSingleSelection])
+
+  const openContextMenu = useCallback((state: Exclude<ItemContextMenuState, null>) => {
+    setContextMenu(state)
+  }, [])
+
+  const closeContextMenu = useCallback(() => {
+    setContextMenu(null)
+  }, [])
 
   const navigateList = useCallback((direction: 'up' | 'down') => {
     const items = Array.from(document.querySelectorAll<HTMLElement>('[data-item-id]'))
     if (items.length === 0) return
     if (!selectedItemId) {
       const first = items[0]?.dataset.itemId ?? null
-      setSelectedItemId(first)
+      setSingleSelection(first)
       return
     }
     const idx = items.findIndex((el) => el.dataset.itemId === selectedItemId)
     if (direction === 'down') {
       const next = items[idx + 1]?.dataset.itemId ?? null
-      if (next) { setSelectedItemId(next); items[idx + 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }
+      if (next) { setSingleSelection(next); items[idx + 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }
     } else {
       const prev = items[idx - 1]?.dataset.itemId ?? null
-      if (prev) { setSelectedItemId(prev); items[idx - 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }
+      if (prev) { setSingleSelection(prev); items[idx - 1]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) }
     }
-  }, [selectedItemId])
+  }, [selectedItemId, setSingleSelection])
+
+  function hasNoFocusedElement() {
+    const active = document.activeElement
+    return !active || active === document.body || active === document.documentElement
+  }
 
   useKeyboard([
     {
       key: 'Escape',
       handler: () => {
+        if (contextMenu) { setContextMenu(null); return }
+        if (shortcutsOpen) { setShortcutsOpen(false); return }
+        if (selectedItemIds.length > 1) { clearSelection(); return }
         if (quickCaptureOpen) { setQuickCaptureOpen(false); return }
         if (calendarOpen) { setCalendarOpen(false); return }
-        if (selectedItemId) setSelectedItemId(null)
+        if (selectedItemId) setSingleSelection(null)
       },
     },
     {
@@ -45,6 +103,15 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       key: 'C',
       shift: true,
       handler: (e) => { e.preventDefault(); setCalendarOpen(!calendarOpen) },
+    },
+    {
+      key: '?',
+      shift: true,
+      handler: (e) => {
+        if (!hasNoFocusedElement()) return
+        e.preventDefault()
+        setShortcutsOpen(true)
+      },
     },
     {
       key: 'j',
@@ -74,14 +141,25 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   return (
     <UIContext.Provider
       value={{ 
-        selectedItemId, 
-        setSelectedItemId, 
+        selectedItemId,
+        setSelectedItemId: setSingleSelection,
+        selectedItemIds,
+        selectionAnchorId,
+        setSingleSelection,
+        toggleSelection,
+        selectRange,
+        clearSelection,
+        contextMenu,
+        openContextMenu,
+        closeContextMenu,
         quickCaptureOpen, 
         setQuickCaptureOpen, 
         editingItemId, 
         setEditingItemId,
         calendarOpen,
-        setCalendarOpen
+        setCalendarOpen,
+        shortcutsOpen,
+        setShortcutsOpen
       }}
     >
       {children}

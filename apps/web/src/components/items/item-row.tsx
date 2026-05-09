@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Item, ItemRecurrence } from '@doit/types'
 import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
 import type { Priority } from './priority-select'
@@ -76,12 +76,22 @@ function nextRecurringDate(current: string | undefined, recurrence: ItemRecurren
 type Props = {
   item: Item
   active?: boolean
+  selected?: boolean
+  orderedIds?: string[]
   index?: number
 }
 
-export function ItemRow({ item, active = false, index = 0 }: Props) {
-  const { setSelectedItemId } = useUI()
+export function ItemRow({ item, active = false, selected = false, orderedIds = [], index = 0 }: Props) {
+  const {
+    selectedItemIds,
+    setSingleSelection,
+    toggleSelection,
+    selectRange,
+    openContextMenu,
+  } = useUI()
   const [justCompleted, setJustCompleted] = useState(false)
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressTriggered = useRef(false)
 
   async function toggleDone(e: React.MouseEvent) {
     e.stopPropagation()
@@ -127,16 +137,68 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
 
   const staggerDelay = `${Math.min(index * 40, 300)}ms`
 
+  function handleClick(e: React.MouseEvent) {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false
+      e.preventDefault()
+      return
+    }
+
+    if (e.shiftKey) {
+      e.preventDefault()
+      selectRange(orderedIds, item.id)
+      return
+    }
+
+    if (e.metaKey || e.ctrlKey) {
+      e.preventDefault()
+      toggleSelection(item.id)
+      return
+    }
+
+    setSingleSelection(item.id)
+  }
+
+  function handleContextMenu(e: React.MouseEvent) {
+    e.preventDefault()
+    if (!selectedItemIds.includes(item.id)) setSingleSelection(item.id)
+    openContextMenu({ itemId: item.id, x: e.clientX, y: e.clientY })
+  }
+
+  function clearLongPressTimer() {
+    if (!longPressTimer.current) return
+    clearTimeout(longPressTimer.current)
+    longPressTimer.current = null
+  }
+
+  function handlePointerDown(e: React.PointerEvent) {
+    if (e.pointerType === 'mouse') return
+    longPressTriggered.current = false
+    clearLongPressTimer()
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true
+      if (!selectedItemIds.includes(item.id)) setSingleSelection(item.id)
+      openContextMenu({ itemId: item.id, x: e.clientX, y: e.clientY })
+    }, 450)
+  }
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => setSelectedItemId(item.id)}
-      onKeyDown={(e) => e.key === 'Enter' && setSelectedItemId(item.id)}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      onPointerDown={handlePointerDown}
+      onPointerMove={clearLongPressTimer}
+      onPointerUp={clearLongPressTimer}
+      onPointerCancel={clearLongPressTimer}
+      onKeyDown={(e) => e.key === 'Enter' && setSingleSelection(item.id)}
       data-item-id={item.id}
       style={{ animationDelay: staggerDelay }}
       className={`group flex w-full cursor-pointer items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
-        active
+        selected
+          ? 'border-ui-border-selected bg-surface-selected'
+          : active
           ? 'border-ui-border-selected bg-surface-selected'
           : 'border-ui-border-soft hover:bg-surface-soft'
       }`}
@@ -145,6 +207,8 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
       {(item.complexity === 'task' || item.complexity === 'capture') ? (
         <button
           onClick={toggleDone}
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.stopPropagation()}
           className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-all ${
             item.status === 'done'
               ? 'border-teal-500 bg-teal-500'
@@ -216,6 +280,8 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
         <button
           type="button"
           onClick={toggleDone}
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.stopPropagation()}
           className="shrink-0 rounded-md border border-ui-border bg-white px-2 py-1 text-[12px] font-medium text-navy-500 hover:bg-surface-soft hover:text-brand-700"
         >
           Restaurar

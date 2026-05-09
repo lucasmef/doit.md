@@ -19,11 +19,11 @@ type ActiveShortcut =
   | { kind: 'project'; query: string; start: number; end: number }
   | { kind: 'priority'; query: string; start: number; end: number }
 
-const PRIORITY_SHORTCUT = /(?:^|\s)!P([1-4])\b/i
+const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
 const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
-const INLINE_METADATA_PATTERN = /(!P[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|\b(?:hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|às\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
+const INLINE_METADATA_PATTERN = /(\bp[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|\b(?:hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|às\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
 const DATE_WORD_SHORTCUT = /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
@@ -101,7 +101,7 @@ const TIME_SUGGESTIONS = ['09:00', '12:00', '18:00', '20:00']
 
 function cleanTitle(value: string) {
   return value
-    .replace(/(?:^|\s)!P[1-4]\b/gi, ' ')
+    .replace(/(?:^|\s)p[1-4]\b/gi, ' ')
     .replace(/(?:^|\s)#[\p{L}\p{N}][\p{L}\p{N}_-]*/giu, ' ')
     .replace(/(?:^|\s)@[\p{L}\p{N}][\p{L}\p{N}_-]*/giu, ' ')
     .replace(DATE_WORD_SHORTCUT, ' ')
@@ -122,7 +122,7 @@ function normalizeToken(value: string) {
 }
 
 function isCategorizerToken(value: string) {
-  return /^!P?[1-4]?$/i.test(value) ||
+  return /^p[1-4]?$/i.test(value) ||
     /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value) ||
     DATE_WORD_SHORTCUT.test(` ${value}`) ||
     SLASH_DATE_SHORTCUT.test(` ${value}`) ||
@@ -208,7 +208,7 @@ function parseInlineDueTime(value: string) {
 
 function activeShortcut(value: string, cursor: number): ActiveShortcut | null {
   const beforeCursor = value.slice(0, cursor)
-  const match = beforeCursor.match(/(^|\s)([@#][\p{L}\p{N}_-]*|!P?[1-4]?)$/iu)
+  const match = beforeCursor.match(/(^|\s)([@#][\p{L}\p{N}_-]*|p[1-4]?)$/iu)
   if (!match?.[2]) return null
 
   const token = match[2]
@@ -414,7 +414,7 @@ export function QuickCapture() {
       }).slice(0, 8)
     : []
   const shortcutPriorities = shortcut?.kind === 'priority'
-    ? PRIORITIES.filter((p) => `!P${p}`.startsWith(shortcut.query || '!')).map((p) => ({ value: p, config: PRIORITY_CONFIG[p] }))
+    ? PRIORITIES.filter((p) => `p${p}`.startsWith(shortcut.query.toLocaleLowerCase('pt-BR') || 'p')).map((p) => ({ value: p, config: PRIORITY_CONFIG[p] }))
     : []
 
   useEffect(() => {
@@ -545,7 +545,7 @@ export function QuickCapture() {
 
   function selectShortcutPriority(next: Priority) {
     setPriority(next)
-    replaceShortcut(`!P${next}`)
+    replaceShortcut(`p${next}`)
   }
 
   async function addProject(value: string) {

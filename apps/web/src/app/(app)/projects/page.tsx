@@ -14,9 +14,8 @@ export default function ProjectsPage() {
   const done = projects.filter((p) => p.status === 'done' || p.status === 'archived')
 
   return (
-    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-      <div className="flex items-center justify-between mb-8 border-b border-ui-border-soft pb-4">
-        <h1 className="text-[28px] font-bold text-slate-900">Projetos</h1>
+    <div className="mx-auto max-w-3xl px-5 pb-24 pt-3 lg:pb-4">
+      <div className="mb-3 flex items-center justify-end">
         {!creating && (
           <button
             onClick={() => setCreating(true)}
@@ -28,7 +27,7 @@ export default function ProjectsPage() {
       </div>
 
       {creating && (
-        <div className="mb-6">
+        <div className="mb-4">
           <CreateProjectForm onDone={() => setCreating(false)} />
         </div>
       )}
@@ -54,7 +53,7 @@ export default function ProjectsPage() {
       )}
 
       {active.length > 0 && (
-        <section className="mb-6">
+        <section className="mb-4">
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
             Ativos · {active.length}
           </h2>
@@ -65,7 +64,7 @@ export default function ProjectsPage() {
       )}
 
       {paused.length > 0 && (
-        <section className="mb-6">
+        <section className="mb-4">
           <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
             Pausados · {paused.length}
           </h2>

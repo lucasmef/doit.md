@@ -2,7 +2,7 @@
 
 import { useEffect, useSyncExternalStore } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
-import type { Item, CreateItemInput, UpdateItemInput } from '@doit/types'
+import type { Item, CreateItemInput, UpdateItemInput, BulkItemActionInput } from '@doit/types'
 import {
   flushOfflineItemQueue,
   getOfflineItemQueue,
@@ -157,5 +157,76 @@ export async function archiveItem(id: string): Promise<void> {
     queueArchiveItem(id)
   } finally {
     await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+  }
+}
+
+function normalizeTag(value: string) {
+  return value.trim().toLocaleLowerCase('pt-BR').replace(/^@/, '')
+}
+
+function patchWithTags(item: Item | undefined, action: BulkItemActionInput): UpdateItemInput {
+  const patch = { ...(action.patch ?? {}) } as UpdateItemInput
+  if (!action.tagAction) return patch
+
+  const tags = action.tagAction.tags.map(normalizeTag).filter(Boolean)
+  const current = item?.tags ?? []
+  if (action.tagAction.type === 'set') {
+    patch.tags = Array.from(new Set(tags))
+  } else if (action.tagAction.type === 'remove') {
+    patch.tags = current.filter((tag) => !tags.includes(normalizeTag(tag)))
+  } else {
+    patch.tags = Array.from(new Set([...current, ...tags]))
+  }
+  return patch
+}
+
+export async function bulkUpdateItems(input: BulkItemActionInput, fallbackItems: Item[] = []): Promise<Item[]> {
+  const ids = Array.from(new Set(input.ids.filter(Boolean)))
+  if (ids.length === 0) return []
+
+  const fallbackById = new Map(fallbackItems.map((item) => [item.id, item]))
+
+  if (ids.every((id) => id.startsWith('local_item_'))) {
+    const items = ids.map((id) => queueUpdateItem(id, patchWithTags(fallbackById.get(id), input), fallbackById.get(id)))
+    await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+    return items
+  }
+
+  try {
+    const res = await fetch('/api/items/bulk', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...input, ids }),
+    })
+    if (!res.ok) throw new Error(await readError(res, 'Falha ao atualizar itens'))
+    const { items } = (await res.json()) as { items: Item[] }
+    await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+    await Promise.all(ids.map((id) => globalMutate(`/api/items/${id}/versions`)))
+    return items
+  } catch (error) {
+    if (!isNetworkFailure(error)) throw error
+
+    const items = ids.map((id) => {
+      if (input.patch?.status === 'archived') {
+        queueArchiveItem(id)
+        return {
+          ...(fallbackById.get(id) ?? {
+            id,
+            userId: 'offline',
+            title: 'Item offline',
+            complexity: 'task' as const,
+            status: 'todo' as const,
+            tags: [],
+            backlinks: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }),
+          status: 'archived' as const,
+        }
+      }
+      return queueUpdateItem(id, patchWithTags(fallbackById.get(id), input), fallbackById.get(id))
+    })
+    await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+    return items
   }
 }

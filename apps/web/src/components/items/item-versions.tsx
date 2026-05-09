@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import type { ItemVersion } from '@doit/types'
 
@@ -15,8 +15,21 @@ export function ItemVersions({ itemId, compact = false }: Props) {
   )
   const [restoring, setRestoring] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
+  const [position, setPosition] = useState<{ left: number; top: number; width: number } | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
 
   const versions = data?.versions ?? []
+
+  function toggleOpen() {
+    const nextOpen = !open
+    if (nextOpen && compact && buttonRef.current && typeof window !== 'undefined') {
+      const rect = buttonRef.current.getBoundingClientRect()
+      const width = Math.min(320, window.innerWidth - 24)
+      const left = Math.min(Math.max(12, rect.right - width), window.innerWidth - width - 12)
+      setPosition({ left, top: rect.bottom + 8, width })
+    }
+    setOpen(nextOpen)
+  }
 
   async function handleRestore(versionId: string) {
     if (!confirm('Restaurar esta versao? O estado atual sera substituido.')) return
@@ -37,8 +50,9 @@ export function ItemVersions({ itemId, compact = false }: Props) {
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggleOpen}
         className="flex w-full items-center justify-between py-1 text-xs text-slate-400 transition-colors hover:text-slate-600"
       >
         <span className="truncate font-medium">{compact ? 'Historico' : 'Historico de versoes'}</span>
@@ -46,7 +60,10 @@ export function ItemVersions({ itemId, compact = false }: Props) {
       </button>
 
       {open && (
-        <div className={`${compact ? 'absolute right-0 top-8 z-30 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md' : 'mt-2'} space-y-1`}>
+        <div
+          className={`${compact ? 'fixed z-[90] rounded-xl border border-ui-border bg-white p-2 shadow-cool-lg' : 'mt-2'} max-h-[min(420px,calc(100vh-96px))] space-y-1 overflow-y-auto`}
+          style={compact && position ? { left: position.left, top: position.top, width: position.width } : undefined}
+        >
           {isLoading && (
             <div className="h-8 animate-pulse rounded bg-slate-100" />
           )}

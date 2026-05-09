@@ -14,13 +14,14 @@ type Props = {
 }
 
 export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot, hideDoneAfterDelay = true }: Props) {
-  const { selectedItemId } = useUI()
+  const { selectedItemId, selectedItemIds } = useUI()
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
   const previousStatuses = useRef<Record<string, Item['status']>>({})
   const visibleItems = useMemo(() => {
     if (!hideDoneAfterDelay) return items
     return items.filter((item) => item.status !== 'done' || recentlyDoneIds[item.id])
   }, [hideDoneAfterDelay, items, recentlyDoneIds])
+  const visibleItemIds = useMemo(() => visibleItems.map((item) => item.id), [visibleItems])
 
   useEffect(() => {
     if (!hideDoneAfterDelay) {
@@ -89,7 +90,14 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
   return (
     <div className="pt-1">
       {visibleItems.map((item, index) => (
-        <ItemRow key={item.id} item={item} active={item.id === selectedItemId} index={index} />
+        <ItemRow
+          key={item.id}
+          item={item}
+          active={item.id === selectedItemId}
+          selected={selectedItemIds.includes(item.id)}
+          orderedIds={visibleItemIds}
+          index={index}
+        />
       ))}
     </div>
   )

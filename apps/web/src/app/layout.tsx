@@ -6,6 +6,16 @@ export const metadata: Metadata = {
   title: { default: 'doit.md', template: '%s — doit.md' },
   description: 'Notas, tarefas, projetos e calendário em um só lugar',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/brand/logo-icon.svg', type: 'image/svg+xml' },
+      { url: '/api/icon/192', sizes: '192x192', type: 'image/png' },
+      { url: '/api/icon/512', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: ['/favicon.svg'],
+    apple: [{ url: '/api/icon/192', sizes: '192x192', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

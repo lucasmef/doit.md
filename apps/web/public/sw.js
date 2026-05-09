@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'clarity-v3'
+const CACHE_VERSION = 'clarity-v4'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 const API_CACHE = `${CACHE_VERSION}-api`

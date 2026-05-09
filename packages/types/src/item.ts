@@ -78,3 +78,14 @@ export type UpdateItemInput = Partial<
     | 'backlinks'
   >
 >
+
+export type BulkItemTagAction = {
+  type: 'add' | 'remove' | 'set'
+  tags: string[]
+}
+
+export type BulkItemActionInput = {
+  ids: string[]
+  patch?: UpdateItemInput
+  tagAction?: BulkItemTagAction
+}

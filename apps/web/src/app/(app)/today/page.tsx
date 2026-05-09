@@ -39,10 +39,6 @@ export default function TodayPage() {
   const today = toLocalDateKey()
   const { events } = useCalendarEvents(today + 'T00:00:00Z', today + 'T23:59:59Z')
 
-  const todayLabel = new Date().toLocaleDateString('pt-BR', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
-
   const todayItems = items.filter(
     (i) => (isToday(i) || isOverdue(i)) && i.status !== 'archived',
   )
@@ -69,17 +65,9 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 py-8 pb-24 lg:pb-8">
-      <div className="mb-6 flex items-end justify-between">
-        <div>
-          <p className="mb-1 font-mono text-[12px] text-navy-300">doit.md / today</p>
-          <h1 className="text-[36px] font-extrabold leading-tight tracking-normal text-navy-900">Hoje</h1>
-        </div>
-        <p className="font-mono text-[12px] font-medium capitalize text-navy-500">{todayLabel}</p>
-      </div>
-
+    <div className="mx-auto w-full max-w-[760px] px-5 pb-24 pt-3 lg:pb-4">
       {todayEvents.length > 0 && (
-        <section className="mb-6 rounded-xl border border-ui-border bg-white p-4 shadow-cool-sm">
+        <section className="mb-4 rounded-xl border border-ui-border bg-white p-4 shadow-cool-sm">
           <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
             Eventos / {todayEvents.length}
           </h2>

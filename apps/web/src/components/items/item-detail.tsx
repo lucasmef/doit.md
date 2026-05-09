@@ -86,9 +86,95 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
   return `${hour}:${minute}`
 })
 const TIME_SUGGESTIONS = ['09:00', '12:00', '18:00', '20:00']
+const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
+const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
+const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
+const DATE_WORD_SHORTCUT = /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
+const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
+const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
 
 function normalizeToken(value: string) {
   return value.trim().toLocaleLowerCase('pt-BR')
+}
+
+function cleanTaskTitle(value: string) {
+  return value
+    .replace(/(?:^|\s)p[1-4]\b/gi, ' ')
+    .replace(/(?:^|\s)#[\p{L}\p{N}][\p{L}\p{N}_-]*/giu, ' ')
+    .replace(/(?:^|\s)@[\p{L}\p{N}][\p{L}\p{N}_-]*/giu, ' ')
+    .replace(DATE_WORD_SHORTCUT, ' ')
+    .replace(SLASH_DATE_SHORTCUT, ' ')
+    .replace(ISO_DATE_SHORTCUT, ' ')
+    .replace(TIME_SHORTCUT, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function parseSlashDate(dayText: string, monthText: string, yearText?: string) {
+  const day = Number(dayText)
+  const month = Number(monthText)
+  const now = new Date()
+  let year = yearText ? Number(yearText) : now.getFullYear()
+  if (yearText?.length === 2) year += 2000
+  if (!day || !month || month > 12 || day > 31) return ''
+
+  let date = new Date(year, month - 1, day)
+  if (!yearText && toLocalDateKey(date) < todayDate()) {
+    date = new Date(year + 1, month - 1, day)
+  }
+  if (date.getDate() !== day || date.getMonth() !== month - 1) return ''
+  return toLocalDateKey(date)
+}
+
+function parseDateWord(value: string) {
+  const token = normalizeToken(value)
+  if (token === 'hoje') return todayDate()
+  if (token === 'amanha' || token === 'amanhã') return dateAfter(1)
+  if (token === 'depois de amanha' || token === 'depois de amanhã') return dateAfter(2)
+  if (token === 'fim de semana' || token === 'final de semana') return nextWeekday(6)
+  if (token === 'semana que vem') return nextWeekday(1)
+
+  const weekdays: Record<string, number> = {
+    domingo: 0,
+    segunda: 1,
+    'segunda-feira': 1,
+    terca: 2,
+    terça: 2,
+    'terca-feira': 2,
+    'terça-feira': 2,
+    quarta: 3,
+    'quarta-feira': 3,
+    quinta: 4,
+    'quinta-feira': 4,
+    sexta: 5,
+    'sexta-feira': 5,
+    sabado: 6,
+    sábado: 6,
+  }
+  const weekday = weekdays[token]
+  return weekday === undefined ? '' : nextWeekday(weekday)
+}
+
+function parseInlineDueDate(value: string) {
+  const wordMatch = value.match(DATE_WORD_SHORTCUT)
+  if (wordMatch?.[1]) return parseDateWord(wordMatch[1])
+
+  const slashMatch = value.match(SLASH_DATE_SHORTCUT)
+  if (slashMatch?.[1] && slashMatch[2]) return parseSlashDate(slashMatch[1], slashMatch[2], slashMatch[3])
+
+  const isoMatch = value.match(ISO_DATE_SHORTCUT)
+  if (isoMatch?.[1] && !Number.isNaN(new Date(`${isoMatch[1]}T12:00:00`).getTime())) return isoMatch[1]
+
+  return ''
+}
+
+function parseInlineDueTime(value: string) {
+  const match = value.match(TIME_SHORTCUT)
+  if (!match?.[1]) return ''
+  const hour = match[1].padStart(2, '0')
+  const minute = match[2] ?? match[3] ?? '00'
+  return `${hour}:${minute.padStart(2, '0')}`
 }
 
 function projectIdOf(project: Project) {
@@ -253,6 +339,61 @@ export function ItemDetail() {
     return !query || normalizeToken(project.name).includes(query)
   })
 
+  function applyTaskTitleCategorizerShortcuts(value: string) {
+    const patch: Record<string, unknown> = {}
+    let hasCategorizer = false
+
+    const priorityMatch = value.match(PRIORITY_SHORTCUT)
+    if (priorityMatch?.[1]) {
+      const nextPriority = Number(priorityMatch[1]) as Priority
+      setPriority(nextPriority)
+      patch['priority'] = nextPriority === 4 ? null : nextPriority
+      hasCategorizer = true
+    }
+
+    const projectMatch = value.match(PROJECT_SHORTCUT)
+    const projectToken = projectMatch?.[1]
+    if (projectToken) {
+      const wanted = normalizeToken(projectToken.replace(/-/g, ' '))
+      const project = activeProjects.find(
+        (p) => normalizeToken(p.name) === wanted || normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
+      )
+      if (project) {
+        patch['projectId'] = projectIdOf(project)
+        hasCategorizer = true
+      }
+    }
+
+    const foundTags = Array.from(value.matchAll(TAG_SHORTCUT)).map((match) => match[1]).filter(Boolean) as string[]
+    if (foundTags.length > 0) {
+      const nextTags = Array.from(new Set([...tagList, ...foundTags.map((tag) => normalizeToken(tag))]))
+      setTags(nextTags.join(', '))
+      patch['tags'] = nextTags
+      hasCategorizer = true
+    }
+
+    const inlineDueDate = parseInlineDueDate(value)
+    if (inlineDueDate) {
+      setDueDate(inlineDueDate)
+      patch['dueDate'] = inlineDueDate
+      hasCategorizer = true
+    }
+
+    const inlineDueTime = parseInlineDueTime(value)
+    if (inlineDueTime) {
+      const nextDueDate = inlineDueDate || dueDate || todayDate()
+      setDueTime(inlineDueTime)
+      if (!dueDate) setDueDate(nextDueDate)
+      patch['dueDate'] = nextDueDate
+      patch['dueTime'] = inlineDueTime
+      hasCategorizer = true
+    }
+
+    const nextTitle = hasCategorizer ? cleanTaskTitle(value) : value
+    if (nextTitle) patch['title'] = nextTitle
+    return { nextTitle: nextTitle || value, patch: nullablePatch(patch) }
+  }
+
   function scheduleAutosave(patch: Parameters<typeof updateItem>[1]) {
     if (!selectedItemId) return
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
@@ -271,8 +412,15 @@ export function ItemDetail() {
   }
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setTitle(e.target.value)
-    scheduleAutosave({ title: e.target.value })
+    const value = e.target.value
+    if (item?.complexity === 'task' || item?.complexity === 'capture') {
+      const { nextTitle, patch } = applyTaskTitleCategorizerShortcuts(value)
+      setTitle(nextTitle)
+      scheduleAutosave(patch)
+      return
+    }
+    setTitle(value)
+    scheduleAutosave({ title: value })
   }
 
   function handleContentChange(value: string) {
@@ -334,7 +482,7 @@ export function ItemDetail() {
   function handlePriorityChange(p: Priority) {
     setPriority(p)
     if (!selectedItemId) return
-    updateItem(selectedItemId, { priority: p === 4 ? undefined : p })
+    updateItem(selectedItemId, p === 4 ? nullablePatch({ priority: null }) : { priority: p })
   }
 
   function handleRecurrenceChange(next: ItemRecurrence | '') {
@@ -1016,21 +1164,21 @@ export function ItemDetail() {
   }
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/40 p-4 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
     >
-      <div 
+      <div
         className={`flex flex-col overflow-hidden bg-white shadow-cool-lg transition-all duration-300 ${
-          isNote 
-            ? 'h-full w-full max-w-5xl rounded-xl' 
+          isNote
+            ? 'h-full w-full max-w-5xl rounded-xl'
             : 'max-h-[85vh] w-full max-w-lg rounded-xl'
         }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-soft shrink-0">
           <div className="flex items-center gap-3">
-            <button 
+            <button
               onClick={() => setSelectedItemId(null)}
               className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
             >
@@ -1044,8 +1192,8 @@ export function ItemDetail() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-xs text-slate-400">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
-            <button 
-              onClick={handleArchive} 
+            <button
+              onClick={handleArchive}
               className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
             >
               Arquivar

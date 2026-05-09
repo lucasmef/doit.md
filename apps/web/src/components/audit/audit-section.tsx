@@ -41,14 +41,7 @@ export function AuditSection() {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-[22px] font-bold text-slate-900">Auditoria</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Mudancas feitas pela IA externa via sync-agent.
-          </p>
-        </div>
-
+      <div className="mb-3 flex items-center justify-end gap-4">
         {approvedCount > 0 && (
           <button
             onClick={handlePush}
@@ -72,7 +65,7 @@ export function AuditSection() {
         </div>
       )}
 
-      <div className="mb-6 flex gap-1 border-b border-slate-200">
+      <div className="mb-4 flex gap-1 border-b border-slate-200">
         <button
           onClick={() => setTab('pending')}
           className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${

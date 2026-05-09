@@ -27,16 +27,12 @@ export function ArchiveSection() {
   return (
     <div>
       <div className="mb-4 border-b border-ui-border-soft pb-3">
-        <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-[22px] font-bold text-slate-900">Concluidos e arquivados</h2>
-          <p className="text-[13px] font-medium text-slate-500">{filtered.length} itens</p>
-        </div>
         <input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Buscar concluidos e arquivados"
-          className="mt-4 h-10 w-full rounded-xl border border-ui-border-soft bg-surface-soft px-3 text-[14px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+          className="h-10 w-full rounded-xl border border-ui-border-soft bg-surface-soft px-3 text-[14px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
         />
       </div>
 

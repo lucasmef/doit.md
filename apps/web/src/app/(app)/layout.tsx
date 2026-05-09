@@ -2,8 +2,10 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { Topbar } from '@/components/layout/topbar'
 import { BottomNav } from '@/components/layout/bottom-nav'
 import { ItemDetail } from '@/components/items/item-detail'
+import { BulkActionBar, ItemContextMenu } from '@/components/items/bulk-actions'
 import { QuickCapture } from '@/components/items/quick-capture'
 import { CalendarSidebar } from '@/components/layout/calendar-sidebar'
+import { ShortcutHelpModal } from '@/components/layout/shortcut-help-modal'
 import { NotificationFailureBanner } from '@/components/notifications/failure-banner'
 import { UIProvider } from '@/store/ui-provider'
 import { ToastProvider } from '@/components/ui/toast'
@@ -24,7 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NotificationFailureBanner />
             <div className="flex flex-1 overflow-hidden">
               {/* Conteúdo principal — padding extra no mobile para o bottom nav */}
-              <main className="flex-1 overflow-y-auto bg-surface-window pb-20 lg:pb-0">{children}</main>
+              <main className="flex-1 overflow-y-auto bg-surface-window pb-28 lg:pb-0">{children}</main>
               <CalendarSidebar />
             </div>
           </div>
@@ -35,6 +37,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ItemDetail />
       <BottomNav />
       <QuickCapture />
+      <ItemContextMenu />
+      <BulkActionBar />
+      <ShortcutHelpModal />
     </UIProvider>
     </ToastProvider>
   )

@@ -148,10 +148,9 @@ function SettingsContent() {
   const pushSubscribed = Boolean(push.status?.currentDeviceEnabled)
 
   return (
-    <div className="mx-auto max-w-4xl p-6 pb-24 lg:pb-6">
-      <div className="mb-6 border-b border-ui-border-soft pb-4">
-        <h1 className="text-[28px] font-bold text-slate-900">Configuracoes</h1>
-        <div className="mt-4 flex gap-1 overflow-x-auto pb-1">
+    <div className="mx-auto max-w-4xl px-5 pb-24 pt-3 lg:pb-4">
+      <div className="mb-4 border-b border-ui-border-soft pb-2">
+        <div className="flex gap-1 overflow-x-auto pb-1">
           {TABS.map((item) => (
             <button
               key={item.id}

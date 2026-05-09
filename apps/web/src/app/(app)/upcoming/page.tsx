@@ -46,12 +46,7 @@ export default function UpcomingPage() {
   }, {})
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 py-8 pb-24 lg:pb-8">
-      <div className="mb-6">
-        <p className="mb-1 font-mono text-[12px] text-navy-300">doit.md / upcoming</p>
-        <h1 className="text-[36px] font-extrabold leading-tight tracking-normal text-navy-900">Proximos</h1>
-      </div>
-
+    <div className="mx-auto w-full max-w-[760px] px-5 pb-24 pt-3 lg:pb-4">
       {isLoading && (
         <div className="space-y-1">
           {[...Array(5)].map((_, i) => (
@@ -65,7 +60,7 @@ export default function UpcomingPage() {
           const groupItems = grouped[group] ?? []
           if (groupItems.length === 0) return null
           return (
-            <section key={group} className="mb-6">
+            <section key={group} className="mb-4">
               <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
                 {group} / {groupItems.length}
               </h2>
