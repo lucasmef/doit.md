@@ -394,14 +394,19 @@ export function ItemDetail() {
     return { nextTitle: nextTitle || value, patch: nullablePatch(patch) }
   }
 
+  const pendingPatch = useRef<Parameters<typeof updateItem>[1] | null>(null)
+
   function scheduleAutosave(patch: Parameters<typeof updateItem>[1]) {
     if (!selectedItemId) return
     if (saveTimeout.current) clearTimeout(saveTimeout.current)
+    pendingPatch.current = { ...(pendingPatch.current ?? {}), ...patch }
     setDirty(true)
     setIsSaving(true)
     saveTimeout.current = setTimeout(async () => {
+      const next = pendingPatch.current
+      pendingPatch.current = null
       try {
-        await updateItem(selectedItemId, patch)
+        if (next) await updateItem(selectedItemId, next)
         setDirty(false)
       } catch {
         toast('Erro ao salvar alteracoes.', 'error')
@@ -409,6 +414,26 @@ export function ItemDetail() {
         setIsSaving(false)
       }
     }, 800)
+  }
+
+  async function flushAndClose() {
+    const id = selectedItemId
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current)
+      saveTimeout.current = null
+    }
+    const patch = pendingPatch.current
+    pendingPatch.current = null
+    if (id && patch) {
+      try {
+        await updateItem(id, patch)
+      } catch {
+        toast('Erro ao salvar alteracoes.', 'error')
+      }
+    }
+    setIsSaving(false)
+    setDirty(false)
+    setSelectedItemId(null)
   }
 
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -579,17 +604,32 @@ export function ItemDetail() {
 
   if (isNote) {
     return (
-      <div
-        className="fixed inset-0 z-[60] flex items-stretch justify-center bg-white sm:bg-navy-900/40 sm:p-4 sm:backdrop-blur-sm"
-        onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
-      >
-        <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden bg-white shadow-cool-lg sm:rounded-xl sm:border sm:border-ui-border">
+      <>
+        <div
+          className="fixed inset-0 z-[55] hidden lg:block lg:left-[260px]"
+          onClick={() => void flushAndClose()}
+          aria-hidden="true"
+        />
+        <div
+          className="fixed inset-0 z-[60] flex flex-col bg-white lg:left-[260px] lg:border-l lg:border-ui-border"
+          role="dialog"
+          aria-modal="true"
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              e.stopPropagation()
+              void flushAndClose()
+            }
+          }}
+          tabIndex={-1}
+          ref={(el) => { if (el && !el.contains(document.activeElement)) el.focus() }}
+        >
           <div className="relative flex min-h-0 flex-1 flex-col">
             <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-ui-border bg-surface-soft px-3 py-2">
               <button
                 type="button"
-                title="Fechar nota"
-                onClick={() => setSelectedItemId(null)}
+                title="Fechar nota (Esc)"
+                onClick={() => void flushAndClose()}
                 className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-slate-500 hover:bg-white hover:text-slate-800"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -781,7 +821,7 @@ export function ItemDetail() {
             </div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 

@@ -16,7 +16,7 @@ interface GoogleAccount {
   connectedAt: string
 }
 
-type Tab = 'profile' | 'integrations' | 'notifications' | 'sync' | 'tags' | 'archive' | 'audit'
+type Tab = 'profile' | 'integrations' | 'notifications' | 'sync' | 'tags' | 'shortcuts' | 'archive' | 'audit'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'profile', label: 'Perfil' },
@@ -24,9 +24,90 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'notifications', label: 'Notificacoes' },
   { id: 'sync', label: 'Sync' },
   { id: 'tags', label: 'Tags' },
+  { id: 'shortcuts', label: 'Atalhos' },
   { id: 'archive', label: 'Arquivo' },
   { id: 'audit', label: 'Auditoria' },
 ]
+
+const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string[]; label: string }> }> = [
+  {
+    title: 'Global',
+    items: [
+      { keys: ['Shift', '?'], label: 'Mostrar atalhos' },
+      { keys: ['Q'], label: 'Nova captura' },
+      { keys: ['Ctrl/Cmd', 'K'], label: 'Nova captura' },
+      { keys: ['Shift', 'C'], label: 'Abrir/fechar calendario' },
+      { keys: ['Esc'], label: 'Fechar modal/painel ou salvar e sair de nota' },
+    ],
+  },
+  {
+    title: 'Listas',
+    items: [
+      { keys: ['J', 'Down'], label: 'Selecionar proximo item' },
+      { keys: ['K', 'Up'], label: 'Selecionar item anterior' },
+      { keys: ['Enter'], label: 'Abrir item focado' },
+      { keys: ['E'], label: 'Editar item selecionado' },
+      { keys: ['Click direito'], label: 'Menu contextual (desktop)' },
+      { keys: ['Long press'], label: 'Menu contextual (mobile)' },
+      { keys: ['Shift', 'Click'], label: 'Selecionar intervalo' },
+      { keys: ['Ctrl/Cmd', 'Click'], label: 'Selecionar varios' },
+    ],
+  },
+  {
+    title: 'Captura rapida',
+    items: [
+      { keys: ['@tag'], label: 'Adicionar tag' },
+      { keys: ['#pasta'], label: 'Vincular a uma pasta' },
+      { keys: ['p1', 'p2', 'p3', 'p4'], label: 'Definir prioridade' },
+      { keys: ['hoje', 'amanha'], label: 'Definir data por palavra' },
+      { keys: ['12/05', '2026-05-09'], label: 'Definir data exata' },
+      { keys: ['14:30', 'as 18h'], label: 'Definir horario' },
+    ],
+  },
+  {
+    title: 'Notas',
+    items: [
+      { keys: ['Esc'], label: 'Salvar e fechar nota' },
+      { keys: ['Click fora'], label: 'Salvar e fechar nota' },
+    ],
+  },
+]
+
+function KeyCap({ children }: { children: string }) {
+  return (
+    <kbd className="inline-flex min-h-6 items-center justify-center rounded-md border border-ui-border bg-white px-1.5 font-mono text-[11px] font-semibold text-navy-700 shadow-sm">
+      {children}
+    </kbd>
+  )
+}
+
+function ShortcutsSection() {
+  return (
+    <section className="space-y-4">
+      <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel px-5 py-4 shadow-sm">
+        <h2 className="text-sm font-semibold text-slate-700">Atalhos de teclado</h2>
+        <p className="mt-0.5 text-xs text-slate-400">Atalhos globais funcionam apenas quando nenhum campo esta em foco.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {SHORTCUT_GROUPS.map((group) => (
+          <div key={group.title} className="rounded-[16px] border border-ui-border-panel bg-surface-panel p-3 shadow-sm">
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-400">{group.title}</h3>
+            <div className="divide-y divide-ui-border-soft">
+              {group.items.map((item) => (
+                <div key={`${group.title}-${item.label}`} className="flex items-center justify-between gap-3 py-2">
+                  <span className="text-[13px] text-navy-700">{item.label}</span>
+                  <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                    {item.keys.map((key) => <KeyCap key={key}>{key}</KeyCap>)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 function TagsSection() {
   const { items } = useItems()
@@ -351,6 +432,7 @@ function SettingsContent() {
       )}
 
       {tab === 'tags' && <TagsSection />}
+      {tab === 'shortcuts' && <ShortcutsSection />}
       {tab === 'archive' && <ArchiveSection />}
       {tab === 'audit' && <AuditSection />}
     </div>

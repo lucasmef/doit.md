@@ -58,8 +58,8 @@ function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; cla
 }
 
 const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
-  { href: '/today', label: 'Hoje', icon: 'today' },
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
+  { href: '/today', label: 'Hoje', icon: 'today' },
   { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
 ]
 
