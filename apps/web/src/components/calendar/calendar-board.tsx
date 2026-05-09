@@ -1,72 +1,72 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Item } from '@doit/types'
-import { toLocalDateKey } from '@doit/core'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { CalendarGrid } from '@/components/ui/calendar-grid'
-import { DayAgenda } from '@/components/ui/day-agenda'
 
 type Props = {
   items: Item[]
   compactSide?: boolean
 }
 
-function formatTime(dt: string, allDay: boolean) {
-  if (allDay) return 'Dia todo'
-  return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-}
-
 export function CalendarBoard({ items, compactSide = false }: Props) {
-  const today = toLocalDateKey()
-  const [selectedDate, setSelectedDate] = useState(today)
-  const { events } = useCalendarEvents(`${selectedDate}T00:00:00Z`, `${selectedDate}T23:59:59Z`)
+  const today = new Date()
+  const [year, setYear] = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth())
+  const [showItems, setShowItems] = useState(true)
+  const [showEvents, setShowEvents] = useState(true)
+
+  const { from, to } = useMemo(() => {
+    const start = new Date(year, month, 1)
+    const end = new Date(year, month + 1, 0, 23, 59, 59)
+    return { from: start.toISOString(), to: end.toISOString() }
+  }, [year, month])
+
+  const { events } = useCalendarEvents(from, to)
+
   const activeItems = (items || []).filter(
     (item) => item.status !== 'archived' && item.status !== 'done',
   )
-  const dayEvents = events
-    .filter((event) => event.start.slice(0, 10) === selectedDate)
-    .sort((a, b) => a.start.localeCompare(b.start))
 
   return (
     <div
-      className={`flex flex-1 min-h-0 flex-col gap-4 overflow-hidden ${compactSide ? 'p-4' : 'p-4 lg:p-5'} lg:flex-row`}
+      className={`flex flex-1 min-h-0 flex-col gap-3 overflow-hidden ${compactSide ? 'p-4' : 'p-4 lg:p-5'}`}
     >
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        <CalendarGrid
-          items={activeItems}
-          selectedDate={selectedDate}
-          onDayClick={setSelectedDate}
-        />
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <button
+          onClick={() => setShowItems((v) => !v)}
+          className={`rounded-md border px-3 py-1.5 font-mono text-[11px] font-medium transition-colors ${
+            showItems
+              ? 'border-brand-200 bg-brand-50 text-navy-900'
+              : 'border-ui-border bg-white text-navy-300 hover:text-navy-700'
+          }`}
+        >
+          Tarefas e notas
+        </button>
+        <button
+          onClick={() => setShowEvents((v) => !v)}
+          className={`rounded-md border px-3 py-1.5 font-mono text-[11px] font-medium transition-colors ${
+            showEvents
+              ? 'border-teal-200 bg-teal-50 text-navy-900'
+              : 'border-ui-border bg-white text-navy-300 hover:text-navy-700'
+          }`}
+        >
+          Eventos do Google
+        </button>
       </div>
 
-      <div className="w-full shrink-0 overflow-y-auto border-t border-ui-border pt-4 lg:w-[300px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
-        <section>
-          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Eventos
-          </h3>
-          {dayEvents.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-ui-border-strong px-3 py-3 font-mono text-[11px] text-navy-300">
-              Nenhum evento nesta data.
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {dayEvents.map((event) => (
-                <div
-                  key={event.id}
-                  className="rounded-lg border border-ui-border bg-white px-3 py-2 shadow-cool-sm"
-                >
-                  <p className="truncate text-[13px] font-semibold text-navy-900">{event.title}</p>
-                  <p className="mt-0.5 font-mono text-[11px] text-navy-300">
-                    {formatTime(event.start, event.allDay)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <DayAgenda date={selectedDate} items={activeItems} compact />
+      <div className="flex flex-1 min-h-0">
+        <CalendarGrid
+          items={showItems ? activeItems : []}
+          events={showEvents ? events : []}
+          year={year}
+          month={month}
+          onYearChange={setYear}
+          onMonthChange={setMonth}
+          compact={compactSide}
+          fillHeight={!compactSide}
+        />
       </div>
     </div>
   )
