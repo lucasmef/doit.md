@@ -244,8 +244,12 @@ function buildWhere(db: DBClient, filter: Filter, startIndex = 1): { sql: string
     if (isOperatorObject(value)) {
       for (const [op, opValue] of Object.entries(value)) {
         if (op === '$ne') {
-          values.push(opValue)
-          parts.push(`(${quote(field)} IS NULL OR ${quote(field)} <> ${placeholder(db, startIndex + values.length - 1)})`)
+          if (opValue === null) {
+            parts.push(`${quote(field)} IS NOT NULL`)
+          } else {
+            values.push(opValue)
+            parts.push(`(${quote(field)} IS NULL OR ${quote(field)} <> ${placeholder(db, startIndex + values.length - 1)})`)
+          }
         } else if (op === '$gte' || op === '$lte') {
           values.push(opValue)
           parts.push(`${quote(field)} ${op === '$gte' ? '>=' : '<='} ${placeholder(db, startIndex + values.length - 1)}`)
