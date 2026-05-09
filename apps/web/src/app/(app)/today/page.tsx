@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { useItems } from '@/hooks/use-items'
+import { updateItem } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { ItemList } from '@/components/items/item-list'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
+import { useToast } from '@/components/ui/toast'
 
 function EventCard({ title, start, end, allDay }: { title: string; start: string; end: string; allDay: boolean }) {
   function fmt(dt: string) {
@@ -31,6 +34,8 @@ function EventCard({ title, start, end, allDay }: { title: string; start: string
 
 export default function TodayPage() {
   const { items, isLoading } = useItems()
+  const [rescheduling, setRescheduling] = useState(false)
+  const { toast } = useToast()
   const today = toLocalDateKey()
   const { events } = useCalendarEvents(today + 'T00:00:00Z', today + 'T23:59:59Z')
 
@@ -41,11 +46,27 @@ export default function TodayPage() {
   const todayItems = items.filter(
     (i) => (isToday(i) || isOverdue(i)) && i.status !== 'archived',
   )
+  const overdueItems = todayItems.filter(
+    (item) => item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
+  )
 
   const todayEvents = events.filter((e) => {
     const d = e.start.slice(0, 10)
     return d === today
   }).sort((a, b) => a.start.localeCompare(b.start))
+
+  async function handleRescheduleOverdue() {
+    if (overdueItems.length === 0) return
+    setRescheduling(true)
+    try {
+      await Promise.all(overdueItems.map((item) => updateItem(item.id, { dueDate: today })))
+      toast(`${overdueItems.length} tarefa(s) reagendada(s) para hoje.`, 'success')
+    } catch {
+      toast('Erro ao reagendar tarefas.', 'error')
+    } finally {
+      setRescheduling(false)
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-[760px] px-5 py-8 pb-24 lg:pb-8">
@@ -71,9 +92,21 @@ export default function TodayPage() {
       )}
 
       <section className="mb-4">
-        <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-          Itens / {todayItems.length}
-        </h2>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+            Itens / {todayItems.length}
+          </h2>
+          {overdueItems.length > 0 && (
+            <button
+              type="button"
+              onClick={handleRescheduleOverdue}
+              disabled={rescheduling}
+              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
+            >
+              {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
+            </button>
+          )}
+        </div>
         <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
       </section>
     </div>

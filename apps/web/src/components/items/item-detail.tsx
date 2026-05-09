@@ -426,18 +426,31 @@ export function ItemDetail() {
   const isTodaySelected = dueDate === today
   const selectedProject = activeProjects.find((project) => projectIdOf(project) === item.projectId)
   const priorityConfig = PRIORITY_CONFIG[priority]
+  const canSwitchNoteToTask = content.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
 
   if (isNote) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-stretch justify-center bg-white sm:bg-navy-900/40 sm:p-4 sm:backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
       >
-        <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-xl border border-ui-border bg-white shadow-cool-lg">
-          <div className="flex max-h-[92vh] flex-col">
-            <div className="overflow-y-auto px-5 pb-4 pt-5">
-              <div className="flex items-center justify-end gap-3">
+        <div className="flex h-full w-full max-w-6xl flex-col overflow-hidden bg-white shadow-cool-lg sm:rounded-xl sm:border sm:border-ui-border">
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-ui-border bg-surface-soft px-3 py-2">
+              <button
+                type="button"
+                title="Fechar nota"
+                onClick={() => setSelectedItemId(null)}
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-slate-500 hover:bg-white hover:text-slate-800"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+              <span className="shrink-0 text-[11px] font-medium text-slate-400">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+
+              {canSwitchNoteToTask && (
                 <button
                   type="button"
                   title="Trocar para tarefa"
@@ -447,103 +460,83 @@ export function ItemDetail() {
                   <IconNote className="h-3.5 w-3.5" />
                   Nota
                 </button>
-              </div>
+              )}
 
-              <div className="mt-3">
-                <MarkdownEditor
-                  value={content}
-                  onChange={handleContentChange}
-                  placeholder="Escreva em Markdown..."
-                  minHeight="min-h-[520px]"
-                />
-              </div>
-
-              <div className="mt-3 rounded-xl border border-dashed border-ui-border-strong bg-surface-soft p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
-                    <p className="text-[12px] text-slate-400">Espaco reservado para upload de arquivos.</p>
-                  </div>
-                  <button
-                    type="button"
-                    disabled
-                    className="h-8 rounded-[10px] border border-ui-border-soft bg-white px-3 text-[12px] font-semibold text-slate-300"
-                  >
-                    Upload em breve
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative mt-3 flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <ToolButton
-                    title="Selecionar ou criar tag"
-                    active={tagList.length > 0}
-                    onClick={() => setPopover(popover === 'tags' ? null : 'tags')}
-                  >
-                    <IconTag className="h-3.5 w-3.5" />
-                    {tagList.length > 0 ? tagList.length : ''}
-                  </ToolButton>
-                  {popover === 'tags' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
-                      {tagList.length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-1">
-                          {tagList.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() => updateTags(tagList.filter((current) => current !== tag))}
-                              className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
-                            >
-                              @{tag}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <input
-                        value={tagQuery}
-                        onChange={(e) => setTagQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addTag(tagQuery)
-                          }
-                        }}
-                        placeholder="Buscar ou criar tag"
-                        className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
-                        autoFocus
-                      />
-                      <div className="mt-1 max-h-44 overflow-y-auto">
-                        {filteredTags.slice(0, 8).map((tag) => (
+              <div className="relative shrink-0">
+                <ToolButton
+                  title="Selecionar ou criar tag"
+                  active={tagList.length > 0}
+                  onClick={() => setPopover(popover === 'tags' ? null : 'tags')}
+                >
+                  <IconTag className="h-3.5 w-3.5" />
+                  {tagList.length > 0 ? tagList.length : ''}
+                </ToolButton>
+                {popover === 'tags' && (
+                  <div className="absolute left-0 top-9 z-20 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                    {tagList.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {tagList.map((tag) => (
                           <button
                             key={tag}
                             type="button"
-                            onClick={() => addTag(tag)}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                            onClick={() => updateTags(tagList.filter((current) => current !== tag))}
+                            className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
                           >
-                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
                             @{tag}
                           </button>
                         ))}
-                        {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
-                          <button
-                            type="button"
-                            onClick={() => addTag(tagQuery)}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected"
-                          >
-                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
-                            Criar @{normalizeToken(tagQuery)}
-                          </button>
-                        )}
                       </div>
+                    )}
+                    <input
+                      value={tagQuery}
+                      onChange={(e) => setTagQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addTag(tagQuery)
+                        }
+                      }}
+                      placeholder="Buscar ou criar tag"
+                      className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                      autoFocus
+                    />
+                    <div className="mt-1 max-h-44 overflow-y-auto">
+                      {filteredTags.slice(0, 8).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                          @{tag}
+                        </button>
+                      ))}
+                      {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
+                        <button
+                          type="button"
+                          onClick={() => addTag(tagQuery)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                          Criar @{normalizeToken(tagQuery)}
+                        </button>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3">
-              <div className="relative min-w-0 flex-1">
+              <button
+                type="button"
+                disabled
+                title="Anexos"
+                className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-white px-2 text-[12px] font-medium text-slate-300"
+              >
+                Anexos
+              </button>
+
+              <div className="relative min-w-[130px] shrink-0">
                 <button
                   type="button"
                   title="Selecionar ou criar projeto"
@@ -554,7 +547,7 @@ export function ItemDetail() {
                   <span className="truncate">{selectedProject?.name ?? 'Projeto'}</span>
                 </button>
                 {popover === 'project' && (
-                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div className="absolute left-0 top-9 z-20 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     <input
                       value={projectQuery}
                       onChange={(e) => setProjectQuery(e.target.value)}
@@ -616,28 +609,27 @@ export function ItemDetail() {
                 )}
               </div>
 
-              <span className="hidden text-[11px] text-slate-400 sm:inline">{dirty || isSaving ? 'Salvando...' : 'Salvo'}</span>
+              <div className="w-56 shrink-0">
+                <ItemVersions itemId={item.id} compact />
+              </div>
+
               <button
                 type="button"
                 onClick={handleArchive}
-                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-400 hover:bg-white hover:text-red-500"
+                className="h-8 shrink-0 rounded-[10px] px-3 text-[12px] font-semibold text-slate-400 hover:bg-white hover:text-red-500"
               >
                 Arquivar
               </button>
-              <button
-                type="button"
-                onClick={() => setSelectedItemId(null)}
-                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedItemId(null)}
-                className="h-8 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
-              >
-                Salvar
-              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-4">
+              <MarkdownEditor
+                value={content}
+                onChange={handleContentChange}
+                placeholder="Escreva em Markdown..."
+                minHeight="min-h-[calc(100vh-96px)] sm:min-h-[calc(100vh-128px)]"
+                plain
+              />
             </div>
           </div>
         </div>

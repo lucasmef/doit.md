@@ -132,6 +132,7 @@ export async function updateItem(id: string, input: UpdateItemInput): Promise<It
     if (!res.ok) throw new Error(await readError(res, 'Falha ao atualizar item'))
     const { item } = await res.json()
     await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+    await globalMutate(`/api/items/${id}/versions`)
     return item
   } catch (error) {
     if (!isNetworkFailure(error)) throw error

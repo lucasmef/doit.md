@@ -2,10 +2,41 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { ItemVersionModel, ItemModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
+import { newVersionId } from '@doit/core'
+import { hashContent } from '@doit/sync'
 
 export const dynamic = 'force-dynamic'
 
 type Params = { params: Promise<{ id: string }> }
+
+function itemSnapshot(item: Record<string, unknown>) {
+  return {
+    title: item['title'],
+    contentMd: item['contentMd'],
+    complexity: item['complexity'],
+    status: item['status'],
+    tags: item['tags'],
+    dueDate: item['dueDate'],
+    projectId: item['projectId'],
+    areaId: item['areaId'],
+  }
+}
+
+async function createVersionIfChanged(item: Record<string, unknown>, userId: string) {
+  const itemId = String(item['_id'] ?? item['id'])
+  const snapshot = itemSnapshot(item)
+  const syncHash = hashContent(JSON.stringify(snapshot))
+  const latest = await ItemVersionModel.find({ itemId, userId }).sort({ createdAt: -1 }).limit(1).lean()
+  if (latest[0]?.['syncHash'] === syncHash) return
+  await ItemVersionModel.create({
+    _id: newVersionId(),
+    itemId,
+    userId,
+    snapshotData: snapshot,
+    syncHash,
+    createdAt: new Date().toISOString(),
+  })
+}
 
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
@@ -38,6 +69,10 @@ export async function POST(req: NextRequest, { params }: Params) {
 
     const version = await ItemVersionModel.findOne({ _id: versionId, itemId: id, userId }).lean() as Record<string, unknown> | null
     if (!version) return NextResponse.json({ error: 'Version not found' }, { status: 404 })
+
+    const current = await ItemModel.findOne({ _id: id, userId }).lean() as Record<string, unknown> | null
+    if (!current) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    await createVersionIfChanged(current, userId)
 
     const snapshot = (version['snapshotData'] ?? {}) as Record<string, unknown>
     const patch = {

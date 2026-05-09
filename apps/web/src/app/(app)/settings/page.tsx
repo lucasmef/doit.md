@@ -1,16 +1,37 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/components/ui/toast'
 import { syncGoogleCalendar } from '@/hooks/use-calendar-events'
 import { usePushNotifications } from '@/hooks/use-push-notifications'
+import { ArchiveSection } from '@/components/archive/archive-section'
+import { AuditSection } from '@/components/audit/audit-section'
+import { ProfileSection } from '@/components/settings/profile-section'
 
 interface GoogleAccount {
   email: string
   connectedAt: string
 }
 
-export default function SettingsPage() {
+type Tab = 'profile' | 'integrations' | 'notifications' | 'sync' | 'archive' | 'audit'
+
+const TABS: Array<{ id: Tab; label: string }> = [
+  { id: 'profile', label: 'Perfil' },
+  { id: 'integrations', label: 'Integracoes' },
+  { id: 'notifications', label: 'Notificacoes' },
+  { id: 'sync', label: 'Sync' },
+  { id: 'archive', label: 'Arquivo' },
+  { id: 'audit', label: 'Auditoria' },
+]
+
+function SettingsContent() {
+  const searchParams = useSearchParams()
+  const initialTab = useMemo(() => {
+    const tab = searchParams.get('tab')
+    return TABS.some((item) => item.id === tab) ? tab as Tab : 'profile'
+  }, [searchParams])
+  const [tab, setTab] = useState<Tab>(initialTab)
   const { toast: addToast } = useToast()
   const [account, setAccount] = useState<GoogleAccount | null>(null)
   const [loading, setLoading] = useState(true)
@@ -18,6 +39,8 @@ export default function SettingsPage() {
   const [disconnecting, setDisconnecting] = useState(false)
   const [pushBusy, setPushBusy] = useState<'enable' | 'disable' | 'test' | null>(null)
   const push = usePushNotifications()
+
+  useEffect(() => setTab(initialTab), [initialTab])
 
   useEffect(() => {
     fetch('/api/google/account')
@@ -29,15 +52,23 @@ export default function SettingsPage() {
     const params = new URLSearchParams(window.location.search)
     if (params.get('google') === 'connected') {
       addToast('Google Calendar conectado com sucesso!', 'success')
-      window.history.replaceState({}, '', '/settings')
+      window.history.replaceState({}, '', '/settings?tab=integrations')
+      setTab('integrations')
     } else if (params.get('google') === 'config-error') {
-      addToast('Google Calendar não está configurado no servidor.', 'error')
-      window.history.replaceState({}, '', '/settings')
+      addToast('Google Calendar nao esta configurado no servidor.', 'error')
+      window.history.replaceState({}, '', '/settings?tab=integrations')
+      setTab('integrations')
     } else if (params.get('google') === 'error') {
       addToast('Erro ao conectar Google Calendar.', 'error')
-      window.history.replaceState({}, '', '/settings')
+      window.history.replaceState({}, '', '/settings?tab=integrations')
+      setTab('integrations')
     }
   }, [addToast])
+
+  function selectTab(next: Tab) {
+    setTab(next)
+    window.history.replaceState({}, '', `/settings?tab=${next}`)
+  }
 
   async function handleSync() {
     setSyncing(true)
@@ -52,7 +83,7 @@ export default function SettingsPage() {
   }
 
   async function handleDisconnect() {
-    if (!confirm('Desconectar Google Calendar? Os eventos salvos serão removidos.')) return
+    if (!confirm('Desconectar Google Calendar? Os eventos salvos serao removidos.')) return
     setDisconnecting(true)
     try {
       const res = await fetch('/api/google/disconnect', { method: 'POST' })
@@ -117,167 +148,179 @@ export default function SettingsPage() {
   const pushSubscribed = Boolean(push.status?.currentDeviceEnabled)
 
   return (
-    <div className="p-6 max-w-3xl mx-auto pb-24 lg:pb-6">
-      <div className="flex items-baseline justify-between mb-8 border-b border-ui-border-soft pb-4">
-        <h1 className="text-[28px] font-bold text-slate-900">Configurações</h1>
+    <div className="mx-auto max-w-4xl p-6 pb-24 lg:pb-6">
+      <div className="mb-6 border-b border-ui-border-soft pb-4">
+        <h1 className="text-[28px] font-bold text-slate-900">Configuracoes</h1>
+        <div className="mt-4 flex gap-1 overflow-x-auto pb-1">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => selectTab(item.id)}
+              className={`h-9 shrink-0 rounded-lg px-3 text-sm font-medium transition-colors ${
+                tab === item.id
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <section className="bg-surface-panel border border-ui-border-panel shadow-sm rounded-[16px] divide-y divide-ui-border-soft">
-        <div className="px-5 py-4">
-          <h2 className="text-sm font-semibold text-slate-700">Google Calendar</h2>
-        </div>
+      {tab === 'profile' && <ProfileSection />}
 
-        <div className="px-5 py-5">
-          {loading ? (
-            <div className="h-10 w-48 bg-slate-100 rounded animate-pulse" />
-          ) : account ? (
-            <div className="flex items-center justify-between gap-4 flex-wrap">
+      {tab === 'integrations' && (
+        <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+          <div className="px-5 py-4">
+            <h2 className="text-sm font-semibold text-slate-700">Google Calendar</h2>
+          </div>
+
+          <div className="px-5 py-5">
+            {loading ? (
+              <div className="h-10 w-48 animate-pulse rounded bg-slate-100" />
+            ) : account ? (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-800">{account.email}</p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Conectado em{' '}
+                    {new Date(account.connectedAt).toLocaleDateString('pt-BR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSync}
+                    disabled={syncing}
+                    className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+                  >
+                    {syncing ? 'Sincronizando...' : 'Sincronizar agora'}
+                  </button>
+                  <button
+                    onClick={handleDisconnect}
+                    disabled={disconnecting}
+                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {disconnecting ? 'Desconectando...' : 'Desconectar'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm text-slate-600">Nenhuma conta conectada.</p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Conecte para ver seus eventos do Google Calendar na visao Hoje e Calendario.
+                  </p>
+                </div>
+                <a
+                  href="/api/google"
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                >
+                  Conectar com Google
+                </a>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'notifications' && (
+        <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+          <div className="px-5 py-4">
+            <h2 className="text-sm font-semibold text-slate-700">Notificacoes</h2>
+          </div>
+          <div className="px-5 py-5">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-slate-800">{account.email}</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Conectado em{' '}
-                  {new Date(account.connectedAt).toLocaleDateString('pt-BR', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                <p className="text-sm font-medium text-slate-800">
+                  {pushSubscribed ? 'Notificacoes ativas neste dispositivo' : 'Notificacoes desativadas neste dispositivo'}
                 </p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {push.status?.activeDeviceCount ?? 0} dispositivo(s) ativo(s) na sua conta.
+                </p>
+                {!pushConfigured ? <p className="mt-2 text-xs text-red-500">Web Push nao esta configurado no servidor.</p> : null}
+                {!pushSupported ? <p className="mt-2 text-xs text-red-500">Este navegador nao suporta notificacoes push.</p> : null}
+                {needsIosInstall ? (
+                  <p className="mt-2 text-xs text-slate-500">
+                    No iPhone, abra no Safari, toque em Compartilhar, escolha Adicionar a Tela de Inicio e abra pelo icone instalado.
+                  </p>
+                ) : null}
+                {push.support === 'denied' ? (
+                  <p className="mt-2 text-xs text-red-500">A permissao foi bloqueada no navegador. Altere nas configuracoes do site.</p>
+                ) : null}
               </div>
 
               <div className="flex gap-2">
-                <button
-                  onClick={handleSync}
-                  disabled={syncing}
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
-                >
-                  {syncing ? 'Sincronizando…' : 'Sincronizar agora'}
-                </button>
-                <button
-                  onClick={handleDisconnect}
-                  disabled={disconnecting}
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                >
-                  {disconnecting ? 'Desconectando…' : 'Desconectar'}
-                </button>
+                {pushSubscribed ? (
+                  <>
+                    <button
+                      onClick={handleTestPush}
+                      disabled={pushBusy !== null || !pushConfigured}
+                      className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+                    >
+                      {pushBusy === 'test' ? 'Enviando...' : 'Enviar teste'}
+                    </button>
+                    <button
+                      onClick={handleDisablePush}
+                      disabled={pushBusy !== null}
+                      className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                    >
+                      {pushBusy === 'disable' ? 'Desativando...' : 'Desativar'}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleEnablePush}
+                    disabled={pushBusy !== null || push.isLoading || !pushConfigured || !pushSupported || needsIosInstall || push.support === 'denied'}
+                    className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+                  >
+                    {pushBusy === 'enable' ? 'Ativando...' : 'Ativar notificacoes'}
+                  </button>
+                )}
               </div>
             </div>
-          ) : (
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-sm text-slate-600">Nenhuma conta conectada.</p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Conecte para ver seus eventos do Google Calendar na visão Hoje e Calendário.
-                </p>
-              </div>
-              <a
-                href="/api/google"
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                Conectar com Google
-              </a>
-            </div>
-          )}
-        </div>
-      </section>
+          </div>
+        </section>
+      )}
 
-      <section className="mt-6 bg-surface-panel border border-ui-border-panel shadow-sm rounded-[16px] divide-y divide-ui-border-soft">
-        <div className="px-5 py-4">
-          <h2 className="text-sm font-semibold text-slate-700">Notificacoes</h2>
-        </div>
-        <div className="px-5 py-5">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-sm font-medium text-slate-800">
-                {pushSubscribed ? 'Notificacoes ativas neste dispositivo' : 'Notificacoes desativadas neste dispositivo'}
-              </p>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {push.status?.activeDeviceCount ?? 0} dispositivo(s) ativo(s) na sua conta.
-              </p>
-              {!pushConfigured ? (
-                <p className="text-xs text-red-500 mt-2">Web Push nao esta configurado no servidor.</p>
-              ) : null}
-              {!pushSupported ? (
-                <p className="text-xs text-red-500 mt-2">Este navegador nao suporta notificacoes push.</p>
-              ) : null}
-              {needsIosInstall ? (
-                <p className="text-xs text-slate-500 mt-2">
-                  No iPhone, abra no Safari, toque em Compartilhar, escolha Adicionar a Tela de Inicio e abra pelo icone instalado.
-                </p>
-              ) : null}
-              {push.support === 'denied' ? (
-                <p className="text-xs text-red-500 mt-2">A permissao foi bloqueada no navegador. Altere nas configuracoes do site.</p>
-              ) : null}
-            </div>
-
-            <div className="flex gap-2">
-              {pushSubscribed ? (
-                <>
-                  <button
-                    onClick={handleTestPush}
-                    disabled={pushBusy !== null || !pushConfigured}
-                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
-                  >
-                    {pushBusy === 'test' ? 'Enviando...' : 'Enviar teste'}
-                  </button>
-                  <button
-                    onClick={handleDisablePush}
-                    disabled={pushBusy !== null}
-                    className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition-colors"
-                  >
-                    {pushBusy === 'disable' ? 'Desativando...' : 'Desativar'}
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleEnablePush}
-                  disabled={pushBusy !== null || push.isLoading || !pushConfigured || !pushSupported || needsIosInstall || push.support === 'denied'}
-                  className="px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
-                >
-                  {pushBusy === 'enable' ? 'Ativando...' : 'Ativar notificacoes'}
-                </button>
-              )}
+      {tab === 'sync' && (
+        <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+          <div className="px-5 py-4">
+            <h2 className="text-sm font-semibold text-slate-700">Agente de Sincronizacao</h2>
+          </div>
+          <div className="px-5 py-5">
+            <p className="mb-3 text-sm text-slate-600">
+              Use o CLI <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">doit-sync</code> para sincronizar itens via arquivos Markdown.
+            </p>
+            <div className="space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
+              <p><span className="text-slate-500">#</span> instalar</p>
+              <p>npm install -g doit-sync</p>
+              <p className="pt-1"><span className="text-slate-500">#</span> configurar</p>
+              <p>doit-sync init</p>
+              <p className="pt-1"><span className="text-slate-500">#</span> sincronizar</p>
+              <p>doit-sync pull && doit-sync diff && doit-sync push</p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <section className="mt-6 bg-surface-panel border border-ui-border-panel shadow-sm rounded-[16px] divide-y divide-ui-border-soft">
-        <div className="px-5 py-4">
-          <h2 className="text-sm font-semibold text-slate-700">Agente de Sincronização</h2>
-        </div>
-        <div className="px-5 py-5">
-          <p className="text-sm text-slate-600 mb-3">
-            Use o CLI <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">doit-sync</code> para
-            sincronizar itens via arquivos Markdown, ideal para integrações com agentes de IA como Claude Code e Cursor.
-          </p>
-          <div className="bg-slate-900 rounded-lg px-4 py-3 text-xs font-mono text-slate-200 space-y-1">
-            <p><span className="text-slate-500">#</span> instalar</p>
-            <p>npm install -g doit-sync</p>
-            <p className="pt-1"><span className="text-slate-500">#</span> configurar</p>
-            <p>doit-sync init</p>
-            <p className="pt-1"><span className="text-slate-500">#</span> sincronizar</p>
-            <p>doit-sync pull && doit-sync diff && doit-sync push</p>
-          </div>
-        </div>
-      </section>
+      {tab === 'archive' && <ArchiveSection />}
+      {tab === 'audit' && <AuditSection />}
     </div>
+  )
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-4xl p-6 text-sm text-slate-400">Carregando...</div>}>
+      <SettingsContent />
+    </Suspense>
   )
 }

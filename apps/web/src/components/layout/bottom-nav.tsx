@@ -1,86 +1,129 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUI } from '@/store/ui'
 
-const TABS = [
-  {
-    href: '/inbox',
-    label: 'Inbox',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-      </svg>
-    ),
-  },
-  {
-    href: '/today',
-    label: 'Hoje',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-      </svg>
-    ),
-  },
-  { href: '#capture', label: 'Novo', icon: null },
-  {
-    href: '/archive',
-    label: 'Arquivo',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 8h14M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2zm3 8h4" />
-      </svg>
-    ),
-  },
-  {
-    href: '/projects',
-    label: 'Projetos',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-      </svg>
-    ),
-  },
+function IconInbox() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7m16 0v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5m16 0h-2.586a1 1 0 0 0-.707.293l-2.414 2.414a1 1 0 0 1-.707.293h-3.172a1 1 0 0 1-.707-.293L6.293 13.293A1 1 0 0 0 5.586 13H4" />
+    </svg>
+  )
+}
+
+function IconToday() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z" />
+    </svg>
+  )
+}
+
+function IconCalendar() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" />
+    </svg>
+  )
+}
+
+function IconMenu() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  )
+}
+
+const MENU_LINKS = [
+  { href: '/projects', label: 'Projetos' },
+  { href: '/tags', label: 'Tags' },
+  { href: '/settings', label: 'Configuracoes' },
+  { href: '/settings?tab=archive', label: 'Arquivo' },
+  { href: '/settings?tab=audit', label: 'Auditoria' },
 ]
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { setQuickCaptureOpen } = useUI()
+  const { setQuickCaptureOpen, setCalendarOpen } = useUI()
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  function linkClass(href: string) {
+    const path = href.split('?')[0] ?? href
+    const active = pathname === path || pathname.startsWith(path + '/')
+    return `flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition-colors ${
+      active ? 'text-brand-600' : 'text-slate-400'
+    }`
+  }
 
   return (
-    <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-200 z-40 flex items-center safe-area-bottom">
-      {TABS.map((tab) => {
-        if (tab.href === '#capture') {
-          return (
-            <button
-              key="capture"
-              onClick={() => setQuickCaptureOpen(true)}
-              className="flex-1 flex flex-col items-center justify-center"
-            >
-              <div className="w-14 h-14 rounded-full bg-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/30 -translate-y-3 border-4 border-white">
-                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-                </svg>
-              </div>
-            </button>
-          )
-        }
-
-        const active = pathname === tab.href || pathname.startsWith(tab.href + '/')
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${
-              active ? 'text-brand-600' : 'text-slate-400'
-            }`}
+    <>
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 bg-navy-900/30 lg:hidden" onClick={() => setMenuOpen(false)}>
+          <div
+            className="absolute bottom-[72px] right-3 w-56 overflow-hidden rounded-2xl border border-ui-border bg-white p-1.5 shadow-cool-lg"
+            onClick={(event) => event.stopPropagation()}
           >
-            {tab.icon}
-            <span className="text-[9px] font-medium">{tab.label}</span>
-          </Link>
-        )
-      })}
-    </nav>
+            {MENU_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className="block rounded-xl px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-surface-soft"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <nav className="safe-area-bottom fixed inset-x-0 bottom-0 z-40 flex items-center border-t border-slate-200 bg-white lg:hidden">
+        <Link href="/inbox" className={linkClass('/inbox')}>
+          <IconInbox />
+          <span className="text-[9px] font-medium">Inbox</span>
+        </Link>
+
+        <Link href="/today" className={linkClass('/today')}>
+          <IconToday />
+          <span className="text-[9px] font-medium">Hoje</span>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setQuickCaptureOpen(true)}
+          className="flex flex-1 flex-col items-center justify-center"
+          title="Novo item"
+        >
+          <div className="-translate-y-3 flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-brand-600 shadow-lg shadow-brand-500/30">
+            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCalendarOpen(true)}
+          className="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-slate-400 transition-colors"
+        >
+          <IconCalendar />
+          <span className="text-[9px] font-medium">Calendario</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 transition-colors ${
+            menuOpen ? 'text-brand-600' : 'text-slate-400'
+          }`}
+        >
+          <IconMenu />
+          <span className="text-[9px] font-medium">Menu</span>
+        </button>
+      </nav>
+    </>
   )
 }

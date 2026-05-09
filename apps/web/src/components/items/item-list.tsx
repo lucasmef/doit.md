@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useMemo, useState } from 'react'
 import type { Item } from '@doit/types'
 import { ItemRow } from './item-row'
 import { useUI } from '@/store/ui'
@@ -9,10 +10,48 @@ type Props = {
   isLoading?: boolean
   emptyMessage?: string
   emptySlot?: React.ReactNode
+  hideDoneAfterDelay?: boolean
 }
 
-export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot }: Props) {
+export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot, hideDoneAfterDelay = true }: Props) {
   const { selectedItemId } = useUI()
+  const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
+  const visibleItems = useMemo(() => {
+    if (!hideDoneAfterDelay) return items
+    return items.filter((item) => item.status !== 'done' || recentlyDoneIds[item.id])
+  }, [hideDoneAfterDelay, items, recentlyDoneIds])
+
+  useEffect(() => {
+    if (!hideDoneAfterDelay) return
+    const doneIds = new Set(items.filter((item) => item.status === 'done').map((item) => item.id))
+    if (doneIds.size === 0) return
+    const now = Date.now()
+    setRecentlyDoneIds((current) => {
+      let changed = false
+      const next = { ...current }
+      for (const id of doneIds) {
+        if (!next[id]) {
+          next[id] = now
+          changed = true
+        }
+      }
+      return changed ? next : current
+    })
+  }, [hideDoneAfterDelay, items])
+
+  useEffect(() => {
+    const timers = Object.entries(recentlyDoneIds).map(([id, startedAt]) => {
+      const delay = Math.max(0, 3000 - (Date.now() - startedAt))
+      return setTimeout(() => {
+        setRecentlyDoneIds((current) => {
+          const next = { ...current }
+          delete next[id]
+          return next
+        })
+      }, delay)
+    })
+    return () => timers.forEach(clearTimeout)
+  }, [recentlyDoneIds])
 
   if (isLoading) {
     return (
@@ -33,7 +72,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
     )
   }
 
-  if (items.length === 0) {
+  if (visibleItems.length === 0) {
     if (emptySlot) return <>{emptySlot}</>
     return (
       <div className="rounded-lg border border-dashed border-ui-border-strong px-4 py-8 text-center font-mono text-sm text-navy-300">
@@ -44,7 +83,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
 
   return (
     <div className="pt-1">
-      {items.map((item, index) => (
+      {visibleItems.map((item, index) => (
         <ItemRow key={item.id} item={item} active={item.id === selectedItemId} index={index} />
       ))}
     </div>

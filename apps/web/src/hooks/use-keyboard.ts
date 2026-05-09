@@ -11,6 +11,13 @@ type Shortcut = {
   when?: boolean
 }
 
+export function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return true
+  if (target.isContentEditable) return true
+  return Boolean(target.closest('[contenteditable="true"], .ProseMirror, form, [data-keyboard-scope="typing"]'))
+}
+
 export function useKeyboard(shortcuts: Shortcut[]) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -21,11 +28,7 @@ export function useKeyboard(shortcuts: Shortcut[]) {
         if ((s.ctrl ?? false) !== e.ctrlKey) continue
         if ((s.shift ?? false) !== e.shiftKey) continue
 
-        const target = e.target as HTMLElement
-        const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)
-
-        // Atalhos sem modificador só disparam fora de inputs
-        if (!s.meta && !s.ctrl && isInput) continue
+        if (!s.meta && !s.ctrl && isTypingTarget(e.target)) continue
 
         s.handler(e)
       }

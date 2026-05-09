@@ -7,6 +7,7 @@ import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
 import { MarkdownEditor } from './markdown-editor'
+import { isTypingTarget } from '@/hooks/use-keyboard'
 import { PRIORITY_CONFIG } from './priority-select'
 import type { Priority } from './priority-select'
 import type { ItemComplexity, ItemRecurrence, Project } from '@doit/types'
@@ -423,13 +424,14 @@ export function QuickCapture() {
         setQuickCaptureOpen(true)
       }
       if (e.key === 'Escape') {
+        if (isTypingTarget(e.target) && !quickCaptureOpen) return
         if (popover) setPopover(null)
         else setQuickCaptureOpen(false)
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [popover, setQuickCaptureOpen])
+  }, [popover, quickCaptureOpen, setQuickCaptureOpen])
 
   useEffect(() => {
     if (quickCaptureOpen) {
@@ -604,6 +606,7 @@ export function QuickCapture() {
   if (!quickCaptureOpen) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
+  const canSwitchMode = !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
   const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
 
@@ -628,19 +631,21 @@ export function QuickCapture() {
               {isNote && (
                 <div className="min-w-0 flex-1" />
               )}
-              <button
-                type="button"
-                title={isNote ? 'Trocar para tarefa' : 'Trocar para nota'}
-                onClick={() => handleComplexityChange(isNote ? 'task' : 'note')}
-                className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
-                  isNote
-                    ? 'border-ui-border-selected bg-surface-selected text-brand-700'
-                    : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
-                }`}
-              >
-                <IconNote className="h-3.5 w-3.5" />
-                Nota
-              </button>
+              {canSwitchMode && (
+                <button
+                  type="button"
+                  title={isNote ? 'Trocar para tarefa' : 'Trocar para nota'}
+                  onClick={() => handleComplexityChange(isNote ? 'task' : 'note')}
+                  className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
+                    isNote
+                      ? 'border-ui-border-selected bg-surface-selected text-brand-700'
+                      : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+                  }`}
+                >
+                  <IconNote className="h-3.5 w-3.5" />
+                  Nota
+                </button>
+              )}
               {shortcut && (shortcutTags.length > 0 || shortcutProjects.length > 0 || shortcutPriorities.length > 0) && (
                 <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
                   {shortcut.kind === 'tag' && shortcutTags.map((tag) => (

@@ -78,6 +78,28 @@
     padding-left: 1.25rem;
   }
 
+  .doit-note-editor p {
+    margin: 0 0 0.55rem;
+  }
+
+  .doit-note-editor p:last-child {
+    margin-bottom: 0;
+  }
+
+  .doit-note-editor h1,
+  .doit-note-editor h2,
+  .doit-note-editor h3 {
+    margin: 0.8rem 0 0.35rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .doit-note-editor ul,
+  .doit-note-editor ol {
+    margin: 0.35rem 0 0.55rem;
+    padding-left: 1.25rem;
+  }
+
   .ProseMirror h1,
   .ProseMirror h2,
   .ProseMirror h3 {

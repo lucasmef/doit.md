@@ -6,9 +6,9 @@ import type { ItemVersion } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-type Props = { itemId: string }
+type Props = { itemId: string; compact?: boolean }
 
-export function ItemVersions({ itemId }: Props) {
+export function ItemVersions({ itemId, compact = false }: Props) {
   const { data, isLoading } = useSWR<{ versions: ItemVersion[] }>(
     `/api/items/${itemId}/versions`,
     fetcher,
@@ -19,7 +19,7 @@ export function ItemVersions({ itemId }: Props) {
   const versions = data?.versions ?? []
 
   async function handleRestore(versionId: string) {
-    if (!confirm('Restaurar esta versão? O estado atual será substituído.')) return
+    if (!confirm('Restaurar esta versao? O estado atual sera substituido.')) return
     setRestoring(versionId)
     try {
       await fetch(`/api/items/${itemId}/versions`, {
@@ -28,29 +28,31 @@ export function ItemVersions({ itemId }: Props) {
         body: JSON.stringify({ versionId }),
       })
       await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+      await globalMutate(`/api/items/${itemId}/versions`)
     } finally {
       setRestoring(null)
     }
   }
 
   return (
-    <div>
+    <div className="relative">
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between text-xs text-slate-400 hover:text-slate-600 transition-colors py-1"
+        className="flex w-full items-center justify-between py-1 text-xs text-slate-400 transition-colors hover:text-slate-600"
       >
-        <span className="font-medium">Histórico de versões</span>
+        <span className="truncate font-medium">{compact ? 'Historico' : 'Historico de versoes'}</span>
         <span>{open ? '▲' : '▼'}</span>
       </button>
 
       {open && (
-        <div className="mt-2 space-y-1">
+        <div className={`${compact ? 'absolute right-0 top-8 z-30 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md' : 'mt-2'} space-y-1`}>
           {isLoading && (
-            <div className="h-8 bg-slate-100 rounded animate-pulse" />
+            <div className="h-8 animate-pulse rounded bg-slate-100" />
           )}
 
           {!isLoading && versions.length === 0 && (
-            <p className="text-xs text-slate-300 italic">Nenhuma versão salva ainda.</p>
+            <p className="text-xs italic text-slate-300">Nenhuma versao salva ainda.</p>
           )}
 
           {versions.map((v) => {
@@ -58,11 +60,11 @@ export function ItemVersions({ itemId }: Props) {
             return (
               <div
                 key={v.id}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-50"
+                className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-50"
               >
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-slate-600 truncate">
-                    {String(snap['title'] ?? 'Sem título')}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-medium text-slate-600">
+                    {String(snap['title'] ?? 'Sem titulo')}
                   </p>
                   <p className="text-[10px] text-slate-400">
                     {new Date(v.createdAt).toLocaleString('pt-BR', {
@@ -72,6 +74,7 @@ export function ItemVersions({ itemId }: Props) {
                   </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => handleRestore(v.id)}
                   disabled={restoring === v.id}
                   className="text-[10px] text-brand-600 hover:underline disabled:opacity-40"

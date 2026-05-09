@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { ItemModel } from '@doit/db'
+import { ItemModel, ItemVersionModel } from '@doit/db'
 import type { UpdateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
+import { newVersionId } from '@doit/core'
+import { hashContent } from '@doit/sync'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +22,43 @@ function validateItemState() {
 function titleFromNoteContent(contentMd: string | undefined) {
   const firstLine = contentMd?.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
   return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+}
+
+const VERSIONED_NOTE_FIELDS = ['title', 'contentMd', 'tags', 'status', 'projectId', 'areaId'] as const
+
+function shouldVersionNote(current: Record<string, unknown>, patch: UpdateItemInput) {
+  if (current['complexity'] !== 'note') return false
+  return VERSIONED_NOTE_FIELDS.some((field) => Object.prototype.hasOwnProperty.call(patch, field))
+}
+
+function itemSnapshot(item: Record<string, unknown>) {
+  return {
+    title: item['title'],
+    contentMd: item['contentMd'],
+    complexity: item['complexity'],
+    status: item['status'],
+    tags: item['tags'],
+    dueDate: item['dueDate'],
+    projectId: item['projectId'],
+    areaId: item['areaId'],
+  }
+}
+
+async function createItemVersionIfChanged(item: Record<string, unknown>, userId: string) {
+  const itemId = String(item['_id'] ?? item['id'])
+  const snapshot = itemSnapshot(item)
+  const syncHash = hashContent(JSON.stringify(snapshot))
+  const latest = await ItemVersionModel.find({ itemId, userId }).sort({ createdAt: -1 }).limit(1).lean()
+  if (latest[0]?.['syncHash'] === syncHash) return
+
+  await ItemVersionModel.create({
+    _id: newVersionId(),
+    itemId,
+    userId,
+    snapshotData: snapshot,
+    syncHash,
+    createdAt: new Date().toISOString(),
+  })
 }
 
 export async function GET(_req: NextRequest, { params }: Params) {
@@ -50,6 +89,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const body = (await req.json()) as UpdateItemInput
     const current = await ItemModel.findOne({ _id: id, userId }).lean()
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    if (shouldVersionNote(current, body)) {
+      await createItemVersionIfChanged(current, userId)
+    }
 
     const merged = { ...mapDocToItem(current), ...body }
     if (merged.complexity === 'note') {

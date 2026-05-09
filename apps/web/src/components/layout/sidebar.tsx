@@ -11,11 +11,9 @@ const TOP_NAV = [
   { href: '/today', label: 'Hoje', token: '- [x]' },
   { href: '/inbox', label: 'Inbox', token: 'in' },
   { href: '/upcoming', label: 'Proximos', token: '>>' },
-  { href: '/archive', label: 'Arquivo', token: 'ok' },
 ]
 
 const BOTTOM_NAV = [
-  { href: '/audit', label: 'Auditoria', token: 'diff' },
   { href: '/settings', label: 'Configuracoes', token: 'cfg' },
 ]
 
@@ -90,7 +88,6 @@ export function Sidebar() {
     '/today': activeItems.filter((item) => item.dueDate === toLocalDateKey()).length,
     '/inbox': activeItems.filter((item) => item.status === 'inbox' || (!item.projectId && !item.dueDate && !item.scheduledDate)).length,
     '/upcoming': activeItems.filter((item) => item.dueDate || item.scheduledDate).length,
-    '/archive': items.filter((item) => item.status === 'done' || item.status === 'archived').length,
   } as Record<string, number>
 
   return (

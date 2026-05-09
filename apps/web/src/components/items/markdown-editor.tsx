@@ -11,6 +11,7 @@ type Props = {
   onChange: (value: string) => void
   placeholder?: string
   minHeight?: string
+  plain?: boolean
 }
 
 export function MarkdownEditor({
@@ -18,6 +19,7 @@ export function MarkdownEditor({
   onChange,
   placeholder = 'Escreva em Markdown...',
   minHeight = 'min-h-[320px]',
+  plain = false,
 }: Props) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -30,7 +32,7 @@ export function MarkdownEditor({
     contentType: 'markdown',
     editorProps: {
       attributes: {
-        class: `prose prose-slate max-w-none ${minHeight} px-5 py-4 text-[15px] leading-7 outline-none focus:outline-none`,
+        class: `${plain ? 'doit-note-editor' : 'prose prose-slate'} max-w-none ${minHeight} px-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
       },
     },
     onUpdate: ({ editor }) => {
@@ -48,7 +50,7 @@ export function MarkdownEditor({
   }, [editor, value])
 
   return (
-    <div className="overflow-hidden rounded-xl border border-ui-border-soft bg-white transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100">
+    <div className={`${plain ? 'h-full rounded-lg' : 'overflow-hidden rounded-xl border border-ui-border-soft'} bg-white transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100`}>
       <EditorContent editor={editor} />
     </div>
   )
