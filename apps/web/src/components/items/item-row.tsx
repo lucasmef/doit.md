@@ -83,7 +83,6 @@ type Props = {
 
 export function ItemRow({ item, active = false, selected = false, orderedIds = [], index = 0 }: Props) {
   const {
-    selectedItemIds,
     setSingleSelection,
     toggleSelection,
     selectRange,
@@ -161,7 +160,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
 
   function handleContextMenu(e: React.MouseEvent) {
     e.preventDefault()
-    if (!selectedItemIds.includes(item.id)) setSingleSelection(item.id)
+    e.stopPropagation()
     openContextMenu({ itemId: item.id, x: e.clientX, y: e.clientY })
   }
 
@@ -177,7 +176,6 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     clearLongPressTimer()
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true
-      if (!selectedItemIds.includes(item.id)) setSingleSelection(item.id)
       openContextMenu({ itemId: item.id, x: e.clientX, y: e.clientY })
     }, 450)
   }
