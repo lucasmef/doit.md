@@ -4,7 +4,6 @@ import { FolderModel } from '@doit/db'
 import { newFolderId } from '@doit/core'
 import type { CreateFolderInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
-import { migrateProjectsToFoldersForUser } from '@/lib/migrate-folders'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +13,6 @@ export async function GET() {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     await ensureDB()
-    await migrateProjectsToFoldersForUser(userId)
     const folders = await FolderModel.find({ userId }).sort({ order: 1 }).lean()
     return NextResponse.json({ folders })
   } catch (err) {

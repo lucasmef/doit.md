@@ -9,8 +9,8 @@ export default function InboxPage() {
   const inboxItems = items.filter((item) => {
     if (item.status === 'archived') return false
     if (item.status === 'inbox') return true
-    if (item.complexity === 'note') return !item.projectId
-    return !item.projectId && !item.dueDate && !item.scheduledDate
+    if (item.complexity === 'note') return !item.folderId
+    return !item.folderId && !item.dueDate && !item.scheduledDate
   })
 
   return (

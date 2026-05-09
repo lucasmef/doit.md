@@ -589,7 +589,7 @@ export function QuickCapture() {
         contentMd: contentMd.trim() || undefined,
         dueDate: dueDate || undefined,
         dueTime: dueDate && dueTime ? dueTime : undefined,
-        projectId: projectId || undefined,
+        folderId: projectId || undefined,
         tags,
         priority: complexity === 'task' && priority < 4 ? priority : undefined,
         recurrence: complexity === 'task' && recurrence ? recurrence : undefined,

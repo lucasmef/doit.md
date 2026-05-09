@@ -7,10 +7,6 @@ export const ItemModel = new SqlModel({
   jsonFields: ['tags', 'backlinks'],
 })
 
-export const ProjectModel = new SqlModel({
-  table: 'projects',
-})
-
 export const FolderModel = new SqlModel({
   table: 'folders',
 })

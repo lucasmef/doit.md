@@ -13,7 +13,7 @@ export function isOverdue(item: Item): boolean {
 }
 
 export function isInbox(item: Item): boolean {
-  return item.status === 'inbox' && !item.projectId && !item.dueDate
+  return item.status === 'inbox' && !item.folderId && !item.dueDate
 }
 
 export const COMPLEXITY_LABELS: Record<ItemComplexity, string> = {
@@ -40,7 +40,7 @@ export const EDITABLE_BY_AI_FIELDS = [
   'contentMd',
   'complexity',
   'status',
-  'projectId',
+  'folderId',
   'areaId',
   'tags',
   'dueDate',

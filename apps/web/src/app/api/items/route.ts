@@ -44,7 +44,6 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status')
-    const projectId = searchParams.get('projectId')
     const folderIdParam = searchParams.get('folderId')
     const q = searchParams.get('q')?.trim()
 
@@ -56,7 +55,6 @@ export async function GET(req: NextRequest) {
       query['deletedAt'] = null
       if (status) query['status'] = status
     }
-    if (projectId) query['projectId'] = projectId
     if (folderIdParam !== null) {
       query['folderId'] = folderIdParam === 'null' || folderIdParam === '' ? null : folderIdParam
     }
@@ -94,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString()
-    const hasInboxContext = !body.projectId && !body.dueDate && !body.scheduledDate
+    const hasInboxContext = !body.folderId && !body.dueDate && !body.scheduledDate
 
     const item = await ItemModel.create({
       _id: newItemId(),
@@ -110,7 +108,6 @@ export async function POST(req: NextRequest) {
       recurrence: complexity === 'note' ? undefined : body.recurrence,
       startDate: body.startDate,
       scheduledDate: body.scheduledDate,
-      projectId: body.projectId,
       folderId: body.folderId,
       areaId: body.areaId,
       parentId: body.parentId,

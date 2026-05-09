@@ -17,7 +17,7 @@ function itemSnapshot(item: Record<string, unknown>) {
     status: item['status'],
     tags: item['tags'],
     dueDate: item['dueDate'],
-    projectId: item['projectId'],
+    folderId: item['folderId'],
     areaId: item['areaId'],
   }
 }
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest, { params }: Params) {
       status: snapshot['status'],
       tags: snapshot['tags'],
       dueDate: snapshot['dueDate'],
-      projectId: snapshot['projectId'],
+      folderId: snapshot['folderId'],
       areaId: snapshot['areaId'],
       updatedAt: new Date().toISOString(),
     }

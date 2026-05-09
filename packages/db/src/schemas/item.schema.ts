@@ -20,7 +20,6 @@ const ItemSchema = new Schema(
     dueDate: { type: String },
     startDate: { type: String },
     scheduledDate: { type: String },
-    projectId: { type: String, ref: 'Project' },
     folderId: { type: String, ref: 'Folder' },
     areaId: { type: String, ref: 'Area' },
     parentId: { type: String, ref: 'Item' },
@@ -40,7 +39,7 @@ const ItemSchema = new Schema(
 
 ItemSchema.index({ userId: 1, status: 1 })
 ItemSchema.index({ userId: 1, dueDate: 1 })
-ItemSchema.index({ userId: 1, projectId: 1 })
+ItemSchema.index({ userId: 1, folderId: 1 })
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ItemModel: Model<any> = (models['Item'] as Model<any>) ?? model('Item', ItemSchema)

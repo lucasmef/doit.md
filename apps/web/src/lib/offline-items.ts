@@ -30,7 +30,7 @@ export type OfflineItemOperation = CreateOperation | UpdateOperation | ArchiveOp
 
 type ItemFilters = {
   status?: string
-  projectId?: string
+  folderId?: string | null
   q?: string
 }
 
@@ -67,7 +67,7 @@ function writeQueue(queue: OfflineItemOperation[]) {
 
 function normalizeCreatedItem(tempId: string, input: CreateItemInput, createdAt: string): Item {
   const complexity = input.complexity ?? 'task'
-  const hasInboxContext = !input.projectId && !input.dueDate && !input.scheduledDate
+  const hasInboxContext = !input.folderId && !input.dueDate && !input.scheduledDate
   const title =
     complexity === 'note'
       ? titleFromNoteContent(input.contentMd) || input.title || 'Nota offline'
@@ -86,7 +86,7 @@ function normalizeCreatedItem(tempId: string, input: CreateItemInput, createdAt:
     recurrence: complexity === 'note' ? undefined : input.recurrence,
     startDate: input.startDate,
     scheduledDate: input.scheduledDate,
-    projectId: input.projectId,
+    folderId: input.folderId,
     areaId: input.areaId,
     parentId: input.parentId,
     tags: input.tags ?? [],
@@ -132,7 +132,11 @@ function matchesFilters(item: Item, filters?: ItemFilters) {
     return false
   }
 
-  if (filters?.projectId && item.projectId !== filters.projectId) return false
+  if (filters?.folderId !== undefined) {
+    const target = filters.folderId
+    if (target === null && item.folderId) return false
+    if (typeof target === 'string' && item.folderId !== target) return false
+  }
 
   const q = filters?.q?.trim().toLocaleLowerCase('pt-BR')
   if (q) {

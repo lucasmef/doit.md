@@ -17,7 +17,6 @@ export function generateId(prefix: string): string {
 }
 
 export const newItemId = () => generateId('itm')
-export const newProjectId = () => generateId('prj')
 export const newFolderId = () => generateId('fld')
 export const newAreaId = () => generateId('are')
 export const newEventId = () => generateId('evt')

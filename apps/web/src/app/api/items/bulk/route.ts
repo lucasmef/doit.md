@@ -33,7 +33,7 @@ function mergeTags(current: unknown, action: BulkItemActionInput['tagAction']) {
   return Array.from(new Set([...existing, ...tags]))
 }
 
-const VERSIONED_NOTE_FIELDS = ['title', 'contentMd', 'tags', 'status', 'projectId', 'areaId'] as const
+const VERSIONED_NOTE_FIELDS = ['title', 'contentMd', 'tags', 'status', 'folderId', 'areaId'] as const
 
 function shouldVersionNote(current: Record<string, unknown>, patch: LoosePatch) {
   if (current['complexity'] !== 'note') return false
@@ -48,7 +48,7 @@ function itemSnapshot(item: Record<string, unknown>) {
     status: item['status'],
     tags: item['tags'],
     dueDate: item['dueDate'],
-    projectId: item['projectId'],
+    folderId: item['folderId'],
     areaId: item['areaId'],
   }
 }
@@ -108,9 +108,9 @@ function buildPatch(current: Record<string, unknown>, body: BulkItemActionInput,
     delete patch.dueTime
     unset.dueTime = ''
   }
-  if (rawPatch['projectId'] === '' || rawPatch['projectId'] === null) {
-    delete patch.projectId
-    unset.projectId = ''
+  if (rawPatch['folderId'] === '' || rawPatch['folderId'] === null) {
+    delete (patch as { folderId?: unknown }).folderId
+    unset.folderId = ''
   }
 
   const set: Record<string, unknown> = { ...patch, updatedAt: now }

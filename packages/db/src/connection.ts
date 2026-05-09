@@ -78,11 +78,80 @@ async function migrate(db: DBClient): Promise<void> {
     for (const sql of statements.filter(isCreateTableStatement)) await db.pool.query(sql)
     await ensureKnownColumns(db)
     for (const sql of statements.filter((statement) => !isCreateTableStatement(statement))) await db.pool.query(sql)
+    await retireProjectsTable(db)
     return
   }
   for (const sql of statements.filter(isCreateTableStatement)) db.db.exec(sql)
   await ensureKnownColumns(db)
   for (const sql of statements.filter((statement) => !isCreateTableStatement(statement))) db.db.exec(sql)
+  await retireProjectsTable(db)
+}
+
+async function tableExists(db: DBClient, table: string): Promise<boolean> {
+  if (db.kind === 'postgres') {
+    const result = await db.pool.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = $1`,
+      [table],
+    )
+    return (result.rowCount ?? 0) > 0
+  }
+  const row = db.db
+    .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?`)
+    .get(table)
+  return Boolean(row)
+}
+
+async function columnExists(db: DBClient, table: string, column: string): Promise<boolean> {
+  if (db.kind === 'postgres') {
+    const result = await db.pool.query(
+      `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+      [table, column],
+    )
+    return (result.rowCount ?? 0) > 0
+  }
+  const rows = db.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>
+  return rows.some((row) => row.name === column)
+}
+
+async function retireProjectsTable(db: DBClient): Promise<void> {
+  if (!(await tableExists(db, 'projects'))) return
+
+  if (db.kind === 'postgres') {
+    await db.pool.query(`
+      INSERT INTO folders (id, "userId", name, "order", "createdAt", "updatedAt")
+      SELECT 'fld_p_' || id, "userId", name, COALESCE("order", 0), "createdAt", "updatedAt"
+      FROM projects
+      WHERE NOT EXISTS (SELECT 1 FROM folders WHERE folders.id = 'fld_p_' || projects.id)
+    `)
+    if (await columnExists(db, 'items', 'projectId')) {
+      await db.pool.query(`
+        UPDATE items SET "folderId" = 'fld_p_' || "projectId"
+        WHERE "projectId" IS NOT NULL AND "folderId" IS NULL
+      `)
+      await db.pool.query(`ALTER TABLE items DROP COLUMN IF EXISTS "projectId"`)
+    }
+    await db.pool.query(`DROP TABLE IF EXISTS projects`)
+    return
+  }
+
+  db.db.exec(`
+    INSERT INTO folders (id, userId, name, "order", createdAt, updatedAt)
+    SELECT 'fld_p_' || id, userId, name, COALESCE("order", 0), createdAt, updatedAt
+    FROM projects
+    WHERE NOT EXISTS (SELECT 1 FROM folders WHERE folders.id = 'fld_p_' || projects.id)
+  `)
+  if (await columnExists(db, 'items', 'projectId')) {
+    db.db.exec(`
+      UPDATE items SET folderId = 'fld_p_' || projectId
+      WHERE projectId IS NOT NULL AND folderId IS NULL
+    `)
+    try {
+      db.db.exec(`ALTER TABLE items DROP COLUMN projectId`)
+    } catch {
+      // older sqlite may not support DROP COLUMN; the column becomes orphan
+    }
+  }
+  db.db.exec(`DROP TABLE IF EXISTS projects`)
 }
 
 function isCreateTableStatement(sql: string): boolean {
@@ -93,6 +162,9 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
   await ensureColumn(db, 'items', 'folderId', 'TEXT')
+  if (db.kind === 'postgres') {
+    await db.pool.query(`DROP INDEX IF EXISTS items_user_project_idx`)
+  }
   await ensureColumn(db, 'push_subscriptions', 'expirationTime', 'INTEGER')
   await ensureColumn(db, 'push_subscriptions', 'userAgent', 'TEXT')
   await ensureColumn(db, 'push_subscriptions', 'deviceLabel', 'TEXT')
@@ -123,7 +195,7 @@ const sqliteSchema = [
     recurrence TEXT,
     startDate TEXT,
     scheduledDate TEXT,
-    projectId TEXT,
+    folderId TEXT,
     areaId TEXT,
     parentId TEXT,
     tags TEXT NOT NULL DEFAULT '[]',
@@ -138,20 +210,7 @@ const sqliteSchema = [
   )`,
   `CREATE INDEX IF NOT EXISTS items_user_status_idx ON items (userId, status)`,
   `CREATE INDEX IF NOT EXISTS items_user_due_idx ON items (userId, dueDate)`,
-  `CREATE INDEX IF NOT EXISTS items_user_project_idx ON items (userId, projectId)`,
-  `CREATE TABLE IF NOT EXISTS projects (
-    id TEXT PRIMARY KEY,
-    userId TEXT NOT NULL,
-    name TEXT NOT NULL,
-    description TEXT,
-    status TEXT NOT NULL,
-    areaId TEXT,
-    color TEXT,
-    "order" INTEGER NOT NULL DEFAULT 0,
-    createdAt TEXT NOT NULL,
-    updatedAt TEXT NOT NULL
-  )`,
-  `CREATE INDEX IF NOT EXISTS projects_user_order_idx ON projects (userId, "order")`,
+  `CREATE INDEX IF NOT EXISTS items_user_folder_idx ON items (userId, folderId)`,
   `CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
@@ -333,7 +392,6 @@ const postgresIdentifiers = [
   'titleAfter',
   'riskLevel',
   'expiresAt',
-  'projectId',
   'folderId',
   'localPath',
   'syncHash',

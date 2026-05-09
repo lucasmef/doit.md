@@ -235,12 +235,12 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
         </SelectControl>
 
         <SelectControl
-          label="Projeto"
+          label="Pasta"
           value=""
-          onChange={(value) => value && void apply({ patch: { projectId: (value === 'inbox' ? '' : value) as never } }, 'Projeto atualizado')}
+          onChange={(value) => value && void apply({ patch: { folderId: (value === 'inbox' ? '' : value) as never } }, 'Pasta atualizada')}
         >
-          <option value="">Mover para projeto</option>
-          <option value="inbox">Inbox</option>
+          <option value="">Mover para pasta</option>
+          <option value="inbox">Sem pasta</option>
           {activeProjects.map((project) => {
             const id = projectIdOf(project)
             return <option key={id} value={id}>{project.name}</option>

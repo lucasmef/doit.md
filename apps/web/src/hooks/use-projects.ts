@@ -1,46 +1,32 @@
 'use client'
 
-import useSWR, { mutate as globalMutate } from 'swr'
-import type { Project, CreateProjectInput, UpdateProjectInput } from '@doit/types'
+import type { Folder } from '@doit/types'
+import { useFolders, createFolder, updateFolder } from './use-folders'
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
+export type ProjectShim = Folder & {
+  status: 'active' | 'paused' | 'done' | 'archived'
+  description?: string
+  color?: string
+  areaId?: string
+}
 
-async function readError(res: Response, fallback: string) {
-  try {
-    const data = (await res.json()) as { error?: string }
-    return data.error ?? fallback
-  } catch {
-    return fallback
-  }
+function asProject(folder: Folder): ProjectShim {
+  return { ...folder, status: 'active' }
 }
 
 export function useProjects() {
-  const { data, error, isLoading } = useSWR<{ projects: Project[] }>('/api/projects', fetcher)
-  return { 
-    projects: Array.isArray(data?.projects) ? data.projects : [], 
-    isLoading, 
-    isError: !!error 
-  }
+  const { folders, isLoading, isError } = useFolders()
+  return { projects: folders.map(asProject), isLoading, isError }
 }
 
-export async function createProject(input: CreateProjectInput): Promise<Project> {
-  const res = await fetch('/api/projects', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
-  if (!res.ok) throw new Error(await readError(res, 'Falha ao criar projeto'))
-  const { project } = await res.json()
-  await globalMutate('/api/projects')
-  return project
+export async function createProject(input: { name: string; description?: string; color?: string; areaId?: string; order?: number }): Promise<ProjectShim> {
+  const folder = await createFolder({ name: input.name, order: input.order })
+  return asProject(folder)
 }
 
-export async function updateProject(id: string, input: UpdateProjectInput): Promise<void> {
-  const res = await fetch(`/api/projects/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  })
-  if (!res.ok) throw new Error(await readError(res, 'Falha ao atualizar projeto'))
-  await globalMutate('/api/projects')
+export async function updateProject(id: string, input: { name?: string; status?: string; color?: string; description?: string; areaId?: string; order?: number }): Promise<void> {
+  const patch: { name?: string; order?: number } = {}
+  if (input.name !== undefined) patch.name = input.name
+  if (input.order !== undefined) patch.order = input.order
+  if (Object.keys(patch).length > 0) await updateFolder(id, patch)
 }

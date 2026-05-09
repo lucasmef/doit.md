@@ -359,7 +359,7 @@ export function ItemDetail() {
         (p) => normalizeToken(p.name) === wanted || normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
       )
       if (project) {
-        patch['projectId'] = projectIdOf(project)
+        patch['folderId'] = projectIdOf(project)
         hasCategorizer = true
       }
     }
@@ -499,7 +499,7 @@ export function ItemDetail() {
 
   function handleProjectChange(projectId: string) {
     if (!selectedItemId) return
-    updateItem(selectedItemId, { projectId: projectId || undefined })
+    updateItem(selectedItemId, { folderId: projectId || undefined })
   }
 
   async function addProject(value: string) {
@@ -572,7 +572,7 @@ export function ItemDetail() {
   const isNote = item.complexity === 'note'
   const today = todayDate()
   const isTodaySelected = dueDate === today
-  const selectedProject = activeProjects.find((project) => projectIdOf(project) === item.projectId)
+  const selectedProject = activeProjects.find((project) => projectIdOf(project) === item.folderId)
   const priorityConfig = PRIORITY_CONFIG[priority]
   const canSwitchNoteToTask = content.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const recurrenceLabel = RECURRENCE_OPTIONS.find((option) => option.value === recurrence)?.label ?? 'Recorrência'
@@ -720,7 +720,7 @@ export function ItemDetail() {
                       >
                         <IconInbox className="h-3.5 w-3.5 text-slate-400" />
                         Inbox
-                        {!item.projectId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                        {!item.folderId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
                       </button>
                       {filteredProjects.map((project) => {
                         const id = projectIdOf(project)
@@ -737,7 +737,7 @@ export function ItemDetail() {
                           >
                             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
                             <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                            {item.projectId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            {item.folderId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                           </button>
                         )
                       })}
@@ -1097,7 +1097,7 @@ export function ItemDetail() {
                       >
                         <IconInbox className="h-3.5 w-3.5 text-slate-400" />
                         Inbox
-                        {!item.projectId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                        {!item.folderId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
                       </button>
                       {filteredProjects.map((project) => {
                         const id = projectIdOf(project)
@@ -1114,7 +1114,7 @@ export function ItemDetail() {
                           >
                             <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color ?? '#94a3b8' }} />
                             <span className="min-w-0 flex-1 truncate">{project.name}</span>
-                            {item.projectId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                            {item.folderId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                           </button>
                         )
                       })}
@@ -1267,7 +1267,7 @@ export function ItemDetail() {
               <div className="flex flex-col gap-1.5">
                 <label className="text-[13px] font-medium text-slate-500">Projeto</label>
                 <select
-                  value={item.projectId ?? ''}
+                  value={item.folderId ?? ''}
                   onChange={(e) => handleProjectChange(e.target.value)}
                   className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
                 >

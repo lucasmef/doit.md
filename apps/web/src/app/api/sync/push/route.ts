@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
 
         if (change.frontmatterChanges) {
           for (const fc of change.frontmatterChanges) {
-            const allowed = ['complexity', 'status', 'tags', 'dueDate', 'projectId', 'areaId']
+            const allowed = ['complexity', 'status', 'tags', 'dueDate', 'folderId', 'areaId']
             if (allowed.includes(fc.field)) patch[fc.field] = fc.after
           }
         }

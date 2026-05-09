@@ -1,6 +1,6 @@
 export * from './item'
-export * from './project'
 export * from './folder'
+export * from './project'
 export * from './area'
 export * from './calendar'
 export * from './audit'

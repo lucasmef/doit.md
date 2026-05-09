@@ -21,8 +21,9 @@ export type Item = {
   startDate?: string
   scheduledDate?: string
 
-  projectId?: string
   folderId?: string
+  /** @deprecated removed; alias for folderId during transition */
+  projectId?: string
   areaId?: string
   parentId?: string
 
@@ -52,8 +53,8 @@ export type CreateItemInput = Pick<Item, 'title' | 'complexity'> &
       | 'recurrence'
       | 'startDate'
       | 'scheduledDate'
-      | 'projectId'
       | 'folderId'
+      | 'projectId'
       | 'areaId'
       | 'parentId'
       | 'tags'
@@ -73,8 +74,8 @@ export type UpdateItemInput = Partial<
     | 'recurrence'
     | 'startDate'
     | 'scheduledDate'
-    | 'projectId'
     | 'folderId'
+    | 'projectId'
     | 'areaId'
     | 'parentId'
     | 'tags'
