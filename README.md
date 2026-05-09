@@ -58,19 +58,11 @@ Para Postgres:
 DATABASE_URL=postgresql://<user>:<password>@<host>:5432/doitmd
 ```
 
-## Desenvolvimento
+## Desenvolvimento e Validacao
 
-Rodar o app web:
+Agentes nao devem rodar o site localmente com `pnpm dev`, `pnpm --filter @doit/web dev`, `next dev`, `next start` ou comandos equivalentes que deixem um servidor persistente em execucao.
 
-```bash
-pnpm dev
-```
-
-Ou diretamente pelo workspace:
-
-```bash
-pnpm --filter @doit/web dev
-```
+Para validar mudancas, use comandos que encerram sozinhos. Se algum teste pontual precisar iniciar o app, encerre o servidor imediatamente ao terminar.
 
 Build do app web:
 

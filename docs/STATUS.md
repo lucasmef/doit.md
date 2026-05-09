@@ -31,8 +31,8 @@
 - [x] Layout raiz com PWA metadata
 
 ### Fase 1 — Core CRUD
-- [x] `packages/db` — connection singleton, todos os schemas Mongoose
-- [x] Schemas: Item, Project, Area, CalendarEvent, AuditLog, PendingChange, ItemVersion, GoogleAccount
+- [x] `packages/db` — connection singleton e models SQL para SQLite/Postgres
+- [x] Models: Item, Project, Area, CalendarEvent, AuditLog, PendingChange, ItemVersion, GoogleAccount, User
 - [x] `apps/web/src/lib/db.ts` — `ensureDB()` singleton
 - [x] `apps/web/src/lib/auth.ts` — `requireUserId()`
 - [x] `GET/POST /api/items` — listar e criar
@@ -115,24 +115,23 @@
 
 ## O que Falta
 
-### Bloqueadores para Rodar (Alta Prioridade)
+### Bloqueadores de Ambiente (Alta Prioridade)
 
 - [ ] Criar `apps/web/.env.local` com todas as variáveis de ambiente
-  - `MONGODB_URI`
+  - `DATABASE_URL` (vazio para SQLite local, `postgresql://...` para Postgres)
   - `NEXTAUTH_SECRET`
   - `NEXTAUTH_URL`
   - `GOOGLE_CLIENT_ID`
   - `GOOGLE_CLIENT_SECRET`
   - `GOOGLE_REDIRECT_URI`
-- [ ] Criar projeto no MongoDB Atlas e obter connection string
 - [x] Login local via NextAuth Credentials
 - [ ] Criar projeto no Google Cloud Console, habilitar Calendar API, obter credenciais OAuth2
-- [ ] Rodar `pnpm install` e `pnpm --filter @doit/web dev` para validar
+- [ ] Rodar `pnpm install` e `pnpm --filter @doit/web build` para validar sem manter servidor local ativo
 
 ### MVP Incompleto (Média Prioridade)
 
 - [x] Busca global de itens — barra no Topbar existe e funciona com SWR Debounce
-  - [x] Criar `GET /api/items/search?q=` com Regex search no MongoDB
+  - [x] Criar `GET /api/items/search?q=` com busca SQL via `@doit/db`
   - [x] Conectar ao input do Topbar com debounce
 - [x] Página de erro 404 (`app/not-found.tsx`)
 - [x] Error boundary global (`app/error.tsx`)
@@ -154,9 +153,9 @@
 - [ ] Múltiplos calendários Google (hoje só sincroniza o primário)
 - [ ] Tarefas recorrentes (`rrule`)
 - [ ] Service Worker para funcionamento offline
-- [ ] Busca full-text com Atlas Search
+- [ ] Busca full-text em Postgres/SQLite, conforme ambiente
 - [ ] Publicar `doit-sync` no npm
-- [ ] Deploy em produção (Vercel + MongoDB Atlas)
+- [ ] Deploy em produção com Postgres
 - [ ] Domínio personalizado
 - [ ] Notificações push para tarefas com prazo
 - [ ] App mobile nativo (React Native ou Capacitor)
@@ -172,7 +171,7 @@
 | `docs/STATUS.md` | Este arquivo |
 | `apps/web/.env.local` | Variáveis de ambiente (NÃO commitar) |
 | `apps/web/src/app/(app)/layout.tsx` | Layout principal do app |
-| `packages/db/src/schemas/` | Todos os schemas Mongoose |
+| `packages/db/src/` | Conexão e models SQL SQLite/Postgres |
 | `packages/core/src/item-rules.ts` | Regras de negócio centrais |
 
 ---
@@ -181,8 +180,8 @@
 
 | Decisão | Motivo |
 |---------|--------|
-| `Model<any>` no Mongoose | Evita erros de union type no TypeScript com hot-reload do Next.js |
-| `exactOptionalPropertyTypes: false` | Causa fricção excessiva com campos opcionais do Mongoose |
+| API `SqlModel` em `@doit/db` | Mantém uma interface simples de persistência para SQLite e Postgres |
+| `exactOptionalPropertyTypes: false` | Reduz fricção com campos opcionais serializados e dados vindos do banco |
 | SWR com mutate global | Invalida caches relacionados sem refetch manual |
 | Soft-delete (status: archived) | Preserva histórico, permite restore |
 | Markdown com frontmatter | Formato editável por humanos e agentes de IA |

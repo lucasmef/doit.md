@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Item } from '@doit/types'
 import { ItemRow } from './item-row'
 import { useUI } from '@/store/ui'
@@ -16,26 +16,31 @@ type Props = {
 export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot, hideDoneAfterDelay = true }: Props) {
   const { selectedItemId } = useUI()
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
+  const previousStatuses = useRef<Record<string, Item['status']>>({})
   const visibleItems = useMemo(() => {
     if (!hideDoneAfterDelay) return items
     return items.filter((item) => item.status !== 'done' || recentlyDoneIds[item.id])
   }, [hideDoneAfterDelay, items, recentlyDoneIds])
 
   useEffect(() => {
-    if (!hideDoneAfterDelay) return
-    const doneIds = new Set(items.filter((item) => item.status === 'done').map((item) => item.id))
-    if (doneIds.size === 0) return
+    if (!hideDoneAfterDelay) {
+      previousStatuses.current = Object.fromEntries(items.map((item) => [item.id, item.status]))
+      return
+    }
+
     const now = Date.now()
+    const transitions = items.filter((item) => {
+      const previous = previousStatuses.current[item.id]
+      return previous && previous !== 'done' && item.status === 'done'
+    })
+
+    previousStatuses.current = Object.fromEntries(items.map((item) => [item.id, item.status]))
+    if (transitions.length === 0) return
+
     setRecentlyDoneIds((current) => {
-      let changed = false
       const next = { ...current }
-      for (const id of doneIds) {
-        if (!next[id]) {
-          next[id] = now
-          changed = true
-        }
-      }
-      return changed ? next : current
+      for (const item of transitions) next[item.id] = now
+      return next
     })
   }, [hideDoneAfterDelay, items])
 

@@ -11,11 +11,11 @@ doit.md é uma PWA de produtividade pessoal construída em Next.js 15 com monore
 Unifica notas, tarefas, projetos e calendário em uma única entidade chamada **Item**.
 
 **Stack principal:**
-- `apps/web` — Next.js 15 App Router, Tailwind CSS, SWR, Clerk
+- `apps/web` — Next.js 15 App Router, React 19, Tailwind CSS, SWR, NextAuth Credentials
 - `apps/sync-agent` — CLI Node.js ESM (`doit-sync`)
 - `packages/types` — tipos TypeScript compartilhados
 - `packages/core` — lógica pura (ids, regras de item)
-- `packages/db` — Mongoose schemas e conexão MongoDB
+- `packages/db` — camada SQL com SQLite local por padrão e Postgres via `DATABASE_URL`
 - `packages/md` — serialização/parsing de Markdown com frontmatter
 - `packages/sync` — hash e manifest de sincronização
 - `packages/audit` — classificação de risco de mudanças
@@ -105,8 +105,8 @@ Conteúdo em Markdown aqui...
 
 ### TypeScript
 - Strict mode ativado (`noUncheckedIndexedAccess`)
-- `exactOptionalPropertyTypes` **desativado** (causa fricção com Mongoose)
-- Todos os Mongoose models exportados como `Model<any>` para evitar erros de union type
+- `exactOptionalPropertyTypes` **desativado**
+- Models de persistência expostos por `@doit/db` usam `SqlModel` com helpers como `find`, `findOne`, `create`, `updateOne` e `lean`
 - Preferir `Record<string, unknown>` sobre `any` em results de `.lean()`
 
 ### Imports
@@ -115,8 +115,8 @@ Conteúdo em Markdown aqui...
 - Nunca importar `@doit/db` em componentes client — apenas em Route Handlers
 
 ### API Routes (Next.js)
-- Sempre validar `userId` via `auth()` do Clerk antes de qualquer operação
-- Sempre chamar `await ensureDB()` antes de queries Mongoose
+- Sempre validar `userId` via `auth()`/`requireUserId()` de `apps/web/src/lib/auth.ts` antes de qualquer operação protegida
+- Sempre chamar `await ensureDB()` antes de queries em `@doit/db`
 - Retornar `{ error: 'Unauthorized' }` com status 401 quando não autenticado
 - Catch global retorna `{ error: 'Internal error' }` com status 500
 
@@ -132,15 +132,21 @@ Conteúdo em Markdown aqui...
 
 ```env
 # apps/web/.env.local
-MONGODB_URI=mongodb+srv://...
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-CLERK_SECRET_KEY=sk_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+DATABASE_URL=
+NEXTAUTH_SECRET=<replace-with-random-secret>
+NEXTAUTH_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/callback
 ```
+
+---
+
+## Restrição de Execução Local
+
+Agentes **não devem rodar o site localmente** (`pnpm dev`, `pnpm --filter @doit/web dev`, `next dev`, `next start` ou comandos equivalentes que iniciem servidor persistente).
+
+É permitido executar apenas validações que encerram sozinhas, como type-check, build e testes pontuais. Se algum teste precisar iniciar o app, o servidor deve ser encerrado imediatamente ao terminar a validação.
 
 ---
 
@@ -150,13 +156,10 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/callback
 # Instalar dependências
 pnpm install
 
-# Rodar em desenvolvimento
-pnpm --filter @doit/web dev
-
 # Type check
 pnpm --filter @doit/web exec tsc --noEmit
 
-# Build
+# Build permitido para validação
 pnpm --filter @doit/web build
 
 # CLI sync (após build do sync-agent)

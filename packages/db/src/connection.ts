@@ -75,14 +75,37 @@ function resolveSqlitePath(url: string | undefined): string {
 async function migrate(db: DBClient): Promise<void> {
   const statements = db.kind === 'postgres' ? postgresSchema : sqliteSchema
   if (db.kind === 'postgres') {
-    for (const sql of statements) await db.pool.query(sql)
-    await ensureColumn(db, 'items', 'recurrence', 'TEXT')
-    await ensureColumn(db, 'items', 'dueTime', 'TEXT')
+    for (const sql of statements.filter(isCreateTableStatement)) await db.pool.query(sql)
+    await ensureKnownColumns(db)
+    for (const sql of statements.filter((statement) => !isCreateTableStatement(statement))) await db.pool.query(sql)
     return
   }
-  for (const sql of statements) db.db.exec(sql)
+  for (const sql of statements.filter(isCreateTableStatement)) db.db.exec(sql)
+  await ensureKnownColumns(db)
+  for (const sql of statements.filter((statement) => !isCreateTableStatement(statement))) db.db.exec(sql)
+}
+
+function isCreateTableStatement(sql: string): boolean {
+  return sql.trimStart().startsWith('CREATE TABLE')
+}
+
+async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'expirationTime', 'INTEGER')
+  await ensureColumn(db, 'push_subscriptions', 'userAgent', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'deviceLabel', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'platform', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'enabled', 'INTEGER NOT NULL DEFAULT 1')
+  await ensureColumn(db, 'push_subscriptions', 'failureCount', 'INTEGER NOT NULL DEFAULT 0')
+  await ensureColumn(db, 'push_subscriptions', 'lastSeenAt', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'lastSuccessAt', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'lastFailureAt', 'TEXT')
+  await ensureColumn(db, 'push_subscriptions', 'disabledAt', 'TEXT')
+  await ensureColumn(db, 'notification_alerts', 'itemId', 'TEXT')
+  await ensureColumn(db, 'notification_alerts', 'scheduledFor', 'TEXT')
+  await ensureColumn(db, 'notification_alerts', 'deliveryStatus', 'TEXT NOT NULL DEFAULT \'pending\'')
+  await ensureColumn(db, 'notification_alerts', 'acknowledgedAt', 'TEXT')
 }
 
 const sqliteSchema = [

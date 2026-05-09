@@ -103,7 +103,7 @@ capture → task → project → area
 ### Stack
 - **Frontend:** Next.js 15 App Router, React 19, Tailwind CSS v3, SWR
 - **Auth:** NextAuth com Credentials
-- **Database:** MongoDB Atlas via Mongoose
+- **Database:** SQLite local por padrão e Postgres via `DATABASE_URL`, expostos por `@doit/db`
 - **Monorepo:** pnpm workspaces
 - **CLI:** Node.js ESM, commander, ora, chalk, conf
 
@@ -115,7 +115,7 @@ apps/
 packages/
   types/         # Tipos TypeScript compartilhados
   core/          # Lógica pura (ids, regras)
-  db/            # Mongoose schemas
+  db/            # Persistência SQL SQLite/Postgres
   md/            # Frontmatter serialization
   sync/          # Hash e manifest
   audit/         # Risk assessment
@@ -136,7 +136,7 @@ packages/
 Monorepo, packages base, TypeScript, Tailwind, NextAuth, variáveis de ambiente
 
 ### Fase 1 — Core CRUD ✅
-Schemas Mongoose, API REST para Items/Projects/Areas, hooks SWR, páginas base
+Persistência SQL, API REST para Items/Projects/Areas, hooks SWR, páginas base
 
 ### Fase 2 — UI Completa ✅
 Layout responsivo, ItemDetail, QuickCapture, todas as views, componentes
@@ -148,7 +148,7 @@ CLI doit-sync, Markdown mirror, PendingChange, aprovação na UI, versionamento
 OAuth2, sync de eventos, Settings page, animações, skeletons, type-check limpo
 
 ### Fase 5 — Produção (pendente)
-Deploy Vercel, MongoDB Atlas produção, variáveis de ambiente, domínio
+Deploy, Postgres em produção, variáveis de ambiente, domínio
 
 ### Fase 6 — Pós-MVP (futuro)
 Google Calendar write, tarefas recorrentes, busca full-text, offline SW, mobile drag
