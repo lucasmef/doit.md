@@ -1,13 +1,14 @@
 import type { Item, ItemComplexity, ItemStatus } from '@doit/types'
+import { toLocalDateKey } from './date'
 
 export function isToday(item: Item): boolean {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateKey()
   return item.dueDate === today || item.scheduledDate === today
 }
 
 export function isOverdue(item: Item): boolean {
   if (!item.dueDate) return false
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateKey()
   return item.dueDate < today && item.status !== 'done' && item.status !== 'archived'
 }
 

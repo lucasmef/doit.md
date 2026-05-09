@@ -6,10 +6,13 @@ import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
 import type { Priority } from './priority-select'
 import { updateItem } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
+import { toLocalDateKey } from '@doit/core'
 
 function formatDueDate(dateStr: string): string {
-  const today = new Date().toISOString().slice(0, 10)
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const tomorrowDate = new Date()
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const today = toLocalDateKey()
+  const tomorrow = toLocalDateKey(tomorrowDate)
   if (dateStr === today) return 'Hoje'
   if (dateStr === tomorrow) return 'Amanhã'
   const d = new Date(dateStr + 'T12:00:00')
@@ -45,11 +48,11 @@ function addDays(date: Date, days: number) {
 }
 
 function toDateString(date: Date) {
-  return date.toISOString().slice(0, 10)
+  return toLocalDateKey(date)
 }
 
 function nextRecurringDate(current: string | undefined, recurrence: ItemRecurrence): string {
-  const today = new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00`)
+  const today = new Date(`${toLocalDateKey()}T12:00:00`)
   const base = current ? new Date(`${current}T12:00:00`) : today
   if (base < today) base.setTime(today.getTime())
 
@@ -105,7 +108,7 @@ export function ItemRow({ item, active = false, index = 0 }: Props) {
     await updateItem(item.id, { status: next })
   }
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateKey()
   const overdue =
     item.dueDate &&
     item.dueDate < today &&

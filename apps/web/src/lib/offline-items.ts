@@ -312,7 +312,17 @@ export function queueArchiveItem(itemId: string) {
   ])
 }
 
+let flushPromise: Promise<boolean> | null = null
+
 export async function flushOfflineItemQueue() {
+  if (flushPromise) return flushPromise
+  flushPromise = flushOfflineItemQueueOnce().finally(() => {
+    flushPromise = null
+  })
+  return flushPromise
+}
+
+async function flushOfflineItemQueueOnce() {
   const queue = readQueue()
   if (!queue.length) return false
 

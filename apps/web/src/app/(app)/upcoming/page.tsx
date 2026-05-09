@@ -3,6 +3,7 @@
 import { useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
 import type { Item } from '@doit/types'
+import { toLocalDateKey } from '@doit/core'
 
 function getGroup(item: Item): string {
   const today = new Date()
@@ -18,9 +19,9 @@ function getGroup(item: Item): string {
   const d = item.dueDate ?? item.scheduledDate
   if (!d) return 'Sem data'
 
-  if (d === tomorrow.toISOString().slice(0, 10)) return 'Amanha'
-  if (d <= endOfWeek.toISOString().slice(0, 10)) return 'Esta semana'
-  if (d <= endOfNextWeek.toISOString().slice(0, 10)) return 'Proxima semana'
+  if (d === toLocalDateKey(tomorrow)) return 'Amanha'
+  if (d <= toLocalDateKey(endOfWeek)) return 'Esta semana'
+  if (d <= toLocalDateKey(endOfNextWeek)) return 'Proxima semana'
   return 'Mais tarde'
 }
 
@@ -29,7 +30,7 @@ const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde', 'S
 export default function UpcomingPage() {
   const { items, isLoading } = useItems()
 
-  const todayStr = new Date().toISOString().slice(0, 10)
+  const todayStr = toLocalDateKey()
   const future = items.filter(
     (i) =>
       i.status !== 'archived' &&

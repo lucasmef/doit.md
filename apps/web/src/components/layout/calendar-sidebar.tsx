@@ -6,6 +6,7 @@ import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useUI } from '@/store/ui'
 import { CalendarGrid } from '@/components/ui/calendar-grid'
 import { DayAgenda } from '@/components/ui/day-agenda'
+import { toLocalDateKey } from '@doit/core'
 
 function CloseIcon() {
   return (
@@ -21,7 +22,7 @@ function formatTime(dt: string, allDay: boolean) {
 }
 
 function CalendarPanel({ onClose }: { onClose: () => void }) {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateKey()
   const [selectedDate, setSelectedDate] = useState(today)
   const { items } = useItems()
   const { events } = useCalendarEvents(`${selectedDate}T00:00:00Z`, `${selectedDate}T23:59:59Z`)

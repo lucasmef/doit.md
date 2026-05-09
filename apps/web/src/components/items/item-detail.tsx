@@ -13,6 +13,7 @@ import { DueDatePicker } from './due-date-picker'
 import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
 import type { ItemComplexity, ItemRecurrence, ItemStatus, Project, UpdateItemInput } from '@doit/types'
+import { toLocalDateKey } from '@doit/core'
 
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
@@ -30,8 +31,10 @@ function nullablePatch<T extends Record<string, unknown>>(patch: T): UpdateItemI
 }
 
 function formatDueDate(dateStr: string): string {
-  const today = new Date().toISOString().slice(0, 10)
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+  const tomorrowDate = new Date()
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const today = toLocalDateKey()
+  const tomorrow = toLocalDateKey(tomorrowDate)
   if (dateStr === today) return 'Hoje'
   if (dateStr === tomorrow) return 'Amanhã'
   const d = new Date(dateStr + 'T12:00:00')
@@ -47,13 +50,13 @@ function formatTimeLabel(time: string) {
 }
 
 function todayDate() {
-  return new Date().toISOString().slice(0, 10)
+  return toLocalDateKey()
 }
 
 function dateAfter(days: number) {
   const date = new Date()
   date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  return toLocalDateKey(date)
 }
 
 function nextWeekday(targetDay: number, minimumDays = 1) {
@@ -61,7 +64,7 @@ function nextWeekday(targetDay: number, minimumDays = 1) {
   let days = (targetDay - date.getDay() + 7) % 7
   if (days < minimumDays) days += 7
   date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
+  return toLocalDateKey(date)
 }
 
 function laterThisWeekDate() {

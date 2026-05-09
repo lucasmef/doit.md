@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
 import { useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
+import { toLocalDateKey } from '@doit/core'
 
 const TOP_NAV = [
   { href: '/today', label: 'Hoje', token: '- [x]' },
@@ -86,7 +87,7 @@ export function Sidebar() {
   ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
 
   const counts = {
-    '/today': activeItems.filter((item) => item.dueDate === new Date().toISOString().slice(0, 10)).length,
+    '/today': activeItems.filter((item) => item.dueDate === toLocalDateKey()).length,
     '/inbox': activeItems.filter((item) => item.status === 'inbox' || (!item.projectId && !item.dueDate && !item.scheduledDate)).length,
     '/upcoming': activeItems.filter((item) => item.dueDate || item.scheduledDate).length,
     '/archive': items.filter((item) => item.status === 'done' || item.status === 'archived').length,

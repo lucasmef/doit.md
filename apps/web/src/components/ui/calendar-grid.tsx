@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { Item } from '@doit/types'
+import { toLocalDateKey } from '@doit/core'
 
 type Props = {
   items: Item[]
@@ -32,7 +33,7 @@ export function CalendarGrid({ items, onDayClick, selectedDate, compact = false 
 
   const daysInMonth = getDaysInMonth(year, month)
   const firstDay = getFirstDayOfWeek(year, month)
-  const todayStr = today.toISOString().slice(0, 10)
+  const todayStr = toLocalDateKey(today)
 
   function prevMonth() {
     if (month === 0) { setYear(y => y - 1); setMonth(11) }

@@ -3,7 +3,7 @@
 import { useItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { ItemList } from '@/components/items/item-list'
-import { isToday, isOverdue } from '@doit/core'
+import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 
 function EventCard({ title, start, end, allDay }: { title: string; start: string; end: string; allDay: boolean }) {
   function fmt(dt: string) {
@@ -31,7 +31,7 @@ function EventCard({ title, start, end, allDay }: { title: string; start: string
 
 export default function TodayPage() {
   const { items, isLoading } = useItems()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = toLocalDateKey()
   const { events } = useCalendarEvents(today + 'T00:00:00Z', today + 'T23:59:59Z')
 
   const todayLabel = new Date().toLocaleDateString('pt-BR', {
