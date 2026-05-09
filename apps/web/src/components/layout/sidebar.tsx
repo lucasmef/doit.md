@@ -7,25 +7,77 @@ import { useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { toLocalDateKey } from '@doit/core'
 
-const TOP_NAV = [
-  { href: '/today', label: 'Hoje', token: '- [x]' },
-  { href: '/inbox', label: 'Inbox', token: 'in' },
-  { href: '/upcoming', label: 'Proximos', token: '>>' },
+type IconKey = 'today' | 'inbox' | 'upcoming' | 'settings' | 'project' | 'tag'
+
+function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; className?: string }) {
+  const common = { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  if (kind === 'today') {
+    return (
+      <svg className={className} {...common}>
+        <path d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+        <path d="m9 14 2 2 4-4" />
+      </svg>
+    )
+  }
+  if (kind === 'inbox') {
+    return (
+      <svg className={className} {...common}>
+        <path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7m16 0v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-5m16 0h-3.5a1 1 0 0 0-.8.4l-1.4 1.86a1 1 0 0 1-.8.4h-3a1 1 0 0 1-.8-.4l-1.4-1.86A1 1 0 0 0 7.5 13H4" />
+      </svg>
+    )
+  }
+  if (kind === 'upcoming') {
+    return (
+      <svg className={className} {...common}>
+        <path d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+        <path d="M9 14h4m-2-2 2 2-2 2" />
+      </svg>
+    )
+  }
+  if (kind === 'settings') {
+    return (
+      <svg className={className} {...common}>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+      </svg>
+    )
+  }
+  if (kind === 'tag') {
+    return (
+      <svg className={className} {...common}>
+        <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0l-7.2-7.2a2 2 0 0 1-.6-1.4V5a2 2 0 0 1 2-2h7a2 2 0 0 1 1.4.6l7.4 7.4a2 2 0 0 1 0 2.8Z" />
+        <circle cx="8" cy="8" r="1.4" />
+      </svg>
+    )
+  }
+  return (
+    <svg className={className} {...common}>
+      <path d="M3 7h18M3 12h18M3 17h12" />
+    </svg>
+  )
+}
+
+const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
+  { href: '/today', label: 'Hoje', icon: 'today' },
+  { href: '/inbox', label: 'Inbox', icon: 'inbox' },
+  { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
 ]
 
-const BOTTOM_NAV = [
-  { href: '/settings', label: 'Configuracoes', token: 'cfg' },
+const BOTTOM_NAV: { href: string; label: string; icon: IconKey }[] = [
+  { href: '/settings', label: 'Configuracoes', icon: 'settings' },
 ]
 
 function NavLink({
   href,
   label,
-  token,
+  icon,
+  iconNode,
   count,
 }: {
   href: string
   label: string
-  token?: string
+  icon?: IconKey
+  iconNode?: React.ReactNode
   count?: number
 }) {
   const pathname = usePathname()
@@ -34,21 +86,19 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-2 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+      className={`group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
         active
           ? 'bg-surface-selected text-brand-600'
           : 'text-navy-900 hover:bg-surface-soft'
       }`}
     >
-      {token && (
-        <span
-          className={`w-9 shrink-0 font-mono text-[11px] font-semibold ${
-            active ? 'text-brand-600' : 'text-navy-300 group-hover:text-navy-500'
-          }`}
-        >
-          {token}
-        </span>
-      )}
+      <span
+        className={`flex h-5 w-5 shrink-0 items-center justify-center ${
+          active ? 'text-brand-600' : 'text-navy-400 group-hover:text-navy-700'
+        }`}
+      >
+        {iconNode ?? (icon ? <NavIcon kind={icon} /> : null)}
+      </span>
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {count !== undefined && (
         <span
@@ -132,7 +182,17 @@ export function Sidebar() {
           .filter((p) => p.status === 'active')
           .slice(0, 8)
           .map((p) => (
-            <NavLink key={p.id} href={`/projects/${p.id}`} label={p.name} token="#" />
+            <NavLink
+              key={p.id}
+              href={`/projects/${p.id}`}
+              label={p.name}
+              iconNode={
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: p.color ?? '#94a3b8' }}
+                />
+              }
+            />
           ))}
         {projects.length === 0 && (
           <span className="px-2.5 py-1 font-mono text-[11px] text-navy-300">Nenhum projeto</span>

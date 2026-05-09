@@ -32,10 +32,10 @@ function CalendarPanel({ onClose }: { onClose: () => void }) {
     .sort((a, b) => a.start.localeCompare(b.start))
 
   return (
-    <>
-      <div className="flex h-14 shrink-0 items-center justify-between border-b border-ui-border px-4">
+    <div className="flex h-full flex-col">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-ui-border px-5">
         <div>
-          <h2 className="text-[14px] font-bold text-navy-900">Calendario</h2>
+          <h2 className="text-[15px] font-bold text-navy-900">Calendario</h2>
           <p className="font-mono text-[10px] text-navy-300">Shift+C</p>
         </div>
         <button
@@ -47,39 +47,42 @@ function CalendarPanel({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <CalendarGrid
-          items={activeItems}
-          selectedDate={selectedDate}
-          onDayClick={setSelectedDate}
-          compact
-        />
+      <div className="flex flex-1 min-h-0 flex-col gap-4 overflow-hidden p-4 lg:flex-row">
+        <div className="flex-1 min-w-0 overflow-y-auto">
+          <CalendarGrid
+            items={activeItems}
+            selectedDate={selectedDate}
+            onDayClick={setSelectedDate}
+          />
+        </div>
 
-        <section className="mt-5">
-          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Eventos
-          </h3>
-          {dayEvents.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-ui-border-strong px-3 py-3 font-mono text-[11px] text-navy-300">
-              Nenhum evento nesta data.
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {dayEvents.map((event) => (
-                <div key={event.id} className="rounded-lg border border-ui-border bg-white px-3 py-2 shadow-cool-sm">
-                  <p className="truncate text-[13px] font-semibold text-navy-900">{event.title}</p>
-                  <p className="mt-0.5 font-mono text-[11px] text-navy-300">
-                    {formatTime(event.start, event.allDay)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+        <div className="w-full shrink-0 overflow-y-auto border-t border-ui-border pt-4 lg:w-[300px] lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+          <section>
+            <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              Eventos
+            </h3>
+            {dayEvents.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-ui-border-strong px-3 py-3 font-mono text-[11px] text-navy-300">
+                Nenhum evento nesta data.
+              </p>
+            ) : (
+              <div className="space-y-1.5">
+                {dayEvents.map((event) => (
+                  <div key={event.id} className="rounded-lg border border-ui-border bg-white px-3 py-2 shadow-cool-sm">
+                    <p className="truncate text-[13px] font-semibold text-navy-900">{event.title}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-navy-300">
+                      {formatTime(event.start, event.allDay)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
-        <DayAgenda date={selectedDate} items={activeItems} compact />
+          <DayAgenda date={selectedDate} items={activeItems} compact />
+        </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -91,15 +94,16 @@ export function CalendarSidebar() {
   if (!calendarOpen) return null
 
   return (
-    <>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/40 p-2 sm:p-6"
+      onClick={() => setCalendarOpen?.(false)}
+    >
       <div
-        className="fixed inset-0 z-40 bg-navy-900/40 lg:hidden"
-        onClick={() => setCalendarOpen?.(false)}
-      />
-
-      <aside className="fixed inset-y-0 right-0 z-50 flex w-full flex-col border-l border-ui-border bg-white shadow-cool-lg sm:w-[360px] lg:static lg:z-auto lg:w-[320px] lg:shrink-0 lg:shadow-none">
+        className="flex h-full w-full max-w-[1100px] flex-col overflow-hidden rounded-2xl border border-ui-border bg-white shadow-cool-lg sm:h-[85vh]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <CalendarPanel onClose={() => setCalendarOpen?.(false)} />
-      </aside>
-    </>
+      </div>
+    </div>
   )
 }

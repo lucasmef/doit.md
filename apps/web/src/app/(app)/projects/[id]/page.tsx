@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 import { useItems } from '@/hooks/use-items'
 import { updateProject } from '@/hooks/use-projects'
@@ -10,17 +10,69 @@ import type { Project } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-const STATUS_OPTIONS: { value: Project['status']; label: string }[] = [
-  { value: 'active', label: 'Ativo' },
-  { value: 'paused', label: 'Pausado' },
-  { value: 'done', label: 'Concluido' },
-  { value: 'archived', label: 'Arquivado' },
+const STATUS_OPTIONS: { value: Project['status']; label: string; dot: string }[] = [
+  { value: 'active', label: 'Ativo', dot: 'bg-green-400' },
+  { value: 'paused', label: 'Pausado', dot: 'bg-amber-400' },
+  { value: 'done', label: 'Concluido', dot: 'bg-blue-400' },
+  { value: 'archived', label: 'Arquivado', dot: 'bg-slate-300' },
 ]
 
 const COLORS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b',
   '#10b981', '#ef4444', '#06b6d4', '#64748b',
 ]
+
+function ChevronIcon() {
+  return (
+    <svg className="h-3 w-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+function Popover({
+  trigger,
+  children,
+  align = 'left',
+}: {
+  trigger: (props: { open: boolean; toggle: () => void }) => React.ReactNode
+  children: (close: () => void) => React.ReactNode
+  align?: 'left' | 'right'
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onDoc(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div ref={ref} className="relative">
+      {trigger({ open, toggle: () => setOpen((v) => !v) })}
+      {open && (
+        <div
+          className={`absolute top-full mt-1 z-30 min-w-[160px] rounded-lg border border-slate-200 bg-white p-1 shadow-lg ${
+            align === 'right' ? 'right-0' : 'left-0'
+          }`}
+        >
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -105,56 +157,116 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 mb-4 pb-4 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Status:</span>
-          <select
-            value={project.status}
-            onChange={(e) => handleStatusChange(e.target.value as Project['status'])}
-            className="text-xs border border-slate-200 rounded-md px-2 py-1 bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-brand-500"
-          >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
+      <div className="flex flex-wrap items-center gap-1.5 mb-4 pb-3 border-b border-slate-100">
+        <Popover
+          trigger={({ toggle }) => {
+            const cur = STATUS_OPTIONS.find((o) => o.value === project.status) ?? STATUS_OPTIONS[0]!
+            return (
+              <button
+                type="button"
+                onClick={toggle}
+                className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${cur.dot}`} />
+                <span>{cur.label}</span>
+                <ChevronIcon />
+              </button>
+            )
+          }}
+        >
+          {(close) =>
+            STATUS_OPTIONS.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => { handleStatusChange(o.value); close() }}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-left hover:bg-slate-100 ${
+                  project.status === o.value ? 'text-brand-600' : 'text-slate-700'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${o.dot}`} />
+                <span>{o.label}</span>
+              </button>
+            ))
+          }
+        </Popover>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Cor:</span>
-          {COLORS.map((c) => (
+        <Popover
+          trigger={({ toggle }) => (
             <button
-              key={c}
               type="button"
-              onClick={() => handleColorChange(c)}
-              className={`w-4 h-4 rounded-full transition-transform ${project.color === c ? 'scale-125 ring-2 ring-offset-1 ring-slate-400' : ''}`}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
+              onClick={toggle}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <span
+                className="h-3 w-3 rounded-full"
+                style={{ backgroundColor: project.color ?? '#94a3b8' }}
+              />
+              <span>Cor</span>
+              <ChevronIcon />
+            </button>
+          )}
+        >
+          {(close) => (
+            <div className="grid grid-cols-4 gap-1 p-1">
+              {COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => { handleColorChange(c); close() }}
+                  className={`h-6 w-6 rounded-full transition-transform hover:scale-110 ${
+                    project.color === c ? 'ring-2 ring-offset-1 ring-slate-400' : ''
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          )}
+        </Popover>
+
+        <Popover
+          trigger={({ toggle }) => (
+            <button
+              type="button"
+              onClick={toggle}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                {viewMode === 'list' ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h10" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 5h5v14H4zM10 5h5v9h-5zM16 5h4v6h-4z" />
+                )}
+              </svg>
+              <span>{viewMode === 'list' ? 'Lista' : 'Kanban'}</span>
+              <ChevronIcon />
+            </button>
+          )}
+        >
+          {(close) => (
+            <>
+              {([
+                ['list', 'Lista'],
+                ['kanban', 'Kanban'],
+              ] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => { setViewMode(mode); close() }}
+                  className={`block w-full rounded-md px-2 py-1.5 text-xs text-left hover:bg-slate-100 ${
+                    viewMode === mode ? 'text-brand-600' : 'text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </>
+          )}
+        </Popover>
 
         <span className="text-xs text-slate-300 ml-auto">
           {open.length} abertos / {closed.length} concluidos
         </span>
-      </div>
-
-      <div className="mb-4 inline-flex rounded-lg border border-slate-200 bg-white p-1">
-        {([
-          ['list', 'Lista'],
-          ['kanban', 'Kanban'],
-        ] as const).map(([mode, label]) => (
-          <button
-            key={mode}
-            type="button"
-            onClick={() => setViewMode(mode)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-              viewMode === mode
-                ? 'bg-brand-100 text-brand-700'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
       </div>
 
       {viewMode === 'list' ? (

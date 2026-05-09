@@ -245,7 +245,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
 
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
-          className={`text-[14px] leading-5 font-medium truncate transition-all ${
+          className={`text-[14px] leading-5 font-normal truncate transition-all ${
             item.status === 'done' ? 'line-through text-navy-300' : 'text-navy-900'
           }`}
         >
