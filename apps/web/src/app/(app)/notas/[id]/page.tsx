@@ -330,7 +330,9 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     if (sourceIdx < 0 || targetIdx < 0) return
 
     const reordered = [...siblings]
-    const [moved] = reordered.splice(sourceIdx, 1)
+    const moved = reordered[sourceIdx]
+    if (!moved) return
+    reordered.splice(sourceIdx, 1)
     const insertAt = sourceIdx < targetIdx ? targetIdx : targetIdx
     reordered.splice(insertAt, 0, moved)
 
