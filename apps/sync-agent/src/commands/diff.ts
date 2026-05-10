@@ -1,5 +1,5 @@
-import { join } from 'path'
-import { readFile } from 'fs/promises'
+import { join, relative, sep } from 'path'
+import { readFile, readdir } from 'fs/promises'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
@@ -9,7 +9,55 @@ import { hashContent } from '@doit/sync'
 import { assessRisk } from '@doit/audit'
 import { newChangeId } from '@doit/core'
 import type { Manifest, ManifestEntry } from '@doit/sync'
-import type { PendingChange } from '@doit/types'
+import type { ChangeType, PendingChange } from '@doit/types'
+
+const SYSTEM_DIRS = new Set(['_system', '_changes', '.git', 'node_modules'])
+
+type LocalFile = {
+  relativePath: string
+  raw: string
+  hash: string
+  itemId?: string
+  title?: string
+  content: string
+  complexity?: string
+  status?: string
+  tags?: string[]
+  dueDate?: string
+}
+
+async function walkMarkdown(root: string, current = root): Promise<string[]> {
+  const entries = await readdir(current, { withFileTypes: true })
+  const out: string[] = []
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (SYSTEM_DIRS.has(entry.name)) continue
+      const sub = await walkMarkdown(root, join(current, entry.name))
+      out.push(...sub)
+    } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'AGENTS.md' && entry.name !== 'README.md') {
+      out.push(join(current, entry.name))
+    }
+  }
+  return out
+}
+
+function toRelative(workspaceRoot: string, absolute: string): string {
+  return relative(workspaceRoot, absolute).split(sep).join('/')
+}
+
+function fieldDiff(before: Record<string, unknown>, after: Record<string, unknown>) {
+  const keys = new Set([...Object.keys(before), ...Object.keys(after)])
+  const out: { field: string; before: unknown; after: unknown }[] = []
+  for (const key of keys) {
+    if (key === 'syncHash' || key === 'updatedAt') continue
+    const a = before[key]
+    const b = after[key]
+    if (JSON.stringify(a) !== JSON.stringify(b)) {
+      out.push({ field: key, before: a, after: b })
+    }
+  }
+  return out
+}
 
 export async function diffCommand() {
   const spinner = ora('Analisando mudanças...').start()
@@ -21,63 +69,141 @@ export async function diffCommand() {
     process.exit(1)
   }
 
+  const manifestByPath = new Map<string, ManifestEntry>()
+  const manifestById = new Map<string, ManifestEntry>()
+  for (const entry of manifest.entries) {
+    manifestByPath.set(entry.localPath, entry)
+    manifestById.set(entry.itemId, entry)
+  }
+
+  // Coleta arquivos locais
+  const absolutePaths = await walkMarkdown(config.workspacePath)
+  const localFiles: LocalFile[] = []
+  for (const abs of absolutePaths) {
+    try {
+      const raw = await readFile(abs, 'utf-8')
+      const { frontmatter, content } = parseItemFile(raw)
+      localFiles.push({
+        relativePath: toRelative(config.workspacePath, abs),
+        raw,
+        hash: hashContent(raw),
+        itemId: frontmatter.id,
+        title: frontmatter.title,
+        content,
+        complexity: frontmatter.complexity,
+        status: frontmatter.status,
+        tags: frontmatter.tags,
+        dueDate: frontmatter.dueDate,
+      })
+    } catch {
+      // ignore unreadable / malformed
+    }
+  }
+
+  const seenItemIds = new Set<string>()
   const changes: PendingChange[] = []
   const now = new Date().toISOString()
 
-  for (const entry of manifest.entries) {
-    const absPath = join(config.workspacePath, entry.localPath)
-    try {
-      const raw = await readFile(absPath, 'utf-8')
-      const currentHash = hashContent(raw)
+  function record(change: Omit<PendingChange, 'id' | 'userId' | 'approved' | 'createdAt' | 'riskLevel'> & {
+    riskLevel?: PendingChange['riskLevel']
+  }) {
+    const riskLevel = change.riskLevel ?? assessRisk(change.changeType)
+    changes.push({
+      id: newChangeId(),
+      userId: config.userId,
+      approved: false,
+      createdAt: now,
+      riskLevel,
+      ...change,
+    })
+  }
 
-      if (currentHash !== entry.syncHash) {
-        const { frontmatter, content } = parseItemFile(raw)
+  // 1. Pra cada arquivo local: criação, movimento, conteúdo, frontmatter
+  for (const file of localFiles) {
+    if (!file.itemId) {
+      record({
+        changeType: 'created',
+        localPathAfter: file.relativePath,
+        titleAfter: file.title,
+        contentMdAfter: file.content,
+      })
+      continue
+    }
 
-        // Detectar que tipo de mudança é
-        const frontmatterChanges: { field: string; before: unknown; after: unknown }[] = []
-        if (frontmatter.title !== entry.localPath.split('/').pop()?.replace('.md', '').replace(/-/g, ' ')) {
-          // não compara com slug; só registra que o title pode ter mudado
-        }
+    seenItemIds.add(file.itemId)
+    const entry = manifestById.get(file.itemId)
+    if (!entry) {
+      // arquivo com id mas sem manifest → tratar como criação
+      record({
+        changeType: 'created',
+        itemId: file.itemId,
+        localPathAfter: file.relativePath,
+        titleAfter: file.title,
+        contentMdAfter: file.content,
+      })
+      continue
+    }
 
-        const changeType = content ? 'content_changed' : 'frontmatter_changed'
+    if (file.hash === entry.syncHash && file.relativePath === entry.localPath) {
+      continue
+    }
 
-        changes.push({
-          id: newChangeId(),
-          userId: config.userId,
-          itemId: entry.itemId,
-          changeType,
-          localPathBefore: entry.localPath,
-          localPathAfter: entry.localPath,
-          titleAfter: frontmatter.title,
-          contentMdAfter: content,
-          frontmatterChanges,
-          riskLevel: assessRisk(changeType),
-          approved: false,
-          createdAt: now,
-        })
-      }
-    } catch {
-      changes.push({
-        id: newChangeId(),
-        userId: config.userId,
-        itemId: entry.itemId,
-        changeType: 'deleted',
+    const moved = file.relativePath !== entry.localPath
+    const contentChanged = file.hash !== entry.syncHash
+
+    if (moved) {
+      record({
+        changeType: 'moved',
+        itemId: file.itemId,
         localPathBefore: entry.localPath,
-        riskLevel: 'high',
-        approved: false,
-        createdAt: now,
+        localPathAfter: file.relativePath,
+        titleAfter: file.title,
+      })
+    }
+
+    if (contentChanged) {
+      // Decide se é frontmatter_changed, content_changed ou ambos
+      // (Usamos o snapshot anterior do servidor seria ideal, mas aqui só temos hash
+      //  do arquivo original. Tratamos como content_changed; o servidor decide.)
+      record({
+        changeType: 'content_changed',
+        itemId: file.itemId,
+        localPathBefore: entry.localPath,
+        localPathAfter: file.relativePath,
+        titleAfter: file.title,
+        contentMdAfter: file.content,
+        frontmatterChanges: fieldDiff(
+          {},
+          {
+            title: file.title,
+            complexity: file.complexity,
+            status: file.status,
+            tags: file.tags,
+            dueDate: file.dueDate,
+          },
+        ),
       })
     }
   }
 
-  // Salvar localmente
+  // 2. Arquivos que existiam no manifest mas não foram vistos → deleted
+  for (const entry of manifest.entries) {
+    if (!seenItemIds.has(entry.itemId)) {
+      record({
+        changeType: 'deleted',
+        itemId: entry.itemId,
+        localPathBefore: entry.localPath,
+      })
+    }
+  }
+
   await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes })
   await writeJson(join(config.workspacePath, '_system', 'last-diff.json'), {
     at: now,
     count: changes.length,
   })
 
-  // Upload para a API (pending-batch)
+  // Upload pro app (Auditoria)
   if (changes.length > 0) {
     try {
       const res = await fetch(`${config.apiUrl}/api/sync/pending-batch`, {
@@ -89,9 +215,8 @@ export async function diffCommand() {
         body: JSON.stringify({ changes }),
       })
       if (!res.ok) {
-        spinner.warn(chalk.yellow('Mudanças detectadas localmente mas falha ao enviar para a API.'))
+        spinner.warn(chalk.yellow('Mudanças detectadas mas falha ao enviar para Auditoria.'))
       } else {
-        // Log na API
         await fetch(`${config.apiUrl}/api/sync/log`, {
           method: 'POST',
           headers: {
@@ -105,7 +230,7 @@ export async function diffCommand() {
         })
       }
     } catch {
-      // offline — sem problema, as mudanças estão salvas localmente
+      // offline — mudanças ficam só localmente
     }
   }
 
@@ -120,10 +245,9 @@ export async function diffCommand() {
   for (const c of changes) {
     const riskColor =
       c.riskLevel === 'high' ? chalk.red : c.riskLevel === 'medium' ? chalk.yellow : chalk.green
-    console.log(
-      `  ${riskColor(`[${c.riskLevel.toUpperCase()}]`)} ${c.changeType.replace(/_/g, ' ')} — ${c.localPathBefore ?? c.localPathAfter ?? c.itemId}`,
-    )
+    const path = c.localPathAfter ?? c.localPathBefore ?? c.itemId ?? '?'
+    console.log(`  ${riskColor(`[${c.riskLevel.toUpperCase()}]`)} ${c.changeType.padEnd(20)} ${chalk.dim(path)}`)
   }
 
-  console.log(chalk.dim('\n  Revise e aprove no app → doit-sync push'))
+  console.log(chalk.dim('\n  Revise e aprove no app (Auditoria) → doit-sync push'))
 }

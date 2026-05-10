@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth, authWithCli } from '@/lib/auth'
 import { FolderModel } from '@doit/db'
 import { newFolderId } from '@doit/core'
 import type { CreateFolderInput } from '@doit/types'
@@ -7,9 +7,9 @@ import { ensureDB } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const { userId } = await authWithCli(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     await ensureDB()

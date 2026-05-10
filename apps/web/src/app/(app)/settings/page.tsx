@@ -8,6 +8,7 @@ import { usePushNotifications } from '@/hooks/use-push-notifications'
 import { ArchiveSection } from '@/components/archive/archive-section'
 import { AuditSection } from '@/components/audit/audit-section'
 import { ProfileSection } from '@/components/settings/profile-section'
+import { CliTokensSection } from '@/components/settings/cli-tokens-section'
 import { useItems } from '@/hooks/use-items'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useDialog } from '@/components/ui/dialog'
@@ -18,7 +19,7 @@ interface GoogleAccount {
   connectedAt: string
 }
 
-type Tab = 'profile' | 'appearance' | 'integrations' | 'notifications' | 'sync' | 'tags' | 'shortcuts' | 'archive' | 'audit'
+type Tab = 'profile' | 'appearance' | 'integrations' | 'notifications' | 'sync' | 'cli' | 'tags' | 'shortcuts' | 'archive' | 'audit'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'profile', label: 'Perfil' },
@@ -26,6 +27,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'integrations', label: 'Integracoes' },
   { id: 'notifications', label: 'Notificacoes' },
   { id: 'sync', label: 'Sync' },
+  { id: 'cli', label: 'CLI' },
   { id: 'tags', label: 'Tags' },
   { id: 'shortcuts', label: 'Atalhos' },
   { id: 'archive', label: 'Arquivo' },
@@ -469,6 +471,7 @@ function SettingsContent() {
       )}
 
       {tab === 'appearance' && <AppearanceSection />}
+      {tab === 'cli' && <CliTokensSection />}
       {tab === 'tags' && <TagsSection />}
       {tab === 'shortcuts' && <ShortcutsSection />}
       {tab === 'archive' && <ArchiveSection />}

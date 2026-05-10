@@ -54,3 +54,7 @@ export const PushSubscriptionModel = new SqlModel({
 export const NotificationAlertModel = new SqlModel({
   table: 'notification_alerts',
 })
+
+export const CliTokenModel = new SqlModel({
+  table: 'cli_tokens',
+})

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth, authWithCli } from '@/lib/auth'
 import { ItemModel } from '@doit/db'
 import { newItemId } from '@doit/core'
 import type { CreateItemInput, Item } from '@doit/types'
@@ -37,7 +37,7 @@ function matchesSearch(item: Record<string, unknown>, q: string) {
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const { userId } = await authWithCli(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     await ensureDB()

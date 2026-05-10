@@ -1,12 +1,16 @@
 import { join } from 'path'
 import chalk from 'chalk'
-import { getConfig, isConfigured } from '../lib/config.js'
+import { getConfig, isInitialized, isLoggedIn } from '../lib/config.js'
 import { readJson } from '../lib/workspace.js'
 import type { PendingChange } from '@doit/types'
 
 export async function statusCommand() {
-  if (!isConfigured()) {
+  if (!isInitialized()) {
     console.log(chalk.red('Workspace não inicializado. Execute: doit-sync init'))
+    return
+  }
+  if (!isLoggedIn()) {
+    console.log(chalk.red('Não autenticado. Execute: doit-sync login'))
     return
   }
 

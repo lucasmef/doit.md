@@ -1,31 +1,51 @@
 {
-  "name": "@doit/sync-agent",
-  "version": "0.0.1",
-  "private": true,
+  "name": "doit-sync",
+  "version": "0.1.0",
+  "description": "CLI sync agent for doit.md — sincroniza notas e tarefas como arquivos Markdown",
   "type": "module",
   "bin": {
     "doit-sync": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "build": "tsup",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
   },
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "doit.md",
+    "markdown",
+    "sync",
+    "cli",
+    "notes",
+    "tasks"
+  ],
+  "license": "MIT",
   "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "conf": "^13.0.0",
+    "gray-matter": "^4.0.3",
+    "ora": "^8.0.0"
+  },
+  "devDependencies": {
     "@doit/audit": "workspace:*",
     "@doit/core": "workspace:*",
     "@doit/md": "workspace:*",
     "@doit/sync": "workspace:*",
     "@doit/types": "workspace:*",
-    "commander": "^12.0.0",
-    "gray-matter": "^4.0.3",
-    "chalk": "^5.3.0",
-    "ora": "^8.0.0",
-    "conf": "^13.0.0",
-    "node-fetch": "^3.3.0"
-  },
-  "devDependencies": {
     "@types/node": "^22.0.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.0.0",
     "typescript": "^5.5.0"
   }

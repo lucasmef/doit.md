@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from 'commander'
 import { initCommand } from './commands/init.js'
+import { loginCommand } from './commands/login.js'
 import { pullCommand } from './commands/pull.js'
 import { diffCommand } from './commands/diff.js'
 import { pushCommand } from './commands/push.js'
@@ -15,12 +16,20 @@ program
 
 program
   .command('init')
-  .description('Inicializa workspace local')
+  .description('Cria a pasta local do workspace')
+  .argument('[path]', 'Caminho do workspace (default: ./workspace-doitmd)')
   .action(initCommand)
 
 program
+  .command('login')
+  .description('Autentica com um CLI token gerado no app')
+  .option('--api-url <url>', 'URL da API (default: http://localhost:3000)')
+  .option('--token <token>', 'Token CLI (formato doit_<prefix>_<secret>)')
+  .action(loginCommand)
+
+program
   .command('pull')
-  .description('Baixa itens do servidor e gera arquivos .md')
+  .description('Baixa pastas e itens do servidor para o workspace')
   .action(pullCommand)
 
 program

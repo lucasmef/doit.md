@@ -1,19 +1,22 @@
 import { mkdir, writeFile, readFile } from 'fs/promises'
 import { join } from 'path'
 
-export const FOLDER_MAP: Record<string, string> = {
-  inbox: '00-inbox',
-  default: '00-inbox',
-}
+export { slugify } from '@doit/core'
+
+export const SPECIAL_DIRS = {
+  inbox: 'Inbox',
+  upcoming: 'Proximos',
+  archive: 'Arquivo',
+} as const
+
+export const SYSTEM_DIRS = ['_system', '_changes'] as const
 
 export async function ensureWorkspace(root: string): Promise<void> {
   const dirs = [
-    '00-inbox',
-    '10-projetos',
-    '20-notas',
-    '90-arquivo',
-    '_system',
-    '_changes',
+    SPECIAL_DIRS.inbox,
+    SPECIAL_DIRS.upcoming,
+    SPECIAL_DIRS.archive,
+    ...SYSTEM_DIRS,
   ]
 
   for (const dir of dirs) {

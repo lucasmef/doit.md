@@ -1,73 +1,80 @@
-import { join } from 'path'
+import { join, resolve } from 'path'
 import { writeFile } from 'fs/promises'
 import chalk from 'chalk'
 import ora from 'ora'
 import { ensureWorkspace, writeJson } from '../lib/workspace.js'
-import { saveConfig } from '../lib/config.js'
+import { saveConfig, isLoggedIn } from '../lib/config.js'
 
 const AGENTS_MD = `# AGENTS.md
 
-## Objetivo
-
-Organizar este workspace de notas, tarefas, projetos e documentos do doit.md.
+Este workspace é o espelho local dos itens do **doit.md** sincronizados via CLI \`doit-sync\`. Você (assistente IA) pode editar livremente os arquivos para reorganizar, melhorar títulos, ajustar tags ou corrigir o conteúdo das notas e tarefas.
 
 ## Regras obrigatórias
 
-1. Nunca apagar arquivos.
-2. Nunca remover o campo \`id\` do frontmatter.
-3. Nunca alterar \`syncHash\` manualmente.
-4. Nunca editar arquivos dentro de \`_system\`.
-5. Pode mover arquivos entre as pastas permitidas.
-6. Pode renomear arquivos para nomes mais claros.
-7. Pode atualizar \`title\`, \`tags\`, \`complexity\`, \`status\`, \`project\` e \`area\`.
-8. Se houver dúvida, mover para \`/00-inbox\`.
-9. Toda alteração relevante deve ser resumida em \`_changes/summary.md\`.
+1. **Nunca apagar arquivos.** Para descartar um item, mova para \`Arquivo/\`.
+2. **Nunca remover ou alterar o campo \`id\`** do frontmatter — é a referência do servidor.
+3. **Nunca editar \`syncHash\`** manualmente — ele é recalculado pelo CLI.
+4. **Nunca editar arquivos dentro de \`_system/\` ou \`_changes/\`** — são estado interno do CLI.
+5. **Pode mover arquivos** entre pastas — o CLI detecta movimento e atualiza o \`folderId\` no servidor.
+6. **Pode renomear arquivos** para nomes mais claros (slug).
+7. **Pode atualizar** \`title\`, \`tags\`, \`complexity\`, \`status\`, \`priority\`, \`dueDate\` no frontmatter.
+8. Se houver dúvida sobre onde colocar algo, deixe em \`Inbox/\`.
 
 ## Estrutura de pastas
 
-- \`/00-inbox\` — capturas sem organização
-- \`/10-projetos\` — notas e tarefas de projetos ativos
-- \`/20-notas\` — notas gerais e documentos
-- \`/90-arquivo\` — itens concluídos ou arquivados
+- \`Inbox/\` — itens sem pasta atribuída (notas avulsas, tarefas sem data)
+- \`Proximos/\` — tarefas com data marcada mas sem pasta
+- \`Arquivo/\` — itens com status \`archived\`
+- \`<NomeDaPasta>/\` — pastas reais do usuário, com subpastas espelhando a árvore do app
 
-## Formato obrigatório de frontmatter
+## Frontmatter padrão
 
 \`\`\`yaml
-id:
-title:
-complexity:
-status:
-project:
-area:
-tags:
-dueDate:
-updatedAt:
-syncHash:
+---
+id: itm_xxx              # NUNCA alterar
+title: Título do item
+complexity: task         # task | note (define se vira tarefa ou nota no app)
+status: todo             # inbox | todo | doing | waiting | done | archived
+priority: 2              # 1 (mais alta) – 4 (mais baixa). Só para tasks.
+dueDate: 2026-05-15      # YYYY-MM-DD opcional
+tags: [trabalho, urgente]
+syncHash: abc123def456   # NUNCA alterar manualmente
+updatedAt: 2026-05-10T14:00:00Z
+---
 \`\`\`
 
-## Uso de tarefas
+## Tarefas dentro do conteúdo
 
 \`\`\`md
-- [ ] Tarefa pendente
-- [x] Tarefa concluída
+- [ ] Subtarefa pendente
+- [x] Subtarefa concluída
 \`\`\`
+
+## Como mudanças são aplicadas
+
+1. Você edita um \`.md\` aqui.
+2. O usuário roda \`doit-sync diff\` — detecta as mudanças e envia para a tela de **Auditoria** no app.
+3. O usuário aprova as mudanças no app.
+4. O usuário roda \`doit-sync push\` — aplica as mudanças aprovadas no servidor.
+
+Mudanças destrutivas (delete, mudança de complexity, movimento entre pastas raiz) sempre exigem aprovação. Pequenas edições de conteúdo/tags vão direto após aprovação.
 
 ## Saída esperada
 
-Ao finalizar, atualizar \`_changes/summary.md\` com um resumo das alterações realizadas.
+Ao terminar uma sessão de organização, atualize \`_changes/summary.md\` com um resumo curto do que mudou e por quê.
 `
 
-export async function initCommand() {
+export async function initCommand(pathArg?: string) {
   const spinner = ora('Inicializando workspace...').start()
 
   try {
-    const workspacePath = join(process.cwd(), 'workspace-doitmd')
+    const workspacePath = resolve(pathArg ?? join(process.cwd(), 'workspace-doitmd'))
     await ensureWorkspace(workspacePath)
 
     await writeFile(join(workspacePath, 'AGENTS.md'), AGENTS_MD, 'utf-8')
     await writeFile(
       join(workspacePath, 'README.md'),
-      `# doit.md Workspace\n\nEste diretório é o espelho local dos seus itens do doit.md.\n\nLeia o [AGENTS.md](./AGENTS.md) para entender como a IA pode interagir com os arquivos.\n`,
+      `# doit.md Workspace\n\nEspelho local dos itens do doit.md.\n\nLeia o [AGENTS.md](./AGENTS.md) para entender como editar (humanos e IA).\n`,
       'utf-8',
     )
 
@@ -79,17 +86,15 @@ export async function initCommand() {
 
     await writeJson(join(workspacePath, '_changes', 'pending.json'), { changes: [] })
 
-    // Solicitar configuração
-    const apiUrl = process.env['DOITMD_API_URL'] ?? 'http://localhost:3000'
-    const apiKey = process.env['DOITMD_API_KEY'] ?? ''
-    const userId = process.env['DOITMD_USER_ID'] ?? ''
+    saveConfig({ workspacePath })
 
-    saveConfig({ apiUrl, apiKey, workspacePath, userId })
-
-    spinner.succeed(chalk.green('Workspace inicializado com sucesso!'))
+    spinner.succeed(chalk.green('Workspace inicializado!'))
     console.log(chalk.dim(`  Pasta: ${workspacePath}`))
-    console.log(chalk.dim('  Configure DOITMD_API_KEY e DOITMD_USER_ID nas variáveis de ambiente.'))
-    console.log(chalk.dim('  Execute: doit-sync pull'))
+    if (!isLoggedIn()) {
+      console.log(chalk.dim('  Próximo passo: doit-sync login'))
+    } else {
+      console.log(chalk.dim('  Próximo passo: doit-sync pull'))
+    }
   } catch (err) {
     spinner.fail('Falha ao inicializar workspace')
     console.error(err)

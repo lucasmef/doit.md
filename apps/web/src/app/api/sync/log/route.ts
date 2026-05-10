@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
+import { authWithCli } from '@/lib/auth'
 import { AuditLogModel } from '@doit/db'
 import { newAuditId } from '@doit/core'
 import type { AuditAction } from '@doit/types'
@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
-    const { userId } = await auth()
+    const { userId } = await authWithCli(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     await ensureDB()

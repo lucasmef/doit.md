@@ -358,6 +358,18 @@ const sqliteSchema = [
   )`,
   `CREATE INDEX IF NOT EXISTS notification_alerts_user_ack_idx ON notification_alerts (userId, acknowledgedAt, createdAt)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS notification_alerts_dedupe_idx ON notification_alerts (userId, itemId, type, scheduledFor) WHERE itemId IS NOT NULL AND scheduledFor IS NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS cli_tokens (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    name TEXT NOT NULL,
+    prefix TEXT NOT NULL,
+    tokenHash TEXT NOT NULL,
+    lastUsedAt TEXT,
+    createdAt TEXT NOT NULL,
+    revokedAt TEXT
+  )`,
+  `CREATE INDEX IF NOT EXISTS cli_tokens_user_idx ON cli_tokens (userId)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS cli_tokens_prefix_idx ON cli_tokens (prefix)`,
 ]
 
 const postgresIdentifiers = [
@@ -383,6 +395,9 @@ const postgresIdentifiers = [
   'scheduledDate',
   'recurrence',
   'lastSeenAt',
+  'lastUsedAt',
+  'tokenHash',
+  'revokedAt',
   'disabledAt',
   'userAgent',
   'dueTime',
