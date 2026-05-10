@@ -12,6 +12,7 @@ import {
   useDraggable,
   useDroppable,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import {
   useFolders,
@@ -166,8 +167,6 @@ function KanbanColumn({
   dragging,
   columnDragging,
   columnDropTarget,
-  onDragStart,
-  onDragEnd,
   onDropItems,
   onColumnDragStart,
   onColumnDragOver,
@@ -186,8 +185,6 @@ function KanbanColumn({
   dragging: boolean
   columnDragging?: boolean
   columnDropTarget?: boolean
-  onDragStart: (item: Item, event: React.DragEvent) => void
-  onDragEnd: () => void
   onDropItems: (folderId: string | null, event: React.DragEvent) => void
   onColumnDragStart?: (folderId: string, event: React.DragEvent) => void
   onColumnDragOver?: (folderId: string, event: React.DragEvent) => void
@@ -361,13 +358,14 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     return map
   }, [allItems])
 
-  function handleDragStart(item: Item, event: React.DragEvent) {
+  function handleDndDragStart(event: DragStartEvent) {
+    const activeId = String(event.active.id)
+    if (!activeId.startsWith('item:')) return
+    const itemId = activeId.slice('item:'.length)
     const ids =
-      selectedItemIds.includes(item.id) && selectedItemIds.length > 1 ? selectedItemIds : [item.id]
-    if (!selectedItemIds.includes(item.id)) setSingleSelection(item.id)
+      selectedItemIds.includes(itemId) && selectedItemIds.length > 1 ? selectedItemIds : [itemId]
+    if (!selectedItemIds.includes(itemId)) setSingleSelection(itemId)
     setDraggingIds(ids)
-    event.dataTransfer.effectAllowed = 'move'
-    event.dataTransfer.setData('text/plain', ids.join(','))
   }
 
   async function handleDropItems(folderId: string | null, event: React.DragEvent) {
@@ -393,6 +391,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
 
   async function handleDndDragEnd(event: DragEndEvent) {
     const { active, over } = event
+    setDraggingIds([])
     if (!over) return
     const activeId = String(active.id)
     const overId = String(over.id)
@@ -622,7 +621,12 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           </section>
         </>
       ) : (
-        <DndContext sensors={dndSensors} onDragEnd={handleDndDragEnd}>
+        <DndContext
+          sensors={dndSensors}
+          onDragStart={handleDndDragStart}
+          onDragCancel={() => setDraggingIds([])}
+          onDragEnd={handleDndDragEnd}
+        >
         <div className="flex items-stretch gap-0 overflow-x-auto pb-4">
           {childFolders.length === 0 ? (
             <>
@@ -635,8 +639,6 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                 selectedItemIds={selectedItemIds}
                 orderedIds={directOpenItems.map((item) => item.id)}
                 dragging={draggingIds.length > 0}
-                onDragStart={handleDragStart}
-                onDragEnd={() => setDraggingIds([])}
                 onDropItems={handleDropItems}
               />
               <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
@@ -658,8 +660,6 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                     dragging={draggingIds.length > 0}
                     columnDragging={draggingFolderId === sub.id}
                     columnDropTarget={columnDropTargetId === sub.id}
-                    onDragStart={handleDragStart}
-                    onDragEnd={() => setDraggingIds([])}
                     onDropItems={handleDropItems}
                     onColumnDragStart={handleColumnDragStart}
                     onColumnDragOver={handleColumnDragOver}
