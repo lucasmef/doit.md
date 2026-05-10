@@ -37,7 +37,7 @@ function buildTree(folders: Folder[]): FolderNode[] {
     const siblings = usedNames.get(parentKey) ?? new Set<string>()
     usedNames.set(parentKey, siblings)
     for (const node of nodes) {
-      let candidate = slugify(node.name, 'pasta')
+      const candidate = slugify(node.name, 'pasta')
       let attempt = candidate
       let counter = 2
       while (siblings.has(attempt)) {

@@ -17,6 +17,18 @@ function generatePrefix(): string {
   return randomBytes(6).toString('base64url').slice(0, TOKEN_PREFIX_LEN)
 }
 
+function toPublicCliToken(token: CliToken): PublicCliToken {
+  return {
+    id: token.id,
+    userId: token.userId,
+    name: token.name,
+    prefix: token.prefix,
+    lastUsedAt: token.lastUsedAt,
+    createdAt: token.createdAt,
+    revokedAt: token.revokedAt,
+  }
+}
+
 export type GeneratedCliToken = {
   token: PublicCliToken
   plaintext: string
@@ -41,16 +53,14 @@ export async function generateCliToken(userId: string, name: string): Promise<Ge
 
   await CliTokenModel.create(doc)
 
-  const { tokenHash: _omit, ...publicToken } = doc
-  return { token: publicToken, plaintext }
+  return { token: toPublicCliToken(doc), plaintext }
 }
 
 export async function listCliTokens(userId: string): Promise<PublicCliToken[]> {
   const rows = await CliTokenModel.find({ userId }).sort({ createdAt: -1 }).lean()
   return rows.map((r) => {
     const row = r as unknown as CliToken
-    const { tokenHash: _omit, ...rest } = row
-    return rest
+    return toPublicCliToken(row)
   })
 }
 
