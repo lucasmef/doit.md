@@ -654,7 +654,12 @@ export function ItemDetail() {
 
   function handleDueDateChange(value: string) {
     setDueDate(value)
-    scheduleAutosave({ dueDate: value || undefined })
+    if (value) {
+      scheduleAutosave({ dueDate: value })
+    } else {
+      setDueTime('')
+      scheduleAutosave(nullablePatch({ dueDate: null, dueTime: null }))
+    }
   }
 
   function handleDueTimeChange(next: string) {
@@ -992,6 +997,62 @@ export function ItemDetail() {
                           </button>
                         )}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative shrink-0">
+                <ToolButton
+                  title="Selecionar data"
+                  active={!!dueDate}
+                  onClick={() => setPopover(popover === 'date' ? null : 'date')}
+                >
+                  <IconCalendar className="h-3.5 w-3.5" />
+                  {dueDate ? formatDueDate(dueDate) : 'Data'}
+                </ToolButton>
+                {popover === 'date' && (
+                  <div className="absolute left-0 top-9 z-20 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                    {DATE_SUGGESTIONS.map((suggestion) => {
+                      const value = suggestion.getValue()
+                      return (
+                        <button
+                          key={suggestion.label}
+                          type="button"
+                          onClick={() => {
+                            handleDueDateChange(value)
+                            setPopover(null)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconCalendar className="h-3.5 w-3.5 text-brand-600" />
+                          <span className="flex-1">{suggestion.label}</span>
+                          <span className="text-[11px] font-normal text-slate-400">
+                            {formatDueDate(value)}
+                          </span>
+                          {dueDate === value && (
+                            <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                          )}
+                        </button>
+                      )
+                    })}
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => handleDueDateChange(e.target.value)}
+                      className="mt-1 h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    {dueDate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleDueDateChange('')
+                          setPopover(null)
+                        }}
+                        className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
+                      >
+                        Remover data
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

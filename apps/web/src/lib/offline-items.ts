@@ -2,7 +2,25 @@ import type { CreateItemInput, Item, UpdateItemInput } from '@doit/types'
 
 const QUEUE_KEY = 'doitmd.offline.items.queue.v1'
 const CHANGE_EVENT = 'doitmd:offline-items-changed'
+const REMAP_EVENT = 'doitmd:offline-item-remapped'
 const FLUSH_TIMEOUT_MS = 10_000
+
+export type OfflineItemRemapDetail = { tempId: string; itemId: string }
+
+function dispatchRemap(tempId: string, itemId: string) {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent<OfflineItemRemapDetail>(REMAP_EVENT, { detail: { tempId, itemId } }))
+}
+
+export function onOfflineItemRemapped(listener: (detail: OfflineItemRemapDetail) => void) {
+  if (typeof window === 'undefined') return () => {}
+  const handler = (event: Event) => {
+    const detail = (event as CustomEvent<OfflineItemRemapDetail>).detail
+    if (detail) listener(detail)
+  }
+  window.addEventListener(REMAP_EVENT, handler)
+  return () => window.removeEventListener(REMAP_EVENT, handler)
+}
 
 type CreateOperation = {
   id: string
@@ -393,6 +411,7 @@ async function flushOfflineItemQueueOnce() {
         if (response.ok) {
           const { item } = (await response.json()) as { item: Item }
           idMap.set(current.tempId, item.id)
+          dispatchRemap(current.tempId, item.id)
         } else {
           console.warn('[offline-sync] dropping create after client error', response.status)
         }

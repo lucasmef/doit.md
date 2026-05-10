@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'clarity-v5'
+const CACHE_VERSION = 'clarity-v6'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 const API_CACHE = `${CACHE_VERSION}-api`
@@ -13,6 +13,7 @@ const APP_PAGES = [
   '/inbox',
   '/upcoming',
   '/calendar',
+  '/notas',
   '/projects',
   '/areas',
   '/audit',
@@ -25,6 +26,7 @@ const API_PATTERN = /^\/api\//
 const READ_API_PATTERNS = [
   /^\/api\/areas(?:\/[^/]+)?$/,
   /^\/api\/projects(?:\/[^/]+)?$/,
+  /^\/api\/folders(?:\/[^/]+)?$/,
   /^\/api\/items(?:\/[^/]+)?$/,
   /^\/api\/items\/search$/,
   /^\/api\/items\/[^/]+\/versions$/,

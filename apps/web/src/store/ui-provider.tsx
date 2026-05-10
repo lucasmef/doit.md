@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { UIContext, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
+import { onOfflineItemRemapped } from '@/lib/offline-items'
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
@@ -52,6 +53,18 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     setSelectedItemId(id)
     setSelectionAnchorId(anchor)
   }, [selectedItemId, selectionAnchorId, setSingleSelection])
+
+  useEffect(() => {
+    return onOfflineItemRemapped(({ tempId, itemId }) => {
+      setSelectedItemId((current) => (current === tempId ? itemId : current))
+      setSelectedItemIds((current) =>
+        current.includes(tempId) ? current.map((id) => (id === tempId ? itemId : id)) : current,
+      )
+      setSelectionAnchorId((current) => (current === tempId ? itemId : current))
+      setEditingItemId((current) => (current === tempId ? itemId : current))
+      setQuickCaptureFolderId((current) => (current === tempId ? itemId : current))
+    })
+  }, [])
 
   const openContextMenu = useCallback((state: Exclude<ItemContextMenuState, null>) => {
     setContextMenu(state)
