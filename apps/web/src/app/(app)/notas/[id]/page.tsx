@@ -91,16 +91,16 @@ function KanbanCard({
 
   return (
     <div
-      className={`group/card flex items-stretch rounded-md border border-ui-border bg-white ${
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={`group/card flex items-stretch rounded-md border border-ui-border bg-white touch-none ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
       <div
-        ref={setNodeRef}
-        {...attributes}
-        {...listeners}
         title="Arrastar"
-        className="flex w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-navy-300 hover:bg-surface-soft hover:text-navy-600 active:cursor-grabbing"
+        className="pointer-events-none flex w-5 shrink-0 items-center justify-center rounded-l-md text-navy-300"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
           <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />

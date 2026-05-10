@@ -178,35 +178,68 @@
     overflow-x: auto;
   }
 
-  /* Global drag handle */
-  .drag-handle {
-    position: fixed;
-    opacity: 1;
-    transition: opacity ease-in 0.15s;
-    border-radius: 0.25rem;
-    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8'%3E%3Cpath d='M4 4a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zM4 9a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zm-4 5a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: center;
+  /* Block reorder handle (custom) */
+  .ProseMirror {
+    position: relative;
+  }
+  .doit-block-handle {
+    position: absolute;
+    left: 0.25rem;
+    margin-top: 0.15rem;
     width: 1.25rem;
-    height: 1.25rem;
-    z-index: 50;
+    height: 1.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    border-radius: 0.25rem;
     cursor: grab;
-  }
-  .drag-handle:hover {
-    background-color: theme('colors.ui.fill-subtle', #f1f5f9);
-  }
-  .drag-handle:active {
-    cursor: grabbing;
-  }
-  .drag-handle.hide {
     opacity: 0;
+    transition: opacity 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .doit-block-handle svg {
+    width: 0.875rem;
+    height: 0.875rem;
     pointer-events: none;
   }
-  @media screen and (max-width: 600px) {
-    .drag-handle {
-      display: none;
-      pointer-events: none;
+  .ProseMirror:hover .doit-block-handle,
+  .ProseMirror:focus-within .doit-block-handle {
+    opacity: 1;
+  }
+  .doit-block-handle:hover {
+    color: #475569;
+    background-color: #f1f5f9;
+  }
+  .doit-block-handle:active {
+    cursor: grabbing;
+  }
+  /* Touch / no-hover devices: keep handles always visible */
+  @media (hover: none) {
+    .doit-block-handle {
+      opacity: 0.6;
     }
+  }
+  body.doit-block-dragging,
+  body.doit-block-dragging * {
+    cursor: grabbing !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+  .doit-block-drop-indicator {
+    position: fixed;
+    height: 2px;
+    background: theme('colors.brand.500', #2f6bff);
+    border-radius: 9999px;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 2px rgba(47, 107, 255, 0.15);
   }
 
   /* Links */

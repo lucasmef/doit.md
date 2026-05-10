@@ -796,6 +796,12 @@ export function ItemDetail() {
           className="fixed inset-0 z-[60] flex flex-col bg-white lg:left-[260px] lg:border-l lg:border-ui-border"
           role="dialog"
           aria-modal="true"
+          style={{
+            paddingTop: 'env(safe-area-inset-top, 0px)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+            paddingLeft: 'env(safe-area-inset-left, 0px)',
+            paddingRight: 'env(safe-area-inset-right, 0px)',
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault()

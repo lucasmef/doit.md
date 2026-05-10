@@ -865,25 +865,18 @@ export function QuickCapture() {
 
   return (
     <div
-      className={
-        isNote
-          ? 'fixed inset-0 z-50 flex flex-col bg-white'
-          : 'fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm'
-      }
+      className="fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
       onClick={(e) => {
-        if (isNote) return
         if (e.target === e.currentTarget) setQuickCaptureOpen(false)
       }}
     >
       <div
-        className={
-          isNote
-            ? 'flex h-full w-full flex-col overflow-visible bg-white lg:pl-[260px]'
-            : `w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg max-w-[560px]`
-        }
+        className={`w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg ${
+          isNote ? 'max-w-[720px]' : 'max-w-[560px]'
+        }`}
       >
-        <form onSubmit={handleSubmit} className={`flex flex-col ${isNote ? 'h-full min-h-0 flex-1' : ''}`}>
-          <div className={`px-5 pb-4 pt-5 ${isNote ? 'flex min-h-0 flex-1 flex-col' : ''}`}>
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          <div className="px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -966,16 +959,14 @@ export function QuickCapture() {
             </div>
 
             {isNote ? (
-              <div className="mt-3 flex min-h-0 flex-1 flex-col">
-                <div className="flex min-h-0 flex-1 flex-col">
-                  <MarkdownEditor
-                    value={contentMd}
-                    onChange={setContentMd}
-                    placeholder="Escreva em Markdown..."
-                    minHeight="min-h-0 flex-1"
-                    plain
-                  />
-                </div>
+              <div className="mt-3 flex flex-col">
+                <MarkdownEditor
+                  value={contentMd}
+                  onChange={setContentMd}
+                  placeholder="Escreva em Markdown..."
+                  minHeight="min-h-[320px] max-h-[60vh] overflow-y-auto"
+                  plain
+                />
               </div>
             ) : (
               <textarea

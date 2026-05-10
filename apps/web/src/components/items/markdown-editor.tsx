@@ -12,8 +12,8 @@ import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
-import GlobalDragHandle from 'tiptap-extension-global-drag-handle'
 import { useDialog } from '@/components/ui/dialog'
+import { BlockReorderHandle } from './block-reorder-extension'
 
 type Props = {
   value: string
@@ -51,16 +51,13 @@ export function MarkdownEditor({
       TableRow,
       TableHeader,
       TableCell,
-      GlobalDragHandle.configure({
-        dragHandleWidth: 20,
-        scrollTreshold: 100,
-      }),
+      BlockReorderHandle,
     ],
     content: value || '',
     contentType: 'markdown',
     editorProps: {
       attributes: {
-        class: `${plain ? 'doit-note-editor' : 'prose prose-slate'} max-w-none ${minHeight} px-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
+        class: `${plain ? 'doit-note-editor' : 'prose prose-slate'} max-w-none ${minHeight} pl-9 pr-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
       },
     },
     onUpdate: ({ editor }) => {
