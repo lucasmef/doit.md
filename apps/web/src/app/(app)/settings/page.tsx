@@ -453,19 +453,37 @@ function SettingsContent() {
         <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
           <div className="px-5 py-4">
             <h2 className="text-sm font-semibold text-slate-700">Agente de Sincronizacao</h2>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Sincronize seus itens como arquivos Markdown via CLI <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">doit-sync</code>. Edite manualmente ou peca pra uma IA reorganizar; aprove as mudancas em <button type="button" onClick={() => selectTab('audit')} className="font-medium text-brand-600 hover:underline">Auditoria</button>.
+            </p>
           </div>
           <div className="px-5 py-5">
-            <p className="mb-3 text-sm text-slate-600">
-              Use o CLI <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">doit-sync</code> para sincronizar itens via arquivos Markdown.
+            <p className="mb-2 text-sm font-medium text-slate-700">1. Gere um token CLI</p>
+            <p className="mb-3 text-xs text-slate-500">
+              Va para <button type="button" onClick={() => selectTab('cli')} className="font-medium text-brand-600 hover:underline">Configuracoes &rarr; CLI</button> e crie um novo token.
             </p>
-            <div className="space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
-              <p><span className="text-slate-500">#</span> instalar</p>
+            <p className="mb-2 text-sm font-medium text-slate-700">2. Instale a CLI no seu computador</p>
+            <div className="mb-3 space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
               <p>npm install -g doit-sync</p>
-              <p className="pt-1"><span className="text-slate-500">#</span> configurar</p>
-              <p>doit-sync init</p>
-              <p className="pt-1"><span className="text-slate-500">#</span> sincronizar</p>
-              <p>doit-sync pull && doit-sync diff && doit-sync push</p>
             </div>
+            <p className="mb-2 text-sm font-medium text-slate-700">3. Inicialize e autentique</p>
+            <div className="mb-3 space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
+              <p>doit-sync init</p>
+              <p>doit-sync login</p>
+            </div>
+            <p className="mb-2 text-sm font-medium text-slate-700">4. Baixe e edite</p>
+            <div className="mb-3 space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
+              <p><span className="text-slate-500">#</span> baixa pastas + itens como .md</p>
+              <p>doit-sync pull</p>
+              <p className="pt-1"><span className="text-slate-500">#</span> edite os .md (ou peca pra uma IA seguir o AGENTS.md)</p>
+              <p className="pt-1"><span className="text-slate-500">#</span> detecta mudancas e envia para Auditoria</p>
+              <p>doit-sync diff</p>
+              <p className="pt-1"><span className="text-slate-500">#</span> aprove em Auditoria, depois:</p>
+              <p>doit-sync push</p>
+            </div>
+            <p className="text-xs text-slate-400">
+              O comando <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">init</code> cria um <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">AGENTS.md</code> na raiz com as regras que sua IA deve seguir ao reorganizar os arquivos.
+            </p>
           </div>
         </section>
       )}
