@@ -9,10 +9,12 @@ import { ShortcutHelpModal } from '@/components/layout/shortcut-help-modal'
 import { NotificationFailureBanner } from '@/components/notifications/failure-banner'
 import { UIProvider } from '@/store/ui-provider'
 import { ToastProvider } from '@/components/ui/toast'
+import { DialogProvider } from '@/components/ui/dialog'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <ToastProvider>
+    <DialogProvider>
     <UIProvider>
       <div className="flex h-screen overflow-hidden bg-surface-window text-navy-900">
         <div className="flex h-full w-full overflow-hidden bg-surface-window">
@@ -41,6 +43,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <BulkActionBar />
       <ShortcutHelpModal />
     </UIProvider>
+    </DialogProvider>
     </ToastProvider>
   )
 }

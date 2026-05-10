@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useFolders, buildFolderTree, createFolder, deleteFolder, updateFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
+import { useDialog } from '@/components/ui/dialog'
 
 function FolderRow({
   node,
@@ -21,20 +22,27 @@ function FolderRow({
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
   const noteCount = noteCounts.get(node.id) ?? 0
+  const { confirm, prompt } = useDialog()
 
   async function handleRename() {
-    const next = window.prompt('Renomear pasta', node.name)
+    const next = await prompt({ title: 'Renomear pasta', message: 'Novo nome', defaultValue: node.name })
     if (!next?.trim() || next === node.name) return
     await updateFolder(node.id, { name: next.trim() })
   }
 
   async function handleDelete() {
-    if (!window.confirm(`Apagar pasta "${node.name}" e todas as subpastas? As notas voltam para a raiz.`)) return
+    const ok = await confirm({
+      title: 'Apagar pasta',
+      message: `Apagar pasta "${node.name}" e todas as subpastas? As notas voltam para a raiz.`,
+      confirmLabel: 'Apagar',
+      variant: 'danger',
+    })
+    if (!ok) return
     await deleteFolder(node.id)
   }
 
   async function handleNewSub() {
-    const name = window.prompt('Nome da subpasta')
+    const name = await prompt({ title: 'Nova subpasta', message: 'Nome da subpasta', placeholder: 'Nome' })
     if (!name?.trim()) return
     await createFolder({ name: name.trim(), parentId: node.id })
   }
@@ -92,6 +100,7 @@ function collectIds(nodes: FolderTreeNode[], acc: string[] = []) {
 export default function NotasPage() {
   const { folders, isLoading } = useFolders()
   const { items } = useItems()
+  const { prompt } = useDialog()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -122,7 +131,7 @@ export default function NotasPage() {
   }
 
   async function handleNewRoot() {
-    const name = window.prompt('Nome da pasta')
+    const name = await prompt({ title: 'Nova pasta', message: 'Nome da pasta', placeholder: 'Nome' })
     if (!name?.trim()) return
     await createFolder({ name: name.trim() })
   }

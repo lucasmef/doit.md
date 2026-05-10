@@ -12,6 +12,8 @@ import { Table } from '@tiptap/extension-table'
 import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
+import GlobalDragHandle from 'tiptap-extension-global-drag-handle'
+import { useDialog } from '@/components/ui/dialog'
 
 type Props = {
   value: string
@@ -49,6 +51,10 @@ export function MarkdownEditor({
       TableRow,
       TableHeader,
       TableCell,
+      GlobalDragHandle.configure({
+        dragHandleWidth: 20,
+        scrollTreshold: 100,
+      }),
     ],
     content: value || '',
     contentType: 'markdown',
@@ -116,13 +122,14 @@ function ToolbarSep() {
 }
 
 function EditorToolbar({ editor }: { editor: Editor | null }) {
+  const { prompt } = useDialog()
   if (!editor) {
     return <div className="h-10 border-b border-ui-border-soft bg-ui-fill-subtle/40" />
   }
 
-  const insertLink = () => {
+  const insertLink = async () => {
     const previous = editor.getAttributes('link').href as string | undefined
-    const url = window.prompt('URL do link', previous ?? 'https://')
+    const url = await prompt({ title: 'Link', message: 'URL do link', defaultValue: previous ?? 'https://' })
     if (url === null) return
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()

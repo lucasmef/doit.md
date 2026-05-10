@@ -9,6 +9,8 @@ import { ArchiveSection } from '@/components/archive/archive-section'
 import { AuditSection } from '@/components/audit/audit-section'
 import { ProfileSection } from '@/components/settings/profile-section'
 import { useItems } from '@/hooks/use-items'
+import { usePreferences } from '@/hooks/use-preferences'
+import { useDialog } from '@/components/ui/dialog'
 import Link from 'next/link'
 
 interface GoogleAccount {
@@ -16,10 +18,11 @@ interface GoogleAccount {
   connectedAt: string
 }
 
-type Tab = 'profile' | 'integrations' | 'notifications' | 'sync' | 'tags' | 'shortcuts' | 'archive' | 'audit'
+type Tab = 'profile' | 'appearance' | 'integrations' | 'notifications' | 'sync' | 'tags' | 'shortcuts' | 'archive' | 'audit'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'profile', label: 'Perfil' },
+  { id: 'appearance', label: 'Aparencia' },
   { id: 'integrations', label: 'Integracoes' },
   { id: 'notifications', label: 'Notificacoes' },
   { id: 'sync', label: 'Sync' },
@@ -109,6 +112,33 @@ function ShortcutsSection() {
   )
 }
 
+function AppearanceSection() {
+  const { prefs, update } = usePreferences()
+  return (
+    <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+      <div className="px-5 py-4">
+        <h2 className="text-sm font-semibold text-slate-700">Navegacao</h2>
+      </div>
+      <div className="px-5 py-5">
+        <label className="flex cursor-pointer items-start justify-between gap-4">
+          <span>
+            <span className="block text-sm font-medium text-slate-800">Mostrar Inbox</span>
+            <span className="mt-0.5 block text-xs text-slate-400">
+              Quando ocultado, os itens da Inbox (sem pasta e sem data, alem de notas soltas) aparecem na tela Hoje.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 accent-brand-600"
+            checked={prefs.showInbox}
+            onChange={(e) => update({ showInbox: e.target.checked })}
+          />
+        </label>
+      </div>
+    </section>
+  )
+}
+
 function TagsSection() {
   const { items } = useItems()
   const counts = new Map<string, number>()
@@ -160,6 +190,7 @@ function SettingsContent() {
   const [disconnecting, setDisconnecting] = useState(false)
   const [pushBusy, setPushBusy] = useState<'enable' | 'disable' | 'test' | null>(null)
   const push = usePushNotifications()
+  const { confirm } = useDialog()
 
   useEffect(() => setTab(initialTab), [initialTab])
 
@@ -204,7 +235,13 @@ function SettingsContent() {
   }
 
   async function handleDisconnect() {
-    if (!confirm('Desconectar Google Calendar? Os eventos salvos serao removidos.')) return
+    const ok = await confirm({
+      title: 'Desconectar Google Calendar',
+      message: 'Os eventos salvos serao removidos.',
+      confirmLabel: 'Desconectar',
+      variant: 'danger',
+    })
+    if (!ok) return
     setDisconnecting(true)
     try {
       const res = await fetch('/api/google/disconnect', { method: 'POST' })
@@ -431,6 +468,7 @@ function SettingsContent() {
         </section>
       )}
 
+      {tab === 'appearance' && <AppearanceSection />}
       {tab === 'tags' && <TagsSection />}
       {tab === 'shortcuts' && <ShortcutsSection />}
       {tab === 'archive' && <ArchiveSection />}

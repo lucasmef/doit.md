@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
 import { useFolders, buildFolderTree, createFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useUI } from '@/store/ui'
+import { useDialog } from '@/components/ui/dialog'
+import { usePreferences } from '@/hooks/use-preferences'
 import { toLocalDateKey } from '@doit/core'
 
 type IconKey = 'today' | 'inbox' | 'upcoming' | 'settings' | 'folder' | 'tag'
@@ -212,6 +214,8 @@ export function Sidebar() {
   const { folders } = useFolders()
   const { items } = useItems()
   const pathname = usePathname()
+  const { prefs } = usePreferences()
+  const { prompt } = useDialog()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -232,7 +236,7 @@ export function Sidebar() {
   }
 
   async function handleNewFolder() {
-    const name = window.prompt('Nome da pasta')
+    const name = await prompt({ title: 'Nova pasta', message: 'Nome da pasta', placeholder: 'Nome' })
     if (!name?.trim()) return
     await createFolder({ name: name.trim() })
   }
@@ -272,7 +276,7 @@ export function Sidebar() {
 
       <SectionTitle>Views</SectionTitle>
       <div className="flex flex-col gap-px px-2">
-        {TOP_NAV.map((n) => (
+        {TOP_NAV.filter((n) => n.href !== '/inbox' || prefs.showInbox).map((n) => (
           <NavLink key={n.href} {...n} count={counts[n.href]} />
         ))}
       </div>

@@ -75,7 +75,20 @@
 
   .ProseMirror ul,
   .ProseMirror ol {
-    padding-left: 1.25rem;
+    padding-left: 1.5rem;
+  }
+  .ProseMirror ul {
+    list-style: disc;
+  }
+  .ProseMirror ol {
+    list-style: decimal;
+  }
+  .ProseMirror ul ul {
+    list-style: circle;
+  }
+  .ProseMirror ul[data-type='taskList'],
+  .ProseMirror ul[data-type='taskList'] ul {
+    list-style: none;
   }
 
   .doit-note-editor p {
@@ -163,6 +176,37 @@
   }
   .ProseMirror .tableWrapper {
     overflow-x: auto;
+  }
+
+  /* Global drag handle */
+  .drag-handle {
+    position: fixed;
+    opacity: 1;
+    transition: opacity ease-in 0.15s;
+    border-radius: 0.25rem;
+    background-image: url("data:image/svg+xml,%3Csvg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='%2394a3b8'%3E%3Cpath d='M4 4a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zM4 9a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2zm-4 5a1 1 0 110-2 1 1 0 010 2zm4 0a1 1 0 110-2 1 1 0 010 2z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 1.25rem;
+    height: 1.25rem;
+    z-index: 50;
+    cursor: grab;
+  }
+  .drag-handle:hover {
+    background-color: theme('colors.ui.fill-subtle', #f1f5f9);
+  }
+  .drag-handle:active {
+    cursor: grabbing;
+  }
+  .drag-handle.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+  @media screen and (max-width: 600px) {
+    .drag-handle {
+      display: none;
+      pointer-events: none;
+    }
   }
 
   /* Links */

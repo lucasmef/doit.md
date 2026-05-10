@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useItems } from '@/hooks/use-items'
 import { updateItem } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
+import { usePreferences } from '@/hooks/use-preferences'
 import { ItemList } from '@/components/items/item-list'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 import { useToast } from '@/components/ui/toast'
@@ -36,12 +37,20 @@ export default function TodayPage() {
   const { items, isLoading } = useItems()
   const [rescheduling, setRescheduling] = useState(false)
   const { toast } = useToast()
+  const { prefs } = usePreferences()
   const today = toLocalDateKey()
   const { events } = useCalendarEvents(today + 'T00:00:00Z', today + 'T23:59:59Z')
 
-  const todayItems = items.filter(
-    (i) => (isToday(i) || isOverdue(i)) && i.status !== 'archived',
-  )
+  const todayItems = items.filter((i) => {
+    if (i.status === 'archived') return false
+    if (isToday(i) || isOverdue(i)) return true
+    if (!prefs.showInbox) {
+      if (i.status === 'inbox') return true
+      if (i.complexity === 'note') return !i.folderId
+      return !i.folderId && !i.dueDate && !i.scheduledDate
+    }
+    return false
+  })
   const overdueItems = todayItems.filter(
     (item) => item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
   )

@@ -19,7 +19,12 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
   const previousStatuses = useRef<Record<string, Item['status']>>({})
   const visibleItems = useMemo(() => {
     if (!hideDoneAfterDelay) return items
-    return items.filter((item) => item.status !== 'done' || recentlyDoneIds[item.id])
+    const filtered = items.filter((item) => item.status !== 'done' || recentlyDoneIds[item.id])
+    return [...filtered].sort((a, b) => {
+      const aDone = a.status === 'done' ? 1 : 0
+      const bDone = b.status === 'done' ? 1 : 0
+      return aDone - bDone
+    })
   }, [hideDoneAfterDelay, items, recentlyDoneIds])
   const visibleItemIds = useMemo(() => visibleItems.map((item) => item.id), [visibleItems])
 

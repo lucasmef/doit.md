@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUI } from '@/store/ui'
+import { usePreferences } from '@/hooks/use-preferences'
 
 function IconInbox() {
   return (
@@ -98,6 +99,8 @@ const NAV_RIGHT = [
 export function BottomNav() {
   const pathname = usePathname()
   const { setQuickCaptureOpen } = useUI()
+  const { prefs } = usePreferences()
+  const navLeft = NAV_LEFT.filter((l) => l.href !== '/inbox' || prefs.showInbox)
 
   function linkClass(href: string) {
     const path = href.split('?')[0] ?? href
@@ -109,7 +112,7 @@ export function BottomNav() {
 
   return (
     <nav className="safe-area-bottom fixed inset-x-0 bottom-0 z-[80] flex min-h-[76px] items-center border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,35,66,0.08)] lg:hidden">
-      {NAV_LEFT.map((link) => (
+      {navLeft.map((link) => (
         <Link
           key={link.href}
           href={link.href}

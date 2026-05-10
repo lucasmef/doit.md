@@ -1,8 +1,18 @@
 'use client'
 
-import { use, useMemo, useState } from 'react'
+import { Fragment, use, useMemo, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import {
   useFolders,
   buildFolderTree,
@@ -16,6 +26,7 @@ import { ItemList } from '@/components/items/item-list'
 import { ItemRow as SharedItemRow } from '@/components/items/item-row'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
+import { useDialog } from '@/components/ui/dialog'
 import type { Folder, Item } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -60,6 +71,88 @@ function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
 }
 
 const FOLDER_DRAG_MIME = 'application/x-folder-id'
+
+function KanbanCard({
+  item,
+  selected,
+  active,
+  orderedIds,
+}: {
+  item: Item
+  selected: boolean
+  active: boolean
+  orderedIds: string[]
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `item:${item.id}`,
+    data: { itemId: item.id },
+  })
+
+  return (
+    <div
+      className={`group/card flex items-stretch rounded-md border border-ui-border bg-white ${
+        isDragging ? 'opacity-50' : ''
+      }`}
+    >
+      <div
+        ref={setNodeRef}
+        {...attributes}
+        {...listeners}
+        title="Arrastar"
+        className="flex w-5 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-navy-300 hover:bg-surface-soft hover:text-navy-600 active:cursor-grabbing"
+      >
+        <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+          <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+        </svg>
+      </div>
+      <div className="min-w-0 flex-1">
+        <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} />
+      </div>
+    </div>
+  )
+}
+
+function ColumnInserter({ onAdd, edge }: { onAdd: () => void; edge?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      title="Adicionar coluna aqui"
+      aria-label="Adicionar coluna aqui"
+      className={`group/inserter relative flex shrink-0 cursor-pointer items-center justify-center self-stretch ${edge ? 'w-3' : 'w-4'}`}
+    >
+      <span className="absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors group-hover/inserter:bg-brand-300" />
+      <span className="relative flex h-7 w-7 items-center justify-center rounded-full border border-brand-300 bg-white text-brand-600 opacity-0 shadow-sm transition-opacity group-hover/inserter:opacity-100">
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+        </svg>
+      </span>
+    </button>
+  )
+}
+
+function KanbanDropZone({
+  folderId,
+  children,
+}: {
+  folderId: string | null
+  children: React.ReactNode
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `col:${folderId ?? 'root'}`,
+    data: { folderId },
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`flex flex-1 flex-col gap-1 px-2 py-2 overflow-y-auto transition-colors ${
+        isOver ? 'bg-brand-50' : ''
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
 
 function KanbanColumn({
   title,
@@ -171,7 +264,7 @@ function KanbanColumn({
         </span>
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 px-2 py-2 overflow-y-auto">
+      <KanbanDropZone folderId={addFolderId}>
         {childFolders.map((sub) => (
           <Link
             key={sub.id}
@@ -186,31 +279,18 @@ function KanbanColumn({
           </Link>
         ))}
         {items.map((item) => (
-          <div
+          <KanbanCard
             key={item.id}
-            draggable
-            onDragStart={(event) => {
-              event.stopPropagation()
-              onDragStart(item, event)
-            }}
-            onDragEnd={(event) => {
-              event.stopPropagation()
-              onDragEnd()
-            }}
-            className="rounded-md border border-ui-border bg-white"
-          >
-            <SharedItemRow
-              item={item}
-              active={item.id === selectedItemId}
-              selected={selectedItemIds.includes(item.id)}
-              orderedIds={orderedIds}
-            />
-          </div>
+            item={item}
+            active={item.id === selectedItemId}
+            selected={selectedItemIds.includes(item.id)}
+            orderedIds={orderedIds}
+          />
         ))}
         {childFolders.length === 0 && items.length === 0 && (
           <p className="px-2 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
         )}
-      </div>
+      </KanbanDropZone>
 
       <button
         type="button"
@@ -240,6 +320,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const { items: allItems } = useItems()
   const { selectedItemIds, setSingleSelection } = useUI()
   const { toast } = useToast()
+  const { confirm, prompt } = useDialog()
 
   const folder = data?.folder
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -305,6 +386,35 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
   }
 
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+  )
+
+  async function handleDndDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    if (!over) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    if (!activeId.startsWith('item:') || !overId.startsWith('col:')) return
+    const itemId = activeId.slice('item:'.length)
+    const folderKey = overId.slice('col:'.length)
+    const targetFolderId = folderKey === 'root' ? null : folderKey
+    const item = activeItemsById.get(itemId)
+    if (!item) return
+    if ((item.folderId ?? null) === targetFolderId) return
+
+    const ids =
+      selectedItemIds.includes(itemId) && selectedItemIds.length > 1 ? selectedItemIds : [itemId]
+    const targets = ids.map((id) => activeItemsById.get(id)).filter(Boolean) as Item[]
+    if (targets.length === 0) return
+    await bulkUpdateItems(
+      { ids: targets.map((t) => t.id), patch: { folderId: (targetFolderId ?? '') as never } },
+      targets,
+    )
+    toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+  }
+
   function handleColumnDragStart(fid: string) {
     setDraggingFolderId(fid)
   }
@@ -364,18 +474,35 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleNewSub() {
-    const subName = window.prompt('Nome da subpasta')
+    const subName = await prompt({ title: 'Nova subpasta', message: 'Nome da subpasta', placeholder: 'Nome' })
     if (!subName?.trim()) return
     await createFolder({ name: subName.trim(), parentId: id })
   }
 
-  async function handleDelete() {
-    if (
-      !window.confirm(
-        `Apagar pasta "${folder?.name}" e todas as subpastas? As notas voltam para a raiz.`,
-      )
+  async function addColumnAt(insertionIdx: number) {
+    const colName = await prompt({ title: 'Nova coluna', message: 'Nome da coluna', placeholder: 'Nome' })
+    if (!colName?.trim()) return
+    const created = await createFolder({ name: colName.trim(), parentId: id, order: 0 })
+    const siblings = [...childFolders]
+    const newNode = { ...created, children: [] } as FolderTreeNode
+    siblings.splice(insertionIdx, 0, newNode)
+    await Promise.all(
+      siblings.map((f, idx) => {
+        const newOrder = (idx + 1) * 1000
+        if (f.order === newOrder) return Promise.resolve()
+        return updateFolder(f.id, { order: newOrder })
+      }),
     )
-      return
+  }
+
+  async function handleDelete() {
+    const ok = await confirm({
+      title: 'Apagar pasta',
+      message: `Apagar pasta "${folder?.name}" e todas as subpastas? As notas voltam para a raiz.`,
+      confirmLabel: 'Apagar',
+      variant: 'danger',
+    })
+    if (!ok) return
     await deleteFolder(id)
     if (typeof window !== 'undefined') window.location.href = '/notas'
   }
@@ -495,47 +622,61 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           </section>
         </>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <DndContext sensors={dndSensors} onDragEnd={handleDndDragEnd}>
+        <div className="flex items-stretch gap-0 overflow-x-auto pb-4">
           {childFolders.length === 0 ? (
-            <KanbanColumn
-              title={folder.name}
-              items={directOpenItems}
-              childFolders={[]}
-              addFolderId={id}
-              selectedItemIds={selectedItemIds}
-              orderedIds={directOpenItems.map((item) => item.id)}
-              dragging={draggingIds.length > 0}
-              onDragStart={handleDragStart}
-              onDragEnd={() => setDraggingIds([])}
-              onDropItems={handleDropItems}
-            />
-          ) : (
-            childFolders.map((sub) => (
+            <>
+              <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
               <KanbanColumn
-                key={sub.id}
-                title={sub.name}
-                href={`/notas/${sub.id}`}
-                items={itemsByFolder.get(sub.id) ?? []}
-                childFolders={sub.children}
-                addFolderId={sub.id}
-                folderId={sub.id}
+                title={folder.name}
+                items={directOpenItems}
+                childFolders={[]}
+                addFolderId={id}
                 selectedItemIds={selectedItemIds}
-                orderedIds={(itemsByFolder.get(sub.id) ?? []).map((item) => item.id)}
+                orderedIds={directOpenItems.map((item) => item.id)}
                 dragging={draggingIds.length > 0}
-                columnDragging={draggingFolderId === sub.id}
-                columnDropTarget={columnDropTargetId === sub.id}
                 onDragStart={handleDragStart}
                 onDragEnd={() => setDraggingIds([])}
                 onDropItems={handleDropItems}
-                onColumnDragStart={handleColumnDragStart}
-                onColumnDragOver={handleColumnDragOver}
-                onColumnDragLeave={() => setColumnDropTargetId(null)}
-                onColumnDragEnd={handleColumnDragEnd}
-                onColumnDrop={handleColumnDrop}
               />
-            ))
+              <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
+            </>
+          ) : (
+            <>
+              <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
+              {childFolders.map((sub, idx) => (
+                <Fragment key={sub.id}>
+                  <KanbanColumn
+                    title={sub.name}
+                    href={`/notas/${sub.id}`}
+                    items={itemsByFolder.get(sub.id) ?? []}
+                    childFolders={sub.children}
+                    addFolderId={sub.id}
+                    folderId={sub.id}
+                    selectedItemIds={selectedItemIds}
+                    orderedIds={(itemsByFolder.get(sub.id) ?? []).map((item) => item.id)}
+                    dragging={draggingIds.length > 0}
+                    columnDragging={draggingFolderId === sub.id}
+                    columnDropTarget={columnDropTargetId === sub.id}
+                    onDragStart={handleDragStart}
+                    onDragEnd={() => setDraggingIds([])}
+                    onDropItems={handleDropItems}
+                    onColumnDragStart={handleColumnDragStart}
+                    onColumnDragOver={handleColumnDragOver}
+                    onColumnDragLeave={() => setColumnDropTargetId(null)}
+                    onColumnDragEnd={handleColumnDragEnd}
+                    onColumnDrop={handleColumnDrop}
+                  />
+                  <ColumnInserter
+                    edge={idx === childFolders.length - 1}
+                    onAdd={() => void addColumnAt(idx + 1)}
+                  />
+                </Fragment>
+              ))}
+            </>
           )}
         </div>
+        </DndContext>
       )}
     </div>
   )

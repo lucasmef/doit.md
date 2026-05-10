@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
     "@doit/core": "workspace:*",
     "@doit/db": "workspace:*",
     "@doit/sync": "workspace:*",
@@ -35,6 +36,7 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "swr": "^2.4.1",
+    "tiptap-extension-global-drag-handle": "^0.1.18",
     "web-push": "^3.6.7"
   },
   "devDependencies": {

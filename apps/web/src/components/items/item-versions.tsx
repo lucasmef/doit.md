@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import useSWR, { mutate as globalMutate } from 'swr'
 import type { ItemVersion } from '@doit/types'
+import { useDialog } from '@/components/ui/dialog'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -71,6 +72,7 @@ export function ItemVersions({ itemId, compact = false }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [position, setPosition] = useState<{ left: number; top: number; width: number } | null>(null)
   const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const { confirm } = useDialog()
 
   const versions = data?.versions ?? []
 
@@ -86,7 +88,12 @@ export function ItemVersions({ itemId, compact = false }: Props) {
   }
 
   async function handleRestore(versionId: string) {
-    if (!confirm('Restaurar esta versao? O estado atual sera salvo no historico antes da troca.')) return
+    const ok = await confirm({
+      title: 'Restaurar versao',
+      message: 'O estado atual sera salvo no historico antes da troca.',
+      confirmLabel: 'Restaurar',
+    })
+    if (!ok) return
     setRestoring(versionId)
     try {
       await fetch(`/api/items/${itemId}/versions`, {

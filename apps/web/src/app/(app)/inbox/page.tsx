@@ -1,11 +1,23 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
+import { usePreferences } from '@/hooks/use-preferences'
 import { ItemList } from '@/components/items/item-list'
 import { EmptyInbox } from '@/components/ui/empty-inbox'
 
 export default function InboxPage() {
+  const router = useRouter()
+  const { prefs } = usePreferences()
   const { items, isLoading } = useItems()
+
+  useEffect(() => {
+    if (!prefs.showInbox) router.replace('/today')
+  }, [prefs.showInbox, router])
+
+  if (!prefs.showInbox) return null
+
   const inboxItems = items.filter((item) => {
     if (item.status === 'archived') return false
     if (item.status === 'inbox') return true

@@ -6,6 +6,7 @@ import { createItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
+import { useDialog } from '@/components/ui/dialog'
 import { MarkdownEditor } from './markdown-editor'
 import { isTypingTarget } from '@/hooks/use-keyboard'
 import { PRIORITY_CONFIG } from './priority-select'
@@ -490,6 +491,7 @@ export function QuickCapture() {
   const { quickCaptureOpen, setQuickCaptureOpen, quickCaptureFolderId, setQuickCaptureFolderId } =
     useUI()
   const { toast } = useToast()
+  const { confirm } = useDialog()
   const { projects } = useProjects()
   const { items } = useItems()
   const [title, setTitle] = useState('')
@@ -676,6 +678,8 @@ export function QuickCapture() {
     if (next === 'note') {
       setPriority(4)
       setRecurrence('')
+      setDueDate('')
+      setDueTime('')
     } else if (!dueDate && isTodayContext) {
       setDueDate(todayDate())
     }
@@ -827,22 +831,28 @@ export function QuickCapture() {
     if (lines.length <= 1) return
 
     event.preventDefault()
-    if (window.confirm(`Deseja adicionar ${lines.length} tarefas? Cada linha sera uma tarefa.`)) {
-      void createTasksFromLines(lines)
-      return
-    }
-
     const start = event.currentTarget.selectionStart ?? title.length
     const end = event.currentTarget.selectionEnd ?? start
-    const pastedInline = pasted.replace(/\s*\r?\n\s*/g, ' ')
-    const nextTitle = insertPastedTitle(title, pasted, start, end)
-    applyTitleShortcuts(nextTitle)
-    const nextCursor = start + pastedInline.length
-    setTitleCursor(nextCursor)
-    setTimeout(() => {
-      inputRef.current?.focus()
-      inputRef.current?.setSelectionRange(nextCursor, nextCursor)
-    }, 0)
+    void confirm({
+      title: 'Adicionar varias tarefas',
+      message: `Deseja adicionar ${lines.length} tarefas? Cada linha sera uma tarefa.`,
+      confirmLabel: 'Adicionar todas',
+      cancelLabel: 'Colar como uma',
+    }).then((ok) => {
+      if (ok) {
+        void createTasksFromLines(lines)
+        return
+      }
+      const pastedInline = pasted.replace(/\s*\r?\n\s*/g, ' ')
+      const nextTitle = insertPastedTitle(title, pasted, start, end)
+      applyTitleShortcuts(nextTitle)
+      const nextCursor = start + pastedInline.length
+      setTitleCursor(nextCursor)
+      setTimeout(() => {
+        inputRef.current?.focus()
+        inputRef.current?.setSelectionRange(nextCursor, nextCursor)
+      }, 0)
+    })
   }
 
   if (!quickCaptureOpen) return null
@@ -855,14 +865,25 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
-      onClick={(e) => e.target === e.currentTarget && setQuickCaptureOpen(false)}
+      className={
+        isNote
+          ? 'fixed inset-0 z-50 flex flex-col bg-white'
+          : 'fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm'
+      }
+      onClick={(e) => {
+        if (isNote) return
+        if (e.target === e.currentTarget) setQuickCaptureOpen(false)
+      }}
     >
       <div
-        className={`w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg ${isNote ? 'max-w-4xl' : 'max-w-[560px]'}`}
+        className={
+          isNote
+            ? 'flex h-full w-full flex-col overflow-visible bg-white lg:pl-[260px]'
+            : `w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg max-w-[560px]`
+        }
       >
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          <div className="px-5 pb-4 pt-5">
+        <form onSubmit={handleSubmit} className={`flex flex-col ${isNote ? 'h-full min-h-0 flex-1' : ''}`}>
+          <div className={`px-5 pb-4 pt-5 ${isNote ? 'flex min-h-0 flex-1 flex-col' : ''}`}>
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -945,29 +966,15 @@ export function QuickCapture() {
             </div>
 
             {isNote ? (
-              <div className="mt-3">
-                <MarkdownEditor
-                  value={contentMd}
-                  onChange={setContentMd}
-                  placeholder="Escreva em Markdown..."
-                  minHeight="min-h-[440px]"
-                />
-                <div className="mt-3 rounded-xl border border-dashed border-ui-border-strong bg-surface-soft p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <h3 className="text-[13px] font-semibold text-slate-700">Anexos</h3>
-                      <p className="text-[12px] text-slate-400">
-                        Espaco reservado para upload de arquivos.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      disabled
-                      className="h-8 rounded-[10px] border border-ui-border-soft bg-white px-3 text-[12px] font-semibold text-slate-300"
-                    >
-                      Upload em breve
-                    </button>
-                  </div>
+              <div className="mt-3 flex min-h-0 flex-1 flex-col">
+                <div className="flex min-h-0 flex-1 flex-col">
+                  <MarkdownEditor
+                    value={contentMd}
+                    onChange={setContentMd}
+                    placeholder="Escreva em Markdown..."
+                    minHeight="min-h-0 flex-1"
+                    plain
+                  />
                 </div>
               </div>
             ) : (
