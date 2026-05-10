@@ -59,30 +59,48 @@ function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
   )
 }
 
+const FOLDER_DRAG_MIME = 'application/x-folder-id'
+
 function KanbanColumn({
   title,
   href,
   items,
   childFolders,
   addFolderId,
+  folderId,
   selectedItemIds,
   orderedIds,
   dragging,
+  columnDragging,
+  columnDropTarget,
   onDragStart,
   onDragEnd,
   onDropItems,
+  onColumnDragStart,
+  onColumnDragOver,
+  onColumnDragLeave,
+  onColumnDragEnd,
+  onColumnDrop,
 }: {
   title: string
   href?: string
   items: Item[]
   childFolders: FolderTreeNode[]
   addFolderId: string | null
+  folderId?: string
   selectedItemIds: string[]
   orderedIds: string[]
   dragging: boolean
+  columnDragging?: boolean
+  columnDropTarget?: boolean
   onDragStart: (item: Item, event: React.DragEvent) => void
   onDragEnd: () => void
   onDropItems: (folderId: string | null, event: React.DragEvent) => void
+  onColumnDragStart?: (folderId: string, event: React.DragEvent) => void
+  onColumnDragOver?: (folderId: string, event: React.DragEvent) => void
+  onColumnDragLeave?: () => void
+  onColumnDragEnd?: () => void
+  onColumnDrop?: (folderId: string, event: React.DragEvent) => void
 }) {
   const { selectedItemId, setQuickCaptureOpen, setQuickCaptureFolderId } = useUI()
 
@@ -91,15 +109,50 @@ function KanbanColumn({
     setQuickCaptureOpen(true)
   }
 
+  const reorderable = !!folderId && !!onColumnDragStart
+
+  function handleDragOver(event: React.DragEvent) {
+    event.preventDefault()
+    if (reorderable && folderId && event.dataTransfer.types.includes(FOLDER_DRAG_MIME)) {
+      onColumnDragOver?.(folderId, event)
+    }
+  }
+
+  function handleDrop(event: React.DragEvent) {
+    if (reorderable && folderId && event.dataTransfer.types.includes(FOLDER_DRAG_MIME)) {
+      event.preventDefault()
+      onColumnDrop?.(folderId, event)
+      return
+    }
+    onDropItems(addFolderId, event)
+  }
+
   return (
     <div
-      onDragOver={(event) => event.preventDefault()}
-      onDrop={(event) => onDropItems(addFolderId, event)}
+      onDragOver={handleDragOver}
+      onDragLeave={onColumnDragLeave}
+      onDrop={handleDrop}
       className={`flex w-80 shrink-0 flex-col rounded-xl border bg-surface-soft transition-colors ${
-        dragging ? 'border-brand-300' : 'border-ui-border'
+        columnDragging
+          ? 'opacity-50 border-brand-400'
+          : columnDropTarget
+            ? 'border-brand-500 ring-2 ring-brand-200'
+            : dragging
+              ? 'border-brand-300'
+              : 'border-ui-border'
       }`}
     >
-      <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-ui-border-soft">
+      <div
+        draggable={reorderable}
+        onDragStart={(event) => {
+          if (!reorderable || !folderId) return
+          event.dataTransfer.effectAllowed = 'move'
+          event.dataTransfer.setData(FOLDER_DRAG_MIME, folderId)
+          onColumnDragStart?.(folderId, event)
+        }}
+        onDragEnd={onColumnDragEnd}
+        className={`flex items-center justify-between gap-2 px-3 py-2 border-b border-ui-border-soft ${reorderable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      >
         {href ? (
           <Link
             href={href}
@@ -136,8 +189,14 @@ function KanbanColumn({
           <div
             key={item.id}
             draggable
-            onDragStart={(event) => onDragStart(item, event)}
-            onDragEnd={onDragEnd}
+            onDragStart={(event) => {
+              event.stopPropagation()
+              onDragStart(item, event)
+            }}
+            onDragEnd={(event) => {
+              event.stopPropagation()
+              onDragEnd()
+            }}
             className="rounded-md border border-ui-border bg-white"
           >
             <SharedItemRow
@@ -189,6 +248,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState('')
   const [draggingIds, setDraggingIds] = useState<string[]>([])
+  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
+  const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
 
   async function changeView(mode: ViewMode) {
     await updateFolder(id, { viewMode: mode, viewModeManual: true })
@@ -242,6 +303,44 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       targets,
     )
     toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+  }
+
+  function handleColumnDragStart(fid: string) {
+    setDraggingFolderId(fid)
+  }
+
+  function handleColumnDragOver(fid: string) {
+    if (draggingFolderId && draggingFolderId !== fid) setColumnDropTargetId(fid)
+  }
+
+  function handleColumnDragEnd() {
+    setDraggingFolderId(null)
+    setColumnDropTargetId(null)
+  }
+
+  async function handleColumnDrop(targetFolderId: string, event: React.DragEvent) {
+    const sourceId = event.dataTransfer.getData(FOLDER_DRAG_MIME) || draggingFolderId
+    setDraggingFolderId(null)
+    setColumnDropTargetId(null)
+    if (!sourceId || sourceId === targetFolderId) return
+
+    const siblings = childFolders
+    const sourceIdx = siblings.findIndex((f) => f.id === sourceId)
+    const targetIdx = siblings.findIndex((f) => f.id === targetFolderId)
+    if (sourceIdx < 0 || targetIdx < 0) return
+
+    const reordered = [...siblings]
+    const [moved] = reordered.splice(sourceIdx, 1)
+    const insertAt = sourceIdx < targetIdx ? targetIdx : targetIdx
+    reordered.splice(insertAt, 0, moved)
+
+    const updates: Promise<void>[] = []
+    reordered.forEach((f, idx) => {
+      const newOrder = (idx + 1) * 1000
+      if (f.order !== newOrder) updates.push(updateFolder(f.id, { order: newOrder }))
+    })
+    await Promise.all(updates)
+    toast('Ordem atualizada', 'success')
   }
 
   if (!folder) {
@@ -417,12 +516,20 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                 items={itemsByFolder.get(sub.id) ?? []}
                 childFolders={sub.children}
                 addFolderId={sub.id}
+                folderId={sub.id}
                 selectedItemIds={selectedItemIds}
                 orderedIds={(itemsByFolder.get(sub.id) ?? []).map((item) => item.id)}
                 dragging={draggingIds.length > 0}
+                columnDragging={draggingFolderId === sub.id}
+                columnDropTarget={columnDropTargetId === sub.id}
                 onDragStart={handleDragStart}
                 onDragEnd={() => setDraggingIds([])}
                 onDropItems={handleDropItems}
+                onColumnDragStart={handleColumnDragStart}
+                onColumnDragOver={handleColumnDragOver}
+                onColumnDragLeave={() => setColumnDropTargetId(null)}
+                onColumnDragEnd={handleColumnDragEnd}
+                onColumnDrop={handleColumnDrop}
               />
             ))
           )}
