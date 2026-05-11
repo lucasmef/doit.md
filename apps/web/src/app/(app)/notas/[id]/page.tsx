@@ -647,6 +647,21 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           ) : (
             <>
               <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
+              {directOpenItems.length > 0 && (
+                <>
+                  <KanbanColumn
+                    title="Sem pasta"
+                    items={directOpenItems}
+                    childFolders={[]}
+                    addFolderId={id}
+                    selectedItemIds={selectedItemIds}
+                    orderedIds={directOpenItems.map((item) => item.id)}
+                    dragging={draggingIds.length > 0}
+                    onDropItems={handleDropItems}
+                  />
+                  <ColumnInserter onAdd={() => void addColumnAt(0)} />
+                </>
+              )}
               {childFolders.map((sub, idx) => (
                 <Fragment key={sub.id}>
                   <KanbanColumn

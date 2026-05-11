@@ -7,7 +7,7 @@ import { useDialog } from '@/components/ui/dialog'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-type Props = { itemId: string; compact?: boolean }
+type Props = { itemId: string; compact?: boolean; iconTrigger?: boolean }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
@@ -62,7 +62,7 @@ function VersionPreview({
   )
 }
 
-export function ItemVersions({ itemId, compact = false }: Props) {
+export function ItemVersions({ itemId, compact = false, iconTrigger = false }: Props) {
   const { data, isLoading } = useSWR<{ versions: ItemVersion[] }>(
     `/api/items/${itemId}/versions`,
     fetcher,
@@ -78,7 +78,7 @@ export function ItemVersions({ itemId, compact = false }: Props) {
 
   function toggleOpen() {
     const nextOpen = !open
-    if (nextOpen && compact && buttonRef.current && typeof window !== 'undefined') {
+    if (nextOpen && (compact || iconTrigger) && buttonRef.current && typeof window !== 'undefined') {
       const rect = buttonRef.current.getBoundingClientRect()
       const width = Math.min(360, window.innerWidth - 24)
       const left = Math.min(Math.max(12, rect.right - width), window.innerWidth - width - 12)
@@ -109,22 +109,48 @@ export function ItemVersions({ itemId, compact = false }: Props) {
     }
   }
 
+  const popoverFloating = compact || iconTrigger
+
   return (
     <div className="relative">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={toggleOpen}
-        className="flex w-full items-center justify-between py-1 text-xs text-slate-400 transition-colors hover:text-slate-600"
-      >
-        <span className="truncate font-medium">{compact ? `Historico (${versions.length})` : `Historico de versoes (${versions.length})`}</span>
-        <span>{open ? '▲' : '▼'}</span>
-      </button>
+      {iconTrigger ? (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggleOpen}
+          title={`Historico (${versions.length})`}
+          aria-label="Historico"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-[10px] text-slate-500 hover:bg-white hover:text-slate-800"
+        >
+          <svg
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          >
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l3 2" strokeLinecap="round" />
+          </svg>
+        </button>
+      ) : (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggleOpen}
+          className="flex w-full items-center justify-between py-1 text-xs text-slate-400 transition-colors hover:text-slate-600"
+        >
+          <span className="truncate font-medium">{compact ? `Historico (${versions.length})` : `Historico de versoes (${versions.length})`}</span>
+          <span>{open ? '▲' : '▼'}</span>
+        </button>
+      )}
 
       {open && (
         <div
-          className={`${compact ? 'fixed z-[90] rounded-xl border border-ui-border bg-white p-2 shadow-cool-lg' : 'mt-2'} max-h-[min(520px,calc(100vh-96px))] space-y-1.5 overflow-y-auto`}
-          style={compact && position ? { left: position.left, top: position.top, width: position.width } : undefined}
+          className={`${popoverFloating ? 'fixed z-[90] rounded-xl border border-ui-border bg-white p-2 shadow-cool-lg' : 'mt-2'} max-h-[min(520px,calc(100vh-96px))] space-y-1.5 overflow-y-auto`}
+          style={popoverFloating && position ? { left: position.left, top: position.top, width: position.width } : undefined}
         >
           {isLoading && <div className="h-8 animate-pulse rounded bg-slate-100" />}
 

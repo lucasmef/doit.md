@@ -832,9 +832,19 @@ export function ItemDetail() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
               </button>
-              <span className="shrink-0 text-[11px] font-medium text-slate-400">
+              <span
+                className="hidden shrink-0 text-[11px] font-medium text-slate-400 sm:inline"
+                title={dirty || isSaving ? 'Salvando...' : 'Salvo'}
+              >
                 {dirty || isSaving ? 'Salvando...' : 'Salvo'}
               </span>
+              <span
+                aria-hidden="true"
+                title={dirty || isSaving ? 'Salvando...' : 'Salvo'}
+                className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full sm:hidden ${
+                  dirty || isSaving ? 'bg-amber-400' : 'bg-emerald-500'
+                }`}
+              />
 
               {canSwitchNoteToTask && (
                 <button
@@ -844,7 +854,7 @@ export function ItemDetail() {
                   className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-selected bg-surface-selected px-2 text-[12px] font-medium text-brand-700 transition-colors hover:bg-white"
                 >
                   <IconNote className="h-3.5 w-3.5" />
-                  Nota
+                  <span className="hidden sm:inline">Nota</span>
                 </button>
               )}
 
@@ -912,24 +922,22 @@ export function ItemDetail() {
                 )}
               </div>
 
-              <button
-                type="button"
-                disabled
-                title="Anexos"
-                className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-white px-2 text-[12px] font-medium text-slate-300"
-              >
-                Anexos
-              </button>
-
-              <div className="relative min-w-[130px] shrink-0">
+              <div className="relative shrink-0">
                 <button
                   type="button"
-                  title="Selecionar ou criar pasta"
+                  title={selectedProject ? `Pasta: ${selectedProject.name}` : 'Selecionar pasta'}
+                  aria-label={selectedProject ? `Pasta: ${selectedProject.name}` : 'Selecionar pasta'}
                   onClick={() => setPopover(popover === 'project' ? null : 'project')}
-                  className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                  className={`inline-flex h-7 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
+                    selectedProject
+                      ? 'border-ui-border-selected bg-surface-selected text-brand-700'
+                      : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+                  }`}
                 >
                   <IconInbox className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
+                  <span className="hidden max-w-[120px] truncate sm:inline">
+                    {selectedProject?.name ?? 'Pasta'}
+                  </span>
                 </button>
                 {popover === 'project' && (
                   <div className="absolute left-0 top-9 z-20 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
@@ -1009,12 +1017,14 @@ export function ItemDetail() {
 
               <div className="relative shrink-0">
                 <ToolButton
-                  title="Selecionar data"
+                  title={dueDate ? `Data: ${formatDueDate(dueDate)}` : 'Selecionar data'}
                   active={!!dueDate}
                   onClick={() => setPopover(popover === 'date' ? null : 'date')}
                 >
                   <IconCalendar className="h-3.5 w-3.5" />
-                  {dueDate ? formatDueDate(dueDate) : 'Data'}
+                  <span className="hidden sm:inline">
+                    {dueDate ? formatDueDate(dueDate) : 'Data'}
+                  </span>
                 </ToolButton>
                 {popover === 'date' && (
                   <div className="absolute left-0 top-9 z-20 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
@@ -1063,16 +1073,29 @@ export function ItemDetail() {
                 )}
               </div>
 
-              <div className="w-56 shrink-0">
-                <ItemVersions itemId={item.id} compact />
+              <div className="shrink-0">
+                <ItemVersions itemId={item.id} iconTrigger />
               </div>
 
               <button
                 type="button"
                 onClick={handleArchive}
-                className="h-8 shrink-0 rounded-[10px] px-3 text-[12px] font-semibold text-slate-400 hover:bg-white hover:text-red-500"
+                title="Arquivar"
+                aria-label="Arquivar"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-slate-400 hover:bg-white hover:text-red-500"
               >
-                Arquivar
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                >
+                  <path d="M3 5h18v4H3z" />
+                  <path d="M5 9v10h14V9" />
+                  <path d="M10 13h4" strokeLinecap="round" />
+                </svg>
               </button>
             </div>
 

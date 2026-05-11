@@ -434,6 +434,7 @@ function HighlightedTitleInput({
   placeholder,
   inputRef,
   onPaste,
+  onKeyDown,
 }: {
   value: string
   onChange: (value: string) => void
@@ -441,6 +442,7 @@ function HighlightedTitleInput({
   placeholder: string
   inputRef?: React.RefObject<HTMLInputElement | null>
   onPaste?: (event: React.ClipboardEvent<HTMLInputElement>) => void
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void
 }) {
   const parts = value.split(INLINE_METADATA_PATTERN)
 
@@ -472,12 +474,14 @@ function HighlightedTitleInput({
       <input
         ref={inputRef}
         value={value}
+        autoFocus
         onChange={(e) => {
           onChange(e.target.value)
           onCursorChange(e.target.selectionStart ?? e.target.value.length)
         }}
         onPaste={onPaste}
         onClick={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
+        onKeyDown={onKeyDown}
         onKeyUp={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
         placeholder={placeholder}
         className="relative w-full border-none bg-transparent text-[16px] font-semibold leading-6 text-transparent caret-slate-900 outline-none placeholder:text-slate-300 selection:bg-brand-100"
@@ -488,8 +492,13 @@ function HighlightedTitleInput({
 
 export function QuickCapture() {
   const pathname = usePathname()
-  const { quickCaptureOpen, setQuickCaptureOpen, quickCaptureFolderId, setQuickCaptureFolderId } =
-    useUI()
+  const {
+    quickCaptureOpen,
+    setQuickCaptureOpen,
+    quickCaptureFolderId,
+    setQuickCaptureFolderId,
+    setSingleSelection,
+  } = useUI()
   const { toast } = useToast()
   const { confirm } = useDialog()
   const { projects } = useProjects()
@@ -595,7 +604,19 @@ export function QuickCapture() {
           if (folderMatch?.[1]) setProjectId(folderMatch[1])
         }
       }
-      setTimeout(() => inputRef.current?.focus(), 50)
+      const focusInput = () => {
+        const el = inputRef.current
+        if (!el) return
+        el.focus()
+        const len = el.value.length
+        try {
+          el.setSelectionRange(len, len)
+        } catch {
+          // ignore (some input types disallow setSelectionRange)
+        }
+      }
+      requestAnimationFrame(focusInput)
+      setTimeout(focusInput, 80)
     } else {
       setTitle('')
       setContentMd('')
@@ -761,6 +782,62 @@ export function QuickCapture() {
     }
   }
 
+  async function handleOpenFullscreen() {
+    if (saving) return
+    setSaving(true)
+    try {
+      const parsedTitle = titleFromNoteContent(contentMd) || 'Nova nota'
+      const item = await createItem({
+        title: parsedTitle,
+        complexity: 'note',
+        status: !projectId ? 'inbox' : 'todo',
+        contentMd: contentMd.trim() || 'Nova nota',
+        folderId: projectId || undefined,
+        tags,
+      })
+      clearDraft()
+      setQuickCaptureOpen(false)
+      if (item?.id) setSingleSelection(item.id)
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao criar nota.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function submitAndContinue() {
+    if (saving) return
+    const parsedTitle = isNote ? titleFromNoteContent(contentMd) : cleanTitle(title)
+    if (!parsedTitle) return
+
+    setSaving(true)
+    try {
+      const inboxContext = !projectId && !dueDate
+      await createItem({
+        title: parsedTitle,
+        complexity,
+        status: inboxContext ? 'inbox' : 'todo',
+        contentMd: contentMd.trim() || undefined,
+        dueDate: dueDate || undefined,
+        dueTime: dueDate && dueTime ? dueTime : undefined,
+        folderId: projectId || undefined,
+        tags,
+        priority: complexity === 'task' && priority < 4 ? priority : undefined,
+        recurrence: complexity === 'task' && recurrence ? recurrence : undefined,
+      })
+      toast('Item criado', 'success')
+      setTitle('')
+      setContentMd('')
+      setTitleCursor(0)
+      clearDraft()
+      requestAnimationFrame(() => inputRef.current?.focus())
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao criar item.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const parsedTitle = isNote ? titleFromNoteContent(contentMd) : cleanTitle(title)
@@ -885,6 +962,18 @@ export function QuickCapture() {
                   onChange={applyTitleShortcuts}
                   onPaste={handleTitlePaste}
                   onCursorChange={setTitleCursor}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === 'Enter' &&
+                      !e.shiftKey &&
+                      !e.metaKey &&
+                      !e.ctrlKey &&
+                      !e.altKey
+                    ) {
+                      e.preventDefault()
+                      void submitAndContinue()
+                    }
+                  }}
                   placeholder="Nome da tarefa"
                 />
               )}
@@ -902,6 +991,30 @@ export function QuickCapture() {
                 >
                   <IconNote className="h-3.5 w-3.5" />
                   Nota
+                </button>
+              )}
+              {isNote && (
+                <button
+                  type="button"
+                  title="Abrir em tela cheia"
+                  aria-label="Abrir em tela cheia"
+                  onClick={() => void handleOpenFullscreen()}
+                  disabled={saving}
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-ui-border-soft bg-surface-soft text-slate-500 transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-50"
+                >
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  >
+                    <path d="M4 9V4h5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M20 9V4h-5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M4 15v5h5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
                 </button>
               )}
               {shortcut &&
