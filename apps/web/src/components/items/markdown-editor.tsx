@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
@@ -21,6 +21,33 @@ type Props = {
   placeholder?: string
   minHeight?: string
   plain?: boolean
+  itemId?: string
+}
+
+type DriveUploadResult = {
+  fileId: string
+  name: string
+  webViewLink: string
+}
+
+async function uploadToDrive(itemId: string, file: File): Promise<DriveUploadResult> {
+  const form = new FormData()
+  form.append('itemId', itemId)
+  form.append('file', file)
+  const res = await fetch('/api/drive/upload', { method: 'POST', body: form })
+  if (res.status === 412) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    const reauthErr = new Error(data.error ?? 'Drive reauth required') as Error & {
+      needsReauth?: boolean
+    }
+    reauthErr.needsReauth = true
+    throw reauthErr
+  }
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string }
+    throw new Error(data.error ?? `Upload failed (${res.status})`)
+  }
+  return (await res.json()) as DriveUploadResult
 }
 
 export function MarkdownEditor({
@@ -29,6 +56,7 @@ export function MarkdownEditor({
   placeholder = 'Escreva em Markdown...',
   minHeight = 'min-h-[320px]',
   plain = false,
+  itemId,
 }: Props) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -73,6 +101,80 @@ export function MarkdownEditor({
       contentType: 'markdown',
     })
   }, [editor, value])
+
+  const insertDriveLink = useCallback(
+    (current: Editor, result: DriveUploadResult) => {
+      current
+        .chain()
+        .focus()
+        .insertContent([
+          {
+            type: 'text',
+            text: result.name,
+            marks: [{ type: 'link', attrs: { href: result.webViewLink } }],
+          },
+          { type: 'text', text: ' ' },
+        ])
+        .run()
+    },
+    [],
+  )
+
+  useEffect(() => {
+    if (!editor || !itemId) return
+    const dom = editor.view.dom
+
+    const handleFiles = async (files: FileList | null | undefined) => {
+      if (!files || files.length === 0) return false
+      const list = Array.from(files)
+      for (const file of list) {
+        try {
+          const result = await uploadToDrive(itemId, file)
+          insertDriveLink(editor, result)
+        } catch (err) {
+          const e = err as Error & { needsReauth?: boolean }
+          if (e.needsReauth) {
+            const ok = window.confirm(
+              'Conecte sua conta Google com permissão para o Drive para enviar arquivos. Abrir agora?',
+            )
+            if (ok) window.location.href = '/api/google'
+            return true
+          }
+          window.alert(`Falha ao enviar ${file.name}: ${e.message}`)
+        }
+      }
+      return true
+    }
+
+    const onDrop = (event: DragEvent) => {
+      const files = event.dataTransfer?.files
+      if (!files || files.length === 0) return
+      event.preventDefault()
+      event.stopPropagation()
+      void handleFiles(files)
+    }
+    const onPaste = (event: ClipboardEvent) => {
+      const files = event.clipboardData?.files
+      if (!files || files.length === 0) return
+      event.preventDefault()
+      event.stopPropagation()
+      void handleFiles(files)
+    }
+    const onDragOver = (event: DragEvent) => {
+      if (event.dataTransfer?.types.includes('Files')) {
+        event.preventDefault()
+      }
+    }
+
+    dom.addEventListener('drop', onDrop)
+    dom.addEventListener('paste', onPaste)
+    dom.addEventListener('dragover', onDragOver)
+    return () => {
+      dom.removeEventListener('drop', onDrop)
+      dom.removeEventListener('paste', onPaste)
+      dom.removeEventListener('dragover', onDragOver)
+    }
+  }, [editor, itemId, insertDriveLink])
 
   return (
     <div

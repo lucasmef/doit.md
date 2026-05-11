@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { GoogleAccountModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
+import { hasCalendarScope, hasDriveScope } from '@/lib/google'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,10 +16,13 @@ export async function GET() {
 
     if (!doc) return NextResponse.json({ account: null })
 
+    const scope = typeof doc['scope'] === 'string' ? (doc['scope'] as string) : null
     return NextResponse.json({
       account: {
         email: doc['email'],
         connectedAt: doc['updatedAt'] ?? doc['createdAt'],
+        hasCalendar: hasCalendarScope({ scope }),
+        hasDrive: hasDriveScope({ scope }),
       },
     })
   } catch {

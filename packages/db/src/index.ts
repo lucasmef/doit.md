@@ -58,3 +58,7 @@ export const NotificationAlertModel = new SqlModel({
 export const CliTokenModel = new SqlModel({
   table: 'cli_tokens',
 })
+
+export const DriveLinkModel = new SqlModel({
+  table: 'drive_links',
+})

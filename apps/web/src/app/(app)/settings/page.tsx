@@ -17,6 +17,8 @@ import Link from 'next/link'
 interface GoogleAccount {
   email: string
   connectedAt: string
+  hasCalendar?: boolean
+  hasDrive?: boolean
 }
 
 type Tab = 'profile' | 'appearance' | 'integrations' | 'notifications' | 'sync' | 'cli' | 'tags' | 'shortcuts' | 'archive' | 'audit'
@@ -351,6 +353,35 @@ function SettingsContent() {
                       year: 'numeric',
                     })}
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        account.hasCalendar
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-slate-100 text-slate-500'
+                      }`}
+                    >
+                      {account.hasCalendar ? '✓' : '○'} Calendar
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                        account.hasDrive
+                          ? 'bg-emerald-50 text-emerald-700'
+                          : 'bg-amber-50 text-amber-700'
+                      }`}
+                    >
+                      {account.hasDrive ? '✓' : '○'} Drive
+                    </span>
+                  </div>
+                  {!account.hasDrive ? (
+                    <p className="mt-2 text-xs text-amber-700">
+                      Drive ainda não autorizado.{' '}
+                      <a href="/api/google" className="underline hover:no-underline">
+                        Reconectar para habilitar anexos
+                      </a>
+                      .
+                    </p>
+                  ) : null}
                 </div>
 
                 <div className="flex gap-2">

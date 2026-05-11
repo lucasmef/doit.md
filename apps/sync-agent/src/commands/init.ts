@@ -59,6 +59,18 @@ updatedAt: 2026-05-10T14:00:00Z
 
 Mudanças destrutivas (delete, mudança de complexity, movimento entre pastas raiz) sempre exigem aprovação. Pequenas edições de conteúdo/tags vão direto após aprovação.
 
+## Anexos via Google Drive
+
+Quando o usuário conectou o Drive, arquivos privados ficam em \`drive/\` (espelho do Google Drive for Desktop).
+
+- O ID canônico de cada arquivo está em \`_system/drive-index.json\`. Para saber a qual arquivo local um link \`https://drive.google.com/file/d/<fileId>/view\` se refere, busque o \`<fileId>\` no índice e use o campo \`path\`.
+- **Nunca edite o \`<fileId>\`** dentro de URLs do Drive — ele é a identidade do arquivo, sobrevive a renames e moves.
+- Você pode **mover, renomear e organizar** livremente os arquivos dentro de \`drive/\` (subpastas semânticas, etc.). O \`fileId\` é preservado e o índice é refeito no próximo \`pull\`.
+- A pasta \`drive/_inbox/\` recebe arquivos novos que o usuário ainda não associou a nenhuma nota. A lista de pendentes está em \`_system/inbox.json\`. Para processar cada pendente:
+  1. Leia o arquivo do disco (\`path\` do índice).
+  2. Crie ou enriqueça uma nota Markdown referenciando o arquivo via \`[nome](https://drive.google.com/file/d/<fileId>/view)\`.
+  3. Mova o arquivo de \`drive/_inbox/\` para uma subpasta semântica dentro de \`drive/\` (ex.: \`drive/Projetos/X/\`).
+
 ## Saída esperada
 
 Ao terminar uma sessão de organização, atualize \`_changes/summary.md\` com um resumo curto do que mudou e por quê.

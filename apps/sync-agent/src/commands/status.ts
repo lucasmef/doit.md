@@ -3,6 +3,8 @@ import chalk from 'chalk'
 import { getConfig, isInitialized, isLoggedIn } from '../lib/config.js'
 import { readJson } from '../lib/workspace.js'
 import type { PendingChange } from '@doit/types'
+import type { DriveIndex } from '../drive/indexer.js'
+import { reconcileDrive } from '../drive/reconcile.js'
 
 export async function statusCommand() {
   if (!isInitialized()) {
@@ -42,4 +44,25 @@ export async function statusCommand() {
 
   console.log(`\n  Pendentes: ${pendingCount > 0 ? chalk.yellow(pendingCount) : chalk.green('0')}`)
   console.log(`  Aprovados: ${chalk.green(approvedCount)}\n`)
+
+  const driveIndex = await readJson<DriveIndex>(
+    join(config.workspacePath, '_system', 'drive-index.json'),
+  )
+  if (driveIndex) {
+    const total = Object.keys(driveIndex.files).length
+    const report = await reconcileDrive(config.workspacePath, driveIndex)
+    console.log(chalk.bold('  Drive'))
+    console.log(`    Total indexado: ${chalk.dim(total)} (atualizado ${chalk.dim(driveIndex.updatedAt)})`)
+    console.log(`    Linkados: ${chalk.green(report.linked.length)}`)
+    console.log(
+      `    Broken: ${report.broken.length > 0 ? chalk.red(report.broken.length) : chalk.green('0')}`,
+    )
+    console.log(
+      `    Inbox pendente: ${report.inboxPending.length > 0 ? chalk.yellow(report.inboxPending.length) : chalk.green('0')}`,
+    )
+    console.log(
+      `    Órfãos: ${report.orphans.length > 0 ? chalk.yellow(report.orphans.length) : chalk.green('0')}`,
+    )
+    console.log()
+  }
 }

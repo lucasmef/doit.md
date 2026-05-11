@@ -1083,6 +1083,7 @@ export function ItemDetail() {
                 placeholder="Escreva em Markdown..."
                 minHeight="min-h-[calc(100vh-96px)] sm:min-h-[calc(100vh-128px)]"
                 plain
+                itemId={item.id}
               />
             </div>
           </div>
@@ -1561,7 +1562,7 @@ export function ItemDetail() {
             {/* Editor Markdown */}
             <div className="min-h-[200px]">
               <label className="text-xs text-slate-400 font-medium block mb-2">Conteúdo</label>
-              <MarkdownEditor value={content} onChange={handleContentChange} />
+              <MarkdownEditor value={content} onChange={handleContentChange} itemId={item.id} />
             </div>
           </div>
 

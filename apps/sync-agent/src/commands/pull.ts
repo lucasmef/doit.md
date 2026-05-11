@@ -8,6 +8,9 @@ import { serializeItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import type { Folder, Item } from '@doit/types'
 import type { ManifestEntry } from '@doit/sync'
+import { buildDriveIndex } from '../drive/indexer.js'
+import { reconcileDrive } from '../drive/reconcile.js'
+import { DriveNotConnectedError } from '../drive/client.js'
 
 type FolderNode = Folder & { children: FolderNode[]; relativePath: string }
 
@@ -142,6 +145,32 @@ export async function pullCommand() {
     spinner.succeed(
       chalk.green(`${items.length} item(ns) e ${folders.length} pasta(s) sincronizados`),
     )
+
+    const driveSpinner = ora('Indexando Drive...').start()
+    try {
+      const driveIndex = await buildDriveIndex(config.apiUrl, config.apiKey)
+      await writeJson(join(config.workspacePath, '_system', 'drive-index.json'), driveIndex)
+      const report = await reconcileDrive(config.workspacePath, driveIndex)
+      await writeJson(join(config.workspacePath, '_system', 'inbox.json'), {
+        version: 1,
+        generatedAt: new Date().toISOString(),
+        pending: report.inboxPending,
+      })
+      const count = Object.keys(driveIndex.files).length
+      const pendingNote =
+        report.inboxPending.length > 0
+          ? chalk.yellow(` — ${report.inboxPending.length} na inbox`)
+          : ''
+      driveSpinner.succeed(chalk.green(`Drive indexado (${count} arquivos/pastas)`) + pendingNote)
+    } catch (err) {
+      if (err instanceof DriveNotConnectedError) {
+        driveSpinner.info(chalk.dim('Drive não conectado — pulando índice'))
+      } else {
+        driveSpinner.warn(
+          chalk.yellow(`Falha ao indexar Drive: ${err instanceof Error ? err.message : err}`),
+        )
+      }
+    }
   } catch (err) {
     spinner.fail('Falha no pull')
     console.error(err instanceof Error ? err.message : err)

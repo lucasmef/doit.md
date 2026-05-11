@@ -187,6 +187,8 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'notification_alerts', 'scheduledFor', 'TEXT')
   await ensureColumn(db, 'notification_alerts', 'deliveryStatus', "TEXT NOT NULL DEFAULT 'pending'")
   await ensureColumn(db, 'notification_alerts', 'acknowledgedAt', 'TEXT')
+  await ensureColumn(db, 'google_accounts', 'driveRootFolderId', 'TEXT')
+  await ensureColumn(db, 'google_accounts', 'driveInboxFolderId', 'TEXT')
 }
 
 const sqliteSchema = [
@@ -370,9 +372,28 @@ const sqliteSchema = [
   )`,
   `CREATE INDEX IF NOT EXISTS cli_tokens_user_idx ON cli_tokens (userId)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS cli_tokens_prefix_idx ON cli_tokens (prefix)`,
+  `CREATE TABLE IF NOT EXISTS drive_links (
+    id TEXT PRIMARY KEY,
+    userId TEXT NOT NULL,
+    itemId TEXT NOT NULL,
+    fileId TEXT NOT NULL,
+    fileName TEXT NOT NULL,
+    mimeType TEXT,
+    size INTEGER,
+    webViewLink TEXT NOT NULL,
+    createdAt TEXT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS drive_links_user_item_idx ON drive_links (userId, itemId)`,
+  `CREATE INDEX IF NOT EXISTS drive_links_user_file_idx ON drive_links (userId, fileId)`,
 ]
 
 const postgresIdentifiers = [
+  'driveRootFolderId',
+  'driveInboxFolderId',
+  'webViewLink',
+  'fileName',
+  'fileId',
+  'mimeType',
   'frontmatterChanges',
   'contentHashBefore',
   'contentHashAfter',
