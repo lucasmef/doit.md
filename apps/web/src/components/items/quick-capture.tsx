@@ -498,6 +498,7 @@ export function QuickCapture() {
     quickCaptureFolderId,
     setQuickCaptureFolderId,
     setSingleSelection,
+    markPendingEmptyNote,
   } = useUI()
   const { toast } = useToast()
   const { confirm } = useDialog()
@@ -786,18 +787,22 @@ export function QuickCapture() {
     if (saving) return
     setSaving(true)
     try {
-      const parsedTitle = titleFromNoteContent(contentMd) || 'Nova nota'
+      const trimmedContent = contentMd.trim()
+      const parsedTitle = titleFromNoteContent(contentMd)
       const item = await createItem({
         title: parsedTitle,
         complexity: 'note',
         status: !projectId ? 'inbox' : 'todo',
-        contentMd: contentMd.trim() || 'Nova nota',
+        contentMd: trimmedContent || undefined,
         folderId: projectId || undefined,
         tags,
       })
       clearDraft()
       setQuickCaptureOpen(false)
-      if (item?.id) setSingleSelection(item.id)
+      if (item?.id) {
+        if (!parsedTitle && !trimmedContent) markPendingEmptyNote(item.id)
+        setSingleSelection(item.id)
+      }
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Erro ao criar nota.', 'error')
     } finally {

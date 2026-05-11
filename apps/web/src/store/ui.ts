@@ -30,6 +30,7 @@ export type UIState = {
   setCalendarOpen: (open: boolean) => void
   shortcutsOpen: boolean
   setShortcutsOpen: (open: boolean) => void
+  markPendingEmptyNote: (id: string | null) => void
 }
 
 export const UIContext = createContext<UIState>({
@@ -54,6 +55,7 @@ export const UIContext = createContext<UIState>({
   setCalendarOpen: () => {},
   shortcutsOpen: false,
   setShortcutsOpen: () => {},
+  markPendingEmptyNote: () => {},
 })
 
 export const useUI = () => useContext(UIContext)

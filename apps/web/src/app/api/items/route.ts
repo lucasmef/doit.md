@@ -91,9 +91,10 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as CreateItemInput
     const complexity = body.complexity ?? 'task'
     const title = complexity === 'note' ? titleFromNoteContent(body.contentMd) : body.title?.trim()
-    if (!title) {
+    if (!title && complexity !== 'note') {
       return NextResponse.json({ error: 'title is required' }, { status: 400 })
     }
+    const finalTitle = title ?? ''
     const validationError = validateItemInput(body)
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 })
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
     const item = await ItemModel.create({
       _id: newItemId(),
       userId,
-      title,
+      title: finalTitle,
       complexity,
       status: body.status ?? (hasInboxContext ? 'inbox' : 'todo'),
       tags: body.tags ?? [],

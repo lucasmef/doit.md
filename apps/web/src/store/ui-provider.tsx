@@ -1,11 +1,25 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { UIContext, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
-import { createItem } from '@/hooks/use-items'
+import { archiveItem, createItem } from '@/hooks/use-items'
+
+async function archiveIfStillEmpty(id: string) {
+  try {
+    const res = await fetch(`/api/items/${id}`)
+    if (!res.ok) return
+    const { item } = (await res.json()) as { item?: { title?: string; contentMd?: string } }
+    if (!item) return
+    const title = String(item.title ?? '').trim()
+    const contentMd = String(item.contentMd ?? '').trim()
+    if (!title && !contentMd) await archiveItem(id)
+  } catch {
+    // ignore
+  }
+}
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -18,6 +32,24 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
   const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null)
   const [contextMenu, setContextMenu] = useState<ItemContextMenuState>(null)
+  const pendingEmptyNoteIdRef = useRef<string | null>(null)
+  const prevSelectedItemIdRef = useRef<string | null>(null)
+
+  const markPendingEmptyNote = useCallback((id: string | null) => {
+    const prev = pendingEmptyNoteIdRef.current
+    if (prev && prev !== id) void archiveIfStillEmpty(prev)
+    pendingEmptyNoteIdRef.current = id
+  }, [])
+
+  useEffect(() => {
+    const prev = prevSelectedItemIdRef.current
+    prevSelectedItemIdRef.current = selectedItemId
+    const pending = pendingEmptyNoteIdRef.current
+    if (pending && prev === pending && selectedItemId !== pending) {
+      pendingEmptyNoteIdRef.current = null
+      void archiveIfStillEmpty(pending)
+    }
+  }, [selectedItemId])
 
   const setSingleSelection = useCallback((id: string | null) => {
     setSelectedItemId(id)
@@ -124,11 +156,14 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         const folderId = folderMatch?.[1]
         void createItem({
           complexity: 'note',
-          title: 'Nova nota',
-          contentMd: 'Nova nota',
+          title: '',
+          contentMd: '',
           folderId,
         }).then((item) => {
-          if (item?.id) setSingleSelection(item.id)
+          if (item?.id) {
+            markPendingEmptyNote(item.id)
+            setSingleSelection(item.id)
+          }
         })
       },
     },
@@ -194,7 +229,8 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         calendarOpen,
         setCalendarOpen,
         shortcutsOpen,
-        setShortcutsOpen
+        setShortcutsOpen,
+        markPendingEmptyNote,
       }}
     >
       {children}
