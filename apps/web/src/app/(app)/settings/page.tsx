@@ -10,7 +10,8 @@ import { AuditSection } from '@/components/audit/audit-section'
 import { ProfileSection } from '@/components/settings/profile-section'
 import { CliTokensSection } from '@/components/settings/cli-tokens-section'
 import { useItems } from '@/hooks/use-items'
-import { usePreferences } from '@/hooks/use-preferences'
+import { usePreferences, type MobileNavItem, type MobileNavItemId } from '@/hooks/use-preferences'
+import { MOBILE_NAV_LABELS } from '@/components/layout/bottom-nav'
 import { useDialog } from '@/components/ui/dialog'
 import Link from 'next/link'
 
@@ -118,26 +119,111 @@ function ShortcutsSection() {
 
 function AppearanceSection() {
   const { prefs, update } = usePreferences()
+
+  function moveNavItem(id: MobileNavItemId, direction: -1 | 1) {
+    const list = [...prefs.mobileNav]
+    const idx = list.findIndex((entry) => entry.id === id)
+    const swap = idx + direction
+    if (idx < 0 || swap < 0 || swap >= list.length) return
+    const current = list[idx]
+    const other = list[swap]
+    if (!current || !other) return
+    list[idx] = other
+    list[swap] = current
+    update({ mobileNav: list })
+  }
+
+  function toggleNavItem(id: MobileNavItemId, visible: boolean) {
+    const list: MobileNavItem[] = prefs.mobileNav.map((entry) =>
+      entry.id === id ? { ...entry, visible } : entry,
+    )
+    if (id === 'inbox') {
+      update({ mobileNav: list, showInbox: visible })
+    } else {
+      update({ mobileNav: list })
+    }
+  }
+
   return (
-    <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
-      <div className="px-5 py-4">
-        <h2 className="text-sm font-semibold text-slate-700">Navegacao</h2>
-      </div>
-      <div className="px-5 py-5">
-        <label className="flex cursor-pointer items-start justify-between gap-4">
-          <span>
-            <span className="block text-sm font-medium text-slate-800">Mostrar Inbox</span>
-            <span className="mt-0.5 block text-xs text-slate-400">
-              Quando ocultado, os itens da Inbox (sem pasta e sem data, alem de notas soltas) aparecem na tela Hoje.
+    <section className="space-y-4">
+      <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+        <div className="border-b border-ui-border-soft px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Navegacao</h2>
+        </div>
+        <div className="px-5 py-5">
+          <label className="flex cursor-pointer items-start justify-between gap-4">
+            <span>
+              <span className="block text-sm font-medium text-slate-800">Mostrar Inbox</span>
+              <span className="mt-0.5 block text-xs text-slate-400">
+                Quando ocultado, os itens da Inbox (sem pasta e sem data, alem de notas soltas) aparecem na tela Hoje.
+              </span>
             </span>
-          </span>
-          <input
-            type="checkbox"
-            className="mt-1 h-4 w-4 accent-brand-600"
-            checked={prefs.showInbox}
-            onChange={(e) => update({ showInbox: e.target.checked })}
-          />
-        </label>
+            <input
+              type="checkbox"
+              className="mt-1 h-4 w-4 accent-brand-600"
+              checked={prefs.showInbox}
+              onChange={(e) => toggleNavItem('inbox', e.target.checked)}
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+        <div className="border-b border-ui-border-soft px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Escolha quais itens aparecem no menu de baixo no celular e em que ordem. O botao + de captura fica sempre no centro.
+          </p>
+        </div>
+        <ul className="divide-y divide-ui-border-soft">
+          {prefs.mobileNav.map((entry, index) => {
+            const isFirst = index === 0
+            const isLast = index === prefs.mobileNav.length - 1
+            return (
+              <li
+                key={entry.id}
+                className="flex items-center gap-3 px-5 py-3"
+              >
+                <div className="flex flex-col">
+                  <button
+                    type="button"
+                    onClick={() => moveNavItem(entry.id, -1)}
+                    disabled={isFirst}
+                    aria-label="Mover para cima"
+                    className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 15 6-6 6 6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveNavItem(entry.id, 1)}
+                    disabled={isLast}
+                    aria-label="Mover para baixo"
+                    className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
+                    </svg>
+                  </button>
+                </div>
+                <span className="flex-1 text-sm font-medium text-slate-800">
+                  {MOBILE_NAV_LABELS[entry.id]}
+                </span>
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-500">
+                  <span>{entry.visible ? 'Visivel' : 'Oculto'}</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-600"
+                    checked={entry.visible}
+                    onChange={(e) => toggleNavItem(entry.id, e.target.checked)}
+                  />
+                </label>
+              </li>
+            )
+          })}
+        </ul>
       </div>
     </section>
   )

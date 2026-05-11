@@ -1,11 +1,14 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { UIContext, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
+import { createItem } from '@/hooks/use-items'
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
   const [quickCaptureFolderId, setQuickCaptureFolderId] = useState<string | null>(null)
@@ -112,6 +115,22 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     {
       key: 'q',
       handler: (e) => { e.preventDefault(); setQuickCaptureOpen(true) },
+    },
+    {
+      key: 'w',
+      handler: (e) => {
+        e.preventDefault()
+        const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
+        const folderId = folderMatch?.[1]
+        void createItem({
+          complexity: 'note',
+          title: 'Nova nota',
+          contentMd: 'Nova nota',
+          folderId,
+        }).then((item) => {
+          if (item?.id) setSingleSelection(item.id)
+        })
+      },
     },
     {
       key: 'C',

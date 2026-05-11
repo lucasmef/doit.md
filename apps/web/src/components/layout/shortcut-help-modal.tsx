@@ -14,6 +14,7 @@ const groups: ShortcutGroup[] = [
       { keys: ['Shift', '?'], label: 'Mostrar atalhos' },
       { keys: ['Q'], label: 'Nova captura' },
       { keys: ['Ctrl/Cmd', 'K'], label: 'Nova captura' },
+      { keys: ['W'], label: 'Nova nota em tela cheia' },
       { keys: ['Shift', 'C'], label: 'Abrir ou fechar calendario' },
       { keys: ['Esc'], label: 'Fechar modal, painel ou selecao' },
     ],

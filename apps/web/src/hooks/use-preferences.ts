@@ -2,23 +2,76 @@
 
 import { useEffect, useState } from 'react'
 
+export type MobileNavItemId =
+  | 'inbox'
+  | 'today'
+  | 'upcoming'
+  | 'calendar'
+  | 'notas'
+  | 'settings'
+
+export type MobileNavItem = { id: MobileNavItemId; visible: boolean }
+
 export type Preferences = {
   showInbox: boolean
+  mobileNav: MobileNavItem[]
 }
+
+const MOBILE_NAV_DEFAULT: MobileNavItem[] = [
+  { id: 'inbox', visible: true },
+  { id: 'today', visible: true },
+  { id: 'upcoming', visible: true },
+  { id: 'calendar', visible: true },
+  { id: 'notas', visible: true },
+  { id: 'settings', visible: true },
+]
 
 const DEFAULTS: Preferences = {
   showInbox: true,
+  mobileNav: MOBILE_NAV_DEFAULT,
 }
 
 const STORAGE_KEY = 'doit:preferences'
 const EVENT = 'doit:preferences-change'
+
+function normalizeMobileNav(value: unknown, showInbox: boolean): MobileNavItem[] {
+  const known = MOBILE_NAV_DEFAULT.map((entry) => entry.id)
+  const incoming = Array.isArray(value) ? (value as MobileNavItem[]) : []
+  const seen = new Set<string>()
+  const merged: MobileNavItem[] = []
+
+  for (const entry of incoming) {
+    if (!entry || typeof entry !== 'object') continue
+    if (!known.includes(entry.id)) continue
+    if (seen.has(entry.id)) continue
+    seen.add(entry.id)
+    merged.push({ id: entry.id, visible: entry.visible !== false })
+  }
+
+  for (const fallback of MOBILE_NAV_DEFAULT) {
+    if (seen.has(fallback.id)) continue
+    merged.push({ ...fallback })
+  }
+
+  if (!showInbox) {
+    const inbox = merged.find((entry) => entry.id === 'inbox')
+    if (inbox) inbox.visible = false
+  }
+
+  return merged
+}
 
 function read(): Preferences {
   if (typeof window === 'undefined') return DEFAULTS
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULTS
-    return { ...DEFAULTS, ...JSON.parse(raw) }
+    const parsed = JSON.parse(raw) as Partial<Preferences>
+    const showInbox = parsed.showInbox !== false
+    return {
+      showInbox,
+      mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
+    }
   } catch {
     return DEFAULTS
   }
@@ -40,6 +93,12 @@ export function usePreferences() {
 
   function update(patch: Partial<Preferences>) {
     const next = { ...read(), ...patch }
+    if (patch.mobileNav) {
+      next.mobileNav = normalizeMobileNav(patch.mobileNav, next.showInbox)
+    }
+    if (patch.showInbox !== undefined) {
+      next.mobileNav = normalizeMobileNav(next.mobileNav, next.showInbox)
+    }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     window.dispatchEvent(new Event(EVENT))
     setPrefs(next)

@@ -45,8 +45,6 @@ export default function TodayPage() {
     if (i.status === 'archived') return false
     if (isToday(i) || isOverdue(i)) return true
     if (!prefs.showInbox) {
-      if (i.status === 'inbox') return true
-      if (i.complexity === 'note') return !i.folderId
       return !i.folderId && !i.dueDate && !i.scheduledDate
     }
     return false

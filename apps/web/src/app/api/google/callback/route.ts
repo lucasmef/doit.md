@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const userId = searchParams.get('state')
 
   if (!code || !userId) {
-    return NextResponse.redirect('/settings?google=error')
+    return NextResponse.redirect(new URL('/settings?google=error', req.url))
   }
 
   try {

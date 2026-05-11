@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUI } from '@/store/ui'
-import { usePreferences } from '@/hooks/use-preferences'
+import { usePreferences, type MobileNavItemId } from '@/hooks/use-preferences'
 
 function IconInbox() {
   return (
@@ -84,23 +84,33 @@ function IconSettings() {
   )
 }
 
-const NAV_LEFT = [
-  { href: '/inbox', label: 'Inbox', icon: <IconInbox /> },
-  { href: '/today', label: 'Hoje', icon: <IconToday /> },
-  { href: '/upcoming', label: 'Proximos', icon: <IconUpcoming /> },
-]
+export const MOBILE_NAV_LABELS: Record<MobileNavItemId, string> = {
+  inbox: 'Inbox',
+  today: 'Hoje',
+  upcoming: 'Proximos',
+  calendar: 'Calendario',
+  notas: 'Notas',
+  settings: 'Config',
+}
 
-const NAV_RIGHT = [
-  { href: '/calendar', label: 'Calendario', icon: <IconCalendar /> },
-  { href: '/notas', label: 'Notas', icon: <IconNotes /> },
-  { href: '/settings', label: 'Config', icon: <IconSettings /> },
-]
+const MOBILE_NAV_DEF: Record<MobileNavItemId, { href: string; icon: React.ReactNode }> = {
+  inbox: { href: '/inbox', icon: <IconInbox /> },
+  today: { href: '/today', icon: <IconToday /> },
+  upcoming: { href: '/upcoming', icon: <IconUpcoming /> },
+  calendar: { href: '/calendar', icon: <IconCalendar /> },
+  notas: { href: '/notas', icon: <IconNotes /> },
+  settings: { href: '/settings', icon: <IconSettings /> },
+}
 
 export function BottomNav() {
   const pathname = usePathname()
   const { setQuickCaptureOpen } = useUI()
   const { prefs } = usePreferences()
-  const navLeft = NAV_LEFT.filter((l) => l.href !== '/inbox' || prefs.showInbox)
+
+  const visible = prefs.mobileNav.filter((entry) => entry.visible)
+  const splitIndex = Math.ceil(visible.length / 2)
+  const leftItems = visible.slice(0, splitIndex)
+  const rightItems = visible.slice(splitIndex)
 
   function linkClass(href: string) {
     const path = href.split('?')[0] ?? href
@@ -110,19 +120,24 @@ export function BottomNav() {
     }`
   }
 
+  function renderLink(id: MobileNavItemId) {
+    const def = MOBILE_NAV_DEF[id]
+    return (
+      <Link
+        key={id}
+        href={def.href}
+        className={linkClass(def.href)}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {def.icon}
+        <span className="text-[9px] font-semibold">{MOBILE_NAV_LABELS[id]}</span>
+      </Link>
+    )
+  }
+
   return (
     <nav className="safe-area-bottom fixed inset-x-0 bottom-0 z-[80] flex min-h-[76px] items-center border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,35,66,0.08)] lg:hidden">
-      {navLeft.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={linkClass(link.href)}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {link.icon}
-          <span className="text-[9px] font-semibold">{link.label}</span>
-        </Link>
-      ))}
+      {leftItems.map((entry) => renderLink(entry.id))}
 
       <button
         type="button"
@@ -150,17 +165,7 @@ export function BottomNav() {
         </div>
       </button>
 
-      {NAV_RIGHT.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className={linkClass(link.href)}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {link.icon}
-          <span className="text-[9px] font-semibold">{link.label}</span>
-        </Link>
-      ))}
+      {rightItems.map((entry) => renderLink(entry.id))}
     </nav>
   )
 }
