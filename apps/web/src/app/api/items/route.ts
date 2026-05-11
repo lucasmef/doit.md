@@ -59,11 +59,19 @@ export async function GET(req: NextRequest) {
       query['folderId'] = folderIdParam === 'null' || folderIdParam === '' ? null : folderIdParam
     }
 
-    const rows = await ItemModel.find(query).sort({ updatedAt: -1 }).lean()
+    const rows = await ItemModel.find(query).lean()
     const filtered = rows.filter((item: Record<string, unknown>) => {
       if (status === 'closed' && item['status'] !== 'done' && item['status'] !== 'archived') return false
       if (q && !matchesSearch(item, q)) return false
       return true
+    })
+    filtered.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const ao = typeof a['order'] === 'number' ? (a['order'] as number) : Number.POSITIVE_INFINITY
+      const bo = typeof b['order'] === 'number' ? (b['order'] as number) : Number.POSITIVE_INFINITY
+      if (ao !== bo) return ao - bo
+      const au = String(a['updatedAt'] ?? '')
+      const bu = String(b['updatedAt'] ?? '')
+      return bu.localeCompare(au)
     })
 
     return NextResponse.json({ items: filtered.map(mapDocToItem) })

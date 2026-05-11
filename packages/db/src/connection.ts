@@ -168,6 +168,7 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
   await ensureColumn(db, 'items', 'folderId', 'TEXT')
+  await ensureColumn(db, 'items', 'order', 'INTEGER')
   await ensureColumn(db, 'folders', 'viewMode', "TEXT NOT NULL DEFAULT 'list'")
   await ensureColumn(db, 'folders', 'viewModeManual', 'INTEGER NOT NULL DEFAULT 0')
   if (db.kind === 'postgres') {
@@ -214,6 +215,7 @@ const sqliteSchema = [
     syncHash TEXT,
     googleEventId TEXT,
     calendarEventId TEXT,
+    "order" INTEGER,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL,
     deletedAt TEXT
@@ -221,6 +223,7 @@ const sqliteSchema = [
   `CREATE INDEX IF NOT EXISTS items_user_status_idx ON items (userId, status)`,
   `CREATE INDEX IF NOT EXISTS items_user_due_idx ON items (userId, dueDate)`,
   `CREATE INDEX IF NOT EXISTS items_user_folder_idx ON items (userId, folderId)`,
+  `CREATE INDEX IF NOT EXISTS items_user_order_idx ON items (userId, "order")`,
   `CREATE TABLE IF NOT EXISTS folders (
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,

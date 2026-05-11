@@ -276,44 +276,51 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
 
       <ToolbarSep />
 
-      <ToolbarBtn
-        title="Título 1"
-        active={editor.isActive('heading', { level: 1 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-      >
-        <span className="text-xs font-semibold">H1</span>
-      </ToolbarBtn>
-      <ToolbarBtn
-        title="Título 2"
-        active={editor.isActive('heading', { level: 2 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-      >
-        <span className="text-xs font-semibold">H2</span>
-      </ToolbarBtn>
-      <ToolbarBtn
-        title="Título 3"
-        active={editor.isActive('heading', { level: 3 })}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-      >
-        <span className="text-xs font-semibold">H3</span>
-      </ToolbarBtn>
+      {(() => {
+        const isH1 = editor.isActive('heading', { level: 1 })
+        const isH2 = editor.isActive('heading', { level: 2 })
+        const isH3 = editor.isActive('heading', { level: 3 })
+        const current: 0 | 1 | 2 | 3 = isH1 ? 1 : isH2 ? 2 : isH3 ? 3 : 0
+        const next: 1 | 2 | 3 | 0 = current === 0 ? 1 : current === 1 ? 2 : current === 2 ? 3 : 0
+        return (
+          <ToolbarBtn
+            title={`Título${current ? ` ${current}` : ''} · clique para ${next ? `H${next}` : 'parágrafo'}`}
+            active={current > 0}
+            onClick={() => {
+              const chain = editor.chain().focus()
+              if (next === 0) chain.setParagraph().run()
+              else chain.toggleHeading({ level: next }).run()
+            }}
+          >
+            <span className="text-xs font-semibold">H{current || 1}</span>
+          </ToolbarBtn>
+        )
+      })()}
 
       <ToolbarSep />
 
-      <ToolbarBtn
-        title="Lista"
-        active={editor.isActive('bulletList')}
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-      >
-        •
-      </ToolbarBtn>
-      <ToolbarBtn
-        title="Lista numerada"
-        active={editor.isActive('orderedList')}
-        onClick={() => editor.chain().focus().toggleOrderedList().run()}
-      >
-        <span className="text-xs">1.</span>
-      </ToolbarBtn>
+      {(() => {
+        const isBullet = editor.isActive('bulletList')
+        const isOrdered = editor.isActive('orderedList')
+        const current: 0 | 1 | 2 = isBullet ? 1 : isOrdered ? 2 : 0
+        const nextLabel = current === 0 ? 'lista' : current === 1 ? 'lista numerada' : 'remover'
+        return (
+          <ToolbarBtn
+            title={`Lista · clique para ${nextLabel}`}
+            active={current > 0}
+            onClick={() => {
+              const chain = editor.chain().focus()
+              if (current === 0) chain.toggleBulletList().run()
+              else if (current === 1) {
+                chain.toggleBulletList().run()
+                editor.chain().focus().toggleOrderedList().run()
+              } else chain.toggleOrderedList().run()
+            }}
+          >
+            {current === 2 ? <span className="text-xs">1.</span> : '•'}
+          </ToolbarBtn>
+        )
+      })()}
       <ToolbarBtn
         title="Lista de tarefas"
         active={editor.isActive('taskList')}

@@ -38,6 +38,9 @@ export type Item = {
   googleEventId?: string
   calendarEventId?: string
 
+  /** Ordem manual definida pelo usuário (modo reordenar). Null/undefined = não ordenado, usa updatedAt. */
+  order?: number
+
   createdAt: string
   updatedAt: string
   deletedAt?: string
@@ -82,6 +85,7 @@ export type UpdateItemInput = Partial<
     | 'parentId'
     | 'tags'
     | 'backlinks'
+    | 'order'
   >
 >
 

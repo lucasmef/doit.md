@@ -24,6 +24,7 @@ import {
 } from '@/hooks/use-folders'
 import { bulkUpdateItems, useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
+import { ReorderableItemList, ReorderToggle } from '@/components/items/reorderable-list'
 import { ItemRow as SharedItemRow } from '@/components/items/item-row'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
@@ -329,6 +330,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [draggingIds, setDraggingIds] = useState<string[]>([])
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
   const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
+  const [reorderMode, setReorderMode] = useState(false)
 
   async function changeView(mode: ViewMode) {
     await updateFolder(id, { viewMode: mode, viewModeManual: true })
@@ -607,16 +609,25 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           )}
 
           <section>
-            <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-              Itens / {directOpenItems.length}
-            </h2>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                Itens / {directOpenItems.length}
+              </h2>
+              {directOpenItems.length > 0 && (
+                <ReorderToggle enabled={reorderMode} onToggle={() => setReorderMode((v) => !v)} />
+              )}
+            </div>
             {directOpenItems.length === 0 ? (
               <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-8 text-center text-sm text-navy-300">
                 Nenhum item nesta pasta.
               </div>
             ) : (
               <div className="rounded-xl border border-ui-border bg-white px-2 pb-2">
-                <ItemList items={directOpenItems} />
+                {reorderMode ? (
+                  <ReorderableItemList items={directOpenItems} />
+                ) : (
+                  <ItemList items={directOpenItems} />
+                )}
               </div>
             )}
           </section>
@@ -647,21 +658,6 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           ) : (
             <>
               <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
-              {directOpenItems.length > 0 && (
-                <>
-                  <KanbanColumn
-                    title="Sem pasta"
-                    items={directOpenItems}
-                    childFolders={[]}
-                    addFolderId={id}
-                    selectedItemIds={selectedItemIds}
-                    orderedIds={directOpenItems.map((item) => item.id)}
-                    dragging={draggingIds.length > 0}
-                    onDropItems={handleDropItems}
-                  />
-                  <ColumnInserter onAdd={() => void addColumnAt(0)} />
-                </>
-              )}
               {childFolders.map((sub, idx) => (
                 <Fragment key={sub.id}>
                   <KanbanColumn
@@ -684,11 +680,26 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                     onColumnDrop={handleColumnDrop}
                   />
                   <ColumnInserter
-                    edge={idx === childFolders.length - 1}
+                    edge={idx === childFolders.length - 1 && directOpenItems.length === 0}
                     onAdd={() => void addColumnAt(idx + 1)}
                   />
                 </Fragment>
               ))}
+              {directOpenItems.length > 0 && (
+                <>
+                  <KanbanColumn
+                    title="Sem pasta"
+                    items={directOpenItems}
+                    childFolders={[]}
+                    addFolderId={id}
+                    selectedItemIds={selectedItemIds}
+                    orderedIds={directOpenItems.map((item) => item.id)}
+                    dragging={draggingIds.length > 0}
+                    onDropItems={handleDropItems}
+                  />
+                  <ColumnInserter edge onAdd={() => void addColumnAt(childFolders.length)} />
+                </>
+              )}
             </>
           )}
         </div>

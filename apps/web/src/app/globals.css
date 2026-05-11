@@ -40,6 +40,25 @@
       font-size: 16px !important;
       line-height: 1.35;
     }
+    /* Mobile: evita que long-press selecione texto e conflite com drag/tap em listas */
+    body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    /* Volta a seleção em campos de edição e conteúdo de texto longo */
+    input,
+    textarea,
+    [contenteditable='true'],
+    [contenteditable='true'] *,
+    .ProseMirror,
+    .ProseMirror *,
+    .doit-allow-select,
+    .doit-allow-select * {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
   }
 
   button:focus-visible,

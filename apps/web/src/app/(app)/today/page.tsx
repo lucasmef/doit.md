@@ -6,6 +6,7 @@ import { updateItem } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
 import { ItemList } from '@/components/items/item-list'
+import { ReorderableItemList, ReorderToggle } from '@/components/items/reorderable-list'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 import { useToast } from '@/components/ui/toast'
 
@@ -36,6 +37,7 @@ function EventCard({ title, start, end, allDay }: { title: string; start: string
 export default function TodayPage() {
   const { items, isLoading } = useItems()
   const [rescheduling, setRescheduling] = useState(false)
+  const [reorderMode, setReorderMode] = useState(false)
   const { toast } = useToast()
   const { prefs } = usePreferences()
   const today = toLocalDateKey()
@@ -91,18 +93,27 @@ export default function TodayPage() {
           <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
             Itens / {todayItems.length}
           </h2>
-          {overdueItems.length > 0 && (
-            <button
-              type="button"
-              onClick={handleRescheduleOverdue}
-              disabled={rescheduling}
-              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
-            >
-              {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {overdueItems.length > 0 && (
+              <button
+                type="button"
+                onClick={handleRescheduleOverdue}
+                disabled={rescheduling}
+                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
+              >
+                {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
+              </button>
+            )}
+            {todayItems.length > 0 && (
+              <ReorderToggle enabled={reorderMode} onToggle={() => setReorderMode((v) => !v)} />
+            )}
+          </div>
         </div>
-        <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
+        {reorderMode ? (
+          <ReorderableItemList items={todayItems} emptyMessage="Nenhum item para hoje." />
+        ) : (
+          <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
+        )}
       </section>
     </div>
   )

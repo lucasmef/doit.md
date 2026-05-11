@@ -815,7 +815,7 @@ export function ItemDetail() {
           }}
         >
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-ui-border bg-surface-soft px-3 py-2">
+            <div className="relative z-[65] flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-ui-border bg-surface-soft px-3 py-2">
               <button
                 type="button"
                 title="Fechar nota (Esc)"
@@ -868,7 +868,7 @@ export function ItemDetail() {
                   {tagList.length > 0 ? tagList.length : ''}
                 </ToolButton>
                 {popover === 'tags' && (
-                  <div className="absolute left-0 top-9 z-20 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div className="absolute left-0 top-9 z-[80] w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     {tagList.length > 0 && (
                       <div className="mb-2 flex flex-wrap gap-1">
                         {tagList.map((tag) => (
@@ -940,7 +940,7 @@ export function ItemDetail() {
                   </span>
                 </button>
                 {popover === 'project' && (
-                  <div className="absolute left-0 top-9 z-20 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div className="absolute left-0 top-9 z-[80] w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     <input
                       value={projectQuery}
                       onChange={(e) => setProjectQuery(e.target.value)}
@@ -1027,7 +1027,7 @@ export function ItemDetail() {
                   </span>
                 </ToolButton>
                 {popover === 'date' && (
-                  <div className="absolute left-0 top-9 z-20 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div className="absolute left-0 top-9 z-[80] w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
                     {DATE_SUGGESTIONS.map((suggestion) => {
                       const value = suggestion.getValue()
                       return (
