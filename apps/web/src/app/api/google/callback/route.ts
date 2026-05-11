@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { google } from 'googleapis'
 import { GoogleAccountModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
-import { createOAuthClient } from '@/lib/google'
+import { createOAuthClient, originFromRequest, resolveRedirectUri } from '@/lib/google'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,15 +14,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
   const userId = searchParams.get('state')
+  const origin = originFromRequest(req)
 
   if (!code || !userId) {
-    return NextResponse.redirect(new URL('/settings?google=error', req.url))
+    return NextResponse.redirect(`${origin}/settings?google=error`)
   }
 
   try {
     await ensureDB()
 
-    const client = createOAuthClient()
+    const client = createOAuthClient(resolveRedirectUri(origin))
     const { tokens } = await client.getToken(code)
     client.setCredentials(tokens)
 
@@ -46,9 +47,9 @@ export async function GET(req: NextRequest) {
       { upsert: true, new: true },
     )
 
-    return NextResponse.redirect(new URL('/settings?google=connected', req.url))
+    return NextResponse.redirect(`${origin}/settings?google=connected`)
   } catch (err) {
     console.error('[Google OAuth callback]', err)
-    return NextResponse.redirect(new URL('/settings?google=error', req.url))
+    return NextResponse.redirect(`${origin}/settings?google=error`)
   }
 }

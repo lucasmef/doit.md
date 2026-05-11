@@ -6,10 +6,27 @@ export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
 
 const CLIENT_ID = process.env['GOOGLE_CLIENT_ID'] ?? ''
 const CLIENT_SECRET = process.env['GOOGLE_CLIENT_SECRET'] ?? ''
-const REDIRECT_URI = process.env['GOOGLE_REDIRECT_URI'] ?? 'http://localhost:3000/api/google/callback'
+const REDIRECT_URI_ENV = process.env['GOOGLE_REDIRECT_URI'] ?? ''
 
 function isPlaceholder(value: string): boolean {
   return /^<.*>$/.test(value.trim())
+}
+
+export function resolveRedirectUri(origin?: string): string {
+  if (REDIRECT_URI_ENV && !isPlaceholder(REDIRECT_URI_ENV)) return REDIRECT_URI_ENV
+  if (origin) return `${origin.replace(/\/$/, '')}/api/google/callback`
+  return 'http://localhost:3000/api/google/callback'
+}
+
+export function originFromRequest(req: { url: string; headers: Headers }): string {
+  const xfProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim()
+  const xfHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const host = xfHost || req.headers.get('host')
+  if (host) {
+    const proto = xfProto || (host.startsWith('localhost') ? 'http' : 'https')
+    return `${proto}://${host}`
+  }
+  return new URL(req.url).origin
 }
 
 export function getGoogleOAuthConfigStatus(): {
@@ -19,7 +36,6 @@ export function getGoogleOAuthConfigStatus(): {
   const required = {
     GOOGLE_CLIENT_ID: CLIENT_ID,
     GOOGLE_CLIENT_SECRET: CLIENT_SECRET,
-    GOOGLE_REDIRECT_URI: REDIRECT_URI,
   }
 
   const issues = Object.entries(required)
@@ -33,17 +49,17 @@ export function getGoogleOAuthConfigStatus(): {
   return { configured: issues.length === 0, issues }
 }
 
-export function createOAuthClient(): Auth.OAuth2Client {
+export function createOAuthClient(redirectUri?: string): Auth.OAuth2Client {
   const status = getGoogleOAuthConfigStatus()
   if (!status.configured) {
     throw new Error(`Google OAuth is not configured: ${status.issues.join(', ')}`)
   }
 
-  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
+  return new google.auth.OAuth2(CLIENT_ID, CLIENT_SECRET, redirectUri ?? resolveRedirectUri())
 }
 
-export function getAuthUrl(state?: string): string {
-  const client = createOAuthClient()
+export function getAuthUrl(state: string | undefined, redirectUri?: string): string {
+  const client = createOAuthClient(redirectUri)
   return client.generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
