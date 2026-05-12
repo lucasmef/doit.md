@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUI } from '@/store/ui'
 import useSWR from 'swr'
@@ -91,6 +92,13 @@ export function Topbar() {
 
   const items = data?.items || []
 
+  const mobilePageTitle = useMemo(() => {
+    const parts = pathname.split('/').filter(Boolean)
+    const last = parts[parts.length - 1]
+    if (!last) return ''
+    return ROUTE_LABELS[last] ?? last
+  }, [pathname])
+
   return (
     <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-ui-border bg-surface-window/85 px-4 backdrop-blur-md">
       <div className="hidden min-w-0 items-center gap-1.5 font-mono text-[12px] text-navy-300 sm:flex">
@@ -110,6 +118,22 @@ export function Topbar() {
         ))}
       </div>
 
+      <div className="flex min-w-0 flex-1 items-center gap-2 sm:hidden">
+        <Link
+          href="/today"
+          aria-label="Inicio"
+          className="inline-flex h-9 shrink-0 items-center gap-1 font-mono text-[15px] font-bold text-navy-900"
+        >
+          <span className="text-brand-600">.</span>
+          <span>md</span>
+        </Link>
+        {mobilePageTitle && (
+          <span className="min-w-0 truncate font-mono text-[12px] font-semibold uppercase tracking-wide text-navy-400">
+            / {mobilePageTitle}
+          </span>
+        )}
+      </div>
+
       <button
         type="button"
         onClick={() => setMobileSearchOpen(true)}
@@ -118,6 +142,18 @@ export function Topbar() {
         title="Buscar"
       >
         <SearchIcon />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setQuickCaptureOpen(true)}
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white shadow-sm sm:hidden"
+        aria-label="Novo"
+        title="Novo"
+      >
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+        </svg>
       </button>
 
       <div
