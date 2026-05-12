@@ -26,6 +26,7 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
   const [quickCaptureFolderId, setQuickCaptureFolderId] = useState<string | null>(null)
+  const [quickCaptureEditId, setQuickCaptureEditId] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -98,6 +99,7 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       setSelectionAnchorId((current) => (current === tempId ? itemId : current))
       setEditingItemId((current) => (current === tempId ? itemId : current))
       setQuickCaptureFolderId((current) => (current === tempId ? itemId : current))
+      setQuickCaptureEditId((current) => (current === tempId ? itemId : current))
     })
   }, [])
 
@@ -224,6 +226,8 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         setQuickCaptureOpen,
         quickCaptureFolderId,
         setQuickCaptureFolderId,
+        quickCaptureEditId,
+        setQuickCaptureEditId,
         editingItemId, 
         setEditingItemId,
         calendarOpen,

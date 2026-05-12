@@ -24,6 +24,8 @@ export type UIState = {
   setQuickCaptureOpen: (open: boolean) => void
   quickCaptureFolderId: string | null
   setQuickCaptureFolderId: (folderId: string | null) => void
+  quickCaptureEditId: string | null
+  setQuickCaptureEditId: (id: string | null) => void
   editingItemId: string | null
   setEditingItemId: (id: string | null) => void
   calendarOpen: boolean
@@ -49,6 +51,8 @@ export const UIContext = createContext<UIState>({
   setQuickCaptureOpen: () => {},
   quickCaptureFolderId: null,
   setQuickCaptureFolderId: () => {},
+  quickCaptureEditId: null,
+  setQuickCaptureEditId: () => {},
   editingItemId: null,
   setEditingItemId: () => {},
   calendarOpen: false,

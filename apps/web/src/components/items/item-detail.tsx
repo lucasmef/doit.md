@@ -369,11 +369,20 @@ function ToolButton({
 
 export function ItemDetail() {
   const pathname = usePathname()
-  const { selectedItemId, setSelectedItemId } = useUI()
+  const { selectedItemId, setSelectedItemId, setQuickCaptureEditId } = useUI()
   const { item, isLoading } = useItem(selectedItemId)
   const { projects } = useProjects()
   const { items } = useItems()
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (!item || !selectedItemId) return
+    if (item.complexity !== 'note') return
+    if (typeof window === 'undefined') return
+    if (!window.matchMedia('(max-width: 639px)').matches) return
+    setQuickCaptureEditId(selectedItemId)
+    setSelectedItemId(null)
+  }, [item, selectedItemId, setQuickCaptureEditId, setSelectedItemId])
 
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')

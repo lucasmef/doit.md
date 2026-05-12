@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import { createItem, useItems } from '@/hooks/use-items'
+import { createItem, updateItem, useItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
@@ -505,9 +505,14 @@ export function QuickCapture() {
     setQuickCaptureOpen,
     quickCaptureFolderId,
     setQuickCaptureFolderId,
+    quickCaptureEditId,
+    setQuickCaptureEditId,
     setSingleSelection,
     markPendingEmptyNote,
   } = useUI()
+  const editMode = !!quickCaptureEditId
+  const isOpen = quickCaptureOpen || editMode
+  const { item: editItem } = useItem(editMode ? quickCaptureEditId : null)
   const { toast } = useToast()
   const { confirm } = useDialog()
   const { projects } = useProjects()
@@ -574,6 +579,11 @@ export function QuickCapture() {
         ).map((p) => ({ value: p, config: PRIORITY_CONFIG[p] }))
       : []
 
+  function closeAll() {
+    setQuickCaptureOpen(false)
+    setQuickCaptureEditId(null)
+  }
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -581,36 +591,49 @@ export function QuickCapture() {
         setQuickCaptureOpen(true)
       }
       if (e.key === 'Escape') {
-        if (isTypingTarget(e.target) && !quickCaptureOpen) return
+        if (isTypingTarget(e.target) && !isOpen) return
         if (popover) setPopover(null)
-        else setQuickCaptureOpen(false)
+        else closeAll()
       }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [popover, quickCaptureOpen, setQuickCaptureOpen])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popover, isOpen, setQuickCaptureOpen])
 
   useEffect(() => {
-    if (quickCaptureOpen) {
-      const draft = loadDraft()
-      if (draft) {
-        setTitle(draft.title ?? '')
-        setContentMd(draft.contentMd ?? '')
-        setComplexity(draft.complexity ?? 'task')
-        setDueDate(draft.dueDate ?? (isTodayContext ? todayDate() : ''))
-        setDueTime(draft.dueTime ?? '')
-        setProjectId(draft.projectId ?? quickCaptureFolderId ?? '')
-        setTags(draft.tags ?? [])
-        setPriority((draft.priority as Priority) ?? 4)
-        setRecurrence((draft.recurrence as ItemRecurrence | '') ?? '')
-      } else {
-        setComplexity('task')
-        setDueDate(isTodayContext ? todayDate() : '')
-        if (quickCaptureFolderId) {
-          setProjectId(quickCaptureFolderId)
+    if (isOpen) {
+      if (editMode && editItem) {
+        setTitle(editItem.title ?? '')
+        setContentMd(editItem.contentMd ?? '')
+        setComplexity((editItem.complexity === 'note' ? 'note' : 'task') as ItemMode)
+        setDueDate(editItem.dueDate ?? '')
+        setDueTime(editItem.dueTime ?? '')
+        setProjectId(editItem.folderId ?? '')
+        setTags(editItem.tags ?? [])
+        setPriority(((editItem.priority as Priority) ?? 4) as Priority)
+        setRecurrence((editItem.recurrence ?? '') as ItemRecurrence | '')
+      } else if (quickCaptureOpen) {
+        const draft = loadDraft()
+        if (draft) {
+          setTitle(draft.title ?? '')
+          setContentMd(draft.contentMd ?? '')
+          setComplexity(draft.complexity ?? 'task')
+          setDueDate(draft.dueDate ?? (isTodayContext ? todayDate() : ''))
+          setDueTime(draft.dueTime ?? '')
+          setProjectId(draft.projectId ?? quickCaptureFolderId ?? '')
+          setTags(draft.tags ?? [])
+          setPriority((draft.priority as Priority) ?? 4)
+          setRecurrence((draft.recurrence as ItemRecurrence | '') ?? '')
         } else {
-          const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
-          if (folderMatch?.[1]) setProjectId(folderMatch[1])
+          setComplexity('task')
+          setDueDate(isTodayContext ? todayDate() : '')
+          if (quickCaptureFolderId) {
+            setProjectId(quickCaptureFolderId)
+          } else {
+            const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
+            if (folderMatch?.[1]) setProjectId(folderMatch[1])
+          }
         }
       }
       const focusInput = () => {
@@ -642,10 +665,10 @@ export function QuickCapture() {
       setPopover(null)
       setQuickCaptureFolderId(null)
     }
-  }, [quickCaptureOpen, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
+  }, [isOpen, editMode, editItem?.id, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
 
   useEffect(() => {
-    if (!quickCaptureOpen) return
+    if (!quickCaptureOpen || editMode) return
     const hasContent = !!title.trim() || !!contentMd.trim()
     if (hasContent) {
       saveDraft({
@@ -662,7 +685,7 @@ export function QuickCapture() {
     } else {
       clearDraft()
     }
-  }, [quickCaptureOpen, title, contentMd, complexity, dueDate, dueTime, projectId, tags, priority, recurrence])
+  }, [quickCaptureOpen, editMode, title, contentMd, complexity, dueDate, dueTime, projectId, tags, priority, recurrence])
 
   function applyTitleShortcuts(value: string) {
     setTitle(value)
@@ -806,7 +829,7 @@ export function QuickCapture() {
         tags,
       })
       clearDraft()
-      setQuickCaptureOpen(false)
+      closeAll()
       if (item?.id) {
         if (!parsedTitle && !trimmedContent) markPendingEmptyNote(item.id)
         setSingleSelection(item.id)
@@ -820,6 +843,10 @@ export function QuickCapture() {
 
   async function submitAndContinue() {
     if (saving) return
+    if (editMode) {
+      await handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+      return
+    }
     const parsedTitle = isNote ? titleFromNoteContent(contentMd) : cleanTitle(title)
     if (!parsedTitle) return
 
@@ -858,24 +885,39 @@ export function QuickCapture() {
 
     setSaving(true)
     try {
-      const inboxContext = !projectId && !dueDate
-      await createItem({
-        title: parsedTitle,
-        complexity,
-        status: inboxContext ? 'inbox' : 'todo',
-        contentMd: contentMd.trim() || undefined,
-        dueDate: dueDate || undefined,
-        dueTime: dueDate && dueTime ? dueTime : undefined,
-        folderId: projectId || undefined,
-        tags,
-        priority: complexity === 'task' && priority < 4 ? priority : undefined,
-        recurrence: complexity === 'task' && recurrence ? recurrence : undefined,
-      })
-      clearDraft()
-      setQuickCaptureOpen(false)
-      toast('Item criado com sucesso', 'success')
+      if (editMode && quickCaptureEditId) {
+        await updateItem(quickCaptureEditId, {
+          title: parsedTitle,
+          complexity,
+          contentMd: contentMd.trim(),
+          dueDate: complexity === 'task' ? dueDate || '' : '',
+          dueTime: complexity === 'task' && dueDate ? dueTime || '' : '',
+          folderId: projectId || '',
+          tags,
+          priority: complexity === 'task' && priority < 4 ? priority : null,
+          recurrence: complexity === 'task' && recurrence ? recurrence : '',
+        } as never)
+        toast('Item atualizado', 'success')
+      } else {
+        const inboxContext = !projectId && !dueDate
+        await createItem({
+          title: parsedTitle,
+          complexity,
+          status: inboxContext ? 'inbox' : 'todo',
+          contentMd: contentMd.trim() || undefined,
+          dueDate: dueDate || undefined,
+          dueTime: dueDate && dueTime ? dueTime : undefined,
+          folderId: projectId || undefined,
+          tags,
+          priority: complexity === 'task' && priority < 4 ? priority : undefined,
+          recurrence: complexity === 'task' && recurrence ? recurrence : undefined,
+        })
+        clearDraft()
+        toast('Item criado com sucesso', 'success')
+      }
+      closeAll()
     } catch (error) {
-      toast(error instanceof Error ? error.message : 'Erro ao criar item.', 'error')
+      toast(error instanceof Error ? error.message : 'Erro ao salvar item.', 'error')
     } finally {
       setSaving(false)
     }
@@ -945,7 +987,8 @@ export function QuickCapture() {
     })
   }
 
-  if (!quickCaptureOpen) return null
+  if (!isOpen) return null
+  if (editMode && !editItem) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
   const canSwitchMode =
@@ -957,7 +1000,7 @@ export function QuickCapture() {
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={(e) => {
-        if (e.target === e.currentTarget) setQuickCaptureOpen(false)
+        if (e.target === e.currentTarget) closeAll()
       }}
     >
       <div
@@ -1440,8 +1483,8 @@ export function QuickCapture() {
             <button
               type="button"
               onClick={() => {
-                clearDraft()
-                setQuickCaptureOpen(false)
+                if (!editMode) clearDraft()
+                closeAll()
               }}
               className="h-10 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700 sm:h-8"
             >
@@ -1452,7 +1495,7 @@ export function QuickCapture() {
               disabled={saveDisabled}
               className="h-10 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-40 sm:h-8"
             >
-              {saving ? '...' : 'Adicionar'}
+              {saving ? '...' : editMode ? 'Salvar' : 'Adicionar'}
             </button>
           </div>
         </form>
