@@ -1528,12 +1528,14 @@ export function ItemDetail() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
     >
       <div
         className={`flex flex-col overflow-hidden bg-white shadow-cool-lg transition-all duration-300 ${
-          isNote ? 'h-full w-full max-w-5xl rounded-xl' : 'max-h-[85vh] w-full max-w-lg rounded-xl'
+          isNote
+            ? 'h-full w-full max-w-5xl rounded-t-2xl sm:rounded-xl'
+            : 'max-h-[85vh] w-full max-w-lg rounded-t-2xl sm:rounded-xl'
         }`}
       >
         {/* Header */}

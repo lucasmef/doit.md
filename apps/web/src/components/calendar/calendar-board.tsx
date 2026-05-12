@@ -83,7 +83,7 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
 
   return (
     <div
-      className={`flex flex-1 min-h-0 flex-col gap-3 overflow-hidden ${compactSide ? 'p-4' : 'p-4 lg:p-5'}`}
+      className={`flex flex-1 min-h-0 flex-col gap-2 overflow-hidden ${compactSide ? 'p-3' : 'p-2 lg:p-3'}`}
     >
       {!compactSide && (
         <div className="flex shrink-0 items-center gap-2 lg:hidden">
@@ -138,26 +138,30 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
         </div>
       )}
 
-      <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5">
         <button
           onClick={() => setShowItems((v) => !v)}
-          className={`rounded-md border px-3 py-1.5 font-mono text-[11px] font-medium transition-colors ${
+          title="Mostrar tarefas e notas"
+          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] font-medium transition-colors ${
             showItems
               ? 'border-brand-200 bg-brand-50 text-navy-900'
               : 'border-ui-border bg-white text-navy-300 hover:text-navy-700'
           }`}
         >
-          Tarefas e notas
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+          Itens
         </button>
         <button
           onClick={() => setShowEvents((v) => !v)}
-          className={`rounded-md border px-3 py-1.5 font-mono text-[11px] font-medium transition-colors ${
+          title="Mostrar eventos do Google"
+          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] font-medium transition-colors ${
             showEvents
               ? 'border-teal-200 bg-teal-50 text-navy-900'
               : 'border-ui-border bg-white text-navy-300 hover:text-navy-700'
           }`}
         >
-          Eventos do Google
+          <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
+          Eventos
         </button>
       </div>
 

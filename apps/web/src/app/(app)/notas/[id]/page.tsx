@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, use, useEffect, useMemo, useState } from 'react'
+import { Fragment, use, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import {
@@ -109,6 +109,10 @@ function KanbanCard({
     id: `item:${item.id}`,
     data: { itemId: item.id },
   })
+  const wasDraggingRef = useRef(false)
+  useEffect(() => {
+    if (isDragging) wasDraggingRef.current = true
+  }, [isDragging])
 
   const availableTargets = moveTargets.filter((target) => target.id !== (item.folderId ?? null))
   const selectedTargetId = targetId === null ? '' : targetId
@@ -127,9 +131,18 @@ function KanbanCard({
     }
   }
 
+  function handleCardClickCapture(e: React.MouseEvent) {
+    if (wasDraggingRef.current) {
+      e.stopPropagation()
+      e.preventDefault()
+      wasDraggingRef.current = false
+    }
+  }
+
   return (
     <div
       ref={setNodeRef}
+      onClickCapture={handleCardClickCapture}
       className={`group/card flex items-stretch rounded-md border border-ui-border bg-white ${
         isDragging ? 'opacity-50' : ''
       }`}
@@ -145,7 +158,7 @@ function KanbanCard({
           <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
         </svg>
       </div>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1" {...attributes} {...listeners}>
         <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} />
         <div className="border-t border-ui-border-soft px-2 py-1.5 lg:hidden">
           {moving ? (

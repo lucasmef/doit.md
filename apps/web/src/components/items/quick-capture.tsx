@@ -440,17 +440,24 @@ function HighlightedTitleInput({
   onChange: (value: string) => void
   onCursorChange: (cursor: number) => void
   placeholder: string
-  inputRef?: React.RefObject<HTMLInputElement | null>
-  onPaste?: (event: React.ClipboardEvent<HTMLInputElement>) => void
-  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void
+  inputRef?: React.RefObject<HTMLTextAreaElement | null>
+  onPaste?: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void
+  onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }) {
   const parts = value.split(INLINE_METADATA_PATTERN)
+
+  useEffect(() => {
+    const el = inputRef?.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value, inputRef])
 
   return (
     <div className="relative min-w-0 flex-1">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre text-[16px] font-semibold leading-6"
+        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words text-[16px] font-semibold leading-6"
       >
         {parts.map((part, index) => {
           if (!part) return null
@@ -471,10 +478,11 @@ function HighlightedTitleInput({
           )
         })}
       </div>
-      <input
+      <textarea
         ref={inputRef}
         value={value}
         autoFocus
+        rows={1}
         onChange={(e) => {
           onChange(e.target.value)
           onCursorChange(e.target.selectionStart ?? e.target.value.length)
@@ -484,7 +492,7 @@ function HighlightedTitleInput({
         onKeyDown={onKeyDown}
         onKeyUp={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
         placeholder={placeholder}
-        className="relative w-full border-none bg-transparent text-[16px] font-semibold leading-6 text-transparent caret-slate-900 outline-none placeholder:text-slate-300 selection:bg-brand-100"
+        className="relative w-full resize-none overflow-hidden border-none bg-transparent text-[16px] font-semibold leading-6 text-transparent caret-slate-900 outline-none placeholder:text-slate-300 selection:bg-brand-100"
       />
     </div>
   )
@@ -519,7 +527,7 @@ export function QuickCapture() {
   const [saving, setSaving] = useState(false)
   const [creatingProject, setCreatingProject] = useState(false)
   const [popover, setPopover] = useState<Popover>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   const activeProjects = projects.filter((p) => p.status !== 'archived')
   const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
@@ -905,7 +913,7 @@ export function QuickCapture() {
     }
   }
 
-  function handleTitlePaste(event: React.ClipboardEvent<HTMLInputElement>) {
+  function handleTitlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
     if (isNote || saving) return
 
     const pasted = event.clipboardData.getData('text')
@@ -947,7 +955,7 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-start sm:p-4 sm:pt-[8vh]"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) setQuickCaptureOpen(false)
       }}
@@ -1092,7 +1100,7 @@ export function QuickCapture() {
                 onChange={(e) => setContentMd(e.target.value)}
                 placeholder="Descrição"
                 rows={2}
-                className="mt-1 block max-h-28 min-h-[48px] w-full resize-y border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
+                className="mt-1 block max-h-[40vh] min-h-[48px] w-full resize-y border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
               />
             )}
 

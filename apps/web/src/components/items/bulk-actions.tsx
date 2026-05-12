@@ -399,19 +399,6 @@ function IconCalendar() {
     </svg>
   )
 }
-function IconFlag() {
-  return (
-    <svg
-      className="h-4 w-4"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.7}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 21V5m0 0h11l-2 4 2 4H5" />
-    </svg>
-  )
-}
 function IconFolder() {
   return (
     <svg
@@ -511,7 +498,7 @@ function MenuSeparator() {
   return <div className="my-1 h-px bg-ui-border-soft" />
 }
 
-type Sub = 'date' | 'priority' | 'folder' | null
+type Sub = 'folder' | null
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   1: 'Prioridade alta',
@@ -535,6 +522,7 @@ function ItemContextMenuContent({
   const [customDate, setCustomDate] = useState(targetItem.dueDate ?? '')
   const ids = allTargets.map((i) => i.id)
   const single = allTargets.length === 1
+  const currentPriority = (targetItem.priority ?? 4) as Priority
 
   async function applyPatch(patch: BulkItemActionInput['patch'], message: string) {
     if (ids.length === 0) return
@@ -589,91 +577,6 @@ function ItemContextMenuContent({
     closeContextMenu()
   }
 
-  if (sub === 'date') {
-    return (
-      <div className="min-w-[220px]">
-        <MenuRow
-          icon={<IconChevron />}
-          label="Voltar"
-          onClick={() => {
-            setSub(null)
-            setShowCustomDate(false)
-          }}
-        />
-        <MenuSeparator />
-        <MenuRow icon={<IconCalendar />} label="Hoje" onClick={() => setDate(toLocalDateKey())} />
-        <MenuRow
-          icon={<IconCalendar />}
-          label="Amanhã"
-          onClick={() => {
-            const d = new Date()
-            d.setDate(d.getDate() + 1)
-            setDate(toLocalDateKey(d))
-          }}
-        />
-        <MenuRow
-          icon={<IconCalendar />}
-          label="Próxima semana"
-          onClick={() => {
-            const d = new Date()
-            d.setDate(d.getDate() + 7)
-            setDate(toLocalDateKey(d))
-          }}
-        />
-        <MenuRow
-          icon={<IconCalendar />}
-          label="Próximo final de semana"
-          onClick={() => setDate(nextSaturday())}
-        />
-        <MenuRow icon={<IconCalendar />} label="Sem data" onClick={() => setDate(null)} />
-        <MenuSeparator />
-        {showCustomDate ? (
-          <div className="flex gap-1 px-1">
-            <input
-              type="date"
-              autoFocus
-              value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
-              className="h-8 min-w-0 flex-1 rounded-md border border-ui-border-soft bg-white px-2 text-[12px] text-navy-700 outline-none focus:ring-2 focus:ring-brand-500"
-            />
-            <button
-              type="button"
-              onClick={() => customDate && setDate(customDate)}
-              className="h-8 rounded-md bg-brand-600 px-2 text-[12px] font-semibold text-white"
-            >
-              OK
-            </button>
-          </div>
-        ) : (
-          <MenuRow
-            icon={<IconCalendar />}
-            label="Escolher data..."
-            onClick={() => setShowCustomDate(true)}
-          />
-        )}
-      </div>
-    )
-  }
-
-  if (sub === 'priority') {
-    const cur = (targetItem.priority ?? 4) as Priority
-    return (
-      <div className="min-w-[220px]">
-        <MenuRow icon={<IconChevron />} label="Voltar" onClick={() => setSub(null)} />
-        <MenuSeparator />
-        {([1, 2, 3, 4] as Priority[]).map((p) => (
-          <MenuRow
-            key={p}
-            icon={<IconFlag />}
-            label={PRIORITY_LABEL[p]}
-            onClick={() => setPriority(p)}
-            trailing={cur === p ? <IconCheck /> : null}
-          />
-        ))}
-      </div>
-    )
-  }
-
   if (sub === 'folder') {
     return (
       <div className="min-w-[240px]">
@@ -706,28 +609,109 @@ function ItemContextMenuContent({
   }
 
   return (
-    <div className="min-w-[220px]">
+    <div className="min-w-[240px]">
       {!single && (
         <div className="px-2 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-navy-300">
           {ids.length} itens
         </div>
       )}
-      <MenuRow icon={<IconEdit />} label="Editar" shortcut="E" onClick={openEdit} />
+
+      {/* Prioridade inline */}
+      <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-navy-300">
+        Prioridade
+      </div>
+      <div className="mb-1 flex items-center gap-1 px-1.5">
+        {([1, 2, 3, 4] as Priority[]).map((p) => {
+          const cfg = PRIORITY_CONFIG[p]
+          const isActive = currentPriority === p
+          return (
+            <button
+              key={p}
+              type="button"
+              title={PRIORITY_LABEL[p]}
+              onClick={() => setPriority(p)}
+              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
+                isActive
+                  ? 'border-brand-300 bg-surface-selected'
+                  : 'border-ui-border-soft bg-white hover:bg-surface-soft'
+              }`}
+            >
+              {p < 4 ? (
+                <svg width={14} height={14} viewBox="0 0 24 24" fill={cfg.flagFill} aria-hidden="true">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                  <line x1="4" y1="22" x2="4" y2="15" stroke={cfg.flagFill} strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              ) : (
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="text-navy-400">
+                  <path d="M5 21V5m0 0h11l-2 4 2 4H5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Data inline */}
+      <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-navy-300">
+        Data
+      </div>
+      <MenuRow icon={<IconCalendar />} label="Hoje" onClick={() => setDate(toLocalDateKey())} />
       <MenuRow
         icon={<IconCalendar />}
-        label="Data"
-        trailing={<IconChevron />}
-        onClick={() => setSub('date')}
+        label="Amanhã"
+        onClick={() => {
+          const d = new Date()
+          d.setDate(d.getDate() + 1)
+          setDate(toLocalDateKey(d))
+        }}
       />
       <MenuRow
-        icon={<IconFlag />}
-        label="Prioridade"
-        trailing={<IconChevron />}
-        onClick={() => setSub('priority')}
+        icon={<IconCalendar />}
+        label="Próxima semana"
+        onClick={() => {
+          const d = new Date()
+          d.setDate(d.getDate() + 7)
+          setDate(toLocalDateKey(d))
+        }}
       />
+      <MenuRow
+        icon={<IconCalendar />}
+        label="Final de semana"
+        onClick={() => setDate(nextSaturday())}
+      />
+      {targetItem.dueDate && (
+        <MenuRow icon={<IconCalendar />} label="Sem data" onClick={() => setDate(null)} />
+      )}
+      {showCustomDate ? (
+        <div className="flex gap-1 px-1 py-1">
+          <input
+            type="date"
+            autoFocus
+            value={customDate}
+            onChange={(e) => setCustomDate(e.target.value)}
+            className="h-8 min-w-0 flex-1 rounded-md border border-ui-border-soft bg-white px-2 text-[12px] text-navy-700 outline-none focus:ring-2 focus:ring-brand-500"
+          />
+          <button
+            type="button"
+            onClick={() => customDate && setDate(customDate)}
+            className="h-8 rounded-md bg-brand-600 px-2 text-[12px] font-semibold text-white"
+          >
+            OK
+          </button>
+        </div>
+      ) : (
+        <MenuRow
+          icon={<IconCalendar />}
+          label="Escolher data..."
+          onClick={() => setShowCustomDate(true)}
+        />
+      )}
+
+      <MenuSeparator />
+      <MenuRow icon={<IconEdit />} label="Editar" shortcut="E" onClick={openEdit} />
       <MenuRow
         icon={<IconFolder />}
-        label="Mover para"
+        label="Mover para pasta"
         trailing={<IconChevron />}
         onClick={() => setSub('folder')}
       />
@@ -735,9 +719,8 @@ function ItemContextMenuContent({
       <MenuSeparator />
       <MenuRow
         icon={<IconTrash />}
-        label="Excluir"
-        onClick={() => applyPatch({ status: 'archived' }, 'Item excluído')}
-        danger
+        label="Arquivar"
+        onClick={() => applyPatch({ status: 'archived' }, 'Item arquivado')}
       />
     </div>
   )
@@ -756,8 +739,8 @@ export function ItemContextMenu() {
 
   useEffect(() => {
     if (!contextMenu) return
-    const width = 240
-    const height = 380
+    const width = 260
+    const height = 460
     setPosition({
       left: Math.max(8, Math.min(contextMenu.x, window.innerWidth - width - 8)),
       top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - height - 8)),

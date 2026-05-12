@@ -21,8 +21,17 @@ export function ArchiveSection() {
     })
   }, [items, normalizedQuery])
 
-  const done = filtered.filter((item) => item.status === 'done')
-  const archived = filtered.filter((item) => item.status === 'archived')
+  function recencyKey(item: { updatedAt?: string; createdAt?: string }) {
+    return item.updatedAt ?? item.createdAt ?? ''
+  }
+  const done = filtered
+    .filter((item) => item.status === 'done')
+    .slice()
+    .sort((a, b) => recencyKey(b).localeCompare(recencyKey(a)))
+  const archived = filtered
+    .filter((item) => item.status === 'archived')
+    .slice()
+    .sort((a, b) => recencyKey(b).localeCompare(recencyKey(a)))
 
   return (
     <div>

@@ -132,12 +132,37 @@ export async function createItem(input: CreateItemInput): Promise<Item> {
   }
 }
 
+function optimisticPatchItems(ids: string[], patch: Partial<Item>) {
+  if (ids.length === 0) return
+  const idSet = new Set(ids)
+  void globalMutate(
+    (key: unknown) => typeof key === 'string' && key.startsWith('/api/items'),
+    (current: unknown) => {
+      if (!current || typeof current !== 'object') return current
+      const c = current as { items?: Item[]; item?: Item }
+      if (Array.isArray(c.items)) {
+        return {
+          ...c,
+          items: c.items.map((it) => (idSet.has(it.id) ? ({ ...it, ...patch } as Item) : it)),
+        }
+      }
+      if (c.item && idSet.has(c.item.id)) {
+        return { ...c, item: { ...c.item, ...patch } as Item }
+      }
+      return current
+    },
+    { revalidate: false },
+  )
+}
+
 export async function updateItem(id: string, input: UpdateItemInput): Promise<Item> {
   if (id.startsWith('local_item_')) {
     const item = queueUpdateItem(id, input)
     await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
     return item
   }
+
+  optimisticPatchItems([id], input as Partial<Item>)
 
   try {
     const res = await fetch(`/api/items/${id}`, {
@@ -211,6 +236,16 @@ export async function bulkUpdateItems(
     )
     await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
     return items
+  }
+
+  if (input.patch) {
+    optimisticPatchItems(ids, input.patch as Partial<Item>)
+  }
+  if (input.tagAction) {
+    for (const id of ids) {
+      const current = fallbackById.get(id)
+      optimisticPatchItems([id], { tags: patchWithTags(current, input).tags } as Partial<Item>)
+    }
   }
 
   try {

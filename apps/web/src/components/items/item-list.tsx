@@ -52,7 +52,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
 
   useEffect(() => {
     const timers = Object.entries(recentlyDoneIds).map(([id, startedAt]) => {
-      const delay = Math.max(0, 3000 - (Date.now() - startedAt))
+      const delay = Math.max(0, 60000 - (Date.now() - startedAt))
       return setTimeout(() => {
         setRecentlyDoneIds((current) => {
           const next = { ...current }

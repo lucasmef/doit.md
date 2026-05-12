@@ -53,6 +53,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     openContextMenu,
   } = useUI()
   const [justCompleted, setJustCompleted] = useState(false)
+  const [optimisticDone, setOptimisticDone] = useState(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
   const longPressStart = useRef<{ x: number; y: number } | null>(null)
@@ -65,22 +66,36 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     }
 
     if (item.status !== 'done' && item.recurrence) {
+      setOptimisticDone(true)
       setJustCompleted(true)
       setTimeout(() => setJustCompleted(false), 600)
-      await updateItem(item.id, {
-        status: 'todo',
-        dueDate: computeNextRecurringDate(item.dueDate, item.recurrence),
-      })
+      try {
+        await updateItem(item.id, {
+          status: 'todo',
+          dueDate: computeNextRecurringDate(item.dueDate, item.recurrence),
+        })
+      } finally {
+        setOptimisticDone(false)
+      }
       return
     }
 
     const next = item.status === 'done' ? 'todo' : 'done'
     if (next === 'done') {
+      setOptimisticDone(true)
       setJustCompleted(true)
       setTimeout(() => setJustCompleted(false), 600)
+    } else {
+      setOptimisticDone(false)
     }
-    await updateItem(item.id, { status: next })
+    try {
+      await updateItem(item.id, { status: next })
+    } catch {
+      if (next === 'done') setOptimisticDone(false)
+    }
   }
+
+  const displayDone = item.status === 'done' || optimisticDone
 
   const today = toLocalDateKey()
   const overdue =
@@ -91,7 +106,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
 
   const p = (item.priority as Priority) ?? 4
   const priorityCfg = PRIORITY_CONFIG[p]
-  const checkboxBorder = item.status === 'done'
+  const checkboxBorder = displayDone
     ? 'border-teal-500'
     : item.status === 'archived'
     ? 'border-navy-100'
@@ -181,14 +196,14 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
           onPointerDown={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.stopPropagation()}
           className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-all ${
-            item.status === 'done'
+            displayDone
               ? 'border-teal-500 bg-teal-500'
               : justCompleted
               ? 'border-brand-500 animate-ring-pulse'
               : `${checkboxBorder} hover:border-brand-500`
           }`}
         >
-          {item.status === 'done' && (
+          {displayDone && (
             <svg
               className={`w-3 h-3 text-white ${justCompleted ? 'animate-check-pop' : ''}`}
               fill="none"
@@ -217,7 +232,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
           className={`text-[14px] leading-5 font-normal truncate transition-all ${
-            item.status === 'done' ? 'line-through text-navy-300' : 'text-navy-900'
+            displayDone ? 'line-through text-navy-300' : 'text-navy-900'
           }`}
         >
           {item.title}
