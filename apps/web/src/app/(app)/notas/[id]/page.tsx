@@ -24,8 +24,8 @@ import {
 } from '@/hooks/use-folders'
 import { bulkUpdateItems, useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
-import { ReorderableItemList, ReorderToggle } from '@/components/items/reorderable-list'
 import { ItemRow as SharedItemRow } from '@/components/items/item-row'
+import { sortForcedItemOrder } from '@/lib/item-order'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
 import { useDialog } from '@/components/ui/dialog'
@@ -422,7 +422,6 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [draggingIds, setDraggingIds] = useState<string[]>([])
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
   const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
-  const [reorderMode, setReorderMode] = useState(false)
   const [mobileColumnKey, setMobileColumnKey] = useState<string | null>(null)
 
   async function changeView(mode: ViewMode) {
@@ -431,7 +430,9 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const childFolders = node?.children ?? []
-  const directOpenItems = directItems.filter((i) => i.status !== 'archived' && i.status !== 'done')
+  const directOpenItems = sortForcedItemOrder(
+    directItems.filter((i) => i.status !== 'archived' && i.status !== 'done'),
+  )
   const viewMode: ViewMode = folder?.viewMode === 'kanban' ? 'kanban' : 'list'
   const moveTargets = useMemo<MoveTarget[]>(() => {
     const targets = childFolders.map((child) => ({ id: child.id, label: child.name }))
@@ -447,6 +448,9 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       const list = map.get(item.folderId) ?? []
       list.push(item)
       map.set(item.folderId, list)
+    }
+    for (const [folderId, folderItems] of map) {
+      map.set(folderId, sortForcedItemOrder(folderItems))
     }
     return map
   }, [allItems])
@@ -756,15 +760,20 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
               <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
                 Subpastas / {childFolders.length}
               </h2>
-              <div className="rounded-xl border border-ui-border bg-white divide-y divide-ui-border-soft">
+              <div className="divide-y divide-ui-border-soft rounded-xl border border-ui-border bg-white">
                 {childFolders.map((child) => (
                   <Link
                     key={child.id}
                     href={`/notas/${child.id}`}
-                    className="flex items-center gap-2 px-3 py-2 text-[14px] text-navy-900 hover:bg-surface-soft"
+                    className="flex min-h-12 items-center gap-3 px-3 py-2.5 text-[14px] text-navy-900 hover:bg-surface-soft"
                   >
-                    <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
-                    <span className="truncate">{child.name}</span>
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-navy-400">
+                      <FolderIcon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{child.name}</span>
+                    {child.children.length > 0 && (
+                      <span className="font-mono text-[10px] text-navy-300">{child.children.length}</span>
+                    )}
                   </Link>
                 ))}
               </div>
@@ -776,9 +785,6 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
               <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
                 Itens / {directOpenItems.length}
               </h2>
-              {directOpenItems.length > 0 && (
-                <ReorderToggle enabled={reorderMode} onToggle={() => setReorderMode((v) => !v)} />
-              )}
             </div>
             {directOpenItems.length === 0 ? (
               <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-8 text-center text-sm text-navy-300">
@@ -786,11 +792,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
               </div>
             ) : (
               <div className="rounded-xl border border-ui-border bg-white px-2 pb-2">
-                {reorderMode ? (
-                  <ReorderableItemList items={directOpenItems} />
-                ) : (
-                  <ItemList items={directOpenItems} />
-                )}
+                <ItemList items={directOpenItems} />
               </div>
             )}
           </section>
@@ -803,19 +805,29 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           onDragEnd={handleDndDragEnd}
         >
         <div className="space-y-3 lg:hidden">
-          <div className="flex items-center gap-2">
-            <select
-              value={mobileColumnKey ?? ''}
-              onChange={(event) => setMobileColumnKey(event.target.value)}
-              className="h-10 min-w-0 flex-1 rounded-lg border border-ui-border bg-white px-3 text-sm font-medium text-navy-800 outline-none"
-              aria-label="Coluna do Kanban"
-            >
-              {kanbanColumns.map((column) => (
-                <option key={column.key} value={column.key}>
-                  {column.title} ({column.childFolders.length + column.items.length})
-                </option>
-              ))}
-            </select>
+          <div className="-mx-4 overflow-x-auto border-b border-ui-border-soft px-4 pb-2">
+            <div className="flex w-max gap-2">
+              {kanbanColumns.map((column) => {
+                const active = column.key === mobileColumnKey
+                return (
+                  <button
+                    key={column.key}
+                    type="button"
+                    onClick={() => setMobileColumnKey(column.key)}
+                    className={`flex h-10 items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold transition-colors ${
+                      active
+                        ? 'border-ui-border-selected bg-surface-selected text-brand-700'
+                        : 'border-ui-border bg-white text-navy-600'
+                    }`}
+                  >
+                    <span className="max-w-36 truncate">{column.title}</span>
+                    <span className="font-mono text-[10px] text-navy-300">
+                      {column.childFolders.length + column.items.length}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
           {kanbanColumns
             .filter((column) => column.key === mobileColumnKey)

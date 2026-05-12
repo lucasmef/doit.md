@@ -6,7 +6,7 @@ import { updateItem } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
 import { ItemList } from '@/components/items/item-list'
-import { ReorderableItemList, ReorderToggle } from '@/components/items/reorderable-list'
+import { isLooseInboxItem, sortTodayWithInboxBelow } from '@/lib/item-order'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 import { useToast } from '@/components/ui/toast'
 
@@ -37,22 +37,25 @@ function EventCard({ title, start, end, allDay }: { title: string; start: string
 export default function TodayPage() {
   const { items, isLoading } = useItems()
   const [rescheduling, setRescheduling] = useState(false)
-  const [reorderMode, setReorderMode] = useState(false)
   const { toast } = useToast()
   const { prefs } = usePreferences()
   const today = toLocalDateKey()
   const { events } = useCalendarEvents(today + 'T00:00:00Z', today + 'T23:59:59Z')
 
-  const todayItems = items.filter((i) => {
+  const datedTodayItems = items.filter((i) => {
     if (i.status === 'archived') return false
     if (isToday(i) || isOverdue(i)) return true
-    if (!prefs.showInbox) {
-      return !i.folderId && !i.dueDate && !i.scheduledDate
-    }
     return false
   })
-  const reorderableTodayItems = todayItems.filter((item) => item.status !== 'done')
-  const overdueItems = todayItems.filter(
+  const hiddenInboxItems = prefs.showInbox
+    ? []
+    : items.filter((i) => {
+        if (i.status === 'archived') return false
+        if (i.status === 'done') return false
+        return isLooseInboxItem(i)
+      })
+  const todayItems = sortTodayWithInboxBelow(datedTodayItems, hiddenInboxItems)
+  const overdueItems = datedTodayItems.filter(
     (item) => item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
   )
 
@@ -105,16 +108,9 @@ export default function TodayPage() {
                 {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
               </button>
             )}
-            {reorderableTodayItems.length > 0 && (
-              <ReorderToggle enabled={reorderMode} onToggle={() => setReorderMode((v) => !v)} />
-            )}
           </div>
         </div>
-        {reorderMode ? (
-          <ReorderableItemList items={reorderableTodayItems} emptyMessage="Nenhum item para hoje." />
-        ) : (
-          <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
-        )}
+        <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
       </section>
     </div>
   )
