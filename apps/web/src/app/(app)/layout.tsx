@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NotificationFailureBanner />
             <div className="flex flex-1 overflow-hidden">
               {/* Conteúdo principal — padding extra no mobile para o bottom nav */}
-              <main className="flex-1 overflow-y-auto bg-surface-window pb-28 lg:pb-0">{children}</main>
+              <main className="flex-1 overflow-y-auto bg-surface-window pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</main>
               <CalendarSidebar />
             </div>
           </div>

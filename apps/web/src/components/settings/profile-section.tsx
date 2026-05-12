@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useToast } from '@/components/ui/toast'
+import { SignOutButton } from '@/components/auth/sign-out-button'
 
 type Profile = {
   email: string
@@ -110,11 +111,12 @@ export function ProfileSection() {
           </label>
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <SignOutButton className="h-10 px-4 text-sm" />
           <button
             type="submit"
             disabled={saving || !name.trim()}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+            className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
           >
             {saving ? 'Salvando...' : 'Salvar perfil'}
           </button>

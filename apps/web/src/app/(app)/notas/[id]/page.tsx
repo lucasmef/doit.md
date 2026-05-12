@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, use, useMemo, useState } from 'react'
+import { Fragment, use, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import {
@@ -33,6 +33,19 @@ import type { Folder, Item } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 type ViewMode = 'list' | 'kanban'
+type MoveTarget = {
+  id: string | null
+  label: string
+}
+type KanbanColumnConfig = {
+  key: string
+  title: string
+  href?: string
+  items: Item[]
+  childFolders: FolderTreeNode[]
+  addFolderId: string
+  folderId?: string
+}
 
 function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
   for (const node of nodes) {
@@ -79,16 +92,40 @@ function KanbanCard({
   selected,
   active,
   orderedIds,
+  moveTargets,
+  onMoveItem,
 }: {
   item: Item
   selected: boolean
   active: boolean
   orderedIds: string[]
+  moveTargets: MoveTarget[]
+  onMoveItem: (itemId: string, folderId: string | null) => Promise<void>
 }) {
+  const [moving, setMoving] = useState(false)
+  const [savingMove, setSavingMove] = useState(false)
+  const [targetId, setTargetId] = useState<string | null>(item.folderId ?? null)
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `item:${item.id}`,
     data: { itemId: item.id },
   })
+
+  const availableTargets = moveTargets.filter((target) => target.id !== (item.folderId ?? null))
+  const selectedTargetId = targetId === null ? '' : targetId
+
+  async function submitMove() {
+    if ((item.folderId ?? null) === targetId) {
+      setMoving(false)
+      return
+    }
+    setSavingMove(true)
+    try {
+      await onMoveItem(item.id, targetId)
+      setMoving(false)
+    } finally {
+      setSavingMove(false)
+    }
+  }
 
   return (
     <div
@@ -102,7 +139,7 @@ function KanbanCard({
         {...listeners}
         title="Arrastar"
         onClick={(e) => e.stopPropagation()}
-        className="flex w-3 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-navy-300 opacity-100 transition-opacity active:cursor-grabbing lg:opacity-0 lg:group-hover/card:opacity-100"
+        className="hidden w-3 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-navy-300 opacity-100 transition-opacity active:cursor-grabbing lg:flex lg:opacity-0 lg:group-hover/card:opacity-100"
       >
         <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
           <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
@@ -110,6 +147,55 @@ function KanbanCard({
       </div>
       <div className="min-w-0 flex-1">
         <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} />
+        <div className="border-t border-ui-border-soft px-2 py-1.5 lg:hidden">
+          {moving ? (
+            <div className="flex items-center gap-1.5">
+              <select
+                value={selectedTargetId}
+                onChange={(event) => setTargetId(event.target.value || null)}
+                disabled={savingMove}
+                className="h-10 min-w-0 flex-1 rounded-[9px] border border-ui-border-soft bg-white px-2 text-[13px] text-navy-700 outline-none disabled:opacity-60"
+              >
+                {moveTargets.map((target) => (
+                  <option key={target.id ?? 'root'} value={target.id ?? ''}>
+                    {target.label}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => void submitMove()}
+                disabled={savingMove || (item.folderId ?? null) === targetId}
+                className="h-10 rounded-[9px] bg-brand-600 px-3 text-[12px] font-medium text-white disabled:opacity-40"
+              >
+                {savingMove ? '...' : 'OK'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTargetId(item.folderId ?? null)
+                  setMoving(false)
+                }}
+                disabled={savingMove}
+                className="h-10 rounded-[9px] border border-ui-border-soft bg-white px-2 text-[12px] text-navy-500 disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setTargetId(availableTargets[0]?.id ?? null)
+                setMoving(true)
+              }}
+              disabled={availableTargets.length === 0}
+              className="inline-flex h-10 items-center gap-1 rounded-[9px] border border-ui-border-soft bg-white px-3 text-[12px] font-medium text-navy-500 disabled:opacity-40"
+            >
+              Mover
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -122,7 +208,7 @@ function ColumnInserter({ onAdd, edge }: { onAdd: () => void; edge?: boolean }) 
       onClick={onAdd}
       title="Adicionar coluna aqui"
       aria-label="Adicionar coluna aqui"
-      className={`group/inserter relative flex shrink-0 cursor-pointer items-center justify-center self-stretch ${edge ? 'w-3' : 'w-4'}`}
+      className={`group/inserter relative hidden shrink-0 cursor-pointer items-center justify-center self-stretch lg:flex ${edge ? 'w-3' : 'w-4'}`}
     >
       <span className="absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors group-hover/inserter:bg-brand-300" />
       <span className="relative flex h-7 w-7 items-center justify-center rounded-full border border-brand-300 bg-white text-brand-600 opacity-0 shadow-sm transition-opacity group-hover/inserter:opacity-100">
@@ -175,6 +261,8 @@ function KanbanColumn({
   onColumnDragLeave,
   onColumnDragEnd,
   onColumnDrop,
+  moveTargets,
+  onMoveItem,
 }: {
   title: string
   href?: string
@@ -193,6 +281,8 @@ function KanbanColumn({
   onColumnDragLeave?: () => void
   onColumnDragEnd?: () => void
   onColumnDrop?: (folderId: string, event: React.DragEvent) => void
+  moveTargets: MoveTarget[]
+  onMoveItem: (itemId: string, folderId: string | null) => Promise<void>
 }) {
   const { selectedItemId, setQuickCaptureOpen, setQuickCaptureFolderId } = useUI()
 
@@ -224,7 +314,7 @@ function KanbanColumn({
       onDragOver={handleDragOver}
       onDragLeave={onColumnDragLeave}
       onDrop={handleDrop}
-      className={`flex w-80 shrink-0 flex-col rounded-xl border bg-surface-soft transition-colors ${
+      className={`flex w-full shrink-0 flex-col rounded-xl border bg-surface-soft transition-colors lg:w-80 ${
         columnDragging
           ? 'opacity-50 border-brand-400'
           : columnDropTarget
@@ -284,6 +374,8 @@ function KanbanColumn({
             active={item.id === selectedItemId}
             selected={selectedItemIds.includes(item.id)}
             orderedIds={orderedIds}
+            moveTargets={moveTargets}
+            onMoveItem={onMoveItem}
           />
         ))}
         {childFolders.length === 0 && items.length === 0 && (
@@ -331,6 +423,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
   const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
   const [reorderMode, setReorderMode] = useState(false)
+  const [mobileColumnKey, setMobileColumnKey] = useState<string | null>(null)
 
   async function changeView(mode: ViewMode) {
     await updateFolder(id, { viewMode: mode, viewModeManual: true })
@@ -340,6 +433,11 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const childFolders = node?.children ?? []
   const directOpenItems = directItems.filter((i) => i.status !== 'archived' && i.status !== 'done')
   const viewMode: ViewMode = folder?.viewMode === 'kanban' ? 'kanban' : 'list'
+  const moveTargets = useMemo<MoveTarget[]>(() => {
+    const targets = childFolders.map((child) => ({ id: child.id, label: child.name }))
+    targets.push({ id, label: 'Sem pasta' })
+    return targets
+  }, [childFolders, id])
 
   const itemsByFolder = useMemo(() => {
     const map = new Map<string, Item[]>()
@@ -360,6 +458,50 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     }
     return map
   }, [allItems])
+
+  const kanbanColumns = useMemo<KanbanColumnConfig[]>(() => {
+    if (childFolders.length === 0) {
+      return [{
+        key: `folder:${id}`,
+        title: folder?.name ?? 'Itens',
+        items: directOpenItems,
+        childFolders: [],
+        addFolderId: id,
+      }]
+    }
+
+    const columns: KanbanColumnConfig[] = childFolders.map((sub) => ({
+      key: `folder:${sub.id}`,
+      title: sub.name,
+      href: `/notas/${sub.id}`,
+      items: itemsByFolder.get(sub.id) ?? [],
+      childFolders: sub.children,
+      addFolderId: sub.id,
+      folderId: sub.id,
+    }))
+
+    if (directOpenItems.length > 0) {
+      columns.push({
+        key: `folder:${id}`,
+        title: 'Sem pasta',
+        items: directOpenItems,
+        childFolders: [],
+        addFolderId: id,
+      })
+    }
+
+    return columns
+  }, [childFolders, directOpenItems, folder?.name, id, itemsByFolder])
+
+  useEffect(() => {
+    if (kanbanColumns.length === 0) {
+      setMobileColumnKey(null)
+      return
+    }
+    if (!mobileColumnKey || !kanbanColumns.some((column) => column.key === mobileColumnKey)) {
+      setMobileColumnKey(kanbanColumns[0]?.key ?? null)
+    }
+  }, [kanbanColumns, mobileColumnKey])
 
   function handleDndDragStart(event: DragStartEvent) {
     const activeId = String(event.active.id)
@@ -385,6 +527,23 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       targets,
     )
     toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+  }
+
+  async function handleMoveItemMobile(itemId: string, folderId: string | null) {
+    const ids =
+      selectedItemIds.includes(itemId) && selectedItemIds.length > 1 ? selectedItemIds : [itemId]
+    const targets = ids.map((targetId) => activeItemsById.get(targetId)).filter(Boolean) as Item[]
+    if (targets.length === 0) return
+    try {
+      await bulkUpdateItems(
+        { ids: targets.map((item) => item.id), patch: { folderId: (folderId ?? '') as never } },
+        targets,
+      )
+      toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao mover item', 'error')
+      throw error
+    }
   }
 
   const dndSensors = useSensors(
@@ -531,59 +690,63 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
         ))}
       </nav>
 
-      <div className="mb-4 flex items-center gap-3">
-        <FolderIcon className="h-6 w-6 shrink-0 text-navy-400" />
-        {editingName ? (
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onBlur={saveName}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') saveName()
-              if (e.key === 'Escape') setEditingName(false)
-            }}
-            className="flex-1 border-none bg-transparent text-2xl font-semibold text-navy-900 outline-none"
-          />
-        ) : (
-          <h1
-            className="flex-1 cursor-pointer text-2xl font-semibold text-navy-900 hover:text-brand-700"
-            onClick={() => {
-              setName(folder.name)
-              setEditingName(true)
-            }}
-          >
-            {folder.name}
-          </h1>
-        )}
-        <div className="flex rounded-md border border-ui-border bg-white p-0.5">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="flex min-w-0 items-center gap-3">
+          <FolderIcon className="h-6 w-6 shrink-0 text-navy-400" />
+          {editingName ? (
+            <input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName()
+                if (e.key === 'Escape') setEditingName(false)
+              }}
+              className="min-w-0 flex-1 border-none bg-transparent text-2xl font-semibold text-navy-900 outline-none"
+            />
+          ) : (
+            <h1
+              className="min-w-0 flex-1 cursor-pointer break-words text-2xl font-semibold leading-tight text-navy-900 hover:text-brand-700"
+              onClick={() => {
+                setName(folder.name)
+                setEditingName(true)
+              }}
+            >
+              {folder.name}
+            </h1>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
+          <div className="flex rounded-md border border-ui-border bg-white p-0.5">
+            <button
+              type="button"
+              onClick={() => void changeView('list')}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
+            >
+              Lista
+            </button>
+            <button
+              type="button"
+              onClick={() => void changeView('kanban')}
+              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
+            >
+              Kanban
+            </button>
+          </div>
           <button
-            type="button"
-            onClick={() => void changeView('list')}
-            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
+            onClick={handleNewSub}
+            className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft"
           >
-            Lista
+            + Subpasta
           </button>
           <button
-            type="button"
-            onClick={() => void changeView('kanban')}
-            className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
+            onClick={handleDelete}
+            className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
           >
-            Kanban
+            Apagar
           </button>
         </div>
-        <button
-          onClick={handleNewSub}
-          className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft"
-        >
-          + Subpasta
-        </button>
-        <button
-          onClick={handleDelete}
-          className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
-        >
-          Apagar
-        </button>
       </div>
 
       {viewMode === 'list' ? (
@@ -639,7 +802,43 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           onDragCancel={() => setDraggingIds([])}
           onDragEnd={handleDndDragEnd}
         >
-        <div className="flex items-stretch gap-0 overflow-x-auto pb-4">
+        <div className="space-y-3 lg:hidden">
+          <div className="flex items-center gap-2">
+            <select
+              value={mobileColumnKey ?? ''}
+              onChange={(event) => setMobileColumnKey(event.target.value)}
+              className="h-10 min-w-0 flex-1 rounded-lg border border-ui-border bg-white px-3 text-sm font-medium text-navy-800 outline-none"
+              aria-label="Coluna do Kanban"
+            >
+              {kanbanColumns.map((column) => (
+                <option key={column.key} value={column.key}>
+                  {column.title} ({column.childFolders.length + column.items.length})
+                </option>
+              ))}
+            </select>
+          </div>
+          {kanbanColumns
+            .filter((column) => column.key === mobileColumnKey)
+            .map((column) => (
+              <KanbanColumn
+                key={column.key}
+                title={column.title}
+                href={column.href}
+                items={column.items}
+                childFolders={column.childFolders}
+                addFolderId={column.addFolderId}
+                folderId={column.folderId}
+                selectedItemIds={selectedItemIds}
+                orderedIds={column.items.map((item) => item.id)}
+                dragging={false}
+                onDropItems={handleDropItems}
+                moveTargets={moveTargets}
+                onMoveItem={handleMoveItemMobile}
+              />
+            ))}
+        </div>
+
+        <div className="hidden items-stretch gap-0 overflow-x-auto pb-4 lg:flex">
           {childFolders.length === 0 ? (
             <>
               <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
@@ -652,6 +851,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                 orderedIds={directOpenItems.map((item) => item.id)}
                 dragging={draggingIds.length > 0}
                 onDropItems={handleDropItems}
+                moveTargets={moveTargets}
+                onMoveItem={handleMoveItemMobile}
               />
               <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
             </>
@@ -678,6 +879,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                     onColumnDragLeave={() => setColumnDropTargetId(null)}
                     onColumnDragEnd={handleColumnDragEnd}
                     onColumnDrop={handleColumnDrop}
+                    moveTargets={moveTargets}
+                    onMoveItem={handleMoveItemMobile}
                   />
                   <ColumnInserter
                     edge={idx === childFolders.length - 1 && directOpenItems.length === 0}
@@ -696,6 +899,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                     orderedIds={directOpenItems.map((item) => item.id)}
                     dragging={draggingIds.length > 0}
                     onDropItems={handleDropItems}
+                    moveTargets={moveTargets}
+                    onMoveItem={handleMoveItemMobile}
                   />
                   <ColumnInserter edge onAdd={() => void addColumnAt(childFolders.length)} />
                 </>

@@ -40,13 +40,7 @@
       font-size: 16px !important;
       line-height: 1.35;
     }
-    /* Mobile: evita que long-press selecione texto e conflite com drag/tap em listas */
-    body {
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-    }
-    /* Volta a seleção em campos de edição e conteúdo de texto longo */
+    /* Mantem selecao de texto em notas; regioes arrastaveis bloqueiam selecao localmente. */
     input,
     textarea,
     [contenteditable='true'],

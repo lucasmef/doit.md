@@ -416,7 +416,7 @@ function ToolButton({
       type="button"
       title={title}
       onClick={onClick}
-      className={`inline-flex h-7 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
+      className={`inline-flex h-10 items-center gap-1.5 rounded-[10px] border px-3 text-[12px] font-medium transition-colors sm:h-7 sm:px-2 ${
         active
           ? 'border-ui-border-selected bg-surface-selected text-brand-700'
           : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
@@ -947,18 +947,18 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-start sm:p-4 sm:pt-[8vh]"
       onClick={(e) => {
         if (e.target === e.currentTarget) setQuickCaptureOpen(false)
       }}
     >
       <div
-        className={`w-full overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg ${
+        className={`max-h-[calc(100dvh-1rem)] w-full overflow-hidden rounded-t-2xl border border-ui-border bg-white shadow-cool-lg sm:max-h-none sm:overflow-visible sm:rounded-xl ${
           isNote ? 'max-w-[720px]' : 'max-w-[560px]'
         }`}
       >
-        <form onSubmit={handleSubmit} className="flex flex-col">
-          <div className="px-5 pb-4 pt-5">
+        <form onSubmit={handleSubmit} className="flex max-h-[calc(100dvh-1rem)] flex-col sm:max-h-none">
+          <div className="overflow-y-auto px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -1026,7 +1026,7 @@ export function QuickCapture() {
                 (shortcutTags.length > 0 ||
                   shortcutProjects.length > 0 ||
                   shortcutPriorities.length > 0) && (
-                  <div className="absolute left-5 right-16 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
+                  <div className="absolute left-0 right-0 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md sm:left-5 sm:right-16">
                     {shortcut.kind === 'tag' &&
                       shortcutTags.map((tag) => (
                         <button
@@ -1108,7 +1108,7 @@ export function QuickCapture() {
                     {dueDate ? formatDueDate(dueDate) : 'Hoje'}
                   </ToolButton>
                   {popover === 'date' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                    <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-9 sm:w-64">
                       {DATE_SUGGESTIONS.map((suggestion) => {
                         const value = suggestion.getValue()
                         return (
@@ -1253,7 +1253,7 @@ export function QuickCapture() {
                     <IconFlag className={`h-3.5 w-3.5 ${priorityConfig.color}`} />
                   </ToolButton>
                   {popover === 'priority' && (
-                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
+                    <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-9 sm:w-44">
                       {PRIORITIES.map((p) => {
                         const cfg = PRIORITY_CONFIG[p]
                         return (
@@ -1289,7 +1289,7 @@ export function QuickCapture() {
                   {tags.length > 0 ? tags.length : ''}
                 </ToolButton>
                 {popover === 'tags' && (
-                  <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-9 sm:w-64">
                     {tags.length > 0 && (
                       <div className="mb-2 flex flex-wrap gap-1">
                         {tags.map((tag) => (
@@ -1347,7 +1347,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3">
+          <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"
@@ -1359,7 +1359,7 @@ export function QuickCapture() {
                 <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
               </button>
               {popover === 'project' && (
-                <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:w-72">
                   <input
                     value={projectQuery}
                     onChange={(e) => setProjectQuery(e.target.value)}
@@ -1435,14 +1435,14 @@ export function QuickCapture() {
                 clearDraft()
                 setQuickCaptureOpen(false)
               }}
-              className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+              className="h-10 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700 sm:h-8"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saveDisabled}
-              className="h-8 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-40"
+              className="h-10 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-40 sm:h-8"
             >
               {saving ? '...' : 'Adicionar'}
             </button>

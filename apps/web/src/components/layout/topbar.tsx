@@ -59,6 +59,7 @@ export function Topbar() {
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [open, setOpen] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   const crumbs = useMemo(() => {
@@ -76,6 +77,7 @@ export function Topbar() {
     const handleClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
         setOpen(false)
+        setMobileSearchOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClick)
@@ -108,7 +110,22 @@ export function Topbar() {
         ))}
       </div>
 
-      <div className="relative ml-0 flex-1 sm:ml-auto sm:max-w-sm" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setMobileSearchOpen(true)}
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ui-border bg-white text-navy-500 sm:hidden"
+        aria-label="Buscar"
+        title="Buscar"
+      >
+        <SearchIcon />
+      </button>
+
+      <div
+        className={`relative ml-0 flex-1 sm:ml-auto sm:max-w-sm ${
+          mobileSearchOpen ? 'absolute inset-x-3 top-2 z-50 sm:static' : 'hidden sm:block'
+        }`}
+        ref={ref}
+      >
         <input
           type="text"
           placeholder="Search or jump..."
@@ -120,9 +137,20 @@ export function Topbar() {
           onFocus={() => {
             if (query) setOpen(true)
           }}
-          className="h-9 w-full rounded-lg border border-ui-border bg-surface-soft py-1.5 pl-9 pr-16 text-[13px] text-navy-900 outline-none transition-colors placeholder:font-mono placeholder:text-navy-300 focus:border-brand-300"
+          className="h-10 w-full rounded-lg border border-ui-border bg-surface-soft py-1.5 pl-9 pr-12 text-[16px] text-navy-900 outline-none transition-colors placeholder:font-mono placeholder:text-navy-300 focus:border-brand-300 sm:h-9 sm:pr-16 sm:text-[13px]"
         />
-        <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-ui-border-strong bg-white px-1.5 py-0.5 font-mono text-[10px] text-navy-500">
+        <button
+          type="button"
+          onClick={() => {
+            setMobileSearchOpen(false)
+            setOpen(false)
+          }}
+          className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-navy-400 sm:hidden"
+          aria-label="Fechar busca"
+        >
+          x
+        </button>
+        <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-ui-border-strong bg-white px-1.5 py-0.5 font-mono text-[10px] text-navy-500 sm:block">
           q
         </kbd>
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-300">
@@ -176,11 +204,11 @@ export function Topbar() {
         </button>
         <button
           onClick={() => setQuickCaptureOpen(true)}
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-brand-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-700"
+          className="hidden h-9 items-center gap-2 rounded-md bg-brand-600 px-3 text-[13px] font-semibold text-white transition-colors hover:bg-brand-700 sm:inline-flex"
         >
           + Novo
         </button>
-        <SignOutButton />
+        <SignOutButton className="hidden sm:inline-flex" />
       </div>
     </header>
   )

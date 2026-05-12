@@ -114,7 +114,7 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
       {children}
       {state && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-navy-900/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[200] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) close(state.kind === 'confirm' ? false : null)
           }}
@@ -122,7 +122,7 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
         >
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-xl border border-ui-border bg-white shadow-cool-lg"
+            className="w-full max-w-md rounded-t-xl border border-ui-border bg-white shadow-cool-lg sm:rounded-xl"
           >
             <div className="px-5 pb-3 pt-5">
               {state.options.title && (
@@ -137,21 +137,21 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={state.options.placeholder}
-                  className="mt-3 h-9 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-3 text-[14px] text-navy-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+                  className="mt-3 h-10 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-3 text-[16px] text-navy-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 sm:h-9 sm:text-[14px]"
                 />
               )}
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-ui-border bg-surface-soft px-4 py-3">
+            <div className="flex items-center justify-end gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={() => close(state.kind === 'confirm' ? false : null)}
-                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+                className="h-10 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700 sm:h-8"
               >
                 {state.options.cancelLabel}
               </button>
               <button
                 type="submit"
-                className={`h-8 rounded-[10px] px-3 text-[12px] font-semibold text-white shadow-sm transition-colors ${
+                className={`h-10 rounded-[10px] px-3 text-[12px] font-semibold text-white shadow-sm transition-colors sm:h-8 ${
                   state.kind === 'confirm' && state.options.variant === 'danger'
                     ? 'bg-red-600 hover:bg-red-700'
                     : 'bg-brand-600 hover:bg-brand-700'

@@ -55,6 +55,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
   const [justCompleted, setJustCompleted] = useState(false)
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const longPressTriggered = useRef(false)
+  const longPressStart = useRef<{ x: number; y: number } | null>(null)
 
   async function toggleDone(e: React.MouseEvent) {
     e.stopPropagation()
@@ -132,16 +133,24 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     if (!longPressTimer.current) return
     clearTimeout(longPressTimer.current)
     longPressTimer.current = null
+    longPressStart.current = null
   }
 
   function handlePointerDown(e: React.PointerEvent) {
     if (e.pointerType === 'mouse') return
     longPressTriggered.current = false
     clearLongPressTimer()
+    longPressStart.current = { x: e.clientX, y: e.clientY }
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true
       openContextMenu({ itemId: item.id, x: e.clientX, y: e.clientY })
     }, 450)
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    const start = longPressStart.current
+    if (!start) return
+    if (Math.hypot(e.clientX - start.x, e.clientY - start.y) > 10) clearLongPressTimer()
   }
 
   return (
@@ -151,13 +160,13 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
       onClick={handleClick}
       onContextMenu={handleContextMenu}
       onPointerDown={handlePointerDown}
-      onPointerMove={clearLongPressTimer}
+      onPointerMove={handlePointerMove}
       onPointerUp={clearLongPressTimer}
       onPointerCancel={clearLongPressTimer}
       onKeyDown={(e) => e.key === 'Enter' && setSingleSelection(item.id)}
       data-item-id={item.id}
       style={{ animationDelay: staggerDelay }}
-      className={`group flex w-full cursor-pointer items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
+      className={`group flex w-full cursor-pointer select-none items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
         selected
           ? 'border-ui-border-selected bg-surface-selected'
           : active

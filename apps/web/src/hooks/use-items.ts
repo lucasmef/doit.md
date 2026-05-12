@@ -251,3 +251,33 @@ export async function bulkUpdateItems(
     return items
   }
 }
+
+export async function reorderItems(
+  updates: Array<{ id: string; order: number }>,
+  fallbackItems: Item[] = [],
+): Promise<Item[]> {
+  const cleanUpdates = updates
+    .filter((entry) => entry.id && Number.isFinite(entry.order))
+    .map((entry) => ({ id: entry.id, order: entry.order }))
+
+  if (cleanUpdates.length === 0) return []
+
+  if (cleanUpdates.every((entry) => entry.id.startsWith('local_item_'))) {
+    const fallbackById = new Map(fallbackItems.map((item) => [item.id, item]))
+    const items = cleanUpdates.map((entry) =>
+      queueUpdateItem(entry.id, { order: entry.order }, fallbackById.get(entry.id)),
+    )
+    await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+    return items
+  }
+
+  const res = await fetch('/api/items/reorder', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updates: cleanUpdates }),
+  })
+  if (!res.ok) throw new Error(await readError(res, 'Falha ao reordenar itens'))
+  const { items } = (await res.json()) as { items: Item[] }
+  await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/items'))
+  return items
+}
