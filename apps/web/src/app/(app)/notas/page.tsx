@@ -12,17 +12,27 @@ function FolderRow({
   expanded,
   toggle,
   noteCounts,
+  index,
+  siblingsCount,
+  onMove,
+  busy,
 }: {
   node: FolderTreeNode
   depth: number
   expanded: Set<string>
   toggle: (id: string) => void
   noteCounts: Map<string, number>
+  index: number
+  siblingsCount: number
+  onMove: (parentId: string | null, fromIndex: number, direction: -1 | 1) => Promise<void>
+  busy: boolean
 }) {
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
   const noteCount = noteCounts.get(node.id) ?? 0
   const { confirm, prompt } = useDialog()
+  const canUp = index > 0 && !busy
+  const canDown = index < siblingsCount - 1 && !busy
 
   async function handleRename() {
     const next = await prompt({ title: 'Renomear pasta', message: 'Novo nome', defaultValue: node.name })
@@ -83,6 +93,32 @@ function FolderRow({
             {noteCount}
           </span>
         </Link>
+        <div className="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            onClick={() => void onMove(node.parentId ?? null, index, -1)}
+            disabled={!canUp}
+            title="Mover para cima"
+            aria-label={`Mover ${node.name} para cima`}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft disabled:opacity-30"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => void onMove(node.parentId ?? null, index, 1)}
+            disabled={!canDown}
+            title="Mover para baixo"
+            aria-label={`Mover ${node.name} para baixo`}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft disabled:opacity-30"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+          </button>
+        </div>
         <div className="flex shrink-0 items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
           <button
             type="button"
@@ -117,8 +153,19 @@ function FolderRow({
           </button>
         </div>
       </div>
-      {hasChildren && isOpen && node.children.map((child) => (
-        <FolderRow key={child.id} node={child} depth={depth + 1} expanded={expanded} toggle={toggle} noteCounts={noteCounts} />
+      {hasChildren && isOpen && node.children.map((child, childIndex) => (
+        <FolderRow
+          key={child.id}
+          node={child}
+          depth={depth + 1}
+          expanded={expanded}
+          toggle={toggle}
+          noteCounts={noteCounts}
+          index={childIndex}
+          siblingsCount={node.children.length}
+          onMove={onMove}
+          busy={busy}
+        />
       ))}
     </>
   )
@@ -139,8 +186,38 @@ export default function NotasPage() {
   const { items } = useItems()
   const { prompt } = useDialog()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [reorderBusy, setReorderBusy] = useState(false)
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
+
+  async function handleMove(parentId: string | null, fromIndex: number, direction: -1 | 1) {
+    if (reorderBusy) return
+    const siblings = folders
+      .filter((folder) => (folder.parentId ?? null) === parentId)
+      .slice()
+      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'pt-BR'))
+    const toIndex = fromIndex + direction
+    if (fromIndex < 0 || fromIndex >= siblings.length) return
+    if (toIndex < 0 || toIndex >= siblings.length) return
+
+    const reordered = siblings.slice()
+    const [moved] = reordered.splice(fromIndex, 1)
+    if (!moved) return
+    reordered.splice(toIndex, 0, moved)
+
+    setReorderBusy(true)
+    try {
+      await Promise.all(
+        reordered.map((folder, index) =>
+          folder.order === (index + 1) * 1000
+            ? null
+            : updateFolder(folder.id, { order: (index + 1) * 1000 }),
+        ),
+      )
+    } finally {
+      setReorderBusy(false)
+    }
+  }
   const allParentIds = useMemo(() => collectIds(tree), [tree])
   const allExpanded = allParentIds.length > 0 && allParentIds.every((id) => expanded.has(id))
 
@@ -217,9 +294,20 @@ export default function NotasPage() {
       )}
 
       {tree.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-ui-border bg-white">
-          {tree.map((node) => (
-            <FolderRow key={node.id} node={node} depth={0} expanded={expanded} toggle={toggle} noteCounts={noteCounts} />
+        <div className={`overflow-hidden rounded-xl border border-ui-border bg-white ${reorderBusy ? 'opacity-70' : ''}`}>
+          {tree.map((node, index) => (
+            <FolderRow
+              key={node.id}
+              node={node}
+              depth={0}
+              expanded={expanded}
+              toggle={toggle}
+              noteCounts={noteCounts}
+              index={index}
+              siblingsCount={tree.length}
+              onMove={handleMove}
+              busy={reorderBusy}
+            />
           ))}
         </div>
       )}
