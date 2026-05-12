@@ -2,6 +2,14 @@
 
 import { useEffect } from 'react'
 
+function runWhenIdle(callback: () => void) {
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(callback, { timeout: 5000 })
+    return
+  }
+  setTimeout(callback, 2500)
+}
+
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') {
@@ -14,7 +22,7 @@ export function ServiceWorkerRegister() {
     }
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
-        .register('/sw.js', { scope: '/' })
+        .register('/sw.js', { scope: '/', updateViaCache: 'imports' })
         .then((registration) => {
           if (
             !location.pathname.startsWith('/sign-in') &&
@@ -24,11 +32,13 @@ export function ServiceWorkerRegister() {
               registration.active?.postMessage({ type: 'CACHE_APP_SHELL' })
             }
 
-            if (registration.active) {
-              notifyReadyWorker()
-            } else {
-              navigator.serviceWorker.ready.then(notifyReadyWorker).catch(() => {})
-            }
+            runWhenIdle(() => {
+              if (registration.active) {
+                notifyReadyWorker()
+              } else {
+                navigator.serviceWorker.ready.then(notifyReadyWorker).catch(() => {})
+              }
+            })
           }
         })
         .catch(() => {})

@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'clarity-v6'
+const CACHE_VERSION = 'clarity-v7'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 const API_CACHE = `${CACHE_VERSION}-api`
@@ -7,7 +7,7 @@ const API_CACHE = `${CACHE_VERSION}-api`
 const STATIC_PATTERNS = [/^\/fonts\//, /\.(ico|png|svg|webp|woff2?)$/]
 const NEXT_STATIC_PATTERN = /^\/_next\/static\//
 
-// App pages: network-first with cached fallback for installed/offline use.
+// App pages: cached-first so poor mobile connections do not block startup.
 const APP_PAGES = [
   '/today',
   '/inbox',
@@ -66,6 +66,28 @@ function isCacheableJsonResponse(response) {
   )
 }
 
+async function fetchAndCache(cache, request, isCacheable) {
+  const response = await fetch(request)
+  if (isCacheable(response)) await cache.put(request, response.clone())
+  return response
+}
+
+async function cachedFirst(request, cacheName, isCacheable, fallback) {
+  const cache = await caches.open(cacheName)
+  const cached = await cache.match(request)
+
+  if (cached) {
+    const refresh = fetchAndCache(cache, request, isCacheable).catch(() => null)
+    return { response: cached, refresh }
+  }
+
+  try {
+    return { response: await fetchAndCache(cache, request, isCacheable) }
+  } catch {
+    return { response: await fallback(cache) }
+  }
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
@@ -101,12 +123,14 @@ self.addEventListener('message', (event) => {
 
   event.waitUntil(
     caches.open(PAGES_CACHE).then(async (cache) => {
-      await Promise.allSettled(
-        APP_SHELL_URLS.map(async (url) => {
+      for (const url of APP_SHELL_URLS) {
+        try {
           const response = await fetch(url, { credentials: 'same-origin' })
           if (isCacheablePageResponse(response)) await cache.put(url, response)
-        }),
-      )
+        } catch {
+          break
+        }
+      }
     }),
   )
 })
@@ -170,21 +194,14 @@ self.addEventListener('fetch', (event) => {
     if (!isReadApi(url.pathname)) return
 
     event.respondWith(
-      caches.open(API_CACHE).then(async (cache) => {
-        try {
-          const response = await fetch(request)
-          if (isCacheableJsonResponse(response)) cache.put(request, response.clone())
-          return response
-        } catch {
-          const cached = await cache.match(request)
-          return (
-            cached ??
-            new Response(JSON.stringify({ error: 'Offline' }), {
-              status: 503,
-              headers: { 'content-type': 'application/json' },
-            })
-          )
-        }
+      cachedFirst(request, API_CACHE, isCacheableJsonResponse, async () =>
+        new Response(JSON.stringify({ error: 'Offline' }), {
+          status: 503,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ).then(({ response, refresh }) => {
+        if (refresh) event.waitUntil(refresh)
+        return response
       }),
     )
     return
@@ -221,7 +238,20 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (request.mode === 'navigate' || isAppPage(url.pathname)) {
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      cachedFirst(request, PAGES_CACHE, isCacheablePageResponse, async (cache) => {
+        const root = await cache.match('/today')
+        return root ?? cache.match('/') ?? Response.error()
+      }).then(({ response, refresh }) => {
+        if (refresh) event.waitUntil(refresh)
+        return response
+      }),
+    )
+    return
+  }
+
+  if (isAppPage(url.pathname)) {
     event.respondWith(
       caches.open(PAGES_CACHE).then(async (cache) => {
         try {
@@ -229,10 +259,7 @@ self.addEventListener('fetch', (event) => {
           if (isCacheablePageResponse(response)) cache.put(request, response.clone())
           return response
         } catch {
-          const cached = await cache.match(request)
-          if (cached) return cached
-          const root = await cache.match('/today')
-          return root ?? cache.match('/') ?? Response.error()
+          return (await cache.match(request)) ?? Response.error()
         }
       }),
     )

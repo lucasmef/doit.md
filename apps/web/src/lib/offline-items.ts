@@ -213,7 +213,12 @@ function matchesFilters(item: Item, filters?: ItemFilters) {
 }
 
 function sortItems(items: Item[]) {
-  return [...items].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+  return [...items].sort((a, b) => {
+    const ao = typeof a.order === 'number' ? a.order : Number.POSITIVE_INFINITY
+    const bo = typeof b.order === 'number' ? b.order : Number.POSITIVE_INFINITY
+    if (ao !== bo) return ao - bo
+    return b.updatedAt.localeCompare(a.updatedAt)
+  })
 }
 
 export function onOfflineItemsChanged(listener: () => void) {

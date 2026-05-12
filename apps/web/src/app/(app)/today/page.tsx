@@ -51,6 +51,7 @@ export default function TodayPage() {
     }
     return false
   })
+  const reorderableTodayItems = todayItems.filter((item) => item.status !== 'done')
   const overdueItems = todayItems.filter(
     (item) => item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
   )
@@ -104,13 +105,13 @@ export default function TodayPage() {
                 {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
               </button>
             )}
-            {todayItems.length > 0 && (
+            {reorderableTodayItems.length > 0 && (
               <ReorderToggle enabled={reorderMode} onToggle={() => setReorderMode((v) => !v)} />
             )}
           </div>
         </div>
         {reorderMode ? (
-          <ReorderableItemList items={todayItems} emptyMessage="Nenhum item para hoje." />
+          <ReorderableItemList items={reorderableTodayItems} emptyMessage="Nenhum item para hoje." />
         ) : (
           <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
         )}

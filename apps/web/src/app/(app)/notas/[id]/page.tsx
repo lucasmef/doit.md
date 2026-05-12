@@ -454,7 +454,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const activeItemsById = useMemo(() => {
     const map = new Map<string, Item>()
     for (const item of allItems) {
-      if (item.status !== 'archived') map.set(item.id, item)
+      if (item.status !== 'archived' && item.status !== 'done') map.set(item.id, item)
     }
     return map
   }, [allItems])

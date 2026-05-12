@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import type { Item } from '@doit/types'
 import { reorderItems } from '@/hooks/use-items'
 import { useToast } from '@/components/ui/toast'
@@ -83,12 +83,16 @@ function ArrowDownIcon() {
 
 export function ReorderableItemList({ items, emptyMessage = 'Nenhum item.' }: Props) {
   const { toast } = useToast()
+  const activeItems = useMemo(
+    () => items.filter((item) => item.status !== 'archived' && item.status !== 'done'),
+    [items],
+  )
   const dragState = useRef<DragState | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  if (items.length === 0) {
+  if (activeItems.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-ui-border-strong px-4 py-8 text-center font-mono text-sm text-navy-300">
         {emptyMessage}
@@ -97,15 +101,15 @@ export function ReorderableItemList({ items, emptyMessage = 'Nenhum item.' }: Pr
   }
 
   async function persistOrder(reordered: Item[]) {
-    if (reordered === items) return
+    if (reordered === activeItems) return
     const updates = recomputeOrders(reordered)
-    const currentById = new Map(items.map((item) => [item.id, item.order]))
+    const currentById = new Map(activeItems.map((item) => [item.id, item.order]))
     const changes = updates.filter(({ id, order }) => currentById.get(id) !== order)
     if (changes.length === 0) return
 
     setSaving(true)
     try {
-      await reorderItems(changes, items)
+      await reorderItems(changes, activeItems)
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Erro ao reordenar', 'error')
     } finally {
@@ -155,7 +159,7 @@ export function ReorderableItemList({ items, emptyMessage = 'Nenhum item.' }: Pr
     const targetId = state.overId
     cleanupDrag()
     if (!state.activated || !targetId || targetId === state.itemId) return
-    void persistOrder(moveItem(items, state.itemId, targetId))
+    void persistOrder(moveItem(activeItems, state.itemId, targetId))
   }
 
   function handlePointerCancel(event: PointerEvent) {
@@ -211,7 +215,7 @@ export function ReorderableItemList({ items, emptyMessage = 'Nenhum item.' }: Pr
     const targetId = state.overId
     cleanupDrag()
     if (!state.activated || !targetId || targetId === state.itemId) return
-    void persistOrder(moveItem(items, state.itemId, targetId))
+    void persistOrder(moveItem(activeItems, state.itemId, targetId))
   }
 
   function handleTouchCancel() {
@@ -240,12 +244,12 @@ export function ReorderableItemList({ items, emptyMessage = 'Nenhum item.' }: Pr
 
   function handleNudge(itemId: string, direction: -1 | 1) {
     if (saving) return
-    void persistOrder(nudgeItem(items, itemId, direction))
+    void persistOrder(nudgeItem(activeItems, itemId, direction))
   }
 
   return (
     <div className={`pt-1 ${saving ? 'opacity-70' : ''}`}>
-      {items.map((item, index) => {
+      {activeItems.map((item, index) => {
         const dragging = activeId === item.id
         const showDropLine = !!activeId && activeId !== item.id && overId === item.id
         return (
@@ -297,7 +301,7 @@ export function ReorderableItemList({ items, emptyMessage = 'Nenhum item.' }: Pr
               <button
                 type="button"
                 onClick={() => handleNudge(item.id, 1)}
-                disabled={saving || index === items.length - 1}
+                disabled={saving || index === activeItems.length - 1}
                 title="Mover para baixo"
                 aria-label={`Mover ${item.title} para baixo`}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-[9px] border border-ui-border-soft bg-white text-navy-500 disabled:opacity-30"
