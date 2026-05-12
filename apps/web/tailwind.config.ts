@@ -3,6 +3,9 @@ import typography from '@tailwindcss/typography'
 
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}', '../../packages/ui/src/**/*.{ts,tsx}'],
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   theme: {
     extend: {
       fontFamily: {
