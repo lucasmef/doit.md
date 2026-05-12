@@ -50,34 +50,71 @@ function FolderRow({
   return (
     <>
       <div
-        className="group flex items-center gap-1 border-b border-ui-border-soft py-1.5 text-[14px]"
-        style={{ paddingLeft: `${12 + depth * 18}px` }}
+        className="group flex min-h-14 items-center gap-2 border-b border-ui-border-soft py-2 pr-2 text-[14px] last:border-b-0"
+        style={{ paddingLeft: `${10 + depth * 14}px` }}
       >
         <button
           type="button"
           onClick={() => hasChildren && toggle(node.id)}
-          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${hasChildren ? 'hover:bg-navy-50' : ''}`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent ${
+            hasChildren ? 'bg-surface-soft text-navy-500 hover:border-ui-border-soft hover:bg-white' : 'text-transparent'
+          }`}
           aria-label={hasChildren ? (isOpen ? 'Recolher' : 'Expandir') : ''}
         >
           {hasChildren ? (
-            <svg className={`h-3 w-3 text-navy-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
             </svg>
           ) : null}
         </button>
-        <Link href={`/notas/${node.id}`} className="flex min-w-0 flex-1 items-center gap-2 text-navy-900 hover:text-brand-600">
-          <svg className="h-4 w-4 shrink-0 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
-          </svg>
-          <span className="truncate">{node.name}</span>
-          {noteCount > 0 && (
-            <span className="font-mono text-[11px] text-navy-300">{noteCount}</span>
-          )}
+        <Link href={`/notas/${node.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-navy-900 hover:text-brand-600">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-navy-400">
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-medium leading-5">{node.name}</span>
+            <span className="block font-mono text-[10px] leading-4 text-navy-300">
+              {node.children.length > 0 ? `${node.children.length} subpasta${node.children.length === 1 ? '' : 's'}` : 'Pasta'}
+            </span>
+          </span>
+          <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-surface-soft px-2 font-mono text-[11px] text-navy-400">
+            {noteCount}
+          </span>
         </Link>
-        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-          <button onClick={handleNewSub} className="rounded px-2 py-0.5 text-[11px] text-navy-500 hover:bg-surface-soft" title="Subpasta">+ sub</button>
-          <button onClick={handleRename} className="rounded px-2 py-0.5 text-[11px] text-navy-500 hover:bg-surface-soft">Renomear</button>
-          <button onClick={handleDelete} className="rounded px-2 py-0.5 text-[11px] text-red-500 hover:bg-red-50">Apagar</button>
+        <div className="flex shrink-0 items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={handleNewSub}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
+            title="Subpasta"
+            aria-label={`Criar subpasta em ${node.name}`}
+          >
+            +
+          </button>
+          <button
+            type="button"
+            onClick={handleRename}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
+            title="Renomear"
+            aria-label={`Renomear ${node.name}`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m16.9 4.6 2.5 2.5M4 20h4.5L20 8.5a1.8 1.8 0 0 0 0-2.5L18 4a1.8 1.8 0 0 0-2.5 0L4 15.5V20Z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50"
+            title="Apagar"
+            aria-label={`Apagar ${node.name}`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 7h14M10 11v6M14 11v6M9 7l1-3h4l1 3M7 7l1 13h8l1-13" />
+            </svg>
+          </button>
         </div>
       </div>
       {hasChildren && isOpen && node.children.map((child) => (
@@ -137,15 +174,20 @@ export default function NotasPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-5 pb-24 pt-3 lg:pb-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold text-navy-900">Notas</h1>
-        <div className="flex items-center gap-2">
+    <div className="mx-auto max-w-3xl px-4 pb-24 pt-3 sm:px-5 lg:pb-4">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-lg font-bold text-navy-900">Notas</h1>
+          <p className="font-mono text-[10px] text-navy-300">
+            {tree.length} pasta{tree.length === 1 ? '' : 's'}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           {allParentIds.length > 0 && (
             <button
               type="button"
               onClick={toggleAll}
-              className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft"
+              className="h-10 rounded-lg border border-ui-border bg-white px-3 text-xs font-medium text-navy-600 hover:bg-surface-soft"
             >
               {allExpanded ? 'Recolher tudo' : 'Expandir tudo'}
             </button>
@@ -153,7 +195,7 @@ export default function NotasPage() {
           <button
             type="button"
             onClick={handleNewRoot}
-            className="rounded-md bg-brand-600 px-3 py-1 text-xs font-medium text-white hover:bg-brand-700"
+            className={`${allParentIds.length === 0 ? 'col-span-2' : ''} h-10 rounded-lg bg-brand-600 px-3 text-xs font-medium text-white hover:bg-brand-700`}
           >
             + Nova pasta
           </button>
@@ -175,7 +217,7 @@ export default function NotasPage() {
       )}
 
       {tree.length > 0 && (
-        <div className="rounded-xl border border-ui-border bg-white">
+        <div className="overflow-hidden rounded-xl border border-ui-border bg-white">
           {tree.map((node) => (
             <FolderRow key={node.id} node={node} depth={0} expanded={expanded} toggle={toggle} noteCounts={noteCounts} />
           ))}
