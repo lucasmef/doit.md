@@ -998,17 +998,22 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeAll()
       }}
     >
       <div
-        className={`max-h-[calc(100dvh-1rem)] w-full overflow-hidden rounded-t-2xl border border-ui-border bg-white shadow-cool-lg sm:max-h-none sm:overflow-visible sm:rounded-xl ${
-          isNote ? 'max-w-[720px]' : 'max-w-[560px]'
+        className={`w-full overflow-hidden border border-ui-border bg-white shadow-cool-lg sm:max-h-none sm:overflow-visible sm:rounded-xl ${
+          isNote
+            ? 'h-full max-h-none rounded-none border-0 sm:h-auto sm:max-w-[720px] sm:rounded-xl sm:border'
+            : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-2xl'
         }`}
       >
-        <form onSubmit={handleSubmit} className="flex max-h-[calc(100dvh-1rem)] flex-col sm:max-h-none">
+        <form
+          onSubmit={handleSubmit}
+          className={`flex flex-col sm:max-h-none ${isNote ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
+        >
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
               {!isNote && (
@@ -1056,7 +1061,7 @@ export function QuickCapture() {
                   aria-label="Abrir em tela cheia"
                   onClick={() => void handleOpenFullscreen()}
                   disabled={saving}
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-ui-border-soft bg-surface-soft text-slate-500 transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-50"
+                  className="hidden h-7 w-7 shrink-0 items-center justify-center rounded-[10px] border border-ui-border-soft bg-surface-soft text-slate-500 transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-50 sm:inline-flex"
                 >
                   <svg
                     className="h-3.5 w-3.5"
@@ -1404,13 +1409,13 @@ export function QuickCapture() {
                 type="button"
                 title="Selecionar ou criar pasta"
                 onClick={() => setPopover(popover === 'project' ? null : 'project')}
-                className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                className="inline-flex h-10 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-white px-3 text-[13px] font-medium text-slate-600 transition-colors hover:bg-surface-soft hover:text-slate-800 sm:h-7 sm:bg-surface-soft sm:px-2 sm:text-[12px]"
               >
                 <IconInbox className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
               </button>
               {popover === 'project' && (
-                <div className="fixed inset-x-3 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-10 max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:w-72">
+                <div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[110] max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:z-10 sm:w-72">
                   <input
                     value={projectQuery}
                     onChange={(e) => setProjectQuery(e.target.value)}

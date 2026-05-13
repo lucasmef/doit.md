@@ -38,6 +38,7 @@ function FolderRow({
   onMove: (parentId: string | null, fromIndex: number, direction: -1 | 1) => Promise<void>
   busy: boolean
 }) {
+  const [actionsOpen, setActionsOpen] = useState(false)
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
   const noteCount = noteCounts.get(node.id) ?? 0
@@ -94,7 +95,7 @@ function FolderRow({
           type="button"
           title="Arrastar"
           aria-label={`Arrastar ${node.name}`}
-          className="flex h-9 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-navy-300 hover:text-navy-600 active:cursor-grabbing"
+          className="hidden h-9 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-navy-300 hover:text-navy-600 active:cursor-grabbing sm:flex"
         >
           <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
@@ -130,7 +131,7 @@ function FolderRow({
             {noteCount}
           </span>
         </Link>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="hidden shrink-0 items-center gap-1 sm:flex">
           <button
             type="button"
             onClick={() => void onMove(node.parentId ?? null, index, -1)}
@@ -156,7 +157,7 @@ function FolderRow({
             </svg>
           </button>
         </div>
-        <div className="flex shrink-0 items-center gap-1 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+        <div className="hidden shrink-0 items-center gap-1 sm:flex sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
           <button
             type="button"
             onClick={handleNewSub}
@@ -189,7 +190,65 @@ function FolderRow({
             </svg>
           </button>
         </div>
+        <button
+          type="button"
+          onClick={() => setActionsOpen((open) => !open)}
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui-border-soft bg-white text-navy-500 sm:hidden"
+          title="Acoes"
+          aria-label={`Acoes de ${node.name}`}
+          aria-expanded={actionsOpen}
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="5" cy="12" r="1.8" />
+            <circle cx="12" cy="12" r="1.8" />
+            <circle cx="19" cy="12" r="1.8" />
+          </svg>
+        </button>
       </div>
+      {actionsOpen && (
+        <div
+          className="grid grid-cols-5 gap-1 border-b border-ui-border-soft bg-surface-soft px-3 py-2 sm:hidden"
+          style={{ paddingLeft: `${10 + depth * 14}px` }}
+        >
+          <button
+            type="button"
+            onClick={() => void onMove(node.parentId ?? null, index, -1)}
+            disabled={!canUp}
+            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500 disabled:opacity-30"
+          >
+            Subir
+          </button>
+          <button
+            type="button"
+            onClick={() => void onMove(node.parentId ?? null, index, 1)}
+            disabled={!canDown}
+            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500 disabled:opacity-30"
+          >
+            Descer
+          </button>
+          <button
+            type="button"
+            onClick={handleNewSub}
+            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500"
+          >
+            Sub
+          </button>
+          <button
+            type="button"
+            onClick={handleRename}
+            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500"
+          >
+            Editar
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="h-10 rounded-lg bg-white text-[11px] font-medium text-red-500"
+          >
+            Apagar
+          </button>
+        </div>
+      )}
       {hasChildren && isOpen && node.children.map((child, childIndex) => (
         <FolderRow
           key={child.id}

@@ -104,8 +104,11 @@ const MOBILE_NAV_DEF: Record<MobileNavItemId, { href: string; icon: React.ReactN
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { setQuickCaptureOpen } = useUI()
+  const { quickCaptureOpen, quickCaptureEditId, selectedItemId, setQuickCaptureOpen } = useUI()
   const { prefs } = usePreferences()
+  const overlayOpen = quickCaptureOpen || !!quickCaptureEditId || !!selectedItemId
+
+  if (overlayOpen) return null
 
   const visible = prefs.mobileNav.filter((entry) => entry.visible)
   const splitIndex = Math.ceil(visible.length / 2)

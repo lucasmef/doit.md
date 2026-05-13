@@ -143,7 +143,7 @@ function KanbanCard({
     <div
       ref={setNodeRef}
       onClickCapture={handleCardClickCapture}
-      className={`group/card flex items-stretch rounded-md border border-ui-border bg-white ${
+      className={`group/card relative flex items-stretch rounded-md border border-ui-border bg-white ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
@@ -160,7 +160,13 @@ function KanbanCard({
       </div>
       <div className="min-w-0 flex-1" {...attributes} {...listeners}>
         <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} />
-        <div className="border-t border-ui-border-soft px-2 py-1.5 lg:hidden">
+        <div
+          className={
+            moving
+              ? 'border-t border-ui-border-soft px-2 py-1.5 lg:hidden'
+              : 'absolute bottom-2 right-2 lg:hidden'
+          }
+        >
           {moving ? (
             <div className="flex items-center gap-1.5">
               <select
@@ -203,9 +209,13 @@ function KanbanCard({
                 setMoving(true)
               }}
               disabled={availableTargets.length === 0}
-              className="inline-flex h-10 items-center gap-1 rounded-[9px] border border-ui-border-soft bg-white px-3 text-[12px] font-medium text-navy-500 disabled:opacity-40"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-ui-border-soft bg-white text-navy-500 disabled:opacity-40"
+              aria-label="Mover item"
+              title="Mover"
             >
-              Mover
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10m0 0-3-3m3 3-3 3M17 17H7m0 0 3 3m-3-3 3-3" />
+              </svg>
             </button>
           )}
         </div>
