@@ -2,9 +2,20 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
+import {
+  DndContext,
+  PointerSensor,
+  TouchSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import { useFolders, buildFolderTree, createFolder, deleteFolder, updateFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
 import { useDialog } from '@/components/ui/dialog'
+import { useToast } from '@/components/ui/toast'
 
 function FolderRow({
   node,
@@ -33,6 +44,16 @@ function FolderRow({
   const { confirm, prompt } = useDialog()
   const canUp = index > 0 && !busy
   const canDown = index < siblingsCount - 1 && !busy
+  const draggableId = `folder:${node.id}`
+  const droppableId = `folder-into:${node.id}`
+  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+    id: draggableId,
+    data: { folderId: node.id },
+  })
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: droppableId,
+    data: { folderId: node.id },
+  })
 
   async function handleRename() {
     const next = await prompt({ title: 'Renomear pasta', message: 'Novo nome', defaultValue: node.name })
@@ -60,9 +81,25 @@ function FolderRow({
   return (
     <>
       <div
-        className="group flex min-h-14 items-center gap-2 border-b border-ui-border-soft py-2 pr-2 text-[14px] last:border-b-0"
+        ref={setDropRef}
+        className={`group flex min-h-14 items-center gap-2 border-b border-ui-border-soft py-2 pr-2 text-[14px] last:border-b-0 transition-colors ${
+          isDragging ? 'opacity-50' : ''
+        } ${isOver ? 'bg-brand-50' : ''}`}
         style={{ paddingLeft: `${10 + depth * 14}px` }}
       >
+        <button
+          ref={setDragRef}
+          {...attributes}
+          {...listeners}
+          type="button"
+          title="Arrastar"
+          aria-label={`Arrastar ${node.name}`}
+          className="flex h-9 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-navy-300 hover:text-navy-600 active:cursor-grabbing"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
+          </svg>
+        </button>
         <button
           type="button"
           onClick={() => hasChildren && toggle(node.id)}
@@ -181,14 +218,80 @@ function collectIds(nodes: FolderTreeNode[], acc: string[] = []) {
   return acc
 }
 
+function RootDropZone() {
+  const { setNodeRef, isOver } = useDroppable({ id: 'folder-into:__root__', data: { folderId: null } })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`mb-2 flex h-12 items-center justify-center rounded-xl border border-dashed text-[12px] font-medium transition-colors ${
+        isOver
+          ? 'border-brand-400 bg-brand-50 text-brand-700'
+          : 'border-ui-border-strong bg-white text-navy-300'
+      }`}
+    >
+      Solte aqui para mover para a raiz
+    </div>
+  )
+}
+
 export default function NotasPage() {
   const { folders, isLoading } = useFolders()
   const { items } = useItems()
   const { prompt } = useDialog()
+  const { toast } = useToast()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [reorderBusy, setReorderBusy] = useState(false)
+  const [dragging, setDragging] = useState(false)
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
+  )
+
+  function isDescendant(ancestorId: string, candidateId: string): boolean {
+    if (ancestorId === candidateId) return true
+    const queue = folders.filter((f) => f.parentId === ancestorId)
+    while (queue.length > 0) {
+      const next = queue.shift()
+      if (!next) break
+      if (next.id === candidateId) return true
+      queue.push(...folders.filter((f) => f.parentId === next.id))
+    }
+    return false
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    setDragging(false)
+    const { active, over } = event
+    if (!over) return
+    const activeId = String(active.id)
+    const overId = String(over.id)
+    if (!activeId.startsWith('folder:') || !overId.startsWith('folder-into:')) return
+
+    const sourceId = activeId.slice('folder:'.length)
+    const targetKey = overId.slice('folder-into:'.length)
+    const targetId = targetKey === '__root__' ? null : targetKey
+    if (sourceId === targetId) return
+    if (targetId && isDescendant(sourceId, targetId)) {
+      toast('Não é possível mover uma pasta para dentro dela mesma.', 'error')
+      return
+    }
+    const source = folders.find((f) => f.id === sourceId)
+    if (!source) return
+    if ((source.parentId ?? null) === targetId) return
+
+    setReorderBusy(true)
+    try {
+      await updateFolder(sourceId, { parentId: targetId ?? null } as never)
+      toast('Pasta movida', 'success')
+    } catch (error) {
+      toast(error instanceof Error ? error.message : 'Erro ao mover pasta', 'error')
+    } finally {
+      setReorderBusy(false)
+    }
+  }
 
   async function handleMove(parentId: string | null, fromIndex: number, direction: -1 | 1) {
     if (reorderBusy) return
@@ -294,22 +397,30 @@ export default function NotasPage() {
       )}
 
       {tree.length > 0 && (
-        <div className={`overflow-hidden rounded-xl border border-ui-border bg-white ${reorderBusy ? 'opacity-70' : ''}`}>
-          {tree.map((node, index) => (
-            <FolderRow
-              key={node.id}
-              node={node}
-              depth={0}
-              expanded={expanded}
-              toggle={toggle}
-              noteCounts={noteCounts}
-              index={index}
-              siblingsCount={tree.length}
-              onMove={handleMove}
-              busy={reorderBusy}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={dndSensors}
+          onDragStart={() => setDragging(true)}
+          onDragCancel={() => setDragging(false)}
+          onDragEnd={handleDragEnd}
+        >
+          {dragging && <RootDropZone />}
+          <div className={`overflow-hidden rounded-xl border border-ui-border bg-white ${reorderBusy ? 'opacity-70' : ''}`}>
+            {tree.map((node, index) => (
+              <FolderRow
+                key={node.id}
+                node={node}
+                depth={0}
+                expanded={expanded}
+                toggle={toggle}
+                noteCounts={noteCounts}
+                index={index}
+                siblingsCount={tree.length}
+                onMove={handleMove}
+                busy={reorderBusy}
+              />
+            ))}
+          </div>
+        </DndContext>
       )}
     </div>
   )
