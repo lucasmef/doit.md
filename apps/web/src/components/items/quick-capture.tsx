@@ -1009,7 +1009,7 @@ export function QuickCapture() {
         }`}
       >
         <form onSubmit={handleSubmit} className="flex max-h-[calc(100dvh-1rem)] flex-col sm:max-h-none">
-          <div className="overflow-y-auto px-5 pb-4 pt-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -1398,7 +1398,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className="flex shrink-0 items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"

@@ -1118,7 +1118,7 @@ export function ItemDetail() {
   if (!isNote && (item.complexity === 'task' || item.complexity === 'capture')) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center bg-navy-900/40 p-4 pt-[8vh] backdrop-blur-sm"
+        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/40 p-3 pt-[6vh] backdrop-blur-sm sm:p-4 sm:pt-[8vh]"
         onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
       >
         <div className="w-full max-w-[560px] overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg">
