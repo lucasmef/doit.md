@@ -391,6 +391,27 @@ export function ItemDetail() {
   const [popover, setPopover] = useState<Popover>(null)
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const taskTitleRef = useRef<HTMLTextAreaElement>(null)
+  const taskContentRef = useRef<HTMLTextAreaElement>(null)
+  const backdropPointerStarted = useRef(false)
+
+  function autosizeTextarea(el: HTMLTextAreaElement | null) {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
+
+  function handleBackdropPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    backdropPointerStarted.current = e.target === e.currentTarget
+  }
+
+  function handleBackdropClick(e: React.MouseEvent<HTMLDivElement>) {
+    const selectedText = window.getSelection()?.toString()
+    if (backdropPointerStarted.current && e.target === e.currentTarget && !selectedText) {
+      setSelectedItemId(null)
+    }
+    backdropPointerStarted.current = false
+  }
 
   useEffect(() => {
     if (item) {
@@ -416,6 +437,14 @@ export function ItemDetail() {
     setRecurrence(item.recurrence ?? '')
     setPriority((item.priority as Priority) ?? 4)
   }, [dirty, isSaving, item?.dueDate, item?.dueTime, item?.id, item?.priority, item?.recurrence])
+
+  useEffect(() => {
+    autosizeTextarea(taskTitleRef.current)
+  }, [title])
+
+  useEffect(() => {
+    autosizeTextarea(taskContentRef.current)
+  }, [content])
 
   const activeProjects = projects.filter((p) => p.status !== 'archived')
   const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
@@ -550,7 +579,7 @@ export function ItemDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
-  function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleTitleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
     const value = e.target.value
     if (item?.complexity === 'task' || item?.complexity === 'capture') {
       const { nextTitle, patch } = applyTaskTitleCategorizerShortcuts(value)
@@ -926,7 +955,9 @@ export function ItemDetail() {
                 <button
                   type="button"
                   title={selectedProject ? `Pasta: ${selectedProject.name}` : 'Selecionar pasta'}
-                  aria-label={selectedProject ? `Pasta: ${selectedProject.name}` : 'Selecionar pasta'}
+                  aria-label={
+                    selectedProject ? `Pasta: ${selectedProject.name}` : 'Selecionar pasta'
+                  }
                   onClick={() => setPopover(popover === 'project' ? null : 'project')}
                   className={`inline-flex h-7 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
                     selectedProject
@@ -1099,7 +1130,10 @@ export function ItemDetail() {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-4">
+            <div
+              className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-4"
+              data-note-scroll-container="true"
+            >
               <MarkdownEditor
                 value={content}
                 onChange={handleContentChange}
@@ -1107,6 +1141,7 @@ export function ItemDetail() {
                 minHeight="min-h-[calc(100vh-96px)] sm:min-h-[calc(100vh-128px)]"
                 plain
                 itemId={item.id}
+                focusAtStart
               />
             </div>
           </div>
@@ -1121,17 +1156,23 @@ export function ItemDetail() {
         className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/40 p-3 pt-[6vh] backdrop-blur-sm sm:p-4 sm:pt-[8vh]"
         role="dialog"
         aria-modal="true"
-        onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
+        onPointerDown={handleBackdropPointerDown}
+        onClick={handleBackdropClick}
       >
         <div className="w-full max-w-[560px] overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg">
           <div className="flex flex-col">
             <div className="px-5 pb-4 pt-5">
               <div className="flex items-center gap-3">
-                <input
+                <textarea
+                  ref={taskTitleRef}
                   value={title}
-                  onChange={handleTitleChange}
+                  onChange={(e) => {
+                    handleTitleChange(e)
+                    autosizeTextarea(e.currentTarget)
+                  }}
                   placeholder="Nome da tarefa"
-                  className="min-w-0 flex-1 border-none bg-transparent text-[16px] font-semibold leading-6 text-slate-900 outline-none placeholder:text-slate-300"
+                  rows={1}
+                  className="max-h-40 min-w-0 flex-1 resize-none overflow-hidden border-none bg-transparent text-[16px] font-semibold leading-6 text-slate-900 outline-none placeholder:text-slate-300"
                 />
                 <button
                   type="button"
@@ -1145,11 +1186,15 @@ export function ItemDetail() {
               </div>
 
               <textarea
+                ref={taskContentRef}
                 value={content}
-                onChange={(e) => handleContentChange(e.target.value)}
+                onChange={(e) => {
+                  handleContentChange(e.target.value)
+                  autosizeTextarea(e.currentTarget)
+                }}
                 placeholder="Descrição"
                 rows={2}
-                className="mt-1 block max-h-28 min-h-[48px] w-full resize-y border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
+                className="mt-1 block min-h-[48px] w-full resize-none overflow-hidden border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
               />
 
               <div className="relative mt-2 flex flex-wrap items-center gap-2">

@@ -159,7 +159,7 @@ function KanbanCard({
           <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
         </svg>
       </div>
-      <div className="min-w-0 flex-1" {...attributes} {...listeners}>
+      <div className="min-w-0 flex-1">
         <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} />
         <div
           className={

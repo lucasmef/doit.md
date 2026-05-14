@@ -38,8 +38,7 @@ export default function UpcomingPage() {
     (i) =>
       i.status !== 'archived' &&
       i.status !== 'done' &&
-      ((i.dueDate && i.dueDate > todayStr) ||
-        (i.scheduledDate && i.scheduledDate > todayStr)),
+      ((i.dueDate && i.dueDate > todayStr) || (i.scheduledDate && i.scheduledDate > todayStr)),
   )
 
   const grouped = GROUP_ORDER.reduce<Record<string, Item[]>>((acc, key) => {
@@ -48,13 +47,7 @@ export default function UpcomingPage() {
   }, {})
 
   const Toolbar = (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-ui-border bg-white px-5 py-3 lg:border-none lg:bg-transparent lg:px-0 lg:py-0">
-      <div className={`min-w-0 ${view === 'list' ? 'lg:hidden' : ''}`}>
-        <h1 className="truncate text-[15px] font-bold text-navy-900">Proximos</h1>
-        <p className="font-mono text-[10px] text-navy-300">
-          {view === 'calendar' ? 'Calendario' : 'Lista'} / {future.length}
-        </p>
-      </div>
+    <div className="flex shrink-0 items-center justify-end gap-3 border-b border-ui-border bg-white px-5 py-3 lg:border-none lg:bg-transparent lg:px-0 lg:py-0">
       <div className="flex rounded-lg bg-surface-soft p-1">
         <button
           type="button"

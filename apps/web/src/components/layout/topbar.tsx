@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useUI } from '@/store/ui'
@@ -110,6 +111,7 @@ export function Topbar() {
     const parts = pathname.split('/').filter(Boolean)
     const last = parts[parts.length - 1]
     if (!last) return ''
+    if (last === 'upcoming' || last === 'calendar') return ''
     return ROUTE_LABELS[last] ?? last
   }, [pathname])
 
@@ -136,10 +138,12 @@ export function Topbar() {
         <Link
           href="/today"
           aria-label="Inicio"
-          className="inline-flex h-9 shrink-0 items-center gap-1 font-mono text-[15px] font-bold text-navy-900"
+          className="inline-flex h-9 shrink-0 items-center gap-2 font-mono text-[15px] font-bold text-navy-900"
         >
-          <span className="text-brand-600">.</span>
-          <span>md</span>
+          <Image src="/brand/logo-icon.svg" alt="" width={28} height={28} className="rounded-lg" />
+          <span>
+            doit<span className="text-brand-600">.md</span>
+          </span>
         </Link>
         {mobilePageTitle && (
           <span className="min-w-0 truncate font-mono text-[12px] font-semibold uppercase tracking-wide text-navy-400">
@@ -165,7 +169,13 @@ export function Topbar() {
         aria-label="Novo"
         title="Novo"
       >
-        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.2}
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
         </svg>
       </button>

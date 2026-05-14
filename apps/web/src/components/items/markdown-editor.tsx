@@ -14,6 +14,7 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { useDialog } from '@/components/ui/dialog'
 import { BlockReorderHandle } from './block-reorder-extension'
+import { HeadingCollapse } from './heading-collapse-extension'
 
 type Props = {
   value: string
@@ -22,6 +23,7 @@ type Props = {
   minHeight?: string
   plain?: boolean
   itemId?: string
+  focusAtStart?: boolean
 }
 
 type DriveUploadResult = {
@@ -57,6 +59,7 @@ export function MarkdownEditor({
   minHeight = 'min-h-[320px]',
   plain = false,
   itemId,
+  focusAtStart = false,
 }: Props) {
   const editor = useEditor({
     immediatelyRender: false,
@@ -79,6 +82,7 @@ export function MarkdownEditor({
       TableRow,
       TableHeader,
       TableCell,
+      HeadingCollapse,
       BlockReorderHandle,
     ],
     content: value || '',
@@ -102,23 +106,26 @@ export function MarkdownEditor({
     })
   }, [editor, value])
 
-  const insertDriveLink = useCallback(
-    (current: Editor, result: DriveUploadResult) => {
-      current
-        .chain()
-        .focus()
-        .insertContent([
-          {
-            type: 'text',
-            text: result.name,
-            marks: [{ type: 'link', attrs: { href: result.webViewLink } }],
-          },
-          { type: 'text', text: ' ' },
-        ])
-        .run()
-    },
-    [],
-  )
+  useEffect(() => {
+    if (!editor || !focusAtStart) return
+    editor.commands.focus('start', { scrollIntoView: true })
+    editor.view.dom.closest('[data-note-scroll-container="true"]')?.scrollTo({ top: 0 })
+  }, [editor, focusAtStart, itemId])
+
+  const insertDriveLink = useCallback((current: Editor, result: DriveUploadResult) => {
+    current
+      .chain()
+      .focus()
+      .insertContent([
+        {
+          type: 'text',
+          text: result.name,
+          marks: [{ type: 'link', attrs: { href: result.webViewLink } }],
+        },
+        { type: 'text', text: ' ' },
+      ])
+      .run()
+  }, [])
 
   useEffect(() => {
     if (!editor || !itemId) return
@@ -179,7 +186,9 @@ export function MarkdownEditor({
   return (
     <div
       className={`${
-        plain ? 'flex h-full flex-col rounded-lg' : 'flex flex-col overflow-hidden rounded-xl border border-ui-border-soft'
+        plain
+          ? 'flex h-full flex-col rounded-lg'
+          : 'flex flex-col overflow-hidden rounded-xl border border-ui-border-soft'
       } bg-white transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100`}
     >
       <EditorToolbar editor={editor} />
@@ -228,7 +237,11 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
 
   const insertLink = async () => {
     const previous = editor.getAttributes('link').href as string | undefined
-    const url = await prompt({ title: 'Link', message: 'URL do link', defaultValue: previous ?? 'https://' })
+    const url = await prompt({
+      title: 'Link',
+      message: 'URL do link',
+      defaultValue: previous ?? 'https://',
+    })
     if (url === null) return
     if (url === '') {
       editor.chain().focus().extendMarkRange('link').unsetLink().run()

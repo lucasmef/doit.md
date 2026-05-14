@@ -17,6 +17,8 @@ type DragState = {
 const TOUCH_LONG_PRESS_MS = 250
 const ACTIVATION_THRESHOLD_PX = 5
 
+const REORDERABLE_LIST_NODE_TYPES = new Set(['taskItem', 'listItem'])
+
 function findBlockAt(view: EditorView, clientX: number, clientY: number): number | null {
   const coords = view.posAtCoords({ left: clientX, top: clientY })
   if (!coords) return null
@@ -28,6 +30,11 @@ function findBlockAt(view: EditorView, clientX: number, clientY: number): number
       return last - (lastChild?.nodeSize ?? 0)
     }
     return null
+  }
+  for (let depth = $pos.depth; depth > 0; depth -= 1) {
+    if (REORDERABLE_LIST_NODE_TYPES.has($pos.node(depth).type.name)) {
+      return $pos.before(depth)
+    }
   }
   return $pos.before(1)
 }
@@ -41,6 +48,9 @@ function moveBlock(view: EditorView, fromPos: number, toPos: number, dropBefore:
 
   const targetNode = state.doc.nodeAt(toPos)
   if (!targetNode) return
+  const fromParent = state.doc.resolve(fromPos + 1).parent
+  const targetParent = state.doc.resolve(toPos + 1).parent
+  if (fromParent.type !== targetParent.type) return
   const targetEnd = toPos + targetNode.nodeSize
 
   let insertPos = dropBefore ? toPos : targetEnd
@@ -193,15 +203,27 @@ function makeHandle(view: EditorView, blockPos: number): HTMLElement {
 
 function buildDecorations(doc: PMNode): DecorationSet {
   const decorations: Decoration[] = []
-  doc.forEach((node: PMNode, offset: number) => {
+  doc.descendants((node: PMNode, pos: number, parent) => {
     if (node.type.name === 'horizontalRule') return
+    if (parent?.type.name === 'doc') {
+      if (
+        node.type.name === 'taskList' ||
+        node.type.name === 'bulletList' ||
+        node.type.name === 'orderedList'
+      ) {
+        return true
+      }
+    } else if (!REORDERABLE_LIST_NODE_TYPES.has(node.type.name)) {
+      return false
+    }
     decorations.push(
-      Decoration.widget(offset + 1, (view) => makeHandle(view, offset), {
+      Decoration.widget(pos + 1, (view) => makeHandle(view, pos), {
         side: -1,
         ignoreSelection: true,
-        key: `doit-handle-${offset}-${node.type.name}`,
+        key: `doit-handle-${pos}-${node.type.name}`,
       }),
     )
+    return !REORDERABLE_LIST_NODE_TYPES.has(node.type.name)
   })
   return DecorationSet.create(doc, decorations)
 }
