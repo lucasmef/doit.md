@@ -16,6 +16,22 @@ function redirectWithError(origin: string, reason: string) {
   )
 }
 
+function getCallbackFailureReason(err: unknown): string {
+  const errorData = (err as { response?: { data?: Record<string, unknown> } })?.response?.data
+  const providerError = errorData?.['error']
+  if (typeof providerError === 'string' && providerError) return providerError
+
+  const description = errorData?.['error_description']
+  const message = typeof (err as { message?: unknown })?.message === 'string'
+    ? String((err as { message?: unknown }).message)
+    : ''
+  const detail = `${typeof description === 'string' ? description : ''} ${message}`.toLowerCase()
+
+  if (detail.includes('redirect_uri_mismatch')) return 'redirect_uri_mismatch'
+  if (detail.includes('invalid_grant')) return 'invalid_grant'
+  return 'callback-failed'
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
@@ -90,6 +106,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(`${origin}/settings?tab=integrations&google=connected`)
   } catch (err) {
     console.error('[Google OAuth callback]', err)
-    return redirectWithError(origin, 'callback-failed')
+    return redirectWithError(origin, getCallbackFailureReason(err))
   }
 }

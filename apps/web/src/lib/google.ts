@@ -7,6 +7,7 @@ export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
 const CLIENT_ID = process.env['GOOGLE_CLIENT_ID'] ?? ''
 const CLIENT_SECRET = process.env['GOOGLE_CLIENT_SECRET'] ?? ''
 const REDIRECT_URI_ENV = process.env['GOOGLE_REDIRECT_URI'] ?? ''
+const NEXTAUTH_URL = process.env['NEXTAUTH_URL'] ?? ''
 
 function isPlaceholder(value: string): boolean {
   return /^<.*>$/.test(value.trim())
@@ -14,6 +15,9 @@ function isPlaceholder(value: string): boolean {
 
 export function resolveRedirectUri(origin?: string): string {
   if (REDIRECT_URI_ENV && !isPlaceholder(REDIRECT_URI_ENV)) return REDIRECT_URI_ENV
+  if (NEXTAUTH_URL && !isPlaceholder(NEXTAUTH_URL)) {
+    return `${NEXTAUTH_URL.replace(/\/$/, '')}/api/google/callback`
+  }
   if (origin) return `${origin.replace(/\/$/, '')}/api/google/callback`
   return 'http://localhost:3000/api/google/callback'
 }

@@ -377,7 +377,11 @@ function SettingsContent() {
           ? 'Permissao do Google negada.'
           : reason === 'missing-code-or-state'
             ? 'Retorno do Google incompleto. Tente conectar novamente.'
-            : 'Erro ao conectar com o Google.'
+            : reason === 'redirect_uri_mismatch'
+              ? 'Callback do Google diferente do cadastrado. Verifique GOOGLE_REDIRECT_URI ou NEXTAUTH_URL.'
+              : reason === 'invalid_grant'
+                ? 'Codigo do Google expirado ou ja usado. Tente conectar novamente.'
+                : 'Erro ao conectar com o Google.'
       addToast(message, 'error')
       window.history.replaceState({}, '', '/settings?tab=integrations')
       setTab('integrations')
