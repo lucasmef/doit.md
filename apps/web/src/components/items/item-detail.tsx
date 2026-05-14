@@ -413,6 +413,13 @@ export function ItemDetail() {
     backdropPointerStarted.current = false
   }
 
+  function handleModalKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== 'Escape') return
+    e.preventDefault()
+    e.stopPropagation()
+    void flushAndClose()
+  }
+
   useEffect(() => {
     if (item) {
       setTitle(item.title)
@@ -1158,6 +1165,7 @@ export function ItemDetail() {
         aria-modal="true"
         onPointerDown={handleBackdropPointerDown}
         onClick={handleBackdropClick}
+        onKeyDown={handleModalKeyDown}
       >
         <div className="w-full max-w-[560px] overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg">
           <div className="flex flex-col">

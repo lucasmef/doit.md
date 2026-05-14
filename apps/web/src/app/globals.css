@@ -116,6 +116,21 @@
     line-height: 1.2;
   }
 
+  .doit-note-editor h1 {
+    font-size: 1.75rem;
+    line-height: 2.1rem;
+  }
+
+  .doit-note-editor h2 {
+    font-size: 1.35rem;
+    line-height: 1.75rem;
+  }
+
+  .doit-note-editor h3 {
+    font-size: 1.05rem;
+    line-height: 1.5rem;
+  }
+
   .doit-note-editor ul,
   .doit-note-editor ol {
     margin: 0.35rem 0 0.55rem;

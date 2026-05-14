@@ -371,7 +371,14 @@ function SettingsContent() {
       window.history.replaceState({}, '', '/settings?tab=integrations')
       setTab('integrations')
     } else if (params.get('google') === 'error') {
-      addToast('Erro ao conectar Google Calendar.', 'error')
+      const reason = params.get('google_error')
+      const message =
+        reason === 'access_denied'
+          ? 'Permissao do Google negada.'
+          : reason === 'missing-code-or-state'
+            ? 'Retorno do Google incompleto. Tente conectar novamente.'
+            : 'Erro ao conectar com o Google.'
+      addToast(message, 'error')
       window.history.replaceState({}, '', '/settings?tab=integrations')
       setTab('integrations')
     }

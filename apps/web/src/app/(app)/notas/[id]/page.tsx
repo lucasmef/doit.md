@@ -48,6 +48,10 @@ type KanbanColumnConfig = {
   folderId?: string
 }
 
+function formatMoveTargetLabel(folderId: string | null, targets: MoveTarget[]): string {
+  return targets.find((target) => target.id === folderId)?.label ?? 'Sem pasta'
+}
+
 function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
   for (const node of nodes) {
     if (node.id === id) return node
@@ -111,6 +115,7 @@ function KanbanCard({
     data: { itemId: item.id },
   })
   const wasDraggingRef = useRef(false)
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
   useEffect(() => {
     if (isDragging) wasDraggingRef.current = true
   }, [isDragging])
@@ -137,6 +142,7 @@ function KanbanCard({
       e.stopPropagation()
       e.preventDefault()
       wasDraggingRef.current = false
+      pointerStartRef.current = null
     }
   }
 
@@ -144,6 +150,22 @@ function KanbanCard({
     <div
       ref={setNodeRef}
       onClickCapture={handleCardClickCapture}
+      onPointerDownCapture={(event) => {
+        pointerStartRef.current = { x: event.clientX, y: event.clientY }
+      }}
+      onPointerMoveCapture={(event) => {
+        const start = pointerStartRef.current
+        if (!start) return
+        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4) {
+          wasDraggingRef.current = true
+        }
+      }}
+      onPointerUpCapture={() => {
+        pointerStartRef.current = null
+      }}
+      onPointerCancelCapture={() => {
+        pointerStartRef.current = null
+      }}
       className={`group/card relative flex items-stretch rounded-md border border-ui-border bg-white ${
         isDragging ? 'opacity-50' : ''
       }`}
@@ -574,7 +596,13 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       { ids: targets.map((item) => item.id), patch: { folderId: (folderId ?? '') as never } },
       targets,
     )
-    toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+    const destination = formatMoveTargetLabel(folderId, moveTargets)
+    toast(
+      targets.length === 1
+        ? `Item movido para ${destination}`
+        : `${targets.length} itens movidos para ${destination}`,
+      'success',
+    )
   }
 
   async function handleMoveItemMobile(itemId: string, folderId: string | null) {
@@ -587,7 +615,13 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
         { ids: targets.map((item) => item.id), patch: { folderId: (folderId ?? '') as never } },
         targets,
       )
-      toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+      const destination = formatMoveTargetLabel(folderId, moveTargets)
+      toast(
+        targets.length === 1
+          ? `Item movido para ${destination}`
+          : `${targets.length} itens movidos para ${destination}`,
+        'success',
+      )
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Erro ao mover item', 'error')
       throw error
@@ -621,7 +655,13 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       { ids: targets.map((t) => t.id), patch: { folderId: (targetFolderId ?? '') as never } },
       targets,
     )
-    toast(targets.length === 1 ? 'Item movido' : `${targets.length} itens movidos`, 'success')
+    const destination = formatMoveTargetLabel(targetFolderId, moveTargets)
+    toast(
+      targets.length === 1
+        ? `Item movido para ${destination}`
+        : `${targets.length} itens movidos para ${destination}`,
+      'success',
+    )
   }
 
   function handleColumnDragStart(fid: string) {

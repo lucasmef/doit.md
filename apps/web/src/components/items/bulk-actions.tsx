@@ -42,6 +42,15 @@ function nextWeek() {
   return dateAfter(7)
 }
 
+function formatDateLabel(dateStr: string): string {
+  const today = toLocalDateKey()
+  const tomorrow = dateAfter(1)
+  if (dateStr === today) return 'hoje'
+  if (dateStr === tomorrow) return 'amanha'
+  const date = new Date(`${dateStr}T12:00:00`)
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+}
+
 function normalizeTag(value: string) {
   return value.trim().toLocaleLowerCase('pt-BR').replace(/^@/, '')
 }
@@ -131,6 +140,11 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
   )
   const folderOptions = useMemo(() => flattenFolderOptions(folders), [folders])
 
+  function folderLabel(folderId: string | null): string {
+    if (!folderId) return 'Sem pasta'
+    return folderOptions.find(({ folder }) => folder.id === folderId)?.folder.name ?? 'pasta'
+  }
+
   async function apply(input: Omit<BulkItemActionInput, 'ids'>, message: string) {
     if (targetIds.length === 0) return
     await bulkUpdateItems({ ids: targetIds, ...input }, targetItems)
@@ -216,7 +230,7 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
                     : ''
             void apply(
               { patch: dueDate ? { dueDate } : { dueDate: '' as never, dueTime: '' as never } },
-              'Data atualizada',
+              dueDate ? `Data atualizada para ${formatDateLabel(dueDate)}` : 'Data removida',
             )
           }}
         >
@@ -237,7 +251,11 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
           <button
             type="button"
             onClick={() =>
-              customDate && void apply({ patch: { dueDate: customDate } }, 'Data atualizada')
+              customDate &&
+              void apply(
+                { patch: { dueDate: customDate } },
+                `Data atualizada para ${formatDateLabel(customDate)}`,
+              )
             }
             className="h-8 rounded-[8px] bg-navy-900 px-2 text-[12px] font-semibold text-white"
           >
@@ -271,7 +289,7 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
             value &&
             void apply(
               { patch: { folderId: (value === 'inbox' ? '' : value) as never } },
-              'Pasta atualizada',
+              `Movido para ${folderLabel(value === 'inbox' ? null : value)}`,
             )
           }
         >
@@ -535,7 +553,7 @@ function ItemContextMenuContent({
     if (value === null) {
       await applyPatch({ dueDate: '' as never, dueTime: '' as never }, 'Data removida')
     } else {
-      await applyPatch({ dueDate: value }, 'Data atualizada')
+      await applyPatch({ dueDate: value }, `Data atualizada para ${formatDateLabel(value)}`)
     }
   }
 
@@ -544,9 +562,12 @@ function ItemContextMenuContent({
   }
 
   async function setFolder(folderId: string | null) {
+    const label = folderId
+      ? (folders.find((folder) => folder.id === folderId)?.name ?? 'pasta')
+      : 'Sem pasta'
     await applyPatch(
       { folderId: (folderId ?? '') as never },
-      folderId ? 'Movido para pasta' : 'Pasta removida',
+      `Movido para ${label}`,
     )
   }
 

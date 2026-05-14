@@ -2,16 +2,26 @@ import { Extension } from '@tiptap/react'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view'
 import type { Node as PMNode } from '@tiptap/pm/model'
+import type { Editor } from '@tiptap/react'
 
 type CollapseState = {
   collapsed: Set<number>
 }
 
 type ToggleMeta = {
-  toggle: number
+  toggle?: number
+  action?: 'collapseAll' | 'expandAll'
 }
 
 const PLUGIN_KEY = new PluginKey<CollapseState>('doitHeadingCollapse')
+
+function getHeadingPositions(doc: PMNode): Set<number> {
+  const positions = new Set<number>()
+  doc.forEach((node, offset) => {
+    if (node.type.name === 'heading') positions.add(offset)
+  })
+  return positions
+}
 
 function makeToggle(view: EditorView, pos: number, collapsed: boolean): HTMLElement {
   const button = document.createElement('button')
@@ -81,6 +91,12 @@ export const HeadingCollapse = Extension.create({
               if (mapped >= 0 && mapped <= tr.doc.content.size) next.add(mapped)
             })
             const meta = tr.getMeta(PLUGIN_KEY) as ToggleMeta | undefined
+            if (meta?.action === 'expandAll') {
+              return { collapsed: new Set() }
+            }
+            if (meta?.action === 'collapseAll') {
+              return { collapsed: getHeadingPositions(tr.doc) }
+            }
             if (meta?.toggle !== undefined) {
               if (next.has(meta.toggle)) next.delete(meta.toggle)
               else next.add(meta.toggle)
@@ -98,3 +114,17 @@ export const HeadingCollapse = Extension.create({
     ]
   },
 })
+
+export function getHeadingCollapseSummary(editor: Editor): { total: number; collapsed: number } {
+  const total = getHeadingPositions(editor.state.doc).size
+  const state = PLUGIN_KEY.getState(editor.state)
+  return { total, collapsed: state?.collapsed.size ?? 0 }
+}
+
+export function setAllHeadingsCollapsed(editor: Editor, collapsed: boolean) {
+  editor.view.dispatch(
+    editor.state.tr.setMeta(PLUGIN_KEY, {
+      action: collapsed ? 'collapseAll' : 'expandAll',
+    } satisfies ToggleMeta),
+  )
+}

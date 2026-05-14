@@ -14,7 +14,11 @@ import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { useDialog } from '@/components/ui/dialog'
 import { BlockReorderHandle } from './block-reorder-extension'
-import { HeadingCollapse } from './heading-collapse-extension'
+import {
+  getHeadingCollapseSummary,
+  HeadingCollapse,
+  setAllHeadingsCollapsed,
+} from './heading-collapse-extension'
 
 type Props = {
   value: string
@@ -255,6 +259,9 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
   }
 
   const inTable = editor.isActive('table')
+  const headingSummary = getHeadingCollapseSummary(editor)
+  const canToggleHeadings = headingSummary.total > 0
+  const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-ui-border-soft bg-white px-2 py-1">
@@ -340,6 +347,13 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
         onClick={() => editor.chain().focus().toggleTaskList().run()}
       >
         ☐
+      </ToolbarBtn>
+      <ToolbarBtn
+        title={shouldCollapseAll ? 'Recolher todos os topicos' : 'Expandir todos os topicos'}
+        disabled={!canToggleHeadings}
+        onClick={() => setAllHeadingsCollapsed(editor, shouldCollapseAll)}
+      >
+        <span className="text-xs">{shouldCollapseAll ? '[-]' : '[+]'}</span>
       </ToolbarBtn>
       <ToolbarBtn
         title="Citação"

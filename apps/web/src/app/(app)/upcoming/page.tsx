@@ -46,8 +46,8 @@ export default function UpcomingPage() {
     return acc
   }, {})
 
-  const Toolbar = (
-    <div className="flex shrink-0 items-center justify-end gap-3 border-b border-ui-border bg-white px-5 py-3 lg:border-none lg:bg-transparent lg:px-0 lg:py-0">
+  const ViewSwitch = (
+    <div className="fixed bottom-20 right-4 z-40 rounded-xl border border-ui-border bg-white p-1 shadow-cool-lg lg:bottom-5">
       <div className="flex rounded-lg bg-surface-soft p-1">
         <button
           type="button"
@@ -78,7 +78,7 @@ export default function UpcomingPage() {
   if (view === 'calendar') {
     return (
       <div className="flex h-full min-h-0 w-full flex-col pb-24 lg:pb-0">
-        {Toolbar}
+        {ViewSwitch}
         <CalendarBoard items={future} />
       </div>
     )
@@ -86,7 +86,7 @@ export default function UpcomingPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[760px] flex-col px-0 pb-24 pt-0 lg:px-5 lg:pb-4 lg:pt-3">
-      <div className="lg:mb-3 lg:flex lg:justify-end">{Toolbar}</div>
+      {ViewSwitch}
 
       <div className="px-5 lg:px-0">
         {isLoading && (
