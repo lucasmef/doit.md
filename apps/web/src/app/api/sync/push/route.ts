@@ -210,7 +210,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ applied })
   } catch (err) {
     console.error('[POST /api/sync/push]', err)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal error' },
+      { status: 500 },
+    )
   }
 }
 
