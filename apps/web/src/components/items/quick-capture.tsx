@@ -586,10 +586,6 @@ export function QuickCapture() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setQuickCaptureOpen(true)
-      }
       if (e.key === 'Escape') {
         if (isTypingTarget(e.target) && !isOpen) return
         if (popover) setPopover(null)
@@ -999,6 +995,8 @@ export function QuickCapture() {
   return (
     <div
       className="fixed inset-0 z-[100] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      role="dialog"
+      aria-modal="true"
       onClick={(e) => {
         if (e.target === e.currentTarget) closeAll()
       }}

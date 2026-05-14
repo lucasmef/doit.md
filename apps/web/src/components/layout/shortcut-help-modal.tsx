@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useUI } from '@/store/ui'
 
 type ShortcutGroup = {
@@ -12,9 +13,11 @@ const groups: ShortcutGroup[] = [
     title: 'Global',
     items: [
       { keys: ['Shift', '?'], label: 'Mostrar atalhos' },
-      { keys: ['Q'], label: 'Nova captura' },
-      { keys: ['Ctrl/Cmd', 'K'], label: 'Nova captura' },
-      { keys: ['W'], label: 'Nova nota em tela cheia' },
+      { keys: ['Q'], label: 'Nova tarefa' },
+      { keys: ['W'], label: 'Nova nota' },
+      { keys: ['Ctrl/Cmd', 'K'], label: 'Buscar' },
+      { keys: ['H'], label: 'Ir para Hoje' },
+      { keys: ['P'], label: 'Ir para Proximos' },
       { keys: ['Shift', 'C'], label: 'Abrir ou fechar calendario' },
       { keys: ['Esc'], label: 'Fechar modal, painel ou selecao' },
     ],
@@ -51,6 +54,15 @@ function KeyCap({ children }: { children: string }) {
 
 export function ShortcutHelpModal() {
   const { shortcutsOpen, setShortcutsOpen } = useUI()
+
+  useEffect(() => {
+    if (!shortcutsOpen) return
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShortcutsOpen(false)
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [shortcutsOpen, setShortcutsOpen])
 
   if (!shortcutsOpen) return null
 

@@ -115,6 +115,8 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
       {state && (
         <div
           className="fixed inset-0 z-[200] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+          role="dialog"
+          aria-modal="true"
           onClick={(e) => {
             if (e.target === e.currentTarget) close(state.kind === 'confirm' ? false : null)
           }}

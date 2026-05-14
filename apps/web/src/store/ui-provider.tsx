@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { UIContext, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
@@ -23,6 +23,7 @@ async function archiveIfStillEmpty(id: string) {
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
   const [quickCaptureFolderId, setQuickCaptureFolderId] = useState<string | null>(null)
@@ -129,9 +130,28 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     }
   }, [selectedItemId, setSingleSelection])
 
-  function hasNoFocusedElement() {
-    const active = document.activeElement
-    return !active || active === document.body || active === document.documentElement
+  const openSearch = useCallback(() => {
+    window.dispatchEvent(new Event('doit:focus-search'))
+  }, [])
+
+  const goTo = useCallback((href: string) => {
+    router.push(href)
+  }, [router])
+
+  function openNewNote() {
+    const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
+    const folderId = folderMatch?.[1]
+    void createItem({
+      complexity: 'note',
+      title: '',
+      contentMd: '',
+      folderId,
+    }).then((item) => {
+      if (item?.id) {
+        markPendingEmptyNote(item.id)
+        setSingleSelection(item.id)
+      }
+    })
   }
 
   useKeyboard([
@@ -154,20 +174,26 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       key: 'w',
       handler: (e) => {
         e.preventDefault()
-        const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
-        const folderId = folderMatch?.[1]
-        void createItem({
-          complexity: 'note',
-          title: '',
-          contentMd: '',
-          folderId,
-        }).then((item) => {
-          if (item?.id) {
-            markPendingEmptyNote(item.id)
-            setSingleSelection(item.id)
-          }
-        })
+        openNewNote()
       },
+    },
+    {
+      key: 'k',
+      ctrl: true,
+      handler: (e) => { e.preventDefault(); openSearch() },
+    },
+    {
+      key: 'k',
+      meta: true,
+      handler: (e) => { e.preventDefault(); openSearch() },
+    },
+    {
+      key: 'h',
+      handler: (e) => { e.preventDefault(); goTo('/today') },
+    },
+    {
+      key: 'p',
+      handler: (e) => { e.preventDefault(); goTo('/upcoming') },
     },
     {
       key: 'C',
@@ -178,7 +204,6 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       key: '?',
       shift: true,
       handler: (e) => {
-        if (!hasNoFocusedElement()) return
         e.preventDefault()
         setShortcutsOpen(true)
       },

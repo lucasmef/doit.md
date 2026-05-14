@@ -62,6 +62,7 @@ export function Topbar() {
   const [open, setOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const crumbs = useMemo(() => {
     const parts = pathname.split('/').filter(Boolean)
@@ -84,6 +85,19 @@ export function Topbar() {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  useEffect(() => {
+    const focusSearch = () => {
+      setMobileSearchOpen(true)
+      setOpen(Boolean(query))
+      window.requestAnimationFrame(() => {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      })
+    }
+    window.addEventListener('doit:focus-search', focusSearch)
+    return () => window.removeEventListener('doit:focus-search', focusSearch)
+  }, [query])
 
   const { data } = useSWR<{ items: Item[] }>(
     debounced.length > 1 ? `/api/items/search?q=${encodeURIComponent(debounced)}` : null,
@@ -163,6 +177,7 @@ export function Topbar() {
         ref={ref}
       >
         <input
+          ref={inputRef}
           type="text"
           placeholder="Search or jump..."
           value={query}
@@ -187,7 +202,7 @@ export function Topbar() {
           x
         </button>
         <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-ui-border-strong bg-white px-1.5 py-0.5 font-mono text-[10px] text-navy-500 sm:block">
-          q
+          Ctrl K
         </kbd>
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-300">
           <SearchIcon />

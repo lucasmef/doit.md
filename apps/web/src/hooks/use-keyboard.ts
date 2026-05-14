@@ -9,6 +9,7 @@ type Shortcut = {
   shift?: boolean
   handler: (e: KeyboardEvent) => void
   when?: boolean
+  allowWhenBlocked?: boolean
 }
 
 export function isTypingTarget(target: EventTarget | null): boolean {
@@ -16,6 +17,16 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return true
   if (target.isContentEditable) return true
   return Boolean(target.closest('[contenteditable="true"], .ProseMirror, form, [data-keyboard-scope="typing"]'))
+}
+
+export function isShortcutFocusTarget(target: EventTarget | null): boolean {
+  if (isTypingTarget(target)) return true
+  if (!(target instanceof HTMLElement)) return false
+  return Boolean(target.closest('button, a, [role="button"], [tabindex]:not([tabindex="-1"])'))
+}
+
+export function hasShortcutBlocker(): boolean {
+  return Boolean(document.querySelector('[aria-modal="true"], [data-global-shortcuts-block="true"]'))
 }
 
 export function useKeyboard(shortcuts: Shortcut[]) {
@@ -28,7 +39,7 @@ export function useKeyboard(shortcuts: Shortcut[]) {
         if ((s.ctrl ?? false) !== e.ctrlKey) continue
         if ((s.shift ?? false) !== e.shiftKey) continue
 
-        if (!s.meta && !s.ctrl && isTypingTarget(e.target)) continue
+        if (!s.allowWhenBlocked && (isShortcutFocusTarget(e.target) || hasShortcutBlocker())) continue
 
         s.handler(e)
       }

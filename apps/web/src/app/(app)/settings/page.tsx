@@ -55,8 +55,11 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string[]; lab
     title: 'Global',
     items: [
       { keys: ['Shift', '?'], label: 'Mostrar atalhos' },
-      { keys: ['Q'], label: 'Nova captura' },
-      { keys: ['Ctrl/Cmd', 'K'], label: 'Nova captura' },
+      { keys: ['Q'], label: 'Nova tarefa' },
+      { keys: ['W'], label: 'Nova nota' },
+      { keys: ['Ctrl/Cmd', 'K'], label: 'Buscar' },
+      { keys: ['H'], label: 'Ir para Hoje' },
+      { keys: ['P'], label: 'Ir para Proximos' },
       { keys: ['Shift', 'C'], label: 'Abrir/fechar calendario' },
       { keys: ['Esc'], label: 'Fechar modal/painel ou salvar e sair de nota' },
     ],
