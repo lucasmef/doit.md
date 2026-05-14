@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'clarity-v7'
+const CACHE_VERSION = 'clarity-v8'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 const API_CACHE = `${CACHE_VERSION}-api`
@@ -85,6 +85,16 @@ async function cachedFirst(request, cacheName, isCacheable, fallback) {
     return { response: await fetchAndCache(cache, request, isCacheable) }
   } catch {
     return { response: await fallback(cache) }
+  }
+}
+
+async function networkFirst(request, cacheName, isCacheable, fallback) {
+  const cache = await caches.open(cacheName)
+
+  try {
+    return await fetchAndCache(cache, request, isCacheable)
+  } catch {
+    return (await cache.match(request)) ?? fallback()
   }
 }
 
@@ -194,15 +204,12 @@ self.addEventListener('fetch', (event) => {
     if (!isReadApi(url.pathname)) return
 
     event.respondWith(
-      cachedFirst(request, API_CACHE, isCacheableJsonResponse, async () =>
+      networkFirst(request, API_CACHE, isCacheableJsonResponse, () =>
         new Response(JSON.stringify({ error: 'Offline' }), {
           status: 503,
           headers: { 'content-type': 'application/json' },
         }),
-      ).then(({ response, refresh }) => {
-        if (refresh) event.waitUntil(refresh)
-        return response
-      }),
+      ),
     )
     return
   }
