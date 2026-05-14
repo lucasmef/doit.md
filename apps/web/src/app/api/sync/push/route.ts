@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
           priority: fmFields['priority'],
           dueDate: fmFields['dueDate'],
           tags: (fmFields['tags'] as string[]) ?? [],
+          backlinks: [],
           folderId,
           localPath: change.localPathAfter,
           syncHash: hashContent(change.contentMdAfter ?? ''),
