@@ -34,7 +34,12 @@ async function walkMarkdown(root: string, current = root): Promise<string[]> {
       if (SYSTEM_DIRS.has(entry.name)) continue
       const sub = await walkMarkdown(root, join(current, entry.name))
       out.push(...sub)
-    } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'AGENTS.md' && entry.name !== 'README.md') {
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith('.md') &&
+      entry.name !== 'AGENTS.md' &&
+      entry.name !== 'README.md'
+    ) {
       out.push(join(current, entry.name))
     }
   }
@@ -57,6 +62,23 @@ function fieldDiff(before: Record<string, unknown>, after: Record<string, unknow
     }
   }
   return out
+}
+
+function normalizeChangeForKey(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeChangeForKey)
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {}
+    for (const key of Object.keys(value).sort()) {
+      if (['id', 'userId', 'approved', 'createdAt', 'riskLevel'].includes(key)) continue
+      out[key] = normalizeChangeForKey((value as Record<string, unknown>)[key])
+    }
+    return out
+  }
+  return value
+}
+
+function changeKey(change: PendingChange): string {
+  return JSON.stringify(normalizeChangeForKey(change))
 }
 
 export async function diffCommand() {
@@ -104,9 +126,11 @@ export async function diffCommand() {
   const changes: PendingChange[] = []
   const now = new Date().toISOString()
 
-  function record(change: Omit<PendingChange, 'id' | 'userId' | 'approved' | 'createdAt' | 'riskLevel'> & {
-    riskLevel?: PendingChange['riskLevel']
-  }) {
+  function record(
+    change: Omit<PendingChange, 'id' | 'userId' | 'approved' | 'createdAt' | 'riskLevel'> & {
+      riskLevel?: PendingChange['riskLevel']
+    },
+  ) {
     const riskLevel = change.riskLevel ?? assessRisk(change.changeType)
     changes.push({
       id: newChangeId(),
@@ -197,6 +221,22 @@ export async function diffCommand() {
     }
   }
 
+  const previousPending = await readJson<{ changes: PendingChange[] }>(
+    join(config.workspacePath, '_changes', 'pending.json'),
+  )
+  const previousByKey = new Map<string, PendingChange>()
+  for (const previous of previousPending?.changes ?? []) {
+    previousByKey.set(changeKey(previous), previous)
+  }
+  for (const change of changes) {
+    const previous = previousByKey.get(changeKey(change))
+    if (previous) {
+      change.id = previous.id
+      change.approved = !!previous.approved
+      change.createdAt = previous.createdAt ?? change.createdAt
+    }
+  }
+
   await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes })
   await writeJson(join(config.workspacePath, '_system', 'last-diff.json'), {
     at: now,
@@ -246,7 +286,9 @@ export async function diffCommand() {
     const riskColor =
       c.riskLevel === 'high' ? chalk.red : c.riskLevel === 'medium' ? chalk.yellow : chalk.green
     const path = c.localPathAfter ?? c.localPathBefore ?? c.itemId ?? '?'
-    console.log(`  ${riskColor(`[${c.riskLevel.toUpperCase()}]`)} ${c.changeType.padEnd(20)} ${chalk.dim(path)}`)
+    console.log(
+      `  ${riskColor(`[${c.riskLevel.toUpperCase()}]`)} ${c.changeType.padEnd(20)} ${chalk.dim(path)}`,
+    )
   }
 
   console.log(chalk.dim('\n  Revise e aprove no app (Auditoria) → doit-sync push'))

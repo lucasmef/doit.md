@@ -83,6 +83,43 @@ export async function POST(req: NextRequest) {
           {},
         )
         const { folderId, archive } = pathToFolderInfo(change.localPathAfter)
+        const existingCreated = (await ItemModel.findOne({ _id: id, userId }).lean()) as
+          | (Item & Record<string, unknown>)
+          | null
+        if (existingCreated) {
+          const patch = {
+            title: titleAfter,
+            contentMd: change.contentMdAfter ?? '',
+            complexity: (fmFields['complexity'] as string) ?? existingCreated.complexity ?? 'note',
+            status: archive
+              ? 'archived'
+              : ((fmFields['status'] as string) ?? existingCreated.status ?? 'inbox'),
+            priority: fmFields['priority'],
+            dueDate: fmFields['dueDate'],
+            tags: (fmFields['tags'] as string[]) ?? existingCreated.tags ?? [],
+            folderId: folderId ?? null,
+            localPath: change.localPathAfter,
+            syncHash: hashContent(change.contentMdAfter ?? ''),
+            deletedAt: archive ? (existingCreated['deletedAt'] ?? now) : null,
+            updatedAt: now,
+          }
+          await ItemModel.findOneAndUpdate({ _id: id, userId }, patch)
+
+          auditEntries.push({
+            _id: newAuditId(),
+            userId,
+            source: 'sync-agent',
+            action: existingCreated['deletedAt'] ? 'file_restored' : 'file_updated',
+            itemId: id,
+            localPathAfter: change.localPathAfter,
+            contentHashAfter: patch.syncHash,
+            summary: `Item existente atualizado a partir de ${change.localPathAfter}`,
+            createdAt: now,
+          })
+          await PendingChangeModel.findOneAndDelete({ _id: change.id, userId })
+          applied++
+          continue
+        }
 
         const newItem = {
           _id: id,
@@ -154,7 +191,10 @@ export async function POST(req: NextRequest) {
           patch['contentMd'] = change.contentMdAfter
           patch['syncHash'] = hashContent(change.contentMdAfter)
         }
-        if (change.localPathAfter !== undefined && change.localPathAfter !== existing['localPath']) {
+        if (
+          change.localPathAfter !== undefined &&
+          change.localPathAfter !== existing['localPath']
+        ) {
           // Movimento implícito junto com edição
           const { folderId, archive } = pathToFolderInfo(change.localPathAfter)
           patch['folderId'] = folderId ?? null
