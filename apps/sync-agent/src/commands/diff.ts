@@ -7,7 +7,7 @@ import { readJson, writeJson, SPECIAL_DIRS } from '../lib/workspace.js'
 import { parseItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import { assessRisk } from '@doit/audit'
-import { newChangeId } from '@doit/core'
+import { newChangeId, USER_AGENTS_TAG, USER_AGENTS_TITLE } from '@doit/core'
 import type { FolderManifestEntry, Manifest, ManifestEntry } from '@doit/sync'
 import type { ChangeType, PendingChange } from '@doit/types'
 
@@ -42,12 +42,7 @@ async function walkMarkdown(root: string, current = root): Promise<string[]> {
       if (SYSTEM_DIRS.has(entry.name)) continue
       const sub = await walkMarkdown(root, join(current, entry.name))
       out.push(...sub)
-    } else if (
-      entry.isFile() &&
-      entry.name.endsWith('.md') &&
-      entry.name !== 'AGENTS.md' &&
-      entry.name !== 'README.md'
-    ) {
+    } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'README.md') {
       out.push(join(current, entry.name))
     }
   }
@@ -64,7 +59,9 @@ async function walkFolders(root: string, current = root): Promise<LocalFolder[]>
     const relativePath = toRelative(root, absolute)
     if (isSpecialRoot(relativePath)) continue
 
-    const marker = await readJson<{ folderId?: string; name?: string }>(join(absolute, '_folder.json'))
+    const marker = await readJson<{ folderId?: string; name?: string }>(
+      join(absolute, '_folder.json'),
+    )
     out.push({
       relativePath,
       name: entry.name,
@@ -76,7 +73,9 @@ async function walkFolders(root: string, current = root): Promise<LocalFolder[]>
 }
 
 function isSpecialRoot(relativePath: string): boolean {
-  return Object.values(SPECIAL_DIRS).includes(relativePath as (typeof SPECIAL_DIRS)[keyof typeof SPECIAL_DIRS])
+  return Object.values(SPECIAL_DIRS).includes(
+    relativePath as (typeof SPECIAL_DIRS)[keyof typeof SPECIAL_DIRS],
+  )
 }
 
 function dirnameAsPosix(relativePath: string): string {
@@ -87,6 +86,10 @@ function dirnameAsPosix(relativePath: string): string {
 
 function toRelative(workspaceRoot: string, absolute: string): string {
   return relative(workspaceRoot, absolute).split(sep).join('/')
+}
+
+function isAgentsPath(relativePath: string): boolean {
+  return relativePath.split('/').at(-1) === USER_AGENTS_TITLE
 }
 
 function fieldDiff(before: Record<string, unknown>, after: Record<string, unknown>) {
@@ -168,9 +171,33 @@ export async function diffCommand() {
   for (const abs of absolutePaths) {
     try {
       const raw = await readFile(abs, 'utf-8')
+      const relativePath = toRelative(config.workspacePath, abs)
+      const manifestEntry = manifestByPath.get(relativePath)
+      if (isAgentsPath(relativePath)) {
+        if (!manifestEntry && relativePath === USER_AGENTS_TITLE) continue
+        localFiles.push({
+          relativePath,
+          raw,
+          hash: hashContent(raw),
+          itemId: manifestEntry?.itemId,
+          title: USER_AGENTS_TITLE,
+          content: raw,
+          complexity: 'document',
+          status: 'todo',
+          tags: [USER_AGENTS_TAG],
+          frontmatter: {
+            id: manifestEntry?.itemId,
+            title: USER_AGENTS_TITLE,
+            complexity: 'document',
+            status: 'todo',
+            tags: [USER_AGENTS_TAG],
+          },
+        })
+        continue
+      }
       const { frontmatter, content } = parseItemFile(raw)
       localFiles.push({
-        relativePath: toRelative(config.workspacePath, abs),
+        relativePath,
         raw,
         hash: hashContent(raw),
         itemId: frontmatter.id,
@@ -292,7 +319,9 @@ export async function diffCommand() {
 
     const moved = file.relativePath !== entry.localPath
     const fileFrontmatter = syncFrontmatter(file)
-    const frontmatterChanges = entry.frontmatter ? fieldDiff(entry.frontmatter, fileFrontmatter) : []
+    const frontmatterChanges = entry.frontmatter
+      ? fieldDiff(entry.frontmatter, fileFrontmatter)
+      : []
     const contentChanged = entry.contentHash
       ? hashContent(file.content) !== entry.contentHash
       : file.hash !== entry.syncHash

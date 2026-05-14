@@ -48,3 +48,10 @@ export const EDITABLE_BY_AI_FIELDS = [
   'recurrence',
   'localPath',
 ] as const
+
+export const USER_AGENTS_TAG = 'system:agents' as const
+export const USER_AGENTS_TITLE = 'AGENTS.md' as const
+
+export function isUserAgentsItem(item: Pick<Item, 'title' | 'tags'>): boolean {
+  return item.title === USER_AGENTS_TITLE && item.tags.includes(USER_AGENTS_TAG)
+}

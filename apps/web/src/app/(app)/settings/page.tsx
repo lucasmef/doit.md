@@ -14,6 +14,7 @@ import { usePreferences, type MobileNavItem, type MobileNavItemId } from '@/hook
 import { MOBILE_NAV_LABELS } from '@/components/layout/bottom-nav'
 import { useDialog } from '@/components/ui/dialog'
 import Link from 'next/link'
+import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 
 interface GoogleAccount {
   email: string
@@ -22,7 +23,18 @@ interface GoogleAccount {
   hasDrive?: boolean
 }
 
-type Tab = 'profile' | 'appearance' | 'integrations' | 'notifications' | 'sync' | 'cli' | 'tags' | 'shortcuts' | 'archive' | 'audit'
+type Tab =
+  | 'profile'
+  | 'appearance'
+  | 'integrations'
+  | 'notifications'
+  | 'sync'
+  | 'ai'
+  | 'cli'
+  | 'tags'
+  | 'shortcuts'
+  | 'archive'
+  | 'audit'
 
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'profile', label: 'Perfil' },
@@ -30,6 +42,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'integrations', label: 'Integracoes' },
   { id: 'notifications', label: 'Notificacoes' },
   { id: 'sync', label: 'Sync' },
+  { id: 'ai', label: 'IA' },
   { id: 'cli', label: 'CLI' },
   { id: 'tags', label: 'Tags' },
   { id: 'shortcuts', label: 'Atalhos' },
@@ -94,18 +107,30 @@ function ShortcutsSection() {
     <section className="space-y-4">
       <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel px-5 py-4 shadow-sm">
         <h2 className="text-sm font-semibold text-slate-700">Atalhos de teclado</h2>
-        <p className="mt-0.5 text-xs text-slate-400">Atalhos globais funcionam apenas quando nenhum campo esta em foco.</p>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Atalhos globais funcionam apenas quando nenhum campo esta em foco.
+        </p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         {SHORTCUT_GROUPS.map((group) => (
-          <div key={group.title} className="rounded-[16px] border border-ui-border-panel bg-surface-panel p-3 shadow-sm">
-            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-400">{group.title}</h3>
+          <div
+            key={group.title}
+            className="rounded-[16px] border border-ui-border-panel bg-surface-panel p-3 shadow-sm"
+          >
+            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-navy-400">
+              {group.title}
+            </h3>
             <div className="divide-y divide-ui-border-soft">
               {group.items.map((item) => (
-                <div key={`${group.title}-${item.label}`} className="flex items-center justify-between gap-3 py-2">
+                <div
+                  key={`${group.title}-${item.label}`}
+                  className="flex items-center justify-between gap-3 py-2"
+                >
                   <span className="text-[13px] text-navy-700">{item.label}</span>
                   <span className="flex shrink-0 flex-wrap justify-end gap-1">
-                    {item.keys.map((key) => <KeyCap key={key}>{key}</KeyCap>)}
+                    {item.keys.map((key) => (
+                      <KeyCap key={key}>{key}</KeyCap>
+                    ))}
                   </span>
                 </div>
               ))}
@@ -155,7 +180,8 @@ function AppearanceSection() {
             <span>
               <span className="block text-sm font-medium text-slate-800">Mostrar Inbox</span>
               <span className="mt-0.5 block text-xs text-slate-400">
-                Quando ocultado, os itens da Inbox (sem pasta e sem data, alem de notas soltas) aparecem na tela Hoje.
+                Quando ocultado, os itens da Inbox (sem pasta e sem data, alem de notas soltas)
+                aparecem na tela Hoje.
               </span>
             </span>
             <input
@@ -172,7 +198,8 @@ function AppearanceSection() {
         <div className="border-b border-ui-border-soft px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>
           <p className="mt-0.5 text-xs text-slate-400">
-            Escolha quais itens aparecem no menu de baixo no celular e em que ordem. O botao + de captura fica sempre no centro.
+            Escolha quais itens aparecem no menu de baixo no celular e em que ordem. O botao + de
+            captura fica sempre no centro.
           </p>
         </div>
         <ul className="divide-y divide-ui-border-soft">
@@ -180,10 +207,7 @@ function AppearanceSection() {
             const isFirst = index === 0
             const isLast = index === prefs.mobileNav.length - 1
             return (
-              <li
-                key={entry.id}
-                className="flex items-center gap-3 px-5 py-3"
-              >
+              <li key={entry.id} className="flex items-center gap-3 px-5 py-3">
                 <div className="flex flex-col">
                   <button
                     type="button"
@@ -192,7 +216,13 @@ function AppearanceSection() {
                     aria-label="Mover para cima"
                     className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
                   >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.4}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" d="m6 15 6-6 6 6" />
                     </svg>
                   </button>
@@ -203,7 +233,13 @@ function AppearanceSection() {
                     aria-label="Mover para baixo"
                     className="flex h-6 w-6 items-center justify-center rounded text-slate-500 hover:bg-surface-soft disabled:cursor-not-allowed disabled:opacity-30"
                   >
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                    <svg
+                      className="h-3 w-3"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2.4}
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" d="m6 9 6 6 6-6" />
                     </svg>
                   </button>
@@ -266,11 +302,42 @@ function TagsSection() {
   )
 }
 
+function AiSection() {
+  const [agentsOpen, setAgentsOpen] = useState(false)
+
+  return (
+    <section className="divide-y divide-ui-border-soft rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+      <div className="px-5 py-4">
+        <h2 className="text-sm font-semibold text-slate-700">AGENTS.md global</h2>
+        <p className="mt-0.5 text-xs text-slate-400">
+          Instrucoes globais do seu workspace local. O CLI baixa este conteudo como AGENTS.md na
+          raiz.
+        </p>
+      </div>
+      <div className="px-5 py-5">
+        <button
+          type="button"
+          onClick={() => setAgentsOpen(true)}
+          className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          Editar AGENTS.md global
+        </button>
+      </div>
+      <AgentsEditorModal
+        folderId={null}
+        title="AGENTS.md global"
+        open={agentsOpen}
+        onClose={() => setAgentsOpen(false)}
+      />
+    </section>
+  )
+}
+
 function SettingsContent() {
   const searchParams = useSearchParams()
   const initialTab = useMemo(() => {
     const tab = searchParams.get('tab')
-    return TABS.some((item) => item.id === tab) ? tab as Tab : 'profile'
+    return TABS.some((item) => item.id === tab) ? (tab as Tab) : 'profile'
   }, [searchParams])
   const [tab, setTab] = useState<Tab>(initialTab)
   const { toast: addToast } = useToast()
@@ -375,7 +442,10 @@ function SettingsContent() {
       const result = await push.sendTest()
       const missed = result.invalid + result.failed
       if (result.sent > 0 && missed > 0) {
-        addToast(`Teste enviado para ${result.sent} dispositivo(s); ${missed} falhou/falharam.`, 'info')
+        addToast(
+          `Teste enviado para ${result.sent} dispositivo(s); ${missed} falhou/falharam.`,
+          'info',
+        )
       } else if (result.sent > 0) {
         addToast(`Teste enviado para ${result.sent} dispositivo(s).`, 'success')
       } else if (missed > 0) {
@@ -516,20 +586,33 @@ function SettingsContent() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium text-slate-800">
-                  {pushSubscribed ? 'Notificacoes ativas neste dispositivo' : 'Notificacoes desativadas neste dispositivo'}
+                  {pushSubscribed
+                    ? 'Notificacoes ativas neste dispositivo'
+                    : 'Notificacoes desativadas neste dispositivo'}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">
                   {push.status?.activeDeviceCount ?? 0} dispositivo(s) ativo(s) na sua conta.
                 </p>
-                {!pushConfigured ? <p className="mt-2 text-xs text-red-500">Web Push nao esta configurado no servidor.</p> : null}
-                {!pushSupported ? <p className="mt-2 text-xs text-red-500">Este navegador nao suporta notificacoes push.</p> : null}
+                {!pushConfigured ? (
+                  <p className="mt-2 text-xs text-red-500">
+                    Web Push nao esta configurado no servidor.
+                  </p>
+                ) : null}
+                {!pushSupported ? (
+                  <p className="mt-2 text-xs text-red-500">
+                    Este navegador nao suporta notificacoes push.
+                  </p>
+                ) : null}
                 {needsIosInstall ? (
                   <p className="mt-2 text-xs text-slate-500">
-                    No iPhone, abra no Safari, toque em Compartilhar, escolha Adicionar a Tela de Inicio e abra pelo icone instalado.
+                    No iPhone, abra no Safari, toque em Compartilhar, escolha Adicionar a Tela de
+                    Inicio e abra pelo icone instalado.
                   </p>
                 ) : null}
                 {push.support === 'denied' ? (
-                  <p className="mt-2 text-xs text-red-500">A permissao foi bloqueada no navegador. Altere nas configuracoes do site.</p>
+                  <p className="mt-2 text-xs text-red-500">
+                    A permissao foi bloqueada no navegador. Altere nas configuracoes do site.
+                  </p>
                 ) : null}
               </div>
 
@@ -554,7 +637,14 @@ function SettingsContent() {
                 ) : (
                   <button
                     onClick={handleEnablePush}
-                    disabled={pushBusy !== null || push.isLoading || !pushConfigured || !pushSupported || needsIosInstall || push.support === 'denied'}
+                    disabled={
+                      pushBusy !== null ||
+                      push.isLoading ||
+                      !pushConfigured ||
+                      !pushSupported ||
+                      needsIosInstall ||
+                      push.support === 'denied'
+                    }
                     className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
                   >
                     {pushBusy === 'enable' ? 'Ativando...' : 'Ativar notificacoes'}
@@ -571,15 +661,35 @@ function SettingsContent() {
           <div className="px-5 py-4">
             <h2 className="text-sm font-semibold text-slate-700">Agente de Sincronizacao</h2>
             <p className="mt-0.5 text-xs text-slate-400">
-              Sincronize seus itens como arquivos Markdown via CLI <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">doit-sync</code>. Edite manualmente ou peca pra uma IA reorganizar; aprove as mudancas em <button type="button" onClick={() => selectTab('audit')} className="font-medium text-brand-600 hover:underline">Auditoria</button>.
+              Sincronize seus itens como arquivos Markdown via CLI{' '}
+              <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">doit-sync</code>.
+              Edite manualmente ou peca pra uma IA reorganizar; aprove as mudancas em{' '}
+              <button
+                type="button"
+                onClick={() => selectTab('audit')}
+                className="font-medium text-brand-600 hover:underline"
+              >
+                Auditoria
+              </button>
+              .
             </p>
           </div>
           <div className="px-5 py-5">
             <p className="mb-2 text-sm font-medium text-slate-700">1. Gere um token CLI</p>
             <p className="mb-3 text-xs text-slate-500">
-              Va para <button type="button" onClick={() => selectTab('cli')} className="font-medium text-brand-600 hover:underline">Configuracoes &rarr; CLI</button> e crie um novo token.
+              Va para{' '}
+              <button
+                type="button"
+                onClick={() => selectTab('cli')}
+                className="font-medium text-brand-600 hover:underline"
+              >
+                Configuracoes &rarr; CLI
+              </button>{' '}
+              e crie um novo token.
             </p>
-            <p className="mb-2 text-sm font-medium text-slate-700">2. Instale a CLI no seu computador</p>
+            <p className="mb-2 text-sm font-medium text-slate-700">
+              2. Instale a CLI no seu computador
+            </p>
             <div className="mb-3 space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
               <p>npm install -g doit-sync</p>
             </div>
@@ -590,22 +700,35 @@ function SettingsContent() {
             </div>
             <p className="mb-2 text-sm font-medium text-slate-700">4. Baixe e edite</p>
             <div className="mb-3 space-y-1 rounded-lg bg-slate-900 px-4 py-3 font-mono text-xs text-slate-200">
-              <p><span className="text-slate-500">#</span> baixa pastas + itens como .md</p>
+              <p>
+                <span className="text-slate-500">#</span> baixa pastas + itens como .md
+              </p>
               <p>doit-sync pull</p>
-              <p className="pt-1"><span className="text-slate-500">#</span> edite os .md (ou peca pra uma IA seguir o AGENTS.md)</p>
-              <p className="pt-1"><span className="text-slate-500">#</span> detecta mudancas e envia para Auditoria</p>
+              <p className="pt-1">
+                <span className="text-slate-500">#</span> edite os .md (ou peca pra uma IA seguir o
+                AGENTS.md)
+              </p>
+              <p className="pt-1">
+                <span className="text-slate-500">#</span> detecta mudancas e envia para Auditoria
+              </p>
               <p>doit-sync diff</p>
-              <p className="pt-1"><span className="text-slate-500">#</span> aprove em Auditoria, depois:</p>
+              <p className="pt-1">
+                <span className="text-slate-500">#</span> aprove em Auditoria, depois:
+              </p>
               <p>doit-sync push</p>
             </div>
             <p className="text-xs text-slate-400">
-              O comando <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">init</code> cria um <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">AGENTS.md</code> na raiz com as regras que sua IA deve seguir ao reorganizar os arquivos.
+              O comando{' '}
+              <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">init</code> cria um{' '}
+              <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">AGENTS.md</code> na
+              raiz com as regras que sua IA deve seguir ao reorganizar os arquivos.
             </p>
           </div>
         </section>
       )}
 
       {tab === 'appearance' && <AppearanceSection />}
+      {tab === 'ai' && <AiSection />}
       {tab === 'cli' && <CliTokensSection />}
       {tab === 'tags' && <TagsSection />}
       {tab === 'shortcuts' && <ShortcutsSection />}
@@ -617,7 +740,9 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={<div className="mx-auto max-w-4xl p-6 text-sm text-slate-400">Carregando...</div>}>
+    <Suspense
+      fallback={<div className="mx-auto max-w-4xl p-6 text-sm text-slate-400">Carregando...</div>}
+    >
       <SettingsContent />
     </Suspense>
   )

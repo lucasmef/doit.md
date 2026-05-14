@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth, authWithCli } from '@/lib/auth'
 import { ItemModel } from '@doit/db'
-import { newItemId } from '@doit/core'
+import { newItemId, isUserAgentsItem } from '@doit/core'
 import type { CreateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 
@@ -20,24 +20,30 @@ function validateItemInput(input: Pick<CreateItemInput, 'complexity'> & Partial<
 }
 
 function titleFromNoteContent(contentMd: string | undefined) {
-  const firstLine = contentMd?.split(/\r?\n/).find((line) => line.trim())?.trim() ?? ''
-  return firstLine.replace(/^#{1,6}\s+/, '').replace(/[*_`[\]]/g, '').trim()
+  const firstLine =
+    contentMd
+      ?.split(/\r?\n/)
+      .find((line) => line.trim())
+      ?.trim() ?? ''
+  return firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/[*_`[\]]/g, '')
+    .trim()
 }
 
 function matchesSearch(item: Record<string, unknown>, q: string) {
   const needle = q.toLocaleLowerCase('pt-BR')
   const tags = Array.isArray(item['tags']) ? item['tags'].join(' ') : ''
-  const haystack = [
-    item['title'],
-    item['contentMd'],
-    tags,
-  ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+  const haystack = [item['title'], item['contentMd'], tags]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('pt-BR')
   return haystack.includes(needle)
 }
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId } = await authWithCli(req)
+    const { userId, source } = await authWithCli(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     await ensureDB()
@@ -46,6 +52,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status')
     const folderIdParam = searchParams.get('folderId')
     const q = searchParams.get('q')?.trim()
+    const syncMode = searchParams.get('sync')
 
     const query: Record<string, unknown> = { userId }
     if (status === 'archived') query['status'] = 'archived'
@@ -61,8 +68,16 @@ export async function GET(req: NextRequest) {
 
     const rows = await ItemModel.find(query).lean()
     const filtered = rows.filter((item: Record<string, unknown>) => {
-      if (status === 'closed' && item['status'] !== 'done' && item['status'] !== 'archived') return false
+      if (
+        syncMode === 'active' &&
+        (item['status'] === 'done' || item['status'] === 'archived' || item['deletedAt'])
+      ) {
+        return false
+      }
+      if (status === 'closed' && item['status'] !== 'done' && item['status'] !== 'archived')
+        return false
       if (q && !matchesSearch(item, q)) return false
+      if (source !== 'cli' && isUserAgentsItem(mapDocToItem(item))) return false
       return true
     })
     filtered.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {

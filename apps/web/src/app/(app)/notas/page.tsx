@@ -12,10 +12,18 @@ import {
   useSensors,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { useFolders, buildFolderTree, createFolder, deleteFolder, updateFolder, type FolderTreeNode } from '@/hooks/use-folders'
+import {
+  useFolders,
+  buildFolderTree,
+  createFolder,
+  deleteFolder,
+  updateFolder,
+  type FolderTreeNode,
+} from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
 import { useDialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 
 function FolderRow({
   node,
@@ -39,6 +47,7 @@ function FolderRow({
   busy: boolean
 }) {
   const [actionsOpen, setActionsOpen] = useState(false)
+  const [agentsOpen, setAgentsOpen] = useState(false)
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
   const noteCount = noteCounts.get(node.id) ?? 0
@@ -47,7 +56,12 @@ function FolderRow({
   const canDown = index < siblingsCount - 1 && !busy
   const draggableId = `folder:${node.id}`
   const droppableId = `folder-into:${node.id}`
-  const { attributes, listeners, setNodeRef: setDragRef, isDragging } = useDraggable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragRef,
+    isDragging,
+  } = useDraggable({
     id: draggableId,
     data: { folderId: node.id },
   })
@@ -57,7 +71,11 @@ function FolderRow({
   })
 
   async function handleRename() {
-    const next = await prompt({ title: 'Renomear pasta', message: 'Novo nome', defaultValue: node.name })
+    const next = await prompt({
+      title: 'Renomear pasta',
+      message: 'Novo nome',
+      defaultValue: node.name,
+    })
     if (!next?.trim() || next === node.name) return
     await updateFolder(node.id, { name: next.trim() })
   }
@@ -74,7 +92,11 @@ function FolderRow({
   }
 
   async function handleNewSub() {
-    const name = await prompt({ title: 'Nova subpasta', message: 'Nome da subpasta', placeholder: 'Nome' })
+    const name = await prompt({
+      title: 'Nova subpasta',
+      message: 'Nome da subpasta',
+      placeholder: 'Nome',
+    })
     if (!name?.trim()) return
     await createFolder({ name: name.trim(), parentId: node.id })
   }
@@ -105,26 +127,49 @@ function FolderRow({
           type="button"
           onClick={() => hasChildren && toggle(node.id)}
           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent ${
-            hasChildren ? 'bg-surface-soft text-navy-500 hover:border-ui-border-soft hover:bg-white' : 'text-transparent'
+            hasChildren
+              ? 'bg-surface-soft text-navy-500 hover:border-ui-border-soft hover:bg-white'
+              : 'text-transparent'
           }`}
           aria-label={hasChildren ? (isOpen ? 'Recolher' : 'Expandir') : ''}
         >
           {hasChildren ? (
-            <svg className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg
+              className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
             </svg>
           ) : null}
         </button>
-        <Link href={`/notas/${node.id}`} className="flex min-w-0 flex-1 items-center gap-3 text-navy-900 hover:text-brand-600">
+        <Link
+          href={`/notas/${node.id}`}
+          className="flex min-w-0 flex-1 items-center gap-3 text-navy-900 hover:text-brand-600"
+        >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-navy-400">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+              />
             </svg>
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-medium leading-5">{node.name}</span>
             <span className="block font-mono text-[10px] leading-4 text-navy-300">
-              {node.children.length > 0 ? `${node.children.length} subpasta${node.children.length === 1 ? '' : 's'}` : 'Pasta'}
+              {node.children.length > 0
+                ? `${node.children.length} subpasta${node.children.length === 1 ? '' : 's'}`
+                : 'Pasta'}
             </span>
           </span>
           <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-surface-soft px-2 font-mono text-[11px] text-navy-400">
@@ -140,7 +185,14 @@ function FolderRow({
             aria-label={`Mover ${node.name} para cima`}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft disabled:opacity-30"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
             </svg>
           </button>
@@ -152,7 +204,14 @@ function FolderRow({
             aria-label={`Mover ${node.name} para baixo`}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft disabled:opacity-30"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              aria-hidden="true"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12l7 7 7-7" />
             </svg>
           </button>
@@ -174,9 +233,29 @@ function FolderRow({
             title="Renomear"
             aria-label={`Renomear ${node.name}`}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m16.9 4.6 2.5 2.5M4 20h4.5L20 8.5a1.8 1.8 0 0 0 0-2.5L18 4a1.8 1.8 0 0 0-2.5 0L4 15.5V20Z" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="m16.9 4.6 2.5 2.5M4 20h4.5L20 8.5a1.8 1.8 0 0 0 0-2.5L18 4a1.8 1.8 0 0 0-2.5 0L4 15.5V20Z"
+              />
             </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setAgentsOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
+            title="AGENTS.md"
+            aria-label={`Editar AGENTS.md de ${node.name}`}
+          >
+            <span className="font-mono text-[10px] font-bold">AI</span>
           </button>
           <button
             type="button"
@@ -185,8 +264,19 @@ function FolderRow({
             title="Apagar"
             aria-label={`Apagar ${node.name}`}
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 7h14M10 11v6M14 11v6M9 7l1-3h4l1 3M7 7l1 13h8l1-13" />
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 7h14M10 11v6M14 11v6M9 7l1-3h4l1 3M7 7l1 13h8l1-13"
+              />
             </svg>
           </button>
         </div>
@@ -207,7 +297,7 @@ function FolderRow({
       </div>
       {actionsOpen && (
         <div
-          className="grid grid-cols-5 gap-1 border-b border-ui-border-soft bg-surface-soft px-3 py-2 sm:hidden"
+          className="grid grid-cols-6 gap-1 border-b border-ui-border-soft bg-surface-soft px-3 py-2 sm:hidden"
           style={{ paddingLeft: `${10 + depth * 14}px` }}
         >
           <button
@@ -242,6 +332,13 @@ function FolderRow({
           </button>
           <button
             type="button"
+            onClick={() => setAgentsOpen(true)}
+            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500"
+          >
+            IA
+          </button>
+          <button
+            type="button"
             onClick={handleDelete}
             className="h-10 rounded-lg bg-white text-[11px] font-medium text-red-500"
           >
@@ -249,20 +346,28 @@ function FolderRow({
           </button>
         </div>
       )}
-      {hasChildren && isOpen && node.children.map((child, childIndex) => (
-        <FolderRow
-          key={child.id}
-          node={child}
-          depth={depth + 1}
-          expanded={expanded}
-          toggle={toggle}
-          noteCounts={noteCounts}
-          index={childIndex}
-          siblingsCount={node.children.length}
-          onMove={onMove}
-          busy={busy}
-        />
-      ))}
+      <AgentsEditorModal
+        folderId={node.id}
+        title={`AGENTS.md / ${node.name}`}
+        open={agentsOpen}
+        onClose={() => setAgentsOpen(false)}
+      />
+      {hasChildren &&
+        isOpen &&
+        node.children.map((child, childIndex) => (
+          <FolderRow
+            key={child.id}
+            node={child}
+            depth={depth + 1}
+            expanded={expanded}
+            toggle={toggle}
+            noteCounts={noteCounts}
+            index={childIndex}
+            siblingsCount={node.children.length}
+            onMove={onMove}
+            busy={busy}
+          />
+        ))}
     </>
   )
 }
@@ -278,7 +383,10 @@ function collectIds(nodes: FolderTreeNode[], acc: string[] = []) {
 }
 
 function RootDropZone() {
-  const { setNodeRef, isOver } = useDroppable({ id: 'folder-into:__root__', data: { folderId: null } })
+  const { setNodeRef, isOver } = useDroppable({
+    id: 'folder-into:__root__',
+    data: { folderId: null },
+  })
   return (
     <div
       ref={setNodeRef}
@@ -407,7 +515,11 @@ export default function NotasPage() {
   }
 
   async function handleNewRoot() {
-    const name = await prompt({ title: 'Nova pasta', message: 'Nome da pasta', placeholder: 'Nome' })
+    const name = await prompt({
+      title: 'Nova pasta',
+      message: 'Nome da pasta',
+      placeholder: 'Nome',
+    })
     if (!name?.trim()) return
     await createFolder({ name: name.trim() })
   }
@@ -463,7 +575,9 @@ export default function NotasPage() {
           onDragEnd={handleDragEnd}
         >
           {dragging && <RootDropZone />}
-          <div className={`overflow-hidden rounded-xl border border-ui-border bg-white ${reorderBusy ? 'opacity-70' : ''}`}>
+          <div
+            className={`overflow-hidden rounded-xl border border-ui-border bg-white ${reorderBusy ? 'opacity-70' : ''}`}
+          >
             {tree.map((node, index) => (
               <FolderRow
                 key={node.id}

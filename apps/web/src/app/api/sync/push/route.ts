@@ -7,7 +7,15 @@ import {
   PendingChangeModel,
   ItemVersionModel,
 } from '@doit/db'
-import { newAuditId, newFolderId, newItemId, newVersionId, slugify } from '@doit/core'
+import {
+  newAuditId,
+  newFolderId,
+  newItemId,
+  newVersionId,
+  slugify,
+  USER_AGENTS_TAG,
+  USER_AGENTS_TITLE,
+} from '@doit/core'
 import { hashContent } from '@doit/sync'
 import type { Folder, Item, PendingChange } from '@doit/types'
 import { ensureDB } from '@/lib/db'
@@ -94,7 +102,8 @@ export async function POST(req: NextRequest) {
       for (const segment of segments) {
         const match = folders.find(
           (folder) =>
-            (folder.parentId ?? undefined) === parentId && slugify(folder.name, 'pasta') === segment,
+            (folder.parentId ?? undefined) === parentId &&
+            slugify(folder.name, 'pasta') === segment,
         )
         if (match) {
           currentId = match.id
@@ -102,7 +111,9 @@ export async function POST(req: NextRequest) {
           continue
         }
 
-        const siblingCount = folders.filter((folder) => (folder.parentId ?? undefined) === parentId).length
+        const siblingCount = folders.filter(
+          (folder) => (folder.parentId ?? undefined) === parentId,
+        ).length
         const id = newFolderId()
         const folder: Folder = {
           id,
@@ -213,12 +224,19 @@ export async function POST(req: NextRequest) {
       return body
     }
 
+    function isAgentsPath(path: string | undefined): boolean {
+      return path?.split('/').filter(Boolean).at(-1) === USER_AGENTS_TITLE
+    }
+
     for (const change of approved) {
       if (await applyFolderChange(change)) continue
       // CREATED — pode não ter itemId; geramos um novo
       if (change.changeType === 'created') {
         const id = change.itemId ?? newItemId()
-        const titleAfter = change.titleAfter?.trim() || 'Sem título'
+        const agentsFile = isAgentsPath(change.localPathAfter)
+        const titleAfter = agentsFile
+          ? USER_AGENTS_TITLE
+          : change.titleAfter?.trim() || 'Sem título'
         const fmFields = (change.frontmatterChanges ?? []).reduce<Record<string, unknown>>(
           (acc, fc) => {
             if (ALLOWED_FRONTMATTER_FIELDS.has(fc.field)) acc[fc.field] = fc.after
@@ -227,7 +245,9 @@ export async function POST(req: NextRequest) {
           {},
         )
         const { folderId, archive } = await pathToFolderInfo(change.localPathAfter)
-        const contentMdAfter = normalizeIncomingBody(titleAfter, change.contentMdAfter)
+        const contentMdAfter = agentsFile
+          ? (change.contentMdAfter ?? '')
+          : normalizeIncomingBody(titleAfter, change.contentMdAfter)
         const existingCreated = (await ItemModel.findOne({ _id: id, userId }).lean()) as
           | (Item & Record<string, unknown>)
           | null
@@ -235,13 +255,19 @@ export async function POST(req: NextRequest) {
           const patch = {
             title: titleAfter,
             contentMd: contentMdAfter,
-            complexity: (fmFields['complexity'] as string) ?? existingCreated.complexity ?? 'note',
-            status: archive
-              ? 'archived'
-              : ((fmFields['status'] as string) ?? existingCreated.status ?? 'inbox'),
+            complexity: agentsFile
+              ? 'document'
+              : ((fmFields['complexity'] as string) ?? existingCreated.complexity ?? 'note'),
+            status: agentsFile
+              ? 'todo'
+              : archive
+                ? 'archived'
+                : ((fmFields['status'] as string) ?? existingCreated.status ?? 'inbox'),
             priority: fmFields['priority'],
             dueDate: fmFields['dueDate'],
-            tags: (fmFields['tags'] as string[]) ?? existingCreated.tags ?? [],
+            tags: agentsFile
+              ? Array.from(new Set([...(existingCreated.tags ?? []), USER_AGENTS_TAG]))
+              : ((fmFields['tags'] as string[]) ?? existingCreated.tags ?? []),
             folderId: folderId ?? null,
             localPath: change.localPathAfter,
             syncHash: hashContent(contentMdAfter),
@@ -271,11 +297,15 @@ export async function POST(req: NextRequest) {
           userId,
           title: titleAfter,
           contentMd: contentMdAfter,
-          complexity: (fmFields['complexity'] as string) ?? 'note',
-          status: archive ? 'archived' : ((fmFields['status'] as string) ?? 'inbox'),
+          complexity: agentsFile ? 'document' : ((fmFields['complexity'] as string) ?? 'note'),
+          status: agentsFile
+            ? 'todo'
+            : archive
+              ? 'archived'
+              : ((fmFields['status'] as string) ?? 'inbox'),
           priority: fmFields['priority'],
           dueDate: fmFields['dueDate'],
-          tags: (fmFields['tags'] as string[]) ?? [],
+          tags: agentsFile ? [USER_AGENTS_TAG] : ((fmFields['tags'] as string[]) ?? []),
           backlinks: [],
           folderId,
           localPath: change.localPathAfter,
@@ -333,7 +363,9 @@ export async function POST(req: NextRequest) {
       } else {
         if (change.titleAfter !== undefined) patch['title'] = change.titleAfter
         if (change.contentMdAfter !== undefined) {
-          const contentMdAfter = normalizeIncomingBody(change.titleAfter ?? existing.title, change.contentMdAfter)
+          const contentMdAfter = isAgentsPath(change.localPathAfter ?? change.localPathBefore)
+            ? change.contentMdAfter
+            : normalizeIncomingBody(change.titleAfter ?? existing.title, change.contentMdAfter)
           patch['contentMd'] = contentMdAfter
           patch['syncHash'] = hashContent(contentMdAfter)
         }
