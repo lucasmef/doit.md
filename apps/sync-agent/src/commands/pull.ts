@@ -1,5 +1,7 @@
 import { dirname, join } from 'path'
 import { mkdir, readFile, readdir, unlink, writeFile } from 'fs/promises'
+import { createInterface } from 'node:readline/promises'
+import { stdin, stdout } from 'node:process'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
@@ -14,6 +16,7 @@ import { reconcileDrive } from '../drive/reconcile.js'
 import { DriveNotConnectedError } from '../drive/client.js'
 
 type FolderNode = Folder & { children: FolderNode[]; relativePath: string }
+type PullConflict = { relativePath: string; action: 'overwrite' | 'remove' }
 
 const SYSTEM_DIRS = new Set(['_system', '_changes', '_raw_archive', '.git', 'node_modules'])
 
@@ -156,6 +159,61 @@ async function archiveIfLocallyModified(
   return true
 }
 
+async function isLocallyModified(
+  workspacePath: string,
+  previousManifest: Manifest | null,
+  relativePath: string,
+) {
+  const previous = previousManifest?.entries.find((entry) => entry.localPath === relativePath)
+  if (!previous) return false
+
+  try {
+    const raw = await readFile(join(workspacePath, relativePath), 'utf-8')
+    return hashContent(raw) !== previous.syncHash
+  } catch {
+    return false
+  }
+}
+
+async function confirmLocalOverwrite(conflicts: PullConflict[]) {
+  if (conflicts.length === 0) return
+
+  if (!stdin.isTTY) {
+    throw new Error(
+      'Pull interrompido: ha edicoes locais que podem ser sobrescritas, mas o terminal nao permite confirmacao interativa.',
+    )
+  }
+
+  const preview = conflicts
+    .slice(0, 10)
+    .map((conflict) => {
+      const action = conflict.action === 'overwrite' ? 'sobrescrever' : 'remover'
+      return `  - ${conflict.relativePath} (${action})`
+    })
+    .join('\n')
+  const remaining = conflicts.length > 10 ? `\n  ... e mais ${conflicts.length - 10}` : ''
+
+  console.log(
+    chalk.yellow(
+      [
+        'O pull vai sobrescrever/remover arquivos com edicoes locais:',
+        preview + remaining,
+        'Essas edicoes serao preservadas em _raw_archive antes da alteracao.',
+      ].join('\n'),
+    ),
+  )
+
+  const rl = createInterface({ input: stdin, output: stdout })
+  try {
+    const answer = (await rl.question('Continuar? (s/N): ')).trim().toLowerCase()
+    if (answer !== 's' && answer !== 'sim' && answer !== 'y' && answer !== 'yes') {
+      throw new Error('Pull cancelado pelo usuario.')
+    }
+  } finally {
+    rl.close()
+  }
+}
+
 async function removeStaleFiles(
   workspacePath: string,
   previousManifest: Manifest | null,
@@ -224,15 +282,9 @@ export async function pullCommand() {
     const folderById = flatten(tree)
     const pullArchiveName = `pull-overwrite-${new Date().toISOString().replace(/[:.]/g, '-')}`
 
-    // Cria todos os diretórios reais (vazios ficam visíveis)
+    // Prepara o manifest antes de tocar no workspace.
     const folderEntries: FolderManifestEntry[] = []
     for (const node of folderById.values()) {
-      await mkdir(join(config.workspacePath, node.relativePath), { recursive: true })
-      await writeJson(join(config.workspacePath, node.relativePath, '_folder.json'), {
-        folderId: node.id,
-        name: node.name,
-        parentId: node.parentId ?? null,
-      })
       folderEntries.push({
         folderId: node.id,
         localPath: node.relativePath,
@@ -244,6 +296,8 @@ export async function pullCommand() {
 
     const usedPaths = await localUntrackedMarkdownPaths(config.workspacePath, previousManifest)
     const entries: ManifestEntry[] = []
+    const pendingWrites: { folderRel: string; relativePath: string; content: string }[] = []
+    const conflicts: PullConflict[] = []
     let overwrittenArchives = 0
 
     for (const item of items) {
@@ -254,7 +308,6 @@ export async function pullCommand() {
       const baseSlug = isAgents ? USER_AGENTS_TITLE : `${slugify(item.title, item.id)}.md`
       const filename = dedupeFilename(usedPaths, folderRel, baseSlug)
       const relativePath = joinRelative(folderRel, filename)
-      const absolutePath = join(config.workspacePath, relativePath)
 
       const content = isAgents ? (item.contentMd ?? '') : serializeItemFile(item)
       const parsed = isAgents
@@ -271,18 +324,10 @@ export async function pullCommand() {
         : parseItemFile(content)
       const hash = hashContent(content)
 
-      await mkdir(join(config.workspacePath, folderRel), { recursive: true })
-      if (
-        await archiveIfLocallyModified(
-          config.workspacePath,
-          previousManifest,
-          relativePath,
-          pullArchiveName,
-        )
-      ) {
-        overwrittenArchives++
+      if (await isLocallyModified(config.workspacePath, previousManifest, relativePath)) {
+        conflicts.push({ relativePath, action: 'overwrite' })
       }
-      await writeFile(absolutePath, content, 'utf-8')
+      pendingWrites.push({ folderRel, relativePath, content })
 
       entries.push({
         itemId: item.id,
@@ -293,6 +338,46 @@ export async function pullCommand() {
         contentMd: parsed.content,
         updatedAt: item.updatedAt,
       })
+    }
+
+    const nextById = new Map(entries.map((entry) => [entry.itemId, entry]))
+    for (const previous of previousManifest?.entries ?? []) {
+      const next = nextById.get(previous.itemId)
+      if (next?.localPath === previous.localPath) continue
+      if (await isLocallyModified(config.workspacePath, previousManifest, previous.localPath)) {
+        conflicts.push({ relativePath: previous.localPath, action: 'remove' })
+      }
+    }
+
+    if (conflicts.length > 0) {
+      spinner.stop()
+      await confirmLocalOverwrite(conflicts)
+      spinner.start('Sincronizando workspace...')
+    }
+
+    // Cria todos os diretorios reais (vazios ficam visiveis)
+    for (const node of folderById.values()) {
+      await mkdir(join(config.workspacePath, node.relativePath), { recursive: true })
+      await writeJson(join(config.workspacePath, node.relativePath, '_folder.json'), {
+        folderId: node.id,
+        name: node.name,
+        parentId: node.parentId ?? null,
+      })
+    }
+
+    for (const write of pendingWrites) {
+      await mkdir(join(config.workspacePath, write.folderRel), { recursive: true })
+      if (
+        await archiveIfLocallyModified(
+          config.workspacePath,
+          previousManifest,
+          write.relativePath,
+          pullArchiveName,
+        )
+      ) {
+        overwrittenArchives++
+      }
+      await writeFile(join(config.workspacePath, write.relativePath), write.content, 'utf-8')
     }
 
     const stale = await removeStaleFiles(config.workspacePath, previousManifest, entries)
