@@ -37,16 +37,9 @@ export function serializeItemFile(item: Item, projectSlug?: string, areaSlug?: s
     ...(item.syncHash ? { syncHash: item.syncHash } : {}),
   }
 
-  const yaml = Object.entries(frontmatter)
-    .map(([k, v]) => {
-      if (Array.isArray(v)) return `${k}: [${v.join(', ')}]`
-      return `${k}: ${v}`
-    })
-    .join('\n')
-
   const body = item.contentMd ?? ''
 
-  return `---\n${yaml}\n---\n\n${body}${body.endsWith('\n') || body.length === 0 ? '' : '\n'}`
+  return matter.stringify(body, frontmatter)
 }
 
 export function itemFilename(item: Item): string {
