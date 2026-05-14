@@ -171,6 +171,9 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'order', 'INTEGER')
   await ensureColumn(db, 'folders', 'viewMode', "TEXT NOT NULL DEFAULT 'list'")
   await ensureColumn(db, 'folders', 'viewModeManual', 'INTEGER NOT NULL DEFAULT 0')
+  await ensureColumn(db, 'pending_changes', 'folderId', 'TEXT')
+  await ensureColumn(db, 'pending_changes', 'folderNameBefore', 'TEXT')
+  await ensureColumn(db, 'pending_changes', 'folderNameAfter', 'TEXT')
   if (db.kind === 'postgres') {
     await db.pool.query(`DROP INDEX IF EXISTS items_user_project_idx`)
   }
@@ -284,11 +287,14 @@ const sqliteSchema = [
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
     itemId TEXT,
+    folderId TEXT,
     changeType TEXT NOT NULL,
     localPathBefore TEXT,
     localPathAfter TEXT,
     titleBefore TEXT,
     titleAfter TEXT,
+    folderNameBefore TEXT,
+    folderNameAfter TEXT,
     contentMdBefore TEXT,
     contentMdAfter TEXT,
     frontmatterChanges TEXT,
@@ -439,6 +445,8 @@ const postgresIdentifiers = [
   'changeType',
   'titleBefore',
   'titleAfter',
+  'folderNameBefore',
+  'folderNameAfter',
   'riskLevel',
   'expiresAt',
   'folderId',

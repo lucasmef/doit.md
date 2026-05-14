@@ -6,6 +6,10 @@ export type AuditAction =
   | 'file_updated'
   | 'file_moved'
   | 'file_deleted'
+  | 'folder_created'
+  | 'folder_updated'
+  | 'folder_moved'
+  | 'folder_deleted'
   | 'frontmatter_changed'
   | 'conflict_detected'
   | 'version_created'
@@ -44,6 +48,10 @@ export type ChangeType =
   | 'frontmatter_changed'
   | 'content_changed'
   | 'deleted'
+  | 'folder_created'
+  | 'folder_moved'
+  | 'folder_renamed'
+  | 'folder_deleted'
   | 'conflict'
 
 export type RiskLevel = 'low' | 'medium' | 'high'
@@ -52,6 +60,7 @@ export type PendingChange = {
   id: string
   userId: string
   itemId?: string
+  folderId?: string
 
   changeType: ChangeType
 
@@ -60,6 +69,8 @@ export type PendingChange = {
 
   titleBefore?: string
   titleAfter?: string
+  folderNameBefore?: string
+  folderNameAfter?: string
 
   contentMdBefore?: string
   contentMdAfter?: string

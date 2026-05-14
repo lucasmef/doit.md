@@ -1,17 +1,17 @@
-import { join, relative, sep } from 'path'
-import { readFile, readdir } from 'fs/promises'
+import { dirname, join, relative, sep } from 'path'
+import { mkdir, readFile, readdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
-import { readJson, writeJson } from '../lib/workspace.js'
+import { readJson, writeJson, SPECIAL_DIRS } from '../lib/workspace.js'
 import { parseItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import { assessRisk } from '@doit/audit'
 import { newChangeId } from '@doit/core'
-import type { Manifest, ManifestEntry } from '@doit/sync'
+import type { FolderManifestEntry, Manifest, ManifestEntry } from '@doit/sync'
 import type { ChangeType, PendingChange } from '@doit/types'
 
-const SYSTEM_DIRS = new Set(['_system', '_changes', '.git', 'node_modules'])
+const SYSTEM_DIRS = new Set(['_system', '_changes', '_raw_archive', '.git', 'node_modules'])
 
 type LocalFile = {
   relativePath: string
@@ -24,6 +24,14 @@ type LocalFile = {
   status?: string
   tags?: string[]
   dueDate?: string
+  priority?: number
+  frontmatter: Record<string, unknown>
+}
+
+type LocalFolder = {
+  relativePath: string
+  name: string
+  folderId?: string
 }
 
 async function walkMarkdown(root: string, current = root): Promise<string[]> {
@@ -46,6 +54,37 @@ async function walkMarkdown(root: string, current = root): Promise<string[]> {
   return out
 }
 
+async function walkFolders(root: string, current = root): Promise<LocalFolder[]> {
+  const entries = await readdir(current, { withFileTypes: true })
+  const out: LocalFolder[] = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    if (SYSTEM_DIRS.has(entry.name)) continue
+    const absolute = join(current, entry.name)
+    const relativePath = toRelative(root, absolute)
+    if (isSpecialRoot(relativePath)) continue
+
+    const marker = await readJson<{ folderId?: string; name?: string }>(join(absolute, '_folder.json'))
+    out.push({
+      relativePath,
+      name: entry.name,
+      folderId: marker?.folderId,
+    })
+    out.push(...(await walkFolders(root, absolute)))
+  }
+  return out
+}
+
+function isSpecialRoot(relativePath: string): boolean {
+  return Object.values(SPECIAL_DIRS).includes(relativePath as (typeof SPECIAL_DIRS)[keyof typeof SPECIAL_DIRS])
+}
+
+function dirnameAsPosix(relativePath: string): string {
+  const parts = relativePath.split('/').filter(Boolean)
+  parts.pop()
+  return parts.join('/')
+}
+
 function toRelative(workspaceRoot: string, absolute: string): string {
   return relative(workspaceRoot, absolute).split(sep).join('/')
 }
@@ -62,6 +101,25 @@ function fieldDiff(before: Record<string, unknown>, after: Record<string, unknow
     }
   }
   return out
+}
+
+function syncFrontmatter(file: LocalFile): Record<string, unknown> {
+  return {
+    id: file.itemId,
+    title: file.title,
+    complexity: file.complexity,
+    status: file.status,
+    tags: file.tags ?? [],
+    ...(file.dueDate ? { dueDate: file.dueDate } : {}),
+    ...(file.priority ? { priority: file.priority } : {}),
+  }
+}
+
+async function archiveChangedRaw(workspacePath: string, file: LocalFile, now: string) {
+  const safeTimestamp = now.replace(/[:.]/g, '-')
+  const target = join(workspacePath, '_raw_archive', safeTimestamp, file.relativePath)
+  await mkdir(dirname(target), { recursive: true })
+  await writeFile(target, file.raw, 'utf-8')
 }
 
 function normalizeChangeForKey(value: unknown): unknown {
@@ -93,9 +151,15 @@ export async function diffCommand() {
 
   const manifestByPath = new Map<string, ManifestEntry>()
   const manifestById = new Map<string, ManifestEntry>()
+  const folderManifestByPath = new Map<string, FolderManifestEntry>()
+  const folderManifestById = new Map<string, FolderManifestEntry>()
   for (const entry of manifest.entries) {
     manifestByPath.set(entry.localPath, entry)
     manifestById.set(entry.itemId, entry)
+  }
+  for (const entry of manifest.folders ?? []) {
+    folderManifestByPath.set(entry.localPath, entry)
+    folderManifestById.set(entry.folderId, entry)
   }
 
   // Coleta arquivos locais
@@ -116,6 +180,8 @@ export async function diffCommand() {
         status: frontmatter.status,
         tags: frontmatter.tags,
         dueDate: frontmatter.dueDate,
+        priority: frontmatter.priority,
+        frontmatter: frontmatter as unknown as Record<string, unknown>,
       })
     } catch {
       // ignore unreadable / malformed
@@ -123,6 +189,7 @@ export async function diffCommand() {
   }
 
   const seenItemIds = new Set<string>()
+  const seenFolderIds = new Set<string>()
   const changes: PendingChange[] = []
   const now = new Date().toISOString()
 
@@ -143,8 +210,63 @@ export async function diffCommand() {
   }
 
   // 1. Pra cada arquivo local: criação, movimento, conteúdo, frontmatter
+  const localFolders = await walkFolders(config.workspacePath)
+  for (const folder of localFolders) {
+    if (!folder.folderId) {
+      const previousAtPath = folderManifestByPath.get(folder.relativePath)
+      if (previousAtPath) {
+        seenFolderIds.add(previousAtPath.folderId)
+        continue
+      }
+      record({
+        changeType: 'folder_created',
+        localPathAfter: folder.relativePath,
+        folderNameAfter: folder.name,
+      })
+      continue
+    }
+
+    seenFolderIds.add(folder.folderId)
+    const entry = folderManifestById.get(folder.folderId)
+    if (!entry) {
+      record({
+        changeType: 'folder_created',
+        folderId: folder.folderId,
+        localPathAfter: folder.relativePath,
+        folderNameAfter: folder.name,
+      })
+      continue
+    }
+
+    if (folder.relativePath !== entry.localPath) {
+      const renamedOnly =
+        dirnameAsPosix(folder.relativePath) === dirnameAsPosix(entry.localPath) &&
+        folder.name !== entry.name
+      record({
+        changeType: renamedOnly ? 'folder_renamed' : 'folder_moved',
+        folderId: folder.folderId,
+        localPathBefore: entry.localPath,
+        localPathAfter: folder.relativePath,
+        folderNameBefore: entry.name,
+        folderNameAfter: folder.name,
+      })
+    }
+  }
+
+  for (const entry of manifest.folders ?? []) {
+    if (!seenFolderIds.has(entry.folderId)) {
+      record({
+        changeType: 'folder_deleted',
+        folderId: entry.folderId,
+        localPathBefore: entry.localPath,
+        folderNameBefore: entry.name,
+      })
+    }
+  }
+
   for (const file of localFiles) {
     if (!file.itemId) {
+      await archiveChangedRaw(config.workspacePath, file, now)
       record({
         changeType: 'created',
         localPathAfter: file.relativePath,
@@ -168,12 +290,18 @@ export async function diffCommand() {
       continue
     }
 
-    if (file.hash === entry.syncHash && file.relativePath === entry.localPath) {
+    const moved = file.relativePath !== entry.localPath
+    const fileFrontmatter = syncFrontmatter(file)
+    const frontmatterChanges = entry.frontmatter ? fieldDiff(entry.frontmatter, fileFrontmatter) : []
+    const contentChanged = entry.contentHash
+      ? hashContent(file.content) !== entry.contentHash
+      : file.hash !== entry.syncHash
+
+    if (!moved && !contentChanged && frontmatterChanges.length === 0) {
       continue
     }
 
-    const moved = file.relativePath !== entry.localPath
-    const contentChanged = file.hash !== entry.syncHash
+    await archiveChangedRaw(config.workspacePath, file, now)
 
     if (moved) {
       record({
@@ -185,27 +313,28 @@ export async function diffCommand() {
       })
     }
 
+    if (frontmatterChanges.length > 0) {
+      record({
+        changeType: 'frontmatter_changed',
+        itemId: file.itemId,
+        localPathBefore: entry.localPath,
+        localPathAfter: file.relativePath,
+        titleBefore:
+          typeof entry.frontmatter?.['title'] === 'string' ? entry.frontmatter['title'] : undefined,
+        titleAfter: file.title,
+        frontmatterChanges,
+      })
+    }
+
     if (contentChanged) {
-      // Decide se é frontmatter_changed, content_changed ou ambos
-      // (Usamos o snapshot anterior do servidor seria ideal, mas aqui só temos hash
-      //  do arquivo original. Tratamos como content_changed; o servidor decide.)
       record({
         changeType: 'content_changed',
         itemId: file.itemId,
         localPathBefore: entry.localPath,
         localPathAfter: file.relativePath,
         titleAfter: file.title,
+        contentMdBefore: entry.contentMd,
         contentMdAfter: file.content,
-        frontmatterChanges: fieldDiff(
-          {},
-          {
-            title: file.title,
-            complexity: file.complexity,
-            status: file.status,
-            tags: file.tags,
-            dueDate: file.dueDate,
-          },
-        ),
       })
     }
   }

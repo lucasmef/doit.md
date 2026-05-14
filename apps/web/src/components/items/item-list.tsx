@@ -13,17 +13,20 @@ type Props = {
   hideDoneAfterDelay?: boolean
 }
 
+const DONE_FEEDBACK_MS = 900
+
 export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot, hideDoneAfterDelay = true }: Props) {
   const { selectedItemId, selectedItemIds } = useUI()
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
   const previousStatuses = useRef<Record<string, Item['status']>>({})
   const visibleItems = useMemo(() => {
     if (!hideDoneAfterDelay) return items
-    const filtered = items.filter((item) => item.status !== 'done' || recentlyDoneIds[item.id])
-    return [...filtered].sort((a, b) => {
-      const aDone = a.status === 'done' ? 1 : 0
-      const bDone = b.status === 'done' ? 1 : 0
-      return aDone - bDone
+    return items.filter((item) => {
+      if (item.status !== 'done') return true
+      if (recentlyDoneIds[item.id]) return true
+
+      const previous = previousStatuses.current[item.id]
+      return Boolean(previous && previous !== 'done')
     })
   }, [hideDoneAfterDelay, items, recentlyDoneIds])
   const visibleItemIds = useMemo(() => visibleItems.map((item) => item.id), [visibleItems])
@@ -52,7 +55,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
 
   useEffect(() => {
     const timers = Object.entries(recentlyDoneIds).map(([id, startedAt]) => {
-      const delay = Math.max(0, 60000 - (Date.now() - startedAt))
+      const delay = Math.max(0, DONE_FEEDBACK_MS - (Date.now() - startedAt))
       return setTimeout(() => {
         setRecentlyDoneIds((current) => {
           const next = { ...current }

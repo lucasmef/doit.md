@@ -19,12 +19,20 @@ const TYPE_LABEL: Record<PendingChange['changeType'], string> = {
   frontmatter_changed: 'Metadados alterados',
   content_changed: 'Conteúdo alterado',
   deleted: 'Excluído',
+  folder_created: 'Pasta criada',
+  folder_moved: 'Pasta movida',
+  folder_renamed: 'Pasta renomeada',
+  folder_deleted: 'Pasta excluida',
   conflict: 'Conflito',
 }
 
-type Props = { change: PendingChange }
+type Props = {
+  change: PendingChange
+  selected?: boolean
+  onSelectChange?: (selected: boolean) => void
+}
 
-export function PendingChangeCard({ change }: Props) {
+export function PendingChangeCard({ change, selected = false, onSelectChange }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(false)
   const risk = RISK_CONFIG[change.riskLevel]
@@ -51,6 +59,15 @@ export function PendingChangeCard({ change }: Props) {
     >
       {/* Header */}
       <div className="flex items-start gap-3">
+        {onSelectChange && (
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(event) => onSelectChange(event.target.checked)}
+            className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+            aria-label="Selecionar mudanca"
+          />
+        )}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="text-xs font-semibold text-slate-600">
@@ -66,7 +83,11 @@ export function PendingChangeCard({ change }: Props) {
             )}
           </div>
           <p className="text-xs text-slate-500 truncate">
-            {change.localPathAfter ?? change.localPathBefore ?? change.itemId ?? 'desconhecido'}
+            {change.localPathAfter ??
+              change.localPathBefore ??
+              change.itemId ??
+              change.folderId ??
+              'desconhecido'}
           </p>
           {change.titleAfter && change.titleBefore && change.titleAfter !== change.titleBefore && (
             <p className="text-xs text-slate-400 mt-0.5">
@@ -75,6 +96,15 @@ export function PendingChangeCard({ change }: Props) {
               <span className="font-medium text-slate-600">{change.titleAfter}</span>
             </p>
           )}
+          {change.folderNameAfter &&
+            change.folderNameBefore &&
+            change.folderNameAfter !== change.folderNameBefore && (
+              <p className="text-xs text-slate-400 mt-0.5">
+                <span className="line-through">{change.folderNameBefore}</span>
+                {' -> '}
+                <span className="font-medium text-slate-600">{change.folderNameAfter}</span>
+              </p>
+            )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

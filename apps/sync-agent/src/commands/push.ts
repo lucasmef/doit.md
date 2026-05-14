@@ -5,6 +5,7 @@ import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { readJson, writeJson } from '../lib/workspace.js'
 import { hashContent } from '@doit/sync'
+import { parseItemFile } from '@doit/md'
 import type { Manifest } from '@doit/sync'
 import type { PendingChange } from '@doit/types'
 
@@ -99,11 +100,15 @@ export async function pushCommand() {
 
         try {
           const raw = await readFile(join(config.workspacePath, change.localPathAfter), 'utf-8')
+          const parsed = parseItemFile(raw)
           const existing = entriesByItemId.get(change.itemId)
           const nextEntry = {
             itemId: change.itemId,
             localPath: change.localPathAfter,
             syncHash: hashContent(raw),
+            contentHash: hashContent(parsed.content),
+            frontmatter: parsed.frontmatter as unknown as Record<string, unknown>,
+            contentMd: parsed.content,
             updatedAt: now,
           }
 
@@ -115,6 +120,30 @@ export async function pushCommand() {
           }
         } catch {
           // If the file disappeared after approval, keep sync state unchanged.
+        }
+      }
+
+      manifest.folders ??= []
+      for (const change of approved) {
+        if (!change.changeType.startsWith('folder_')) continue
+        if (change.changeType === 'folder_deleted' && change.folderId) {
+          const deletedIds = descendantFolderIds(manifest.folders, change.folderId)
+          manifest.folders = manifest.folders.filter((folder) => !deletedIds.has(folder.folderId))
+          continue
+        }
+        if (!change.folderId || !change.localPathAfter) continue
+        const existing = manifest.folders.find((folder) => folder.folderId === change.folderId)
+        if (existing) {
+          existing.localPath = change.localPathAfter
+          existing.name = change.folderNameAfter ?? folderNameFromPath(change.localPathAfter)
+          existing.updatedAt = now
+        } else {
+          manifest.folders.push({
+            folderId: change.folderId,
+            localPath: change.localPathAfter,
+            name: change.folderNameAfter ?? folderNameFromPath(change.localPathAfter),
+            updatedAt: now,
+          })
         }
       }
 
@@ -133,4 +162,26 @@ export async function pushCommand() {
     spinner.fail(chalk.red(`Falha no push: ${err instanceof Error ? err.message : String(err)}`))
     process.exit(1)
   }
+}
+
+function folderNameFromPath(path: string): string {
+  return path.split('/').filter(Boolean).at(-1) ?? 'pasta'
+}
+
+function descendantFolderIds(
+  folders: NonNullable<Manifest['folders']>,
+  rootId: string,
+): Set<string> {
+  const ids = new Set<string>([rootId])
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const folder of folders) {
+      if (folder.parentId && ids.has(folder.parentId) && !ids.has(folder.folderId)) {
+        ids.add(folder.folderId)
+        changed = true
+      }
+    }
+  }
+  return ids
 }

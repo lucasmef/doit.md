@@ -4,6 +4,7 @@ import type { Folder } from '@doit/types'
 const SPECIAL = {
   Inbox: 'inbox',
   Proximos: 'upcoming',
+  _arquivo: 'archive',
   Arquivo: 'archive',
 } as const
 

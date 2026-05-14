@@ -26,19 +26,27 @@ export function usePendingChanges() {
 }
 
 export async function approveChange(id: string): Promise<void> {
+  await approveChanges([id])
+}
+
+export async function approveChanges(ids: string[]): Promise<void> {
   await fetch('/api/sync/approve', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ ids }),
   })
   await globalMutate('/api/sync/pending')
 }
 
 export async function rejectChange(id: string): Promise<void> {
+  await rejectChanges([id])
+}
+
+export async function rejectChanges(ids: string[]): Promise<void> {
   await fetch('/api/sync/reject', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
+    body: JSON.stringify({ ids }),
   })
   await globalMutate('/api/sync/pending')
 }

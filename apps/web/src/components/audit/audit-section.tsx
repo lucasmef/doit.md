@@ -1,15 +1,25 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuditLogs, usePendingChanges, applyApprovedChanges } from '@/hooks/use-audit'
+import {
+  useAuditLogs,
+  usePendingChanges,
+  applyApprovedChanges,
+  approveChanges,
+  rejectChanges,
+} from '@/hooks/use-audit'
 import { PendingChangeCard } from '@/components/audit/pending-change-card'
 import { AuditLogRow } from '@/components/audit/audit-log-row'
 import { useToast } from '@/components/ui/toast'
 
 type Tab = 'pending' | 'logs'
+type RiskFilter = 'all' | 'low' | 'medium' | 'high'
 
 export function AuditSection() {
   const [tab, setTab] = useState<Tab>('pending')
+  const [riskFilter, setRiskFilter] = useState<RiskFilter>('all')
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bulkLoading, setBulkLoading] = useState(false)
   const [pushing, setPushing] = useState(false)
   const [pushResult, setPushResult] = useState<string | null>(null)
   const { toast } = useToast()
@@ -20,6 +30,35 @@ export function AuditSection() {
   const approvedCount = changes.filter((c) => c.approved).length
   const pendingCount = changes.filter((c) => !c.approved).length
   const highRiskCount = changes.filter((c) => c.riskLevel === 'high' && !c.approved).length
+  const filteredChanges = changes.filter((c) => riskFilter === 'all' || c.riskLevel === riskFilter)
+  const selectedVisibleCount = filteredChanges.filter((c) => selectedIds.includes(c.id)).length
+  const allVisibleSelected = filteredChanges.length > 0 && selectedVisibleCount === filteredChanges.length
+
+  function setSelected(id: string, selected: boolean) {
+    setSelectedIds((current) =>
+      selected ? [...new Set([...current, id])] : current.filter((currentId) => currentId !== id),
+    )
+  }
+
+  async function handleBulk(action: 'approve' | 'reject') {
+    if (selectedIds.length === 0) return
+    setBulkLoading(true)
+    try {
+      if (action === 'approve') {
+        await approveChanges(selectedIds)
+        toast(`${selectedIds.length} mudanca(s) aprovada(s)`, 'success')
+      } else {
+        await rejectChanges(selectedIds)
+        toast(`${selectedIds.length} mudanca(s) recusada(s)`, 'success')
+      }
+      setSelectedIds([])
+      await refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Falha na acao em lote', 'error')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
 
   async function handlePush() {
     if (approvedCount === 0) return
@@ -96,7 +135,7 @@ export function AuditSection() {
       {tab === 'pending' && (
         <div>
           {changes.length > 0 && (
-            <div className="mb-5 flex flex-wrap gap-3">
+            <div className="mb-5 flex flex-wrap items-center gap-3">
               <div className="rounded-lg bg-slate-100 px-3 py-2 text-xs text-slate-600">
                 <span className="font-semibold">{pendingCount}</span> aguardando aprovacao
               </div>
@@ -106,6 +145,49 @@ export function AuditSection() {
               {highRiskCount > 0 && (
                 <div className="rounded-lg bg-red-100 px-3 py-2 text-xs text-red-700">
                   <span className="font-semibold">{highRiskCount}</span> alto risco
+                </div>
+              )}
+              <select
+                value={riskFilter}
+                onChange={(event) => {
+                  setRiskFilter(event.target.value as RiskFilter)
+                  setSelectedIds([])
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600"
+                aria-label="Filtrar por gravidade"
+              >
+                <option value="all">Todas as gravidades</option>
+                <option value="low">Baixo risco</option>
+                <option value="medium">Medio risco</option>
+                <option value="high">Alto risco</option>
+              </select>
+              <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={(event) =>
+                    setSelectedIds(event.target.checked ? filteredChanges.map((c) => c.id) : [])
+                  }
+                  className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+                />
+                Selecionar visiveis
+              </label>
+              {selectedIds.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleBulk('approve')}
+                    disabled={bulkLoading}
+                    className="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-40"
+                  >
+                    Aprovar {selectedIds.length}
+                  </button>
+                  <button
+                    onClick={() => handleBulk('reject')}
+                    disabled={bulkLoading}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:border-red-300 hover:text-red-600 disabled:opacity-40"
+                  >
+                    Recusar {selectedIds.length}
+                  </button>
                 </div>
               )}
             </div>
@@ -128,9 +210,20 @@ export function AuditSection() {
             </div>
           )}
 
+          {!loadingChanges && changes.length > 0 && filteredChanges.length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-200 px-4 py-12 text-center">
+              <p className="text-sm text-slate-400">Nenhuma mudanca nessa gravidade.</p>
+            </div>
+          )}
+
           <div className="space-y-3">
-            {changes.map((change) => (
-              <PendingChangeCard key={change.id} change={change} />
+            {filteredChanges.map((change) => (
+              <PendingChangeCard
+                key={change.id}
+                change={change}
+                selected={selectedIds.includes(change.id)}
+                onSelectChange={(selected) => setSelected(change.id, selected)}
+              />
             ))}
           </div>
         </div>

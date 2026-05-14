@@ -4,10 +4,10 @@ import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { writeJson, slugify, SPECIAL_DIRS } from '../lib/workspace.js'
-import { serializeItemFile } from '@doit/md'
+import { parseItemFile, serializeItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import type { Folder, Item } from '@doit/types'
-import type { ManifestEntry } from '@doit/sync'
+import type { FolderManifestEntry, ManifestEntry } from '@doit/sync'
 import { buildDriveIndex } from '../drive/indexer.js'
 import { reconcileDrive } from '../drive/reconcile.js'
 import { DriveNotConnectedError } from '../drive/client.js'
@@ -106,8 +106,21 @@ export async function pullCommand() {
     const folderById = flatten(tree)
 
     // Cria todos os diretórios reais (vazios ficam visíveis)
+    const folderEntries: FolderManifestEntry[] = []
     for (const node of folderById.values()) {
       await mkdir(join(config.workspacePath, node.relativePath), { recursive: true })
+      await writeJson(join(config.workspacePath, node.relativePath, '_folder.json'), {
+        folderId: node.id,
+        name: node.name,
+        parentId: node.parentId ?? null,
+      })
+      folderEntries.push({
+        folderId: node.id,
+        localPath: node.relativePath,
+        name: node.name,
+        parentId: node.parentId,
+        updatedAt: node.updatedAt,
+      })
     }
 
     const usedPaths = new Set<string>()
@@ -121,6 +134,7 @@ export async function pullCommand() {
       const absolutePath = join(config.workspacePath, relativePath)
 
       const content = serializeItemFile(item)
+      const parsed = parseItemFile(content)
       const hash = hashContent(content)
 
       await mkdir(join(config.workspacePath, folderRel), { recursive: true })
@@ -130,11 +144,19 @@ export async function pullCommand() {
         itemId: item.id,
         localPath: relativePath,
         syncHash: hash,
+        contentHash: hashContent(parsed.content),
+        frontmatter: parsed.frontmatter as unknown as Record<string, unknown>,
+        contentMd: parsed.content,
         updatedAt: item.updatedAt,
       })
     }
 
-    const manifest = { version: 1 as const, generatedAt: new Date().toISOString(), entries }
+    const manifest = {
+      version: 1 as const,
+      generatedAt: new Date().toISOString(),
+      entries,
+      folders: folderEntries,
+    }
     await writeJson(join(config.workspacePath, '_system', 'manifest.json'), manifest)
     await writeJson(join(config.workspacePath, '_system', 'last-pull.json'), {
       at: new Date().toISOString(),

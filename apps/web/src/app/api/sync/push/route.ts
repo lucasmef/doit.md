@@ -7,7 +7,7 @@ import {
   PendingChangeModel,
   ItemVersionModel,
 } from '@doit/db'
-import { newAuditId, newItemId, newVersionId } from '@doit/core'
+import { newAuditId, newFolderId, newItemId, newVersionId, slugify } from '@doit/core'
 import { hashContent } from '@doit/sync'
 import type { Folder, Item, PendingChange } from '@doit/types'
 import { ensureDB } from '@/lib/db'
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = await authWithCli(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const authedUserId = userId
 
     await ensureDB()
 
@@ -60,17 +61,160 @@ export async function POST(req: NextRequest) {
     const auditEntries: Record<string, unknown>[] = []
     let applied = 0
 
-    function pathToFolderInfo(path: string | undefined): {
+    async function pathToFolderInfo(path: string | undefined): Promise<{
       folderId: string | undefined
       archive: boolean
-    } {
+    }> {
       if (!path) return { folderId: undefined, archive: false }
       const resolved = resolveFolderFromPath(folders, path)
       if (resolved.special === 'archive') return { folderId: undefined, archive: true }
-      return { folderId: resolved.folderId ?? undefined, archive: false }
+      if (resolved.folderId) return { folderId: resolved.folderId, archive: false }
+      const folderId = await ensureFoldersFromPath(path)
+      return { folderId, archive: false }
+    }
+
+    async function ensureFoldersFromPath(path: string): Promise<string | undefined> {
+      const segments = path.split('/').filter(Boolean).slice(0, -1)
+      return ensureFolderSegments(segments)
+    }
+
+    async function ensureFolderPath(folderPath: string | undefined): Promise<string | undefined> {
+      const segments = folderPath?.split('/').filter(Boolean) ?? []
+      return ensureFolderSegments(segments)
+    }
+
+    async function ensureFolderSegments(segments: string[]): Promise<string | undefined> {
+      if (segments.length === 0) return undefined
+      if (['Inbox', 'Proximos', '_arquivo', 'Arquivo'].includes(segments[0] ?? '')) {
+        return undefined
+      }
+
+      let parentId: string | undefined
+      let currentId: string | undefined
+      for (const segment of segments) {
+        const match = folders.find(
+          (folder) =>
+            (folder.parentId ?? undefined) === parentId && slugify(folder.name, 'pasta') === segment,
+        )
+        if (match) {
+          currentId = match.id
+          parentId = match.id
+          continue
+        }
+
+        const siblingCount = folders.filter((folder) => (folder.parentId ?? undefined) === parentId).length
+        const id = newFolderId()
+        const folder: Folder = {
+          id,
+          userId: authedUserId,
+          name: segment,
+          parentId,
+          order: siblingCount,
+          viewMode: 'list',
+          viewModeManual: false,
+          createdAt: now,
+          updatedAt: now,
+        }
+        await FolderModel.create({ ...folder, _id: id })
+        folders.push(folder)
+        currentId = id
+        parentId = id
+      }
+      return currentId
+    }
+
+    function folderNameFromPath(path: string | undefined): string {
+      return path?.split('/').filter(Boolean).at(-1) ?? 'Nova pasta'
+    }
+
+    function parentPathFromFolderPath(path: string | undefined): string | undefined {
+      const segments = path?.split('/').filter(Boolean) ?? []
+      segments.pop()
+      return segments.length > 0 ? segments.join('/') : undefined
+    }
+
+    async function deleteFolderSubtree(folderId: string) {
+      const ids = new Set<string>([folderId])
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const folder of folders) {
+          if (folder.parentId && ids.has(folder.parentId) && !ids.has(folder.id)) {
+            ids.add(folder.id)
+            changed = true
+          }
+        }
+      }
+
+      for (const id of ids) {
+        await ItemModel.updateMany({ userId, folderId: id }, { folderId: null })
+      }
+      for (const id of Array.from(ids).reverse()) {
+        await FolderModel.findOneAndDelete({ _id: id, userId })
+      }
+      for (let index = folders.length - 1; index >= 0; index--) {
+        if (ids.has(folders[index]!.id)) folders.splice(index, 1)
+      }
+    }
+
+    async function applyFolderChange(change: PendingChange): Promise<boolean> {
+      if (!change.changeType.startsWith('folder_')) return false
+
+      if (change.changeType === 'folder_created') {
+        await ensureFolderPath(change.localPathAfter)
+      } else if (change.changeType === 'folder_moved' || change.changeType === 'folder_renamed') {
+        const id = change.folderId
+        const name = change.folderNameAfter ?? folderNameFromPath(change.localPathAfter)
+        const parentId = await ensureFolderPath(parentPathFromFolderPath(change.localPathAfter))
+        if (id) {
+          const existing = folders.find((folder) => folder.id === id)
+          await FolderModel.findOneAndUpdate(
+            { _id: id, userId },
+            { name, parentId: parentId ?? null, updatedAt: now },
+          )
+          if (existing) {
+            existing.name = name
+            existing.parentId = parentId
+            existing.updatedAt = now
+          }
+        } else {
+          await ensureFolderPath(change.localPathAfter)
+        }
+      } else if (change.changeType === 'folder_deleted' && change.folderId) {
+        await deleteFolderSubtree(change.folderId)
+      }
+
+      auditEntries.push({
+        _id: newAuditId(),
+        userId,
+        source: 'sync-agent',
+        action:
+          change.changeType === 'folder_created'
+            ? 'folder_created'
+            : change.changeType === 'folder_deleted'
+              ? 'folder_deleted'
+              : 'folder_moved',
+        localPathBefore: change.localPathBefore,
+        localPathAfter: change.localPathAfter,
+        summary: buildSummary(change),
+        createdAt: now,
+      })
+      await PendingChangeModel.findOneAndDelete({ _id: change.id, userId })
+      applied++
+      return true
+    }
+
+    function normalizeIncomingBody(title: string | undefined, content: string | undefined): string {
+      const body = content ?? ''
+      const cleanTitle = title?.trim()
+      if (!cleanTitle) return body
+      const cleanBody = body.trim()
+      if (cleanBody === cleanTitle || cleanBody === `# ${cleanTitle}`) return ''
+      return body
     }
 
     for (const change of approved) {
+      if (await applyFolderChange(change)) continue
       // CREATED — pode não ter itemId; geramos um novo
       if (change.changeType === 'created') {
         const id = change.itemId ?? newItemId()
@@ -82,14 +226,15 @@ export async function POST(req: NextRequest) {
           },
           {},
         )
-        const { folderId, archive } = pathToFolderInfo(change.localPathAfter)
+        const { folderId, archive } = await pathToFolderInfo(change.localPathAfter)
+        const contentMdAfter = normalizeIncomingBody(titleAfter, change.contentMdAfter)
         const existingCreated = (await ItemModel.findOne({ _id: id, userId }).lean()) as
           | (Item & Record<string, unknown>)
           | null
         if (existingCreated) {
           const patch = {
             title: titleAfter,
-            contentMd: change.contentMdAfter ?? '',
+            contentMd: contentMdAfter,
             complexity: (fmFields['complexity'] as string) ?? existingCreated.complexity ?? 'note',
             status: archive
               ? 'archived'
@@ -99,7 +244,7 @@ export async function POST(req: NextRequest) {
             tags: (fmFields['tags'] as string[]) ?? existingCreated.tags ?? [],
             folderId: folderId ?? null,
             localPath: change.localPathAfter,
-            syncHash: hashContent(change.contentMdAfter ?? ''),
+            syncHash: hashContent(contentMdAfter),
             deletedAt: archive ? (existingCreated['deletedAt'] ?? now) : null,
             updatedAt: now,
           }
@@ -125,7 +270,7 @@ export async function POST(req: NextRequest) {
           _id: id,
           userId,
           title: titleAfter,
-          contentMd: change.contentMdAfter ?? '',
+          contentMd: contentMdAfter,
           complexity: (fmFields['complexity'] as string) ?? 'note',
           status: archive ? 'archived' : ((fmFields['status'] as string) ?? 'inbox'),
           priority: fmFields['priority'],
@@ -134,7 +279,7 @@ export async function POST(req: NextRequest) {
           backlinks: [],
           folderId,
           localPath: change.localPathAfter,
-          syncHash: hashContent(change.contentMdAfter ?? ''),
+          syncHash: hashContent(contentMdAfter),
           createdAt: now,
           updatedAt: now,
         }
@@ -181,22 +326,23 @@ export async function POST(req: NextRequest) {
         patch['status'] = 'archived'
         patch['deletedAt'] = now
       } else if (change.changeType === 'moved') {
-        const { folderId, archive } = pathToFolderInfo(change.localPathAfter)
+        const { folderId, archive } = await pathToFolderInfo(change.localPathAfter)
         patch['folderId'] = folderId ?? null
         patch['localPath'] = change.localPathAfter
         if (archive && existing['status'] !== 'archived') patch['status'] = 'archived'
       } else {
         if (change.titleAfter !== undefined) patch['title'] = change.titleAfter
         if (change.contentMdAfter !== undefined) {
-          patch['contentMd'] = change.contentMdAfter
-          patch['syncHash'] = hashContent(change.contentMdAfter)
+          const contentMdAfter = normalizeIncomingBody(change.titleAfter ?? existing.title, change.contentMdAfter)
+          patch['contentMd'] = contentMdAfter
+          patch['syncHash'] = hashContent(contentMdAfter)
         }
         if (
           change.localPathAfter !== undefined &&
           change.localPathAfter !== existing['localPath']
         ) {
           // Movimento implícito junto com edição
-          const { folderId, archive } = pathToFolderInfo(change.localPathAfter)
+          const { folderId, archive } = await pathToFolderInfo(change.localPathAfter)
           patch['folderId'] = folderId ?? null
           patch['localPath'] = change.localPathAfter
           if (archive && existing['status'] !== 'archived') patch['status'] = 'archived'
@@ -262,6 +408,14 @@ function buildSummary(change: PendingChange): string {
   switch (change.changeType) {
     case 'deleted':
       return `Arquivo removido: ${path}`
+    case 'folder_created':
+      return `Pasta criada: ${path}`
+    case 'folder_moved':
+      return `Pasta movida: ${change.localPathBefore} -> ${change.localPathAfter}`
+    case 'folder_renamed':
+      return `Pasta renomeada: ${change.folderNameBefore} -> ${change.folderNameAfter}`
+    case 'folder_deleted':
+      return `Pasta removida: ${path}`
     case 'created':
       return `Arquivo criado: ${path}`
     case 'moved':

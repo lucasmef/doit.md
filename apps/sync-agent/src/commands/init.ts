@@ -11,10 +11,10 @@ Este workspace é o espelho local dos itens do **doit.md** sincronizados via CLI
 
 ## Regras obrigatórias
 
-1. **Nunca apagar arquivos.** Para descartar um item, mova para \`Arquivo/\`.
+1. **Nunca apagar arquivos.** Para descartar um item, mova para \`_arquivo/\`.
 2. **Nunca remover ou alterar o campo \`id\`** do frontmatter — é a referência do servidor.
 3. **Nunca editar \`syncHash\`** manualmente — ele é recalculado pelo CLI.
-4. **Nunca editar arquivos dentro de \`_system/\` ou \`_changes/\`** — são estado interno do CLI.
+4. **Nunca editar arquivos dentro de \`_system/\`, \`_changes/\` ou \`_raw_archive/\`** — são estado interno do CLI.
 5. **Pode mover arquivos** entre pastas — o CLI detecta movimento e atualiza o \`folderId\` no servidor.
 6. **Pode renomear arquivos** para nomes mais claros (slug).
 7. **Pode atualizar** \`title\`, \`tags\`, \`complexity\`, \`status\`, \`priority\`, \`dueDate\` no frontmatter.
@@ -24,7 +24,8 @@ Este workspace é o espelho local dos itens do **doit.md** sincronizados via CLI
 
 - \`Inbox/\` — itens sem pasta atribuída (notas avulsas, tarefas sem data)
 - \`Proximos/\` — tarefas com data marcada mas sem pasta
-- \`Arquivo/\` — itens com status \`archived\`
+- \`_arquivo/\` — itens com status \`archived\`
+- \`_raw_archive/\` — snapshots locais dos arquivos brutos que o CLI detectou como alterados
 - \`<NomeDaPasta>/\` — pastas reais do usuário, com subpastas espelhando a árvore do app
 
 ## Frontmatter padrão

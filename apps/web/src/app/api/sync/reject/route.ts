@@ -12,10 +12,13 @@ export async function POST(req: NextRequest) {
 
     await ensureDB()
 
-    const { id } = (await req.json()) as { id: string }
-    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    const { id, ids } = (await req.json()) as { id?: string; ids?: string[] }
+    const changeIds = ids ?? (id ? [id] : [])
+    if (changeIds.length === 0) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-    await PendingChangeModel.findOneAndDelete({ _id: id, userId })
+    for (const changeId of changeIds) {
+      await PendingChangeModel.findOneAndDelete({ _id: changeId, userId })
+    }
 
     return NextResponse.json({ ok: true })
   } catch {

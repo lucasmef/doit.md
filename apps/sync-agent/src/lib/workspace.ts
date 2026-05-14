@@ -6,10 +6,10 @@ export { slugify } from '@doit/core'
 export const SPECIAL_DIRS = {
   inbox: 'Inbox',
   upcoming: 'Proximos',
-  archive: 'Arquivo',
+  archive: '_arquivo',
 } as const
 
-export const SYSTEM_DIRS = ['_system', '_changes'] as const
+export const SYSTEM_DIRS = ['_system', '_changes', '_raw_archive'] as const
 
 export async function ensureWorkspace(root: string): Promise<void> {
   const dirs = [

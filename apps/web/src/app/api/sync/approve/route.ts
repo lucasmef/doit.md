@@ -12,18 +12,23 @@ export async function POST(req: NextRequest) {
 
     await ensureDB()
 
-    const { id } = (await req.json()) as { id: string }
-    if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    const { id, ids } = (await req.json()) as { id?: string; ids?: string[] }
+    const changeIds = ids ?? (id ? [id] : [])
+    if (changeIds.length === 0) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-    const change = await PendingChangeModel.findOneAndUpdate(
-      { _id: id, userId },
-      { approved: true },
-      { new: true },
-    ).lean()
+    const changes = []
+    for (const changeId of changeIds) {
+      const change = await PendingChangeModel.findOneAndUpdate(
+        { _id: changeId, userId },
+        { approved: true },
+        { new: true },
+      ).lean()
+      if (change) changes.push(change)
+    }
 
-    if (!change) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (changes.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    return NextResponse.json({ change })
+    return NextResponse.json({ change: changes[0], changes })
   } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }

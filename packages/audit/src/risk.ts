@@ -8,6 +8,10 @@ const RISK_MAP: Record<ChangeType, RiskLevel> = {
   renamed: 'medium',
   moved: 'medium',
   deleted: 'high',
+  folder_created: 'low',
+  folder_moved: 'medium',
+  folder_renamed: 'medium',
+  folder_deleted: 'high',
   conflict: 'high',
 }
 
