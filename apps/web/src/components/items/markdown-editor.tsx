@@ -237,7 +237,7 @@ export function MarkdownEditor({
           event.target.value = ''
         }}
       />
-      <EditorToolbar
+      <EditorToolbarAccessible
         editor={editor}
         canUpload={!!itemId}
         uploadingFiles={uploadingFiles}
@@ -253,10 +253,11 @@ type ToolbarBtnProps = {
   active?: boolean
   disabled?: boolean
   title: string
+  className?: string
   children: React.ReactNode
 }
 
-function ToolbarBtn({ onClick, active, disabled, title, children }: ToolbarBtnProps) {
+function ToolbarBtn({ onClick, active, disabled, title, className = '', children }: ToolbarBtnProps) {
   return (
     <button
       type="button"
@@ -265,19 +266,256 @@ function ToolbarBtn({ onClick, active, disabled, title, children }: ToolbarBtnPr
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-md text-sm transition-colors ${
+      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm transition-colors sm:h-8 sm:min-w-8 ${
         active
           ? 'bg-brand-100 text-brand-700'
           : 'text-ui-text-muted hover:bg-ui-fill-subtle hover:text-ui-text'
-      } disabled:cursor-not-allowed disabled:opacity-40`}
+      } disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
     </button>
   )
 }
 
+function ToolbarGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-ui-border-soft bg-white p-0.5">
+      {children}
+    </div>
+  )
+}
+
 function ToolbarSep() {
   return <span className="mx-0.5 h-5 w-px bg-ui-border-soft" />
+}
+
+function EditorToolbarAccessible({
+  editor,
+  canUpload,
+  uploadingFiles,
+  onUploadFiles,
+}: {
+  editor: Editor | null
+  canUpload: boolean
+  uploadingFiles: number
+  onUploadFiles: () => void
+}) {
+  const { prompt } = useDialog()
+  const [moreOpen, setMoreOpen] = useState(false)
+  if (!editor) {
+    return <div className="h-[86px] border-b border-ui-border-soft bg-ui-fill-subtle/40" />
+  }
+
+  const insertLink = async () => {
+    const previous = editor.getAttributes('link').href as string | undefined
+    const url = await prompt({
+      title: 'Link',
+      message: 'URL do link',
+      defaultValue: previous ?? 'https://',
+    })
+    if (url === null) return
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run()
+      return
+    }
+    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run()
+  }
+
+  const insertTable = () => {
+    editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
+  }
+
+  const inTable = editor.isActive('table')
+  const headingSummary = getHeadingCollapseSummary(editor)
+  const canToggleHeadings = headingSummary.total > 0
+  const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
+
+  return (
+    <div className="space-y-1 border-b border-ui-border-soft bg-ui-fill-subtle/40 px-2 py-1.5">
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+        <ToolbarGroup>
+          <ToolbarBtn
+            title="Negrito (Ctrl+B)"
+            active={editor.isActive('bold')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <b>B</b>
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Italico (Ctrl+I)"
+            active={editor.isActive('italic')}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <i>I</i>
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Riscado"
+            active={editor.isActive('strike')}
+            onClick={() => editor.chain().focus().toggleStrike().run()}
+          >
+            <span className="line-through">S</span>
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Codigo inline"
+            active={editor.isActive('code')}
+            onClick={() => editor.chain().focus().toggleCode().run()}
+          >
+            <span className="font-mono text-xs">{'<>'}</span>
+          </ToolbarBtn>
+        </ToolbarGroup>
+
+        <ToolbarGroup>
+          {[1, 2, 3].map((level) => (
+            <ToolbarBtn
+              key={level}
+              title={`Titulo H${level}`}
+              active={editor.isActive('heading', { level })}
+              className="font-semibold"
+              onClick={() =>
+                editor
+                  .chain()
+                  .focus()
+                  .toggleHeading({ level: level as 1 | 2 | 3 })
+                  .run()
+              }
+            >
+              <span className="text-xs">H{level}</span>
+            </ToolbarBtn>
+          ))}
+        </ToolbarGroup>
+      </div>
+
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+        <ToolbarGroup>
+          <ToolbarBtn
+            title="Lista com marcadores"
+            active={editor.isActive('bulletList')}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <span className="text-lg leading-none">•</span>
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Lista numerada"
+            active={editor.isActive('orderedList')}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            <span className="text-xs">1.</span>
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Lista de tarefas"
+            active={editor.isActive('taskList')}
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
+            <span className="text-xs">☐</span>
+          </ToolbarBtn>
+          <ToolbarBtn
+            title={shouldCollapseAll ? 'Recolher topicos' : 'Expandir topicos'}
+            disabled={!canToggleHeadings}
+            onClick={() => setAllHeadingsCollapsed(editor, shouldCollapseAll)}
+          >
+            <span className="text-xs">{shouldCollapseAll ? '[-]' : '[+]'}</span>
+          </ToolbarBtn>
+        </ToolbarGroup>
+
+        <ToolbarGroup>
+          <ToolbarBtn
+            title={editor.isActive('link') ? 'Editar link' : 'Inserir link'}
+            active={editor.isActive('link')}
+            onClick={insertLink}
+          >
+            <span className="text-xs">link</span>
+          </ToolbarBtn>
+          <button
+            type="button"
+            title={
+              canUpload
+                ? 'Enviar arquivos para a pasta doit.md no Google Drive'
+                : 'Salve o item antes de enviar arquivos'
+            }
+            aria-label={
+              canUpload
+                ? 'Anexar arquivo no Google Drive'
+                : 'Salve o item antes de anexar arquivo'
+            }
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={onUploadFiles}
+            disabled={!canUpload || uploadingFiles > 0}
+            className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40 sm:h-8"
+          >
+            <span className="text-sm leading-none">{uploadingFiles > 0 ? '...' : '+'}</span>
+            <span>Anexar</span>
+          </button>
+          <ToolbarBtn
+            title={moreOpen ? 'Ocultar mais opcoes' : 'Mostrar mais opcoes'}
+            active={moreOpen}
+            onClick={() => setMoreOpen((open) => !open)}
+            className="min-w-[50px]"
+          >
+            <span className="text-xs">Mais</span>
+          </ToolbarBtn>
+        </ToolbarGroup>
+      </div>
+
+      {moreOpen || inTable ? (
+        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+          <ToolbarGroup>
+            <ToolbarBtn
+              title="Citacao"
+              active={editor.isActive('blockquote')}
+              onClick={() => editor.chain().focus().toggleBlockquote().run()}
+            >
+              <span className="text-sm">"</span>
+            </ToolbarBtn>
+            <ToolbarBtn
+              title="Bloco de codigo"
+              active={editor.isActive('codeBlock')}
+              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+            >
+              <span className="font-mono text-xs">{'{}'}</span>
+            </ToolbarBtn>
+            <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
+              <span className="text-xs">tbl</span>
+            </ToolbarBtn>
+          </ToolbarGroup>
+
+          {inTable ? (
+            <ToolbarGroup>
+            <ToolbarBtn
+              title="Adicionar coluna"
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+            >
+              <span className="text-xs">+col</span>
+            </ToolbarBtn>
+            <ToolbarBtn
+              title="Adicionar linha"
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+            >
+              <span className="text-xs">+lin</span>
+            </ToolbarBtn>
+            <ToolbarBtn
+              title="Remover coluna"
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+            >
+              <span className="text-xs">-col</span>
+            </ToolbarBtn>
+            <ToolbarBtn
+              title="Remover linha"
+              onClick={() => editor.chain().focus().deleteRow().run()}
+            >
+              <span className="text-xs">-lin</span>
+            </ToolbarBtn>
+            <ToolbarBtn
+              title="Excluir tabela"
+              onClick={() => editor.chain().focus().deleteTable().run()}
+            >
+              <span className="text-xs">del</span>
+            </ToolbarBtn>
+            </ToolbarGroup>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  )
 }
 
 function EditorToolbar({
@@ -439,17 +677,26 @@ function EditorToolbar({
       <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
         ▦
       </ToolbarBtn>
-      <ToolbarBtn
+      <button
+        type="button"
         title={
           canUpload
             ? 'Enviar arquivos para a pasta doit.md no Google Drive'
             : 'Salve o item antes de enviar arquivos'
         }
+        aria-label={
+          canUpload
+            ? 'Anexar arquivo no Google Drive'
+            : 'Salve o item antes de anexar arquivo'
+        }
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onUploadFiles}
         disabled={!canUpload || uploadingFiles > 0}
+        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
       >
-        <span className="text-xs">{uploadingFiles > 0 ? '...' : '+'}</span>
-      </ToolbarBtn>
+        <span className="text-sm leading-none">{uploadingFiles > 0 ? '...' : '+'}</span>
+        <span>Anexar</span>
+      </button>
 
       {inTable ? (
         <>
