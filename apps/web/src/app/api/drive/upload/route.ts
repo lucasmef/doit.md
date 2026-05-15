@@ -11,6 +11,38 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const MAX_BYTES = 100 * 1024 * 1024
+const DRIVE_API_DISABLED_MESSAGE =
+  'A API do Google Drive esta desativada no projeto OAuth. Ative a Google Drive API no Google Cloud Console e tente novamente.'
+
+function getErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+function getErrorStatus(err: unknown): number | undefined {
+  const candidate = err as { status?: unknown; code?: unknown; response?: { status?: unknown } }
+  const status = candidate.status ?? candidate.code ?? candidate.response?.status
+  return typeof status === 'number' ? status : undefined
+}
+
+function isDriveApiDisabled(err: unknown): boolean {
+  const message = getErrorMessage(err).toLowerCase()
+  const responseData = (err as { response?: { data?: Record<string, unknown> } })?.response?.data
+  const providerStatus = String(responseData?.['status'] ?? '').toLowerCase()
+  return (
+    providerStatus === 'service_disabled' ||
+    message.includes('drive api has not been used') ||
+    (message.includes('drive.googleapis.com') && message.includes('disabled'))
+  )
+}
+
+function isInsufficientDrivePermission(err: unknown): boolean {
+  const message = getErrorMessage(err).toLowerCase()
+  return (
+    getErrorStatus(err) === 401 ||
+    message.includes('insufficient authentication scopes') ||
+    message.includes('insufficient permission')
+  )
+}
 
 export async function POST(req: NextRequest) {
   const { userId } = await auth()
@@ -100,11 +132,24 @@ export async function POST(req: NextRequest) {
       webViewLink,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err)
+    const message = getErrorMessage(err)
     if (message === 'GOOGLE_REAUTH_REQUIRED') {
       return NextResponse.json(
         { error: 'Google reauth required', needsReauth: true },
         { status: 412 },
+      )
+    }
+    if (isInsufficientDrivePermission(err)) {
+      return NextResponse.json(
+        { error: 'Permissao do Google Drive expirada ou ausente', needsReauth: true },
+        { status: 412 },
+      )
+    }
+    if (isDriveApiDisabled(err)) {
+      console.warn('[POST /api/drive/upload] Google Drive API disabled for OAuth project')
+      return NextResponse.json(
+        { error: DRIVE_API_DISABLED_MESSAGE, code: 'DRIVE_API_DISABLED' },
+        { status: 503 },
       )
     }
     console.error('[POST /api/drive/upload]', err)
