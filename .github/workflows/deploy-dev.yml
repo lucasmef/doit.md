@@ -73,4 +73,6 @@ jobs:
             "$GITHUB_WORKSPACE/" /srv/doit/dev/app/
 
       - name: Executar script de deploy
+        env:
+          DOIT_DEV_STANDBY: "1"
         run: bash /srv/doit/dev/app/scripts/deploy.sh dev

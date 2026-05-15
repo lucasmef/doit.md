@@ -5,6 +5,7 @@ set -euo pipefail
 
 TARGET_ENV="${1:?Usage: $0 <dev|prod>}"
 PORT="${2:-}"
+STANDBY_DEV="${DOIT_DEV_STANDBY:-0}"
 
 case "$TARGET_ENV" in
   prod)
@@ -301,6 +302,14 @@ fi
 
 echo "Cleaning orphan listeners on port $PORT..."
 cleanup_orphan_listener "$PORT"
+
+if [[ "$TARGET_ENV" == "dev" && "$STANDBY_DEV" == "1" ]]; then
+  echo "Dev standby requested; stopping $SERVICE_NAME and skipping restart/healthcheck."
+  sudo systemctl daemon-reload
+  sudo systemctl stop "$SERVICE_NAME" || true
+  echo "Deploy prepared: dev build is updated and $SERVICE_NAME is stopped."
+  exit 0
+fi
 
 echo "Restarting service $SERVICE_NAME..."
 sudo systemctl daemon-reload
