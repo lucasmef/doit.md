@@ -284,7 +284,7 @@ export NODE_ENV=production
 export PORT="$PORT"
 export HOSTNAME="${HOSTNAME:-127.0.0.1}"
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
-export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}"
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2304}"
 
 cd "$APP_DIR"
 
