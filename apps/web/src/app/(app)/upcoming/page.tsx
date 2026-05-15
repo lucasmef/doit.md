@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
 import { CalendarBoard } from '@/components/calendar/calendar-board'
@@ -32,6 +32,7 @@ const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde']
 export default function UpcomingPage() {
   const { items, isLoading } = useItems()
   const [view, setView] = useState<'list' | 'calendar'>('list')
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   const todayStr = toLocalDateKey()
   const future = items.filter(
@@ -75,9 +76,22 @@ export default function UpcomingPage() {
     </div>
   )
 
+  function handleListTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
+    const start = touchStartRef.current
+    const touch = event.changedTouches[0]
+    touchStartRef.current = null
+    if (!start || !touch) return
+
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (deltaX < -60 && Math.abs(deltaY) < 50) {
+      setView('calendar')
+    }
+  }
+
   if (view === 'calendar') {
     return (
-      <div className="flex h-full min-h-0 w-full flex-col pb-24 lg:pb-0">
+      <div className="flex h-full min-h-0 w-full flex-col">
         {ViewSwitch}
         <CalendarBoard items={future} />
       </div>
@@ -85,7 +99,14 @@ export default function UpcomingPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col px-0 pb-24 pt-0 lg:px-5 lg:pb-4 lg:pt-3">
+    <div
+      className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-0 pb-24 pt-0 lg:px-5 lg:pb-4 lg:pt-3"
+      onTouchStart={(event) => {
+        const touch = event.touches[0]
+        if (touch) touchStartRef.current = { x: touch.clientX, y: touch.clientY }
+      }}
+      onTouchEnd={handleListTouchEnd}
+    >
       {ViewSwitch}
 
       <div className="px-5 lg:px-0">

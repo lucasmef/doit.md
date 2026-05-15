@@ -123,7 +123,7 @@ export function CalendarGrid({
   const cellHeight = compact ? 'h-9' : fillHeight ? '' : 'h-20 lg:h-24 xl:h-28'
 
   const containerClass = fillHeight
-    ? 'flex flex-1 min-h-0 select-none flex-col rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
+    ? 'flex flex-1 min-h-0 select-none flex-col rounded-none border-y border-ui-border bg-white p-2 shadow-cool-sm lg:rounded-xl lg:border lg:p-3'
     : 'select-none rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
 
   const gridClass = fillHeight

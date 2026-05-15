@@ -159,7 +159,7 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
 
   return (
     <div
-      className={`flex flex-1 min-h-0 flex-col gap-2 overflow-hidden ${compactSide ? 'p-3' : 'p-2 lg:p-3'}`}
+      className={`flex flex-1 min-h-0 flex-col gap-2 overflow-hidden ${compactSide ? 'p-3' : 'px-0 pb-0 pt-2 lg:p-3'}`}
     >
       {!compactSide && (
         <div className="flex shrink-0 items-center gap-2 lg:hidden">
@@ -373,7 +373,7 @@ function DayList({
 function EventSheet({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
       role="dialog"
       aria-modal="true"
       onClick={(clickEvent) => {
