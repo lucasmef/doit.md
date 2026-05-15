@@ -193,6 +193,7 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'notification_alerts', 'acknowledgedAt', 'TEXT')
   await ensureColumn(db, 'google_accounts', 'driveRootFolderId', 'TEXT')
   await ensureColumn(db, 'google_accounts', 'driveInboxFolderId', 'TEXT')
+  await ensureColumnType(db, 'google_accounts', 'expiresAt', 'BIGINT')
 }
 
 const sqliteSchema = [
@@ -318,7 +319,7 @@ const sqliteSchema = [
     email TEXT NOT NULL,
     accessToken TEXT NOT NULL,
     refreshToken TEXT,
-    expiresAt INTEGER,
+    expiresAt BIGINT,
     scope TEXT,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL
@@ -498,4 +499,24 @@ async function ensureColumn(
   if (!rows.some((row) => row.name === column)) {
     db.db.prepare(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${definition}`).run()
   }
+}
+
+async function ensureColumnType(
+  db: DBClient,
+  table: string,
+  column: string,
+  definition: string,
+): Promise<void> {
+  if (db.kind !== 'postgres') return
+
+  const result = await db.pool.query(
+    `SELECT data_type FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+    [table, column],
+  )
+  const dataType = result.rows[0]?.['data_type']
+  if (!dataType || String(dataType).toLowerCase() === definition.toLowerCase()) return
+
+  await db.pool.query(
+    `ALTER TABLE "${table}" ALTER COLUMN "${column}" TYPE ${definition} USING "${column}"::${definition}`,
+  )
 }
