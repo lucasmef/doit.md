@@ -464,7 +464,7 @@ function EditorToolbarAccessible({
               active={editor.isActive('blockquote')}
               onClick={() => editor.chain().focus().toggleBlockquote().run()}
             >
-              <span className="text-sm">"</span>
+              <span className="text-sm">{'"'}</span>
             </ToolbarBtn>
             <ToolbarBtn
               title="Bloco de codigo"
@@ -518,7 +518,7 @@ function EditorToolbarAccessible({
   )
 }
 
-function EditorToolbar({
+export function EditorToolbar({
   editor,
   canUpload,
   uploadingFiles,
