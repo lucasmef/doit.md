@@ -1,8 +1,11 @@
+import { setDefaultResultOrder } from 'node:dns'
 import { google, Auth } from 'googleapis'
 import { GoogleAccountModel } from '@doit/db'
 
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+
+setDefaultResultOrder('ipv4first')
 
 const CLIENT_ID = process.env['GOOGLE_CLIENT_ID'] ?? ''
 const CLIENT_SECRET = process.env['GOOGLE_CLIENT_SECRET'] ?? ''
