@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
+import useSWR from 'swr'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -33,8 +34,31 @@ type Props = {
 type DriveUploadResult = {
   fileId: string
   name: string
+  mimeType: string | null
+  size: number
   webViewLink: string
 }
+
+type DriveAttachment = DriveUploadResult & {
+  id?: string
+  createdAt?: string
+}
+
+type UploadState = {
+  id: string
+  name: string
+  size: number
+  mimeType: string
+  status: 'uploading' | 'done' | 'error'
+  error?: string
+  webViewLink?: string
+}
+
+const attachmentsFetcher = (url: string) =>
+  fetch(url).then(async (res) => {
+    if (!res.ok) throw new Error('Falha ao carregar anexos')
+    return (await res.json()) as { links: DriveAttachment[] }
+  })
 
 async function uploadToDrive(itemId: string, file: File): Promise<DriveUploadResult> {
   const form = new FormData()
@@ -101,7 +125,12 @@ export function MarkdownEditor({
     },
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [uploadingFiles, setUploadingFiles] = useState(0)
+  const [uploads, setUploads] = useState<UploadState[]>([])
+  const { data: attachmentData, mutate: mutateAttachments } = useSWR(
+    itemId ? `/api/items/${itemId}/drive-links` : null,
+    attachmentsFetcher,
+  )
+  const uploadingFiles = uploads.filter((upload) => upload.status === 'uploading').length
 
   useEffect(() => {
     if (!editor) return
@@ -118,77 +147,70 @@ export function MarkdownEditor({
     editor.view.dom.closest('[data-note-scroll-container="true"]')?.scrollTo({ top: 0 })
   }, [editor, focusAtStart, itemId])
 
-  const insertDriveLink = useCallback((current: Editor, result: DriveUploadResult) => {
-    current
-      .chain()
-      .focus()
-      .insertContent([
-        {
-          type: 'text',
-          text: result.name,
-          marks: [{ type: 'link', attrs: { href: result.webViewLink } }],
-        },
-        { type: 'text', text: ' ' },
-      ])
-      .run()
-  }, [])
-
   const handleFiles = useCallback(
     async (files: FileList | null | undefined) => {
       if (!editor || !itemId || !files || files.length === 0) return false
       const list = Array.from(files)
-      setUploadingFiles((current) => current + list.length)
-      try {
-        for (const file of list) {
-          try {
-            const result = await uploadToDrive(itemId, file)
-            insertDriveLink(editor, result)
-          } catch (err) {
-            const e = err as Error & { needsReauth?: boolean }
-            if (e.needsReauth) {
-              const ok = window.confirm(
-                'Conecte sua conta Google com permissao para o Drive para enviar arquivos. Abrir agora?',
-              )
-              if (ok) window.location.href = '/api/google'
-              return true
-            }
-            window.alert(`Falha ao enviar ${file.name}: ${e.message}`)
+      const queued = list.map((file) => ({
+        id: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+        name: file.name,
+        size: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        status: 'uploading' as const,
+      }))
+      setUploads((current) => [...queued, ...current])
+
+      for (let index = 0; index < list.length; index += 1) {
+        const file = list[index]
+        const upload = queued[index]
+        if (!file || !upload) continue
+        try {
+          const result = await uploadToDrive(itemId, file)
+          setUploads((current) =>
+            current.map((entry) =>
+              entry.id === upload.id
+                ? {
+                    ...entry,
+                    status: 'done',
+                    webViewLink: result.webViewLink,
+                    mimeType: result.mimeType ?? entry.mimeType,
+                    size: result.size,
+                  }
+                : entry,
+            ),
+          )
+          await mutateAttachments()
+        } catch (err) {
+          const e = err as Error & { needsReauth?: boolean }
+          if (e.needsReauth) {
+            const ok = window.confirm(
+              'Conecte sua conta Google com permissao para o Drive para enviar arquivos. Abrir agora?',
+            )
+            if (ok) window.location.href = '/api/google'
+            setUploads((current) =>
+              current.map((entry) =>
+                entry.id === upload.id
+                  ? { ...entry, status: 'error', error: 'Reconecte o Google Drive' }
+                  : entry,
+              ),
+            )
+            return true
           }
+          setUploads((current) =>
+            current.map((entry) =>
+              entry.id === upload.id ? { ...entry, status: 'error', error: e.message } : entry,
+            ),
+          )
         }
-      } finally {
-        setUploadingFiles((current) => Math.max(0, current - list.length))
       }
       return true
     },
-    [editor, itemId, insertDriveLink],
+    [editor, itemId, mutateAttachments],
   )
 
   useEffect(() => {
     if (!editor || !itemId) return
     const dom = editor.view.dom
-
-    const handleFiles = async (files: FileList | null | undefined) => {
-      if (!files || files.length === 0) return false
-      const list = Array.from(files)
-      for (const file of list) {
-        try {
-          const result = await uploadToDrive(itemId, file)
-          insertDriveLink(editor, result)
-        } catch (err) {
-          const e = err as Error & { needsReauth?: boolean }
-          if (e.needsReauth) {
-            const ok = window.confirm(
-              'Conecte sua conta Google com permissão para o Drive para enviar arquivos. Abrir agora?',
-            )
-            if (ok) window.location.href = '/api/google'
-            return true
-          }
-          window.alert(`Falha ao enviar ${file.name}: ${e.message}`)
-        }
-      }
-      return true
-    }
-
     const onDrop = (event: DragEvent) => {
       const files = event.dataTransfer?.files
       if (!files || files.length === 0) return
@@ -217,7 +239,7 @@ export function MarkdownEditor({
       dom.removeEventListener('paste', onPaste)
       dom.removeEventListener('dragover', onDragOver)
     }
-  }, [editor, itemId, insertDriveLink])
+  }, [editor, itemId, handleFiles])
 
   return (
     <div
@@ -244,6 +266,7 @@ export function MarkdownEditor({
         onUploadFiles={() => fileInputRef.current?.click()}
       />
       <EditorContent editor={editor} className="flex-1 overflow-auto" />
+      <AttachmentTray uploads={uploads} attachments={attachmentData?.links ?? []} />
     </div>
   )
 }
@@ -289,6 +312,132 @@ function ToolbarSep() {
   return <span className="mx-0.5 h-5 w-px bg-ui-border-soft" />
 }
 
+function formatBytes(size: number) {
+  if (!Number.isFinite(size) || size <= 0) return 'Tamanho desconhecido'
+  const units = ['B', 'KB', 'MB', 'GB']
+  let value = size
+  let unit = 0
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024
+    unit += 1
+  }
+  return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`
+}
+
+function fileExtension(name: string, mimeType?: string | null) {
+  const ext = name.includes('.') ? name.split('.').pop()?.toUpperCase() : ''
+  if (ext) return ext
+  if (!mimeType) return 'FILE'
+  return mimeType.split('/').pop()?.toUpperCase().slice(0, 8) || 'FILE'
+}
+
+function AttachmentIcon({ label }: { label: string }) {
+  return (
+    <span className="relative inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-md border border-ui-border-soft bg-white text-[9px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
+      <span className="absolute right-0 top-0 h-2 w-2 rounded-bl border-b border-l border-ui-border-soft bg-surface-soft" />
+      {label.slice(0, 4)}
+    </span>
+  )
+}
+
+function AttachmentTray({
+  uploads,
+  attachments,
+}: {
+  uploads: UploadState[]
+  attachments: DriveAttachment[]
+}) {
+  const visibleUploads = uploads.filter(
+    (upload) =>
+      upload.status !== 'done' ||
+      !attachments.some((attachment) => attachment.webViewLink === upload.webViewLink),
+  )
+  if (visibleUploads.length === 0 && attachments.length === 0) return null
+
+  return (
+    <div className="border-t border-ui-border-soft bg-surface-soft/70 px-3 py-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+          Anexos
+        </span>
+        {visibleUploads.some((upload) => upload.status === 'uploading') ? (
+          <span className="text-[11px] font-medium text-brand-700">Enviando...</span>
+        ) : null}
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {visibleUploads.map((upload) => (
+          <div
+            key={upload.id}
+            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-lg border border-ui-border-soft bg-white px-2.5 py-2"
+          >
+            <AttachmentIcon label={fileExtension(upload.name, upload.mimeType)} />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-slate-800">{upload.name}</div>
+              <div className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                <span>{formatBytes(upload.size)}</span>
+                <span aria-hidden="true">|</span>
+                <span>{fileExtension(upload.name, upload.mimeType)}</span>
+              </div>
+              <div
+                className={`mt-1 h-1 overflow-hidden rounded-full bg-slate-100 ${
+                  upload.status === 'error' ? 'bg-red-100' : ''
+                }`}
+              >
+                <div
+                  className={`h-full rounded-full ${
+                    upload.status === 'error'
+                      ? 'w-full bg-red-400'
+                      : upload.status === 'done'
+                        ? 'w-full bg-emerald-500'
+                        : 'w-2/3 animate-pulse bg-brand-500'
+                  }`}
+                />
+              </div>
+              {upload.status === 'error' ? (
+                <div className="mt-1 truncate text-[11px] text-red-600">{upload.error}</div>
+              ) : null}
+            </div>
+            {upload.webViewLink ? (
+              <a
+                href={upload.webViewLink}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md px-2 py-1 text-xs font-semibold text-brand-700 hover:bg-surface-selected"
+              >
+                Abrir
+              </a>
+            ) : null}
+          </div>
+        ))}
+        {attachments.map((attachment) => (
+          <a
+            key={attachment.id ?? attachment.fileId}
+            href={attachment.webViewLink}
+            target="_blank"
+            rel="noreferrer"
+            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-lg border border-ui-border-soft bg-white px-2.5 py-2 text-left transition-colors hover:border-brand-200 hover:bg-surface-selected"
+          >
+            <AttachmentIcon label={fileExtension(attachment.name, attachment.mimeType)} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-slate-800">
+                {attachment.name}
+              </span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-slate-500">
+                <span>{formatBytes(attachment.size)}</span>
+                <span aria-hidden="true">|</span>
+                <span>{fileExtension(attachment.name, attachment.mimeType)}</span>
+              </span>
+            </span>
+            <span className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-brand-700">
+              Abrir
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function EditorToolbarAccessible({
   editor,
   canUpload,
@@ -331,8 +480,8 @@ function EditorToolbarAccessible({
   const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
 
   return (
-    <div className="space-y-1 border-b border-ui-border-soft bg-ui-fill-subtle/40 px-2 py-1.5">
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+    <div className="border-b border-ui-border-soft bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur sm:flex sm:flex-wrap sm:items-center sm:gap-1 sm:bg-ui-fill-subtle/60">
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none sm:overflow-visible sm:pb-0">
         <ToolbarGroup>
           <ToolbarBtn
             title="Negrito (Ctrl+B)"
@@ -385,14 +534,14 @@ function EditorToolbarAccessible({
         </ToolbarGroup>
       </div>
 
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none sm:overflow-visible">
         <ToolbarGroup>
           <ToolbarBtn
             title="Lista com marcadores"
             active={editor.isActive('bulletList')}
             onClick={() => editor.chain().focus().toggleBulletList().run()}
           >
-            <span className="text-lg leading-none">•</span>
+            <span className="text-lg leading-none">*</span>
           </ToolbarBtn>
           <ToolbarBtn
             title="Lista numerada"
@@ -406,7 +555,7 @@ function EditorToolbarAccessible({
             active={editor.isActive('taskList')}
             onClick={() => editor.chain().focus().toggleTaskList().run()}
           >
-            <span className="text-xs">☐</span>
+            <span className="text-xs">[ ]</span>
           </ToolbarBtn>
           <ToolbarBtn
             title={shouldCollapseAll ? 'Recolher topicos' : 'Expandir topicos'}
@@ -443,7 +592,7 @@ function EditorToolbarAccessible({
             className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40 sm:h-8"
           >
             <span className="text-sm leading-none">{uploadingFiles > 0 ? '...' : '+'}</span>
-            <span>Anexar</span>
+            <span>{uploadingFiles > 0 ? `Enviando ${uploadingFiles}` : 'Anexar'}</span>
           </button>
           <ToolbarBtn
             title={moreOpen ? 'Ocultar mais opcoes' : 'Mostrar mais opcoes'}
@@ -457,7 +606,7 @@ function EditorToolbarAccessible({
       </div>
 
       {moreOpen || inTable ? (
-        <div className="flex items-center gap-1 overflow-x-auto scrollbar-none">
+        <div className="mt-1 flex basis-full items-center gap-1 overflow-x-auto scrollbar-none sm:overflow-visible">
           <ToolbarGroup>
             <ToolbarBtn
               title="Citacao"
@@ -632,7 +781,7 @@ export function EditorToolbar({
               } else chain.toggleOrderedList().run()
             }}
           >
-            {current === 2 ? <span className="text-xs">1.</span> : '•'}
+            {current === 2 ? <span className="text-xs">1.</span> : '*'}
           </ToolbarBtn>
         )
       })()}
@@ -641,7 +790,7 @@ export function EditorToolbar({
         active={editor.isActive('taskList')}
         onClick={() => editor.chain().focus().toggleTaskList().run()}
       >
-        ☐
+        [ ]
       </ToolbarBtn>
       <ToolbarBtn
         title={shouldCollapseAll ? 'Recolher todos os topicos' : 'Expandir todos os topicos'}
