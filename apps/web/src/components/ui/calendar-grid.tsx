@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Item, CalendarEvent } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 
@@ -15,6 +15,9 @@ type Props = {
   month?: number
   onYearChange?: (year: number) => void
   onMonthChange?: (month: number) => void
+  onEventClick?: (event: CalendarEvent) => void
+  headerControls?: ReactNode
+  hideMobileNav?: boolean
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -53,6 +56,9 @@ export function CalendarGrid({
   month: monthProp,
   onYearChange,
   onMonthChange,
+  onEventClick,
+  headerControls,
+  hideMobileNav = false,
 }: Props) {
   const today = new Date()
   const [yearState, setYearState] = useState(today.getFullYear())
@@ -114,11 +120,7 @@ export function CalendarGrid({
   const weekRows = Math.ceil(cells.length / 7)
   while (cells.length < weekRows * 7) cells.push(null)
 
-  const cellHeight = compact
-    ? 'h-9'
-    : fillHeight
-      ? ''
-      : 'h-20 lg:h-24 xl:h-28'
+  const cellHeight = compact ? 'h-9' : fillHeight ? '' : 'h-20 lg:h-24 xl:h-28'
 
   const containerClass = fillHeight
     ? 'flex flex-1 min-h-0 select-none flex-col rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
@@ -134,11 +136,20 @@ export function CalendarGrid({
 
   return (
     <div className={containerClass}>
-      <div className="mb-3 flex shrink-0 items-center justify-between gap-2">
-        <h2 className={`${compact ? 'text-[14px]' : 'text-lg'} font-bold text-navy-900`}>
-          {MONTHS[month]} {year}
-        </h2>
-        <div className="flex items-center gap-1 rounded-lg bg-surface-soft p-1">
+      <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className={`${compact ? 'text-[14px]' : 'text-lg'} font-bold text-navy-900`}>
+            {MONTHS[month]} {year}
+          </h2>
+          {headerControls ? (
+            <div className="mt-1 flex flex-wrap gap-1.5">{headerControls}</div>
+          ) : null}
+        </div>
+        <div
+          className={`items-center gap-1 rounded-lg bg-surface-soft p-1 ${
+            hideMobileNav ? 'hidden lg:flex' : 'flex'
+          }`}
+        >
           <button
             onClick={prevMonth}
             className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
@@ -207,9 +218,17 @@ export function CalendarGrid({
           const hidden = entries.length - visible.length
 
           return (
-            <button
+            <div
               key={ds}
               onClick={() => onDayClick?.(ds)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault()
+                  onDayClick?.(ds)
+                }
+              }}
               className={`relative flex ${cellHeight} min-h-0 flex-col items-start overflow-hidden bg-white p-1.5 text-left transition-colors hover:bg-surface-soft ${isSelected ? 'z-10 ring-2 ring-inset ring-brand-400' : ''}`}
             >
               <span
@@ -236,8 +255,14 @@ export function CalendarGrid({
                     if (entry.kind === 'event') {
                       const time = formatEventTime(entry.start, entry.allDay)
                       return (
-                        <div
+                        <button
+                          type="button"
                           key={`event-${entry.id}`}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            const calendarEvent = dayEvents.find((ev) => ev.id === entry.id)
+                            if (calendarEvent) onEventClick?.(calendarEvent)
+                          }}
                           className="flex w-full items-center gap-1 truncate rounded-md bg-brand-100 px-1.5 py-0.5 text-left text-[10px] font-medium text-navy-700"
                           title={entry.title}
                         >
@@ -245,7 +270,7 @@ export function CalendarGrid({
                             <span className="font-mono text-[9px] text-navy-500">{time}</span>
                           )}
                           <span className="truncate">{entry.title}</span>
-                        </div>
+                        </button>
                       )
                     }
 
@@ -272,7 +297,7 @@ export function CalendarGrid({
                   )}
                 </div>
               )}
-            </button>
+            </div>
           )
         })}
       </div>

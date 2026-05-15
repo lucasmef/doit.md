@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
@@ -100,6 +100,8 @@ export function MarkdownEditor({
       onChange(editor.getMarkdown())
     },
   })
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingFiles, setUploadingFiles] = useState(0)
 
   useEffect(() => {
     if (!editor) return
@@ -130,6 +132,36 @@ export function MarkdownEditor({
       ])
       .run()
   }, [])
+
+  const handleFiles = useCallback(
+    async (files: FileList | null | undefined) => {
+      if (!editor || !itemId || !files || files.length === 0) return false
+      const list = Array.from(files)
+      setUploadingFiles((current) => current + list.length)
+      try {
+        for (const file of list) {
+          try {
+            const result = await uploadToDrive(itemId, file)
+            insertDriveLink(editor, result)
+          } catch (err) {
+            const e = err as Error & { needsReauth?: boolean }
+            if (e.needsReauth) {
+              const ok = window.confirm(
+                'Conecte sua conta Google com permissao para o Drive para enviar arquivos. Abrir agora?',
+              )
+              if (ok) window.location.href = '/api/google'
+              return true
+            }
+            window.alert(`Falha ao enviar ${file.name}: ${e.message}`)
+          }
+        }
+      } finally {
+        setUploadingFiles((current) => Math.max(0, current - list.length))
+      }
+      return true
+    },
+    [editor, itemId, insertDriveLink],
+  )
 
   useEffect(() => {
     if (!editor || !itemId) return
@@ -195,7 +227,22 @@ export function MarkdownEditor({
           : 'flex flex-col overflow-hidden rounded-xl border border-ui-border-soft'
       } bg-white transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100`}
     >
-      <EditorToolbar editor={editor} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void handleFiles(event.target.files)
+          event.target.value = ''
+        }}
+      />
+      <EditorToolbar
+        editor={editor}
+        canUpload={!!itemId}
+        uploadingFiles={uploadingFiles}
+        onUploadFiles={() => fileInputRef.current?.click()}
+      />
       <EditorContent editor={editor} className="flex-1 overflow-auto" />
     </div>
   )
@@ -233,7 +280,17 @@ function ToolbarSep() {
   return <span className="mx-0.5 h-5 w-px bg-ui-border-soft" />
 }
 
-function EditorToolbar({ editor }: { editor: Editor | null }) {
+function EditorToolbar({
+  editor,
+  canUpload,
+  uploadingFiles,
+  onUploadFiles,
+}: {
+  editor: Editor | null
+  canUpload: boolean
+  uploadingFiles: number
+  onUploadFiles: () => void
+}) {
   const { prompt } = useDialog()
   if (!editor) {
     return <div className="h-10 border-b border-ui-border-soft bg-ui-fill-subtle/40" />
@@ -381,6 +438,17 @@ function EditorToolbar({ editor }: { editor: Editor | null }) {
       </ToolbarBtn>
       <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
         ▦
+      </ToolbarBtn>
+      <ToolbarBtn
+        title={
+          canUpload
+            ? 'Enviar arquivos para a pasta doit.md no Google Drive'
+            : 'Salve o item antes de enviar arquivos'
+        }
+        onClick={onUploadFiles}
+        disabled={!canUpload || uploadingFiles > 0}
+      >
+        <span className="text-xs">{uploadingFiles > 0 ? '...' : '+'}</span>
       </ToolbarBtn>
 
       {inTable ? (
