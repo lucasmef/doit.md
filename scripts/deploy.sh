@@ -286,6 +286,13 @@ export HOSTNAME="${HOSTNAME:-127.0.0.1}"
 
 cd "$APP_DIR"
 
+if [[ "$TARGET_ENV" == "dev" && "$STANDBY_DEV" == "1" ]]; then
+  echo "Dev standby requested; stopping $SERVICE_NAME before install/build to free RAM."
+  if ! sudo -n systemctl stop "$SERVICE_NAME" 2>/dev/null; then
+    echo "Warning: no non-interactive sudo permission to stop $SERVICE_NAME; continuing without restarting dev."
+  fi
+fi
+
 echo "Installing dependencies..."
 "${PNPM_CMD[@]}" install --frozen-lockfile --prod=false
 
@@ -305,9 +312,13 @@ cleanup_orphan_listener "$PORT"
 
 if [[ "$TARGET_ENV" == "dev" && "$STANDBY_DEV" == "1" ]]; then
   echo "Dev standby requested; stopping $SERVICE_NAME and skipping restart/healthcheck."
-  sudo systemctl daemon-reload
-  sudo systemctl stop "$SERVICE_NAME" || true
-  echo "Deploy prepared: dev build is updated and $SERVICE_NAME is stopped."
+  if ! sudo -n systemctl daemon-reload 2>/dev/null; then
+    echo "Warning: no non-interactive sudo permission to reload systemd; continuing without restarting dev."
+  fi
+  if ! sudo -n systemctl stop "$SERVICE_NAME" 2>/dev/null; then
+    echo "Warning: no non-interactive sudo permission to stop $SERVICE_NAME; use docs/dev-standby.md for manual standby commands."
+  fi
+  echo "Deploy prepared: dev build is updated without restarting $SERVICE_NAME."
   exit 0
 fi
 

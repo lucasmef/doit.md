@@ -12,6 +12,8 @@ still restart/healthcheck their production services.
 
 ## Stop dev services
 
+Run these commands in an interactive SSH session with sudo privileges:
+
 ```bash
 sudo systemctl stop doit-dev.service salomao-dev.service salomao-inter-dev.service
 ```
@@ -39,6 +41,13 @@ curl --fail http://127.0.0.1:8101/api/v1/health
 
 ```bash
 sudo systemctl stop doit-dev.service salomao-dev.service salomao-inter-dev.service
+```
+
+## Check status
+
+```bash
+systemctl is-active doit-dev.service salomao-dev.service salomao-inter-dev.service
+systemctl is-enabled doit-dev.service salomao-dev.service salomao-inter-dev.service
 ```
 
 `systemctl start` does not re-enable boot startup. If the services were disabled
