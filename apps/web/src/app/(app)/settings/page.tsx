@@ -397,7 +397,7 @@ function SettingsContent() {
     setSyncing(true)
     try {
       const result = await syncGoogleCalendar()
-      addToast(`${result.synced} evento(s) sincronizados.`, 'success')
+      addToast(`${result.synced} evento(s) sincronizados, ${result.removed} removidos.`, 'success')
     } catch (e: unknown) {
       addToast(e instanceof Error ? e.message : 'Erro ao sincronizar', 'error')
     } finally {

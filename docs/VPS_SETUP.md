@@ -63,10 +63,13 @@ EMAIL_FROM
 
 `NOTIFICATION_LOOKAHEAD_MINUTES` controla a janela de busca de lembretes com horario; o padrao recomendado e `5`.
 
-Os lembretes sao disparados por timers systemd (`doit-reminders.timer` e `doit-dev-reminders.timer`) que executam a cada minuto e chamam `/api/notifications/reminders` localmente usando o `CRON_SECRET` do `web.env`. Veja a secao Systemd abaixo. Caso prefira disparar de outro lugar:
+Os lembretes sao disparados por timers systemd (`doit-reminders.timer` e `doit-dev-reminders.timer`) que executam a cada minuto e chamam `/api/notifications/reminders` localmente usando o `CRON_SECRET` do `web.env`. A agenda do Google e sincronizada por `doit-calendar-sync.timer` e `doit-dev-calendar-sync.timer` a cada 10 minutos, chamando `/api/calendar/sync/cron` com o mesmo segredo. Veja a secao Systemd abaixo. Caso prefira disparar de outro lugar:
 
 ```bash
 curl -X POST https://<doit-public-domain>/api/notifications/reminders \
+  -H "Authorization: Bearer <CRON_SECRET>"
+
+curl -X POST https://<doit-public-domain>/api/calendar/sync/cron \
   -H "Authorization: Bearer <CRON_SECRET>"
 ```
 
@@ -81,9 +84,13 @@ sudo install -m 644 infra/systemd/doit-reminders.service /etc/systemd/system/doi
 sudo install -m 644 infra/systemd/doit-reminders.timer /etc/systemd/system/doit-reminders.timer
 sudo install -m 644 infra/systemd/doit-dev-reminders.service /etc/systemd/system/doit-dev-reminders.service
 sudo install -m 644 infra/systemd/doit-dev-reminders.timer /etc/systemd/system/doit-dev-reminders.timer
+sudo install -m 644 infra/systemd/doit-calendar-sync.service /etc/systemd/system/doit-calendar-sync.service
+sudo install -m 644 infra/systemd/doit-calendar-sync.timer /etc/systemd/system/doit-calendar-sync.timer
+sudo install -m 644 infra/systemd/doit-dev-calendar-sync.service /etc/systemd/system/doit-dev-calendar-sync.service
+sudo install -m 644 infra/systemd/doit-dev-calendar-sync.timer /etc/systemd/system/doit-dev-calendar-sync.timer
 sudo systemctl daemon-reload
 sudo systemctl enable doit.service doit-dev.service
-sudo systemctl enable --now doit-reminders.timer doit-dev-reminders.timer
+sudo systemctl enable --now doit-reminders.timer doit-dev-reminders.timer doit-calendar-sync.timer doit-dev-calendar-sync.timer
 ```
 
 Para inspecionar:
@@ -91,6 +98,7 @@ Para inspecionar:
 ```bash
 systemctl list-timers 'doit*'
 journalctl -u doit-reminders.service -n 50
+journalctl -u doit-calendar-sync.service -n 50
 ```
 
 ## Nginx

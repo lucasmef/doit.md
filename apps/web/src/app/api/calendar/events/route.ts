@@ -7,6 +7,12 @@ import { newEventId } from '@doit/core'
 
 export const dynamic = 'force-dynamic'
 
+function addDays(dateKey: string, days: number): string {
+  const date = new Date(`${dateKey}T00:00:00`)
+  date.setDate(date.getDate() + days)
+  return date.toISOString().slice(0, 10)
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth()
@@ -99,7 +105,7 @@ export async function POST(req: NextRequest) {
       summary: item['title'] as string,
       description: (item['contentMd'] as string | undefined) ?? '',
       start: { date: dueDate },
-      end: { date: dueDate },
+      end: { date: addDays(dueDate, 1) },
     }
 
     const { data: created } = await calendar.events.insert({

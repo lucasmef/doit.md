@@ -41,9 +41,15 @@ done
 echo "Installing systemd units..."
 sudo install -m 644 infra/systemd/doit.service /etc/systemd/system/doit.service
 sudo install -m 644 infra/systemd/doit-dev.service /etc/systemd/system/doit-dev.service
+sudo install -m 644 infra/systemd/doit-calendar-sync.service /etc/systemd/system/doit-calendar-sync.service
+sudo install -m 644 infra/systemd/doit-calendar-sync.timer /etc/systemd/system/doit-calendar-sync.timer
+sudo install -m 644 infra/systemd/doit-dev-calendar-sync.service /etc/systemd/system/doit-dev-calendar-sync.service
+sudo install -m 644 infra/systemd/doit-dev-calendar-sync.timer /etc/systemd/system/doit-dev-calendar-sync.timer
 sudo systemctl daemon-reload
 sudo systemctl enable doit.service
 sudo systemctl enable doit-dev.service
+sudo systemctl enable --now doit-calendar-sync.timer
+sudo systemctl enable --now doit-dev-calendar-sync.timer
 
 echo "Installing limited sudoers rule for GitHub Actions deploy..."
 sudo install -m 440 infra/sudoers/doit-actions /etc/sudoers.d/doit-actions

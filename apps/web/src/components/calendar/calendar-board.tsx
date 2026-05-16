@@ -3,9 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CalendarEvent, Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
-import { useCalendarEvents } from '@/hooks/use-calendar-events'
+import {
+  deleteCalendarEvent,
+  updateCalendarEvent,
+  useCalendarEvents,
+} from '@/hooks/use-calendar-events'
 import { CalendarGrid } from '@/components/ui/calendar-grid'
 import { useUI } from '@/store/ui'
+import { useToast } from '@/components/ui/toast'
 
 type Props = {
   items: Item[]
@@ -263,7 +268,14 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
         </section>
       </div>
 
-      {openEvent ? <EventSheet event={openEvent} onClose={() => setOpenEvent(null)} /> : null}
+      {openEvent ? (
+        <EventSheet
+          event={openEvent}
+          onSaved={setOpenEvent}
+          onDeleted={() => setOpenEvent(null)}
+          onClose={() => setOpenEvent(null)}
+        />
+      ) : null}
     </div>
   )
 }
@@ -370,7 +382,74 @@ function DayList({
   )
 }
 
-function EventSheet({ event, onClose }: { event: CalendarEvent; onClose: () => void }) {
+function toTimeInput(dt: string, allDay: boolean) {
+  if (allDay) return '09:00'
+  const date = new Date(dt)
+  if (Number.isNaN(date.getTime())) return '09:00'
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function buildDateTime(date: string, time: string) {
+  return new Date(`${date}T${time}:00`).toISOString()
+}
+
+function EventSheet({
+  event,
+  onSaved,
+  onDeleted,
+  onClose,
+}: {
+  event: CalendarEvent
+  onSaved: (event: CalendarEvent) => void
+  onDeleted: () => void
+  onClose: () => void
+}) {
+  const { toast } = useToast()
+  const [title, setTitle] = useState(event.title)
+  const [description, setDescription] = useState(event.description ?? '')
+  const [allDay, setAllDay] = useState(event.allDay)
+  const [date, setDate] = useState(event.start.slice(0, 10))
+  const [endDate, setEndDate] = useState(event.end.slice(0, 10) || event.start.slice(0, 10))
+  const [startTime, setStartTime] = useState(toTimeInput(event.start, event.allDay))
+  const [endTime, setEndTime] = useState(toTimeInput(event.end, event.allDay))
+  const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  async function handleSubmit(submitEvent: React.FormEvent) {
+    submitEvent.preventDefault()
+    if (!title.trim()) return
+    setSaving(true)
+    try {
+      const saved = await updateCalendarEvent(event.id, {
+        title: title.trim(),
+        description,
+        allDay,
+        start: allDay ? date : buildDateTime(date, startTime),
+        end: allDay ? endDate : buildDateTime(endDate, endTime),
+      })
+      onSaved(saved)
+      toast('Evento atualizado.', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao editar evento.', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Excluir este evento tambem do Google Calendar?')) return
+    setDeleting(true)
+    try {
+      await deleteCalendarEvent(event.id)
+      toast('Evento excluido.', 'success')
+      onDeleted()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Erro ao excluir evento.', 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
@@ -380,13 +459,16 @@ function EventSheet({ event, onClose }: { event: CalendarEvent; onClose: () => v
         if (clickEvent.target === clickEvent.currentTarget) onClose()
       }}
     >
-      <div className="w-full rounded-2xl border border-ui-border bg-white p-4 shadow-cool-lg sm:max-w-md">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full rounded-2xl border border-ui-border bg-white p-4 shadow-cool-lg sm:max-w-md"
+      >
         <div className="mb-3 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
               {event.source === 'google' ? 'Google Calendar' : 'Evento'}
             </p>
-            <h2 className="mt-1 text-xl font-bold text-navy-900">{event.title}</h2>
+            <h2 className="mt-1 text-xl font-bold text-navy-900">Editar evento</h2>
           </div>
           <button
             type="button"
@@ -397,20 +479,126 @@ function EventSheet({ event, onClose }: { event: CalendarEvent; onClose: () => v
             x
           </button>
         </div>
-        <div className="space-y-2 text-[14px] text-navy-700">
-          <p className="font-medium capitalize">{formatDate(event.start.slice(0, 10))}</p>
-          <p className="font-mono text-[12px] text-navy-500">
-            {event.allDay
-              ? 'Dia todo'
-              : `${formatTime(event.start, false)} - ${formatTime(event.end, false)}`}
-          </p>
-          {event.description ? (
-            <p className="whitespace-pre-wrap rounded-lg bg-surface-soft p-3 text-[13px] text-navy-600">
-              {event.description}
-            </p>
+
+        <div className="space-y-3 text-[14px] text-navy-700">
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              Titulo
+            </span>
+            <input
+              value={title}
+              onChange={(inputEvent) => setTitle(inputEvent.target.value)}
+              className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+            />
+          </label>
+
+          <label className="flex items-center gap-2 font-mono text-[11px] font-semibold text-navy-500">
+            <input
+              type="checkbox"
+              checked={allDay}
+              onChange={(inputEvent) => setAllDay(inputEvent.target.checked)}
+              className="h-4 w-4 rounded border-ui-border"
+            />
+            Dia todo
+          </label>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                Inicio
+              </span>
+              <input
+                type="date"
+                value={date}
+                onChange={(inputEvent) => {
+                  setDate(inputEvent.target.value)
+                  if (endDate < inputEvent.target.value) setEndDate(inputEvent.target.value)
+                }}
+                className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                Fim
+              </span>
+              <input
+                type="date"
+                value={endDate}
+                min={date}
+                onChange={(inputEvent) => setEndDate(inputEvent.target.value)}
+                className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+              />
+            </label>
+          </div>
+
+          {!allDay ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                  Hora inicio
+                </span>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(inputEvent) => setStartTime(inputEvent.target.value)}
+                  className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                  Hora fim
+                </span>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(inputEvent) => setEndTime(inputEvent.target.value)}
+                  className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                />
+              </label>
+            </div>
           ) : null}
+
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              Descricao
+            </span>
+            <textarea
+              value={description}
+              onChange={(inputEvent) => setDescription(inputEvent.target.value)}
+              rows={4}
+              className="w-full resize-none rounded-lg border border-ui-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+            />
+          </label>
         </div>
-      </div>
+
+        <div className="mt-4 flex flex-wrap justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="h-10 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+          >
+            {deleting ? 'Excluindo...' : 'Excluir'}
+          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving || deleting}
+              className="h-10 rounded-lg border border-ui-border px-3 text-sm font-semibold text-navy-500 transition-colors hover:bg-surface-soft disabled:opacity-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={saving || deleting || !title.trim()}
+              className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+            >
+              {saving ? 'Salvando...' : 'Salvar'}
+            </button>
+          </div>
+        </div>
+      </form>
     </div>
   )
 }
