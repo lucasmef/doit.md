@@ -11,6 +11,12 @@ export type DriveReconcileReport = {
 }
 
 const FILE_ID_REGEX = /drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)/g
+const TRASH_PATH_PREFIX = 'drive/_trash'
+
+/** Arquivos na `_trash/` foram excluídos pelo app — não são órfãos nem inbox. */
+function isInTrash(path: string): boolean {
+  return path === TRASH_PATH_PREFIX || path.startsWith(`${TRASH_PATH_PREFIX}/`)
+}
 
 async function walkMarkdowns(root: string, skipDirs: Set<string>): Promise<string[]> {
   const out: string[] = []
@@ -80,6 +86,7 @@ export async function reconcileDrive(
   const inboxPathPrefix = inboxPathPrefixFor(index)
   for (const [fileId, entry] of Object.entries(index.files)) {
     if (entry.isFolder || entry.trashed) continue
+    if (isInTrash(entry.path)) continue
     if (refs.has(fileId)) continue
     if (inboxPathPrefix && entry.path.startsWith(inboxPathPrefix)) {
       inboxPending.push({

@@ -193,6 +193,7 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'notification_alerts', 'acknowledgedAt', 'TEXT')
   await ensureColumn(db, 'google_accounts', 'driveRootFolderId', 'TEXT')
   await ensureColumn(db, 'google_accounts', 'driveInboxFolderId', 'TEXT')
+  await ensureColumn(db, 'google_accounts', 'driveTrashFolderId', 'TEXT')
   await ensureColumn(db, 'folders', 'driveFolderId', 'TEXT')
   await ensureColumnType(db, 'google_accounts', 'expiresAt', 'BIGINT')
 }
@@ -401,6 +402,7 @@ const sqliteSchema = [
 const postgresIdentifiers = [
   'driveRootFolderId',
   'driveInboxFolderId',
+  'driveTrashFolderId',
   'driveFolderId',
   'webViewLink',
   'fileName',

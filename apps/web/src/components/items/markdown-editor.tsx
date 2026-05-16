@@ -208,6 +208,31 @@ export function MarkdownEditor({
     [editor, itemId, mutateAttachments],
   )
 
+  const handleDeleteAttachment = useCallback(
+    async (fileId: string, name: string) => {
+      if (!itemId) return
+      if (
+        !window.confirm(`Excluir "${name}"? O arquivo vai para a pasta _trash no seu Drive.`)
+      ) {
+        return
+      }
+      try {
+        const res = await fetch(`/api/items/${itemId}/drive-links`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileId }),
+        })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        await mutateAttachments()
+      } catch (err) {
+        window.alert(
+          `Falha ao excluir anexo: ${err instanceof Error ? err.message : String(err)}`,
+        )
+      }
+    },
+    [itemId, mutateAttachments],
+  )
+
   useEffect(() => {
     if (!editor || !itemId) return
     const dom = editor.view.dom
@@ -266,7 +291,11 @@ export function MarkdownEditor({
         onUploadFiles={() => fileInputRef.current?.click()}
       />
       <EditorContent editor={editor} className="flex-1 overflow-auto" />
-      <AttachmentTray uploads={uploads} attachments={attachmentData?.links ?? []} />
+      <AttachmentTray
+        uploads={uploads}
+        attachments={attachmentData?.links ?? []}
+        onDelete={handleDeleteAttachment}
+      />
     </div>
   )
 }
@@ -590,9 +619,11 @@ function AttachmentIcon({ label }: { label: string }) {
 function AttachmentTray({
   uploads,
   attachments,
+  onDelete,
 }: {
   uploads: UploadState[]
   attachments: DriveAttachment[]
+  onDelete: (fileId: string, name: string) => void | Promise<void>
 }) {
   const visibleUploads = uploads.filter(
     (upload) =>
@@ -657,12 +688,9 @@ function AttachmentTray({
           </div>
         ))}
         {attachments.map((attachment) => (
-          <a
+          <div
             key={attachment.id ?? attachment.fileId}
-            href={attachment.webViewLink}
-            target="_blank"
-            rel="noreferrer"
-            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-lg border border-ui-border-soft bg-white px-2.5 py-2 text-left transition-colors hover:border-brand-200 hover:bg-surface-selected"
+            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-lg border border-ui-border-soft bg-white px-2.5 py-2 text-left transition-colors hover:border-brand-200"
           >
             <AttachmentIcon label={fileExtension(attachment.name, attachment.mimeType)} />
             <span className="min-w-0 flex-1">
@@ -675,10 +703,39 @@ function AttachmentTray({
                 <span>{fileExtension(attachment.name, attachment.mimeType)}</span>
               </span>
             </span>
-            <span className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-brand-700">
+            <a
+              href={attachment.webViewLink}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 rounded-md px-2 py-1 text-xs font-semibold text-brand-700 hover:bg-surface-selected"
+            >
               Abrir
-            </span>
-          </a>
+            </a>
+            <button
+              type="button"
+              onClick={() => void onDelete(attachment.fileId, attachment.name)}
+              aria-label={`Excluir ${attachment.name}`}
+              title="Excluir anexo"
+              className="shrink-0 rounded-md p-1 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+            >
+              <svg
+                className="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M6 7h12" />
+                <path d="M10 11v6" />
+                <path d="M14 11v6" />
+                <path d="M9 7V5h6v2" />
+                <path d="m8 7 1 12h6l1-12" />
+              </svg>
+            </button>
+          </div>
         ))}
       </div>
     </div>

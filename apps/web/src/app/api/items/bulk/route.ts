@@ -5,6 +5,7 @@ import { ItemModel, ItemVersionModel } from '@doit/db'
 import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
 import type { BulkItemActionInput, Item, UpdateItemInput } from '@doit/types'
+import { reconcileItemAttachments } from '@/lib/drive-reconcile'
 
 export const dynamic = 'force-dynamic'
 
@@ -188,6 +189,7 @@ export async function PATCH(req: NextRequest) {
 
     const now = new Date().toISOString()
     const updated: Item[] = []
+    const reconcileItemIds = new Set<string>()
 
     for (const id of ids) {
       const current = await ItemModel.findOne({ _id: id, userId }).lean()
@@ -207,7 +209,24 @@ export async function PATCH(req: NextRequest) {
         { new: true },
       ).lean()
 
-      if (item) updated.push(mapDocToItem(item))
+      if (item) {
+        updated.push(mapDocToItem(item))
+        // Anexo segue a nota: detecta mudança de folder pra reposicionar no Drive.
+        const folderUnset = Object.prototype.hasOwnProperty.call(unset, 'folderId')
+        const folderSet = Object.prototype.hasOwnProperty.call(set, 'folderId')
+        const folderChanged = folderUnset
+          ? (current['folderId'] ?? null) !== null
+          : folderSet && (set['folderId'] ?? null) !== (current['folderId'] ?? null)
+        if (folderChanged) reconcileItemIds.add(id)
+      }
+    }
+
+    try {
+      for (const id of reconcileItemIds) {
+        await reconcileItemAttachments(userId, id)
+      }
+    } catch (err) {
+      console.warn('[items/bulk] reconciliação do Drive falhou:', err)
     }
 
     return NextResponse.json({ items: updated })

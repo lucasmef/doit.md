@@ -114,6 +114,7 @@ export type GoogleAccountRow = {
   scope?: string | null
   driveRootFolderId?: string | null
   driveInboxFolderId?: string | null
+  driveTrashFolderId?: string | null
 }
 
 export function accountHasScope(account: Pick<GoogleAccountRow, 'scope'>, scope: string): boolean {

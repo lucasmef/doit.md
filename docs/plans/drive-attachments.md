@@ -123,6 +123,7 @@ Formato atual mantido. O `path` virtual (`drive/Projetos/Cliente X/relatorio.pdf
 
 | Caso | Tratamento |
 |---|---|
+| Usuário exclui anexo pelo app | `DELETE /api/items/[id]/drive-links` move o arquivo para `doit.md/_trash/` e remove o `drive_link`. Move best-effort: se falhar, o vínculo é removido mesmo assim. `_trash/` é ignorada pela reconciliação (não vira órfão). |
 | Item sem `folderId` | Anexo na raiz `doit.md/`. |
 | Anexo referenciado por várias notas | Segue a pasta do item **dono** (`drive_links.itemId`); demais são só links. |
 | Folder deletado no doit.md | Itens são reassinados (parent/null); reconciliação move os anexos. Pasta-espelho vazia é enviada pra lixeira. |

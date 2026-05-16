@@ -12,6 +12,7 @@ type FolderRow = {
 
 const ROOT_FOLDER_NAME = process.env['DRIVE_ROOT_FOLDER_NAME'] ?? 'doit.md'
 const INBOX_FOLDER_NAME = '_inbox'
+const TRASH_FOLDER_NAME = '_trash'
 const FOLDER_MIME = 'application/vnd.google-apps.folder'
 
 async function findFolderByName(
@@ -77,6 +78,23 @@ export async function getOrCreateInboxFolder(
     { $set: { driveInboxFolderId: id, updatedAt: new Date().toISOString() } },
   )
   account.driveInboxFolderId = id
+  return id
+}
+
+/** Pasta `_trash/` sob a raiz — destino de anexos excluídos pelo app. */
+export async function getOrCreateTrashFolder(
+  drive: drive_v3.Drive,
+  account: GoogleAccountRow,
+): Promise<string> {
+  if (account.driveTrashFolderId) return account.driveTrashFolderId
+  const rootId = await getOrCreateRootFolder(drive, account)
+  const existing = await findFolderByName(drive, TRASH_FOLDER_NAME, rootId)
+  const id = existing ?? (await createFolder(drive, TRASH_FOLDER_NAME, rootId))
+  await GoogleAccountModel.findOneAndUpdate(
+    { userId: account.userId },
+    { $set: { driveTrashFolderId: id, updatedAt: new Date().toISOString() } },
+  )
+  account.driveTrashFolderId = id
   return id
 }
 
