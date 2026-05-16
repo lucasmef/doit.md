@@ -300,6 +300,69 @@ function ToolbarBtn({ onClick, active, disabled, title, className = '', children
   )
 }
 
+function IconUploadButton({
+  canUpload,
+  uploadingFiles,
+  onUploadFiles,
+  className = '',
+}: {
+  canUpload: boolean
+  uploadingFiles: number
+  onUploadFiles: () => void
+  className?: string
+}) {
+  return (
+    <button
+      type="button"
+      title={
+        canUpload
+          ? 'Enviar arquivos para a pasta doit.md no Google Drive'
+          : 'Salve o item antes de enviar arquivos'
+      }
+      aria-label={
+        canUpload ? 'Anexar arquivo no Google Drive' : 'Salve o item antes de anexar arquivo'
+      }
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onUploadFiles}
+      disabled={!canUpload || uploadingFiles > 0}
+      className={`relative inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 ${className}`}
+    >
+      <EditorIcon name="paperclip" />
+      {uploadingFiles > 0 ? (
+        <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] font-bold leading-none text-white">
+          {uploadingFiles}
+        </span>
+      ) : null}
+    </button>
+  )
+}
+
+function MobileToolbarBtn({
+  onClick,
+  active,
+  disabled,
+  title,
+  children,
+}: ToolbarBtnProps) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className={`flex h-9 min-w-0 items-center justify-center rounded-md text-sm transition-colors ${
+        active
+          ? 'bg-brand-100 text-brand-700'
+          : 'text-ui-text-muted hover:bg-ui-fill-subtle hover:text-ui-text'
+      } disabled:cursor-not-allowed disabled:opacity-40`}
+    >
+      {children}
+    </button>
+  )
+}
+
 function ToolbarGroup({ children }: { children: React.ReactNode }) {
   return (
     <div className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-ui-border-soft bg-white p-0.5">
@@ -310,6 +373,190 @@ function ToolbarGroup({ children }: { children: React.ReactNode }) {
 
 function ToolbarSep() {
   return <span className="mx-0.5 h-5 w-px bg-ui-border-soft" />
+}
+
+type EditorIconName =
+  | 'bold'
+  | 'italic'
+  | 'strike'
+  | 'code'
+  | 'bulletList'
+  | 'orderedList'
+  | 'taskList'
+  | 'collapse'
+  | 'expand'
+  | 'link'
+  | 'paperclip'
+  | 'quote'
+  | 'codeBlock'
+  | 'table'
+  | 'columnAdd'
+  | 'rowAdd'
+  | 'columnRemove'
+  | 'rowRemove'
+  | 'trash'
+
+function EditorIcon({ name }: { name: EditorIconName }) {
+  const common = {
+    className: 'h-4 w-4',
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.9,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+
+  if (name === 'bold') {
+    return (
+      <svg {...common}>
+        <path d="M7 5h6a3.5 3.5 0 0 1 0 7H7z" />
+        <path d="M7 12h7a3.5 3.5 0 0 1 0 7H7z" />
+        <path d="M7 5v14" />
+      </svg>
+    )
+  }
+  if (name === 'italic') {
+    return (
+      <svg {...common}>
+        <path d="M10 5h8" />
+        <path d="M6 19h8" />
+        <path d="M14 5 10 19" />
+      </svg>
+    )
+  }
+  if (name === 'strike') {
+    return (
+      <svg {...common}>
+        <path d="M6 12h12" />
+        <path d="M16 7.5A4.5 4.5 0 0 0 12.5 6H11a3 3 0 0 0-2.6 4.5" />
+        <path d="M8 16.5A5 5 0 0 0 11.5 18H13a3 3 0 0 0 2.7-4.3" />
+      </svg>
+    )
+  }
+  if (name === 'code') {
+    return (
+      <svg {...common}>
+        <path d="m10 8-4 4 4 4" />
+        <path d="m14 8 4 4-4 4" />
+      </svg>
+    )
+  }
+  if (name === 'bulletList') {
+    return (
+      <svg {...common}>
+        <path d="M9 7h10" />
+        <path d="M9 12h10" />
+        <path d="M9 17h10" />
+        <path d="M5 7h.01" />
+        <path d="M5 12h.01" />
+        <path d="M5 17h.01" />
+      </svg>
+    )
+  }
+  if (name === 'orderedList') {
+    return (
+      <svg {...common}>
+        <path d="M10 7h9" />
+        <path d="M10 12h9" />
+        <path d="M10 17h9" />
+        <path d="M4 6h1v3" />
+        <path d="M4 17h2" />
+        <path d="M4 15.5A1.5 1.5 0 0 1 5.5 14h.2a1.3 1.3 0 0 1 .8 2.3L4 19" />
+      </svg>
+    )
+  }
+  if (name === 'taskList') {
+    return (
+      <svg {...common}>
+        <path d="M9 7h10" />
+        <path d="M9 17h10" />
+        <path d="m4 7 1 1 2-3" />
+        <rect x="4" y="14" width="3" height="3" rx=".5" />
+      </svg>
+    )
+  }
+  if (name === 'collapse' || name === 'expand') {
+    return (
+      <svg {...common}>
+        <path d={name === 'collapse' ? 'm8 10 4 4 4-4' : 'm8 14 4-4 4 4'} />
+        <path d="M5 5h14" />
+        <path d="M5 19h14" />
+      </svg>
+    )
+  }
+  if (name === 'link') {
+    return (
+      <svg {...common}>
+        <path d="M10 13a5 5 0 0 0 7.1 0l1.4-1.4a5 5 0 0 0-7.1-7.1L10.5 5.4" />
+        <path d="M14 11a5 5 0 0 0-7.1 0l-1.4 1.4a5 5 0 0 0 7.1 7.1l.9-.9" />
+      </svg>
+    )
+  }
+  if (name === 'paperclip') {
+    return (
+      <svg {...common}>
+        <path d="m21 11.5-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.1 9.1a1.9 1.9 0 0 1-2.7-2.7l8.5-8.5" />
+      </svg>
+    )
+  }
+  if (name === 'quote') {
+    return (
+      <svg {...common}>
+        <path d="M8 11H5.5A3.5 3.5 0 0 1 9 7.5V16H5v-5" />
+        <path d="M18 11h-2.5A3.5 3.5 0 0 1 19 7.5V16h-4v-5" />
+      </svg>
+    )
+  }
+  if (name === 'codeBlock') {
+    return (
+      <svg {...common}>
+        <rect x="4" y="5" width="16" height="14" rx="2" />
+        <path d="m10 10-2 2 2 2" />
+        <path d="m14 10 2 2-2 2" />
+      </svg>
+    )
+  }
+  if (name === 'table') {
+    return (
+      <svg {...common}>
+        <rect x="4" y="5" width="16" height="14" rx="2" />
+        <path d="M4 10h16" />
+        <path d="M9 5v14" />
+        <path d="M15 5v14" />
+      </svg>
+    )
+  }
+  if (name === 'columnAdd' || name === 'columnRemove') {
+    return (
+      <svg {...common}>
+        <rect x="4" y="5" width="12" height="14" rx="2" />
+        <path d="M10 5v14" />
+        {name === 'columnAdd' ? <path d="M19 8v6" /> : null}
+        <path d="M16 11h6" />
+      </svg>
+    )
+  }
+  if (name === 'rowAdd' || name === 'rowRemove') {
+    return (
+      <svg {...common}>
+        <rect x="4" y="5" width="16" height="12" rx="2" />
+        <path d="M4 11h16" />
+        <path d="M9 20h6" />
+        {name === 'rowAdd' ? <path d="M12 17v6" /> : null}
+      </svg>
+    )
+  }
+  return (
+    <svg {...common}>
+      <path d="M6 7h12" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M9 7V5h6v2" />
+      <path d="m8 7 1 12h6l1-12" />
+    </svg>
+  )
 }
 
 function formatBytes(size: number) {
@@ -450,9 +697,9 @@ function EditorToolbarAccessible({
   onUploadFiles: () => void
 }) {
   const { prompt } = useDialog()
-  const [moreOpen, setMoreOpen] = useState(false)
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   if (!editor) {
-    return <div className="h-[86px] border-b border-ui-border-soft bg-ui-fill-subtle/40" />
+    return <div className="h-[48px] border-b border-ui-border-soft bg-ui-fill-subtle/40" />
   }
 
   const insertLink = async () => {
@@ -479,37 +726,135 @@ function EditorToolbarAccessible({
   const canToggleHeadings = headingSummary.total > 0
   const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
 
+  const advancedTools = (
+    <>
+      <ToolbarGroup>
+        {[1, 2, 3].map((level) => (
+          <ToolbarBtn
+            key={level}
+            title={`Titulo H${level}`}
+            active={editor.isActive('heading', { level })}
+            className="font-semibold"
+            onClick={() =>
+              editor
+                .chain()
+                .focus()
+                .toggleHeading({ level: level as 1 | 2 | 3 })
+                .run()
+            }
+          >
+            <span className="text-xs">H{level}</span>
+          </ToolbarBtn>
+        ))}
+      </ToolbarGroup>
+
+      <ToolbarGroup>
+        <ToolbarBtn
+          title="Riscado"
+          active={editor.isActive('strike')}
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+        >
+          <EditorIcon name="strike" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          title="Codigo inline"
+          active={editor.isActive('code')}
+          onClick={() => editor.chain().focus().toggleCode().run()}
+        >
+          <EditorIcon name="code" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          title="Lista numerada"
+          active={editor.isActive('orderedList')}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+        >
+          <EditorIcon name="orderedList" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          title={shouldCollapseAll ? 'Recolher topicos' : 'Expandir topicos'}
+          disabled={!canToggleHeadings}
+          onClick={() => setAllHeadingsCollapsed(editor, shouldCollapseAll)}
+        >
+          <EditorIcon name={shouldCollapseAll ? 'collapse' : 'expand'} />
+        </ToolbarBtn>
+      </ToolbarGroup>
+
+      <ToolbarGroup>
+        <ToolbarBtn
+          title="Citacao"
+          active={editor.isActive('blockquote')}
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+        >
+          <EditorIcon name="quote" />
+        </ToolbarBtn>
+        <ToolbarBtn
+          title="Bloco de codigo"
+          active={editor.isActive('codeBlock')}
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+        >
+          <EditorIcon name="codeBlock" />
+        </ToolbarBtn>
+        <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
+          <EditorIcon name="table" />
+        </ToolbarBtn>
+      </ToolbarGroup>
+    </>
+  )
+
+  const tableTools = inTable ? (
+    <ToolbarGroup>
+      <ToolbarBtn
+        title="Adicionar coluna"
+        onClick={() => editor.chain().focus().addColumnAfter().run()}
+      >
+        <EditorIcon name="columnAdd" />
+      </ToolbarBtn>
+      <ToolbarBtn title="Adicionar linha" onClick={() => editor.chain().focus().addRowAfter().run()}>
+        <EditorIcon name="rowAdd" />
+      </ToolbarBtn>
+      <ToolbarBtn title="Remover coluna" onClick={() => editor.chain().focus().deleteColumn().run()}>
+        <EditorIcon name="columnRemove" />
+      </ToolbarBtn>
+      <ToolbarBtn title="Remover linha" onClick={() => editor.chain().focus().deleteRow().run()}>
+        <EditorIcon name="rowRemove" />
+      </ToolbarBtn>
+      <ToolbarBtn title="Excluir tabela" onClick={() => editor.chain().focus().deleteTable().run()}>
+        <EditorIcon name="trash" />
+      </ToolbarBtn>
+    </ToolbarGroup>
+  ) : null
+
   return (
-    <div className="border-b border-ui-border-soft bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur sm:flex sm:flex-wrap sm:items-center sm:gap-1 sm:bg-ui-fill-subtle/60">
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none sm:overflow-visible sm:pb-0">
+    <div className="border-b border-ui-border-soft bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur sm:bg-ui-fill-subtle/60">
+      <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 sm:flex">
         <ToolbarGroup>
           <ToolbarBtn
             title="Negrito (Ctrl+B)"
             active={editor.isActive('bold')}
             onClick={() => editor.chain().focus().toggleBold().run()}
           >
-            <b>B</b>
+            <EditorIcon name="bold" />
           </ToolbarBtn>
           <ToolbarBtn
             title="Italico (Ctrl+I)"
             active={editor.isActive('italic')}
             onClick={() => editor.chain().focus().toggleItalic().run()}
           >
-            <i>I</i>
+            <EditorIcon name="italic" />
           </ToolbarBtn>
           <ToolbarBtn
             title="Riscado"
             active={editor.isActive('strike')}
             onClick={() => editor.chain().focus().toggleStrike().run()}
           >
-            <span className="line-through">S</span>
+            <EditorIcon name="strike" />
           </ToolbarBtn>
           <ToolbarBtn
             title="Codigo inline"
             active={editor.isActive('code')}
             onClick={() => editor.chain().focus().toggleCode().run()}
           >
-            <span className="font-mono text-xs">{'<>'}</span>
+            <EditorIcon name="code" />
           </ToolbarBtn>
         </ToolbarGroup>
 
@@ -532,37 +877,52 @@ function EditorToolbarAccessible({
             </ToolbarBtn>
           ))}
         </ToolbarGroup>
-      </div>
 
-      <div className="flex items-center gap-1 overflow-x-auto scrollbar-none sm:overflow-visible">
         <ToolbarGroup>
           <ToolbarBtn
             title="Lista com marcadores"
             active={editor.isActive('bulletList')}
             onClick={() => editor.chain().focus().toggleBulletList().run()}
           >
-            <span className="text-lg leading-none">*</span>
+            <EditorIcon name="bulletList" />
           </ToolbarBtn>
           <ToolbarBtn
             title="Lista numerada"
             active={editor.isActive('orderedList')}
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
           >
-            <span className="text-xs">1.</span>
+            <EditorIcon name="orderedList" />
           </ToolbarBtn>
           <ToolbarBtn
             title="Lista de tarefas"
             active={editor.isActive('taskList')}
             onClick={() => editor.chain().focus().toggleTaskList().run()}
           >
-            <span className="text-xs">[ ]</span>
+            <EditorIcon name="taskList" />
           </ToolbarBtn>
           <ToolbarBtn
             title={shouldCollapseAll ? 'Recolher topicos' : 'Expandir topicos'}
             disabled={!canToggleHeadings}
             onClick={() => setAllHeadingsCollapsed(editor, shouldCollapseAll)}
           >
-            <span className="text-xs">{shouldCollapseAll ? '[-]' : '[+]'}</span>
+            <EditorIcon name={shouldCollapseAll ? 'collapse' : 'expand'} />
+          </ToolbarBtn>
+        </ToolbarGroup>
+
+        <ToolbarGroup>
+          <ToolbarBtn
+            title="Citacao"
+            active={editor.isActive('blockquote')}
+            onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          >
+            <EditorIcon name="quote" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Bloco de codigo"
+            active={editor.isActive('codeBlock')}
+            onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          >
+            <EditorIcon name="codeBlock" />
           </ToolbarBtn>
         </ToolbarGroup>
 
@@ -572,95 +932,90 @@ function EditorToolbarAccessible({
             active={editor.isActive('link')}
             onClick={insertLink}
           >
-            <span className="text-xs">link</span>
+            <EditorIcon name="link" />
           </ToolbarBtn>
-          <button
-            type="button"
-            title={
-              canUpload
-                ? 'Enviar arquivos para a pasta doit.md no Google Drive'
-                : 'Salve o item antes de enviar arquivos'
-            }
-            aria-label={
-              canUpload
-                ? 'Anexar arquivo no Google Drive'
-                : 'Salve o item antes de anexar arquivo'
-            }
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={onUploadFiles}
-            disabled={!canUpload || uploadingFiles > 0}
-            className="inline-flex h-9 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40 sm:h-8"
-          >
-            <span className="text-sm leading-none">{uploadingFiles > 0 ? '...' : '+'}</span>
-            <span>{uploadingFiles > 0 ? `Enviando ${uploadingFiles}` : 'Anexar'}</span>
-          </button>
-          <ToolbarBtn
-            title={moreOpen ? 'Ocultar mais opcoes' : 'Mostrar mais opcoes'}
-            active={moreOpen}
-            onClick={() => setMoreOpen((open) => !open)}
-            className="min-w-[50px]"
-          >
-            <span className="text-xs">Mais</span>
+          <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
+            <EditorIcon name="table" />
           </ToolbarBtn>
+          <IconUploadButton
+            canUpload={canUpload}
+            uploadingFiles={uploadingFiles}
+            onUploadFiles={onUploadFiles}
+          />
         </ToolbarGroup>
+
+        {tableTools}
       </div>
 
-      {moreOpen || inTable ? (
-        <div className="mt-1 flex basis-full items-center gap-1 overflow-x-auto scrollbar-none sm:overflow-visible">
-          <ToolbarGroup>
-            <ToolbarBtn
-              title="Citacao"
-              active={editor.isActive('blockquote')}
-              onClick={() => editor.chain().focus().toggleBlockquote().run()}
-            >
-              <span className="text-sm">{'"'}</span>
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Bloco de codigo"
-              active={editor.isActive('codeBlock')}
-              onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-            >
-              <span className="font-mono text-xs">{'{}'}</span>
-            </ToolbarBtn>
-            <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
-              <span className="text-xs">tbl</span>
-            </ToolbarBtn>
-          </ToolbarGroup>
+      <div className="grid w-full grid-cols-7 gap-1 sm:hidden">
+        <MobileToolbarBtn
+            title="Negrito (Ctrl+B)"
+            active={editor.isActive('bold')}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <EditorIcon name="bold" />
+        </MobileToolbarBtn>
+        <MobileToolbarBtn
+            title="Italico (Ctrl+I)"
+            active={editor.isActive('italic')}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <EditorIcon name="italic" />
+        </MobileToolbarBtn>
+        <MobileToolbarBtn
+            title="Lista com marcadores"
+            active={editor.isActive('bulletList')}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <EditorIcon name="bulletList" />
+        </MobileToolbarBtn>
+        <MobileToolbarBtn
+            title="Lista de tarefas"
+            active={editor.isActive('taskList')}
+            onClick={() => editor.chain().focus().toggleTaskList().run()}
+          >
+            <EditorIcon name="taskList" />
+        </MobileToolbarBtn>
+        <MobileToolbarBtn
+            title={editor.isActive('link') ? 'Editar link' : 'Inserir link'}
+            active={editor.isActive('link')}
+            onClick={insertLink}
+          >
+            <EditorIcon name="link" />
+        </MobileToolbarBtn>
+        <IconUploadButton
+          canUpload={canUpload}
+          uploadingFiles={uploadingFiles}
+          onUploadFiles={onUploadFiles}
+          className="!h-9 !min-w-0 !px-0"
+        />
+        <MobileToolbarBtn
+            title={mobileSheetOpen ? 'Fechar ferramentas' : 'Mais ferramentas'}
+            active={mobileSheetOpen}
+            onClick={() => setMobileSheetOpen((open) => !open)}
+          >
+            <span className="text-lg leading-none">+</span>
+        </MobileToolbarBtn>
+      </div>
 
-          {inTable ? (
-            <ToolbarGroup>
-            <ToolbarBtn
-              title="Adicionar coluna"
-              onClick={() => editor.chain().focus().addColumnAfter().run()}
+      {mobileSheetOpen ? (
+        <div className="mt-2 rounded-xl border border-ui-border-soft bg-white p-2 shadow-cool-sm sm:hidden">
+          <div className="mb-2 flex items-center justify-between px-1">
+            <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              Ferramentas
+            </span>
+            <button
+              type="button"
+              onClick={() => setMobileSheetOpen(false)}
+              className="rounded-md px-2 py-1 text-[12px] font-semibold text-navy-400 hover:bg-surface-soft hover:text-navy-700"
             >
-              <span className="text-xs">+col</span>
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Adicionar linha"
-              onClick={() => editor.chain().focus().addRowAfter().run()}
-            >
-              <span className="text-xs">+lin</span>
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Remover coluna"
-              onClick={() => editor.chain().focus().deleteColumn().run()}
-            >
-              <span className="text-xs">-col</span>
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Remover linha"
-              onClick={() => editor.chain().focus().deleteRow().run()}
-            >
-              <span className="text-xs">-lin</span>
-            </ToolbarBtn>
-            <ToolbarBtn
-              title="Excluir tabela"
-              onClick={() => editor.chain().focus().deleteTable().run()}
-            >
-              <span className="text-xs">del</span>
-            </ToolbarBtn>
-            </ToolbarGroup>
-          ) : null}
+              Fechar
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {advancedTools}
+            {tableTools}
+          </div>
         </div>
       ) : null}
     </div>
