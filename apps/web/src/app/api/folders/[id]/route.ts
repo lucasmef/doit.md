@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth'
 import { FolderModel, ItemModel } from '@doit/db'
 import type { UpdateFolderInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
+import { reconcileFolderMirror } from '@/lib/drive-reconcile'
 
 export const dynamic = 'force-dynamic'
 
@@ -39,6 +40,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'Invalid viewMode' }, { status: 400 })
     }
 
+    const before = (await FolderModel.findOne({ _id: id, userId }).lean()) as {
+      name?: string
+      parentId?: string | null
+    } | null
+
     const now = new Date().toISOString()
     const patch: Record<string, unknown> = { ...body, updatedAt: now }
     if (body.viewMode) patch['viewModeManual'] = true
@@ -47,6 +53,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }).lean()
 
     if (!folder) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // Espelho no Drive: renomeia/move a pasta-espelho junto com o folder.
+    const renamed = typeof body.name === 'string' && body.name !== before?.name
+    const reparented =
+      Object.prototype.hasOwnProperty.call(body, 'parentId') &&
+      (body.parentId ?? null) !== (before?.parentId ?? null)
+    if (renamed || reparented) {
+      await reconcileFolderMirror(userId, id)
+    }
 
     if (body.viewMode) {
       const allFolders = (await FolderModel.find({ userId }).lean()) as Array<{

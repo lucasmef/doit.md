@@ -94,4 +94,18 @@ export async function listAllUnder(
   return all
 }
 
+/** Baixa o conteúdo bruto de um arquivo do Drive via `files.get?alt=media`. */
+export async function downloadFile(accessToken: string, fileId: string): Promise<Buffer> {
+  const url = new URL(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}`)
+  url.searchParams.set('alt', 'media')
+
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) {
+    throw new Error(`Drive download falhou (${res.status}): ${await res.text()}`)
+  }
+  return Buffer.from(await res.arrayBuffer())
+}
+
 export { FOLDER_MIME }

@@ -1,6 +1,12 @@
 # Plano Técnico — Anexos via Google Drive (Implementação)
 
-**Status:** Proposto
+> ⚠️ **Parcialmente obsoleto (2026-05-16).** As Fases 1–2 abaixo já foram
+> implementadas e continuam válidas. A partir da Fase 3, este plano assumia o
+> Google Drive for Desktop como motor de bytes — decisão **revertida**. O plano
+> atual (API-only + espelho de pastas por projeto) está no PRD
+> [drive-attachments.md](./drive-attachments.md), Fases A–E. Use o PRD como fonte da verdade.
+
+**Status:** Fases 1–2 implementadas; Fase 3+ superada pelo PRD
 **Data:** 2026-05-10
 **Autor:** Lucas
 **PRD:** [docs/plans/drive-attachments.md](./drive-attachments.md)

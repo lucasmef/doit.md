@@ -5,7 +5,7 @@ import { ensureDB } from '@/lib/db'
 import { DriveLinkModel, GoogleAccountModel, ItemModel } from '@doit/db'
 import { newDriveLinkId } from '@doit/core'
 import { getDriveClient, hasDriveScope, type GoogleAccountRow } from '@/lib/google'
-import { getOrCreateRootFolder } from '@/lib/drive'
+import { ensureFolderPath } from '@/lib/drive'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -90,12 +90,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const drive = await getDriveClient(account)
-    const rootFolderId = await getOrCreateRootFolder(drive, account)
+    const parentFolderId = await ensureFolderPath(
+      drive,
+      account,
+      (item.folderId as string | null | undefined) ?? null,
+    )
 
     const created = await drive.files.create({
       requestBody: {
         name: file.name,
-        parents: [rootFolderId],
+        parents: [parentFolderId],
       },
       media: {
         mimeType: file.type || 'application/octet-stream',

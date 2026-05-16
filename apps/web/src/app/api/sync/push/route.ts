@@ -20,6 +20,11 @@ import { hashContent } from '@doit/sync'
 import type { Folder, Item, PendingChange } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 import { resolveFolderFromPath } from '@/lib/path-resolver'
+import {
+  reconcileFolderMirror,
+  reconcileItemAttachments,
+  registerInboxLinks,
+} from '@/lib/drive-reconcile'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,6 +73,11 @@ export async function POST(req: NextRequest) {
     const now = new Date().toISOString()
     const auditEntries: Record<string, unknown>[] = []
     let applied = 0
+
+    // Reconciliação do espelho do Drive: coletada durante o loop, aplicada no fim.
+    const reconcileItemIds = new Set<string>()
+    const reconcileFolderIds = new Set<string>()
+    const inboxScan = new Map<string, string>()
 
     async function pathToFolderInfo(path: string | undefined): Promise<{
       folderId: string | undefined
@@ -158,6 +168,14 @@ export async function POST(req: NextRequest) {
       }
 
       for (const id of ids) {
+        const affected = (await ItemModel.find({ userId, folderId: id }).lean()) as Array<{
+          _id?: string
+          id?: string
+        }>
+        for (const it of affected) {
+          const affectedId = String(it._id ?? it.id ?? '')
+          if (affectedId) reconcileItemIds.add(affectedId)
+        }
         await ItemModel.updateMany({ userId, folderId: id }, { folderId: null })
       }
       for (const id of Array.from(ids).reverse()) {
@@ -175,6 +193,7 @@ export async function POST(req: NextRequest) {
         await ensureFolderPath(change.localPathAfter)
       } else if (change.changeType === 'folder_moved' || change.changeType === 'folder_renamed') {
         const id = change.folderId
+        if (id) reconcileFolderIds.add(id)
         const name = change.folderNameAfter ?? folderNameFromPath(change.localPathAfter)
         const parentId = await ensureFolderPath(parentPathFromFolderPath(change.localPathAfter))
         if (id) {
@@ -248,6 +267,8 @@ export async function POST(req: NextRequest) {
         const contentMdAfter = agentsFile
           ? (change.contentMdAfter ?? '')
           : normalizeIncomingBody(titleAfter, change.contentMdAfter)
+        reconcileItemIds.add(id)
+        if (contentMdAfter) inboxScan.set(id, contentMdAfter)
         const existingCreated = (await ItemModel.findOne({ _id: id, userId }).lean()) as
           | (Item & Record<string, unknown>)
           | null
@@ -388,6 +409,12 @@ export async function POST(req: NextRequest) {
 
       await ItemModel.findOneAndUpdate({ _id: change.itemId, userId }, patch)
 
+      if (patch['folderId'] !== undefined) reconcileItemIds.add(change.itemId)
+      if (typeof patch['contentMd'] === 'string') {
+        inboxScan.set(change.itemId, patch['contentMd'])
+        reconcileItemIds.add(change.itemId)
+      }
+
       auditEntries.push({
         _id: newAuditId(),
         userId,
@@ -424,6 +451,22 @@ export async function POST(req: NextRequest) {
       summary: `Push aplicado: ${applied} mudança(s).`,
       createdAt: now,
     })
+
+    // Reconcilia o espelho do Drive depois de aplicar as mudanças. Best-effort:
+    // cada função já trata os próprios erros, mas blindamos o push de qualquer forma.
+    try {
+      for (const [itemId, contentMd] of inboxScan) {
+        await registerInboxLinks(userId, itemId, contentMd)
+      }
+      for (const itemId of reconcileItemIds) {
+        await reconcileItemAttachments(userId, itemId)
+      }
+      for (const folderId of reconcileFolderIds) {
+        await reconcileFolderMirror(userId, folderId)
+      }
+    } catch (err) {
+      console.warn('[sync/push] reconciliação do Drive falhou:', err)
+    }
 
     return NextResponse.json({ applied })
   } catch (err) {

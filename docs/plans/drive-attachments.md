@@ -1,201 +1,209 @@
-# PRD — Anexos via Google Drive
+# PRD — Anexos via Google Drive (espelho de projetos)
 
-**Status:** Proposto
-**Data:** 2026-05-10
+**Status:** Fases A–E codadas (2026-05-16) — pendente validação E2E com conta Google real
+**Data:** 2026-05-16 (revisa o PRD original de 2026-05-10)
 **Autor:** Lucas
-**Componente afetado:** `apps/web` (upload UI, renderer de markdown, OAuth Google), `apps/sync-agent` (indexação Drive, reconciliação), `packages/db` (tabela `drive_links`), `AGENTS.md` (instruções pra IA)
+**Componentes:** `apps/web` (upload, reconciliação de move, OAuth), `apps/sync-agent` (índice, leitura de bytes), `packages/db` (`drive_links`, coluna `driveFolderId`), `AGENTS.md`
 
 ---
 
-## 1. Contexto
+## 1. Contexto e decisão de arquitetura
 
-Hoje o doit.md guarda notas e tarefas em markdown sincronizado via `doit-sync`. Não há mecanismo pra anexar arquivos privados (PDFs, imagens grandes, planilhas, áudios) a uma nota. Subir esses arquivos pro storage próprio do app implica:
+O doit.md guarda notas/tarefas em markdown. Anexos (PDFs, imagens, planilhas) ficam no Google Drive do usuário: o app sobe via API, grava um link clicável no markdown, e o `sync-agent` mantém um índice `fileId ↔ caminho`.
 
-- Custo de storage e banda no servidor.
-- Outro sistema pra fazer backup, versionar e dar permissão.
-- IA local (Claude Code rodando no workspace do `doit-sync`) não tem acesso direto aos bytes.
+### 1.1. Decisão: API-only (sem Google Drive for Desktop)
 
-O usuário já usa Google Drive pra arquivos pessoais e tem o **Google Drive for Desktop** instalado, que espelha pastas do Drive no filesystem local. Aproveitar essa stack: o app sobe arquivos pro Drive do usuário via OAuth, o espelho local fica dentro do workspace do `doit-sync`, e a IA lê arquivos como se fossem locais.
+O PRD original (2026-05-10) assumia o **Drive for Desktop** como motor de bytes — o `sync-agent` só criaria um *junction* pra pasta espelhada localmente. **Revisado em 2026-05-16:** abandonamos essa dependência.
 
-## 2. Objetivo
+**Por quê:** o Drive for Desktop só era usado pra (a) a IA ler bytes localmente e (b) a IA mover arquivos com `mv`. Nenhum dos dois exige um motor de sync — esta feature **nunca edita os bytes** de um anexo, só *lê* e *reorganiza*. Leitura é `files.get?alt=media`; reorganização é `files.update`. Ambos são chamadas únicas no escopo `drive.file` que o indexer já usa. A Drive API **não tem custo monetário** — só rate limit gratuito, irrelevante pra uso pessoal.
 
-Permitir o fluxo:
+**Ganho:** o `sync-agent` passa a rodar em qualquer máquina (inclusive headless), sem junction no Windows, sem placeholders de arquivo não-baixado, sem o caminho do espelho variando por OS.
 
-1. Usuário conecta sua conta Google ao doit.md (OAuth, escopo `drive.file`).
-2. Anexa arquivos a uma nota pela UI do app, ou joga arquivos numa pasta `_inbox/` do Drive pra IA processar depois.
-3. App grava no markdown da nota um link clicável (`webViewLink`) que abre o arquivo no Drive.
-4. `doit-sync` mantém um índice local mapeando `fileId ↔ caminho local`, atualizado a cada sync via Drive API.
-5. IA (rodando no workspace) lê arquivos do espelho local do Drive for Desktop, reorganiza em subpastas livremente, cria notas a partir dos arquivos da `_inbox/`.
-6. Renames/moves feitos pela IA não quebram os links — o `fileId` é estável.
+### 1.2. Decisão: espelho automático da árvore de pastas
 
-## 3. Escopo
+A organização das pastas no Drive é **derivada** da árvore de `folders` do doit.md, não definida à mão:
 
-### In-scope
+- Cada `folder` do doit.md ↔ uma pasta no Drive sob `doit.md/`.
+- Um anexo pertence a um `item`; o `item` pertence a um `folder`; logo o anexo vive em `doit.md/<relativePath do folder>/`.
+- A IA "ajusta a organização do Drive" **movendo notas entre folders** (ou renomeando folders). Ela nunca chama a Drive API. Quem propaga o move pro Drive é a reconciliação server-side.
 
-- OAuth Google no app (escopo `https://www.googleapis.com/auth/drive.file` — acesso apenas a arquivos criados/abertos pelo app).
-- Configuração de **pasta raiz** do Drive (ex.: `My Drive/doit.md/`) e subpasta `_inbox/` automática.
-- Upload de arquivos pela UI da nota (drag-drop + botão), via API do Drive.
-- Inserção automática de link markdown na nota: `[nome.ext](https://drive.google.com/file/d/<fileId>/view)`.
-- Tabela `drive_links` em `packages/db` com `{itemId, fileId, fileName, mimeType, createdAt}` — backup do mapping caso o markdown seja corrompido.
-- Comando `doit-sync drive pull` (ou integrado ao `pull` normal): chama Drive API, reconstrói `.doitsync/drive-index.json`.
-- Reconciliação no `diff`/`status`: detecta links quebrados (arquivo trashed/deletado) e órfãos (arquivo no Drive sem nota referenciando).
-- Instruções no `AGENTS.md` ensinando a IA a: ler do índice, preservar URLs do Drive nos markdowns, processar `_inbox/`.
+```
+Árvore doit.md            →   Drive (espelhado)
+─────────────────             ─────────────────
+Projetos/
+  Cliente X/  ◄── nota    →   doit.md/Projetos/Cliente X/relatorio.pdf
+  Cliente Y/              →   doit.md/Projetos/Cliente Y/
 
-### Out-of-scope (V1)
+IA move a nota p/ Cliente Y → server roda files.update → PDF migra de pasta.
+fileId preservado → link no markdown nunca quebra.
+```
 
-- Compartilhamento de arquivos entre usuários do doit.md.
-- Edição de arquivos do Drive pelo app (Google Docs/Sheets nativos).
-- Preview inline no app (imagens/PDFs renderizados na nota) — V1 só link clicável.
-- Storage alternativo (S3, R2). Drive é a única opção em V1.
-- Antivírus / scan de conteúdo. Confiamos no Drive.
+**Consequência aceita:** a estrutura de pastas no Drive é *autoritativamente* a árvore do doit.md. Se o usuário mover um anexo manualmente no Drive web, a próxima reconciliação devolve pra pasta espelhada. Isso é o trade-off do "espelho automático".
+
+---
+
+## 2. Estado atual do código (o que já existe)
+
+Já implementado (Fases 1–2 do plano original):
+
+- **OAuth:** reusa `GoogleAccountModel` + fluxo do Calendar; escopo `drive.file` adicionado. `apps/web/src/lib/google.ts`.
+- **`apps/web/src/lib/drive.ts`:** `getOrCreateRootFolder`, `getOrCreateInboxFolder`, helpers `findFolderByName` / `createFolder`.
+- **`POST /api/drive/upload`:** sobe arquivo, grava `drive_links`, retorna `webViewLink`. **Hoje põe tudo na raiz `doit.md/`** (`parents: [rootFolderId]`) — sem espelho de pastas.
+- **`GET /api/drive/token`:** entrega access token de curta duração + `rootFolderId`/`inboxFolderId` pro CLI.
+- **Tabela `drive_links`** `{id, userId, itemId, fileId, fileName, mimeType, size, webViewLink, createdAt}`.
+- **`apps/sync-agent/src/drive/`:** `client.ts` (`listAllUnder` recursivo via API), `indexer.ts` (monta `drive-index.json` com paths virtuais `drive/...`), `reconcile.ts` (cruza `fileId`s dos markdowns vs índice → linked/broken/orphans/inboxPending).
+- **`pull`** indexa o Drive e grava `_system/drive-index.json`; **`status`** mostra contadores.
+
+**Gap pra esta revisão:** nada cria pastas por projeto no Drive nem move arquivos quando a nota muda de folder. É isso que as fases abaixo entregam.
+
+---
+
+## 3. Objetivo
+
+1. Anexos sobem direto pra pasta do Drive que espelha o folder da nota.
+2. Quando a nota muda de folder (UI ou IA via `sync-agent`), o anexo migra de pasta no Drive sozinho, sem quebrar o link.
+3. Renomear/mover um folder no doit.md renomeia/move a pasta correspondente no Drive.
+4. A IA lê o conteúdo dos anexos sem Drive for Desktop, via comando do `sync-agent`.
+5. Arquivos jogados na `_inbox/` viram notas e migram pra pasta do projeto certo.
+
+### Out of scope (V1)
+
+Compartilhamento entre usuários; edição de Google Docs nativos; preview inline na nota; storage alternativo (S3/R2); sync bidirecional de bytes (a IA nunca reescreve um anexo).
+
+---
 
 ## 4. Modelo de dados
 
-### Fonte da verdade
+### 4.1. Mapeamento folder ↔ pasta do Drive
 
-- **Identidade do arquivo:** `fileId` do Drive (imutável, sobrevive a rename/move).
-- **Referência na nota:** URL markdown padrão `https://drive.google.com/file/d/<fileId>/view`. O `fileId` é extraído via regex `/\/d\/([^/]+)\//`.
-- **Backup do mapping:** tabela `drive_links` no DB do app + `drive-links` no JSON do `item` exportado pelo `sync-agent`.
+Coluna nova `driveFolderId TEXT` na tabela `folders` (via `ensureColumn` em `ensureKnownColumns`, conforme o padrão SQL dual do repo). É o `fileId` da pasta-espelho no Drive. Estável: sobrevive a rename e move do folder, igual ao `fileId` de um arquivo.
 
-### Índice local (`.doitsync/drive-index.json`)
+- `driveFolderId` é **criado sob demanda** — só quando o primeiro anexo precisa daquela pasta. Folders sem anexo nunca geram pasta no Drive.
+- `item` sem `folderId` → anexo vai pra raiz `doit.md/` (sem `_unfiled`).
 
-Reconstruído a cada `doit-sync pull` a partir da Drive API (não do filesystem):
+### 4.2. `drive_links` (sem mudança de schema)
 
-```json
-{
-  "version": 1,
-  "rootFolderId": "0Bxyz…",
-  "updatedAt": "2026-05-10T12:00:00Z",
-  "files": {
-    "1aBcDxyz": {
-      "path": "drive/Projetos/relatorio.pdf",
-      "name": "relatorio.pdf",
-      "mimeType": "application/pdf",
-      "md5": "…",
-      "size": 1048576,
-      "modifiedTime": "2026-05-09T20:00:00Z",
-      "trashed": false,
-      "parents": ["folder_id_1"]
-    }
-  }
-}
-```
+Continua `{id, userId, itemId, fileId, ...}`. O `itemId` é o **dono** do anexo — o item em que ele foi anexado. Se outras notas referenciarem o mesmo `fileId`, são só links; o arquivo segue a pasta do item dono.
+
+### 4.3. Índice (`_system/drive-index.json`)
+
+Formato atual mantido. O `path` virtual (`drive/Projetos/Cliente X/relatorio.pdf`) já é derivado dos `parents` reais do Drive pelo `indexer.ts` — depois das fases abaixo ele passa a refletir a árvore de projetos automaticamente.
+
+---
 
 ## 5. Fluxos
 
 ### 5.1. Upload pelo app
+1. Usuário arrasta arquivo numa nota → `POST /api/drive/upload` com `itemId`.
+2. Server resolve `item.folderId` → `ensureFolderPath` cria/recupera a cadeia de pastas-espelho no Drive (mkdir -p) → `driveFolderId` da folha.
+3. `files.create` com `parents: [driveFolderId]`.
+4. Grava `drive_links`, insere `[nome](webViewLink)` no markdown.
 
-1. Usuário arrasta arquivo na nota → frontend chama `POST /api/drive/upload` com `itemId` + multipart.
-2. Backend (com token OAuth do usuário) chama `files.create` na Drive API, parent = pasta raiz configurada.
-3. Recebe `fileId`, `webViewLink`. Insere `[nome](webViewLink)` na posição do cursor.
-4. Grava linha em `drive_links` (`itemId`, `fileId`, `fileName`).
-5. Em background, Drive for Desktop espelha o arquivo localmente. App **não** depende disso.
+### 5.2. IA reorganiza (move nota entre projetos)
+1. IA move o `.md` entre pastas no workspace → `doit-sync diff` → `push`.
+2. `push` aplica a mudança via API de update do item → `item.folderId` muda no server.
+3. O handler de update detecta a mudança de `folderId` e, pra cada `drive_link` do item, roda `files.update` (`addParents`/`removeParents`) movendo o arquivo pra nova pasta-espelho.
+4. `fileId` intacto → o link no markdown continua válido. Próximo `pull` reindexa o novo `path`.
 
-### 5.2. Upload pela IA (via `_inbox/`)
+### 5.3. Rename/move de folder
+- `folder.name` muda → `files.update` renomeia a pasta-espelho (mesmo `driveFolderId`).
+- `folder.parentId` muda → `files.update` move a pasta-espelho. Os arquivos dentro acompanham nativamente.
 
-1. Usuário joga arquivos em `drive/_inbox/` (Drive web, mobile, ou pasta local).
-2. `doit-sync pull` indexa, marca esses fileIds como `inbox-pendentes` em `.doitsync/inbox.json`.
-3. IA lê `inbox.json` + os arquivos do espelho local, cria notas com links markdown apontando pros `fileId`s.
-4. IA move os arquivos pra subpastas semânticas (ex.: `drive/Projetos/X/`) usando ferramentas locais (`mv`).
-5. Drive for Desktop propaga moves → próximo `pull` atualiza `path` no índice, `fileId` permanece.
-6. `doit-sync diff` envia notas novas pra auditoria; usuário aprova; `push` aplica.
+### 5.4. IA lê o conteúdo de um anexo
+- `doit-sync drive get <fileId> [destino]` baixa via `files.get?alt=media` pra um cache (`.doitsync/cache/<fileId>`), retorna o caminho local. Read-through, sem mirror completo.
 
-### 5.3. Acesso pelo usuário
+### 5.5. Inbox
+1. Usuário joga arquivos em `doit.md/_inbox/` (Drive web/mobile).
+2. `pull` lista em `_system/inbox.json` (já existe via `reconcile.ts`).
+3. IA cria nota referenciando o `fileId`; `push` registra um `drive_link` e a reconciliação 5.2 move o arquivo da `_inbox/` pra pasta do projeto.
 
-- Clica no link markdown na UI da nota → abre `drive.google.com/file/d/<id>/view` no browser logado.
-- Sem permissão → tela padrão do Drive ("request access"). Pra uso próprio, sempre tem permissão.
+---
 
-### 5.4. IA precisa ler conteúdo
+## 6. Casos de borda
 
-- Lê o `fileId` do markdown via regex.
-- Consulta `.doitsync/drive-index.json` → `files[fileId].path`.
-- Lê o arquivo do disco. Fallback: `files.get?alt=media` via API se não houver espelho local.
+| Caso | Tratamento |
+|---|---|
+| Item sem `folderId` | Anexo na raiz `doit.md/`. |
+| Anexo referenciado por várias notas | Segue a pasta do item **dono** (`drive_links.itemId`); demais são só links. |
+| Folder deletado no doit.md | Itens são reassinados (parent/null); reconciliação move os anexos. Pasta-espelho vazia é enviada pra lixeira. |
+| Nome de pasta duplicado no Drive | `fileId` resolve identidade; `findFolderByName` casa pela primeira; aceitável pra uso pessoal. |
+| Usuário move arquivo manualmente no Drive | Reconciliação devolve pra pasta-espelho (árvore doit.md é autoritativa). |
+| `files.update` de move falha (rate limit/offline) | Logado; varredura de drift (`drive sync`) corrige depois. Idempotente. |
+| Token OAuth revogado | Upload/move retornam 412 `needsReauth`; índice mantém último estado. |
+| Anexo na lixeira do Drive | `reconcile.ts` marca o link como `broken (trashed)` no `status`. |
 
-## 6. Matriz de deleção
+---
 
-| Evento | Estado resultante | Detecção | Comportamento |
-|---|---|---|---|
-| Usuário remove link da nota | Arquivo órfão no Drive | `pull` compara `fileId`s no markdown vs índice | Lista órfãos no `status`; opção de mover pra `_orphans/` |
-| Usuário deleta no Drive web | `trashed: true` no índice | API retorna trashed | Marca link como `⚠️ broken` no `status`; lixeira do Drive guarda 30 dias |
-| IA deleta arquivo local | Drive for Desktop manda pra lixeira | Mesmo do anterior | Mesmo tratamento |
-| IA apaga link da nota mas não o arquivo | Órfão | Mesmo de "remove link" | Reversível via git nas notas |
-| Arquivo não baixado localmente (Drive for Desktop offline) | Existe na API, não no disco | `pull` confirma via API | IA usa fallback API; não marca broken |
-| Token OAuth revogado | API falha | `pull` retorna 401 | Pede reauth na UI; índice mantém último estado conhecido |
+## 7. Etapas de implementação
 
-## 7. Mudanças por componente
+Cada fase é mergeable e usável sozinha. Ordem = ordem de PRs.
+**Status (2026-05-16): A–E implementadas e com typecheck/lint limpos.** Falta só
+a validação ponta-a-ponta com uma conta Google conectada. E2/E3 abaixo ficaram
+de fora (ver nota no fim da Fase E).
 
-### `apps/web`
+### Fase A — Espelho de pastas no upload
+*Anexo novo cai na pasta do projeto certo.*
 
-- Tela **Configurações → Integrações → Google Drive**: botão "Conectar", picker da pasta raiz, status da conexão.
-- Endpoint `GET /api/auth/google` (start OAuth) + `GET /api/auth/google/callback`.
-- Endpoint `POST /api/drive/upload` (multipart → Drive API → grava `drive_links` → retorna `{fileId, webViewLink, name}`).
-- Endpoint `GET /api/drive/links?itemId=...` (lista pra UI mostrar anexos de uma nota).
-- Componente `<AttachmentDropzone />` no editor de notas.
+- **A1.** Schema: `ensureColumn(db, 'folders', 'driveFolderId', 'TEXT')` em `ensureKnownColumns`; adicionar `'driveFolderId'` aos `postgresIdentifiers`.
+- **A2.** `lib/drive.ts`: `ensureFolderPath(drive, account, folderId)` — busca a cadeia de ancestrais do folder, faz mkdir -p das pastas-espelho, memoiza `driveFolderId` em cada `folder` (lock otimista contra corrida, como em `getOrCreateRootFolder`). Retorna o `driveFolderId` da folha. Sem `folderId` → retorna `rootFolderId`.
+- **A3.** `POST /api/drive/upload`: trocar `parents: [rootFolderId]` por `parents: [await ensureFolderPath(...)]`.
+- **Aceite:** anexar arquivo a uma nota dentro de `Projetos/Cliente X` cria `doit.md/Projetos/Cliente X/` no Drive e põe o arquivo lá; nota sem folder → raiz.
 
-### `packages/db`
+### Fase B — Reconciliação de move (o "ajuste da IA")
+*Mudar a nota de projeto move o anexo no Drive.*
 
-- Migration: tabela `drive_links` `{id, userId, itemId, fileId, fileName, mimeType, createdAt}`.
-- Tabela `google_oauth_tokens` `{userId, accessToken (enc), refreshToken (enc), scope, expiresAt}`.
+- **B1.** `lib/drive.ts`: `moveFileToFolder(drive, fileId, newParentId)` via `files.update` (`addParents`/`removeParents`); `renameFolder` e `moveFolder` pra pastas-espelho.
+- **B2.** Hook no endpoint de update de **item**: ao detectar mudança de `folderId`, pra cada `drive_link` do item → `ensureFolderPath` do novo folder → `moveFileToFolder`. Falha não bloqueia o update (logar + marcar pra drift sweep).
+- **B3.** Hook no endpoint de update de **folder**: `name` mudou → `renameFolder`; `parentId` mudou → `moveFolder`.
+- **B4.** Como `doit-sync push` aplica as mudanças da IA por esses mesmos endpoints, a reorganização da IA já flui sem código extra no CLI. Validar o caminho `push` → API → reconcile.
+- **Aceite:** mover nota entre folders (UI **e** via `sync-agent`) migra o anexo de pasta no Drive; `fileId` e link intactos; renomear folder renomeia a pasta-espelho.
 
-### `apps/sync-agent`
+### Fase C — Leitura de bytes pela IA
+*A IA lê anexos sem Drive for Desktop.*
 
-- Novo módulo `drive/`:
-  - `indexer.ts`: lista recursiva via `files.list`, monta `drive-index.json`.
-  - `reconcile.ts`: cruza `fileId`s referenciados em markdowns vs índice; produz lista de broken/órfãos/inbox-pendentes.
-  - `auth.ts`: usa o token OAuth do usuário (obtido do servidor doit.md via `/api/me/google-token` autenticado por CLI token).
-- Integração no `pull`: depois de baixar markdowns, roda indexação + reconciliação se Drive estiver conectado.
-- Integração no `status`: mostra contadores `broken`, `orphans`, `inbox-pendentes`.
+- **C1.** `sync-agent/src/drive/client.ts`: `downloadFile(accessToken, fileId, dest)` via `files.get?alt=media`.
+- **C2.** Comando `doit-sync drive get <fileId> [destino]` → baixa pra `.doitsync/cache/<fileId>` (ou destino), imprime o caminho. Cache invalida por `md5Checksum` do índice.
+- **Aceite:** `doit-sync drive get <id>` baixa o arquivo e a IA consegue lê-lo localmente.
 
-### `AGENTS.md` (gerado pelo `doit-sync init`)
+### Fase D — Inbox + `AGENTS.md`
+*Arquivos da `_inbox/` viram notas no projeto certo.*
 
-Trecho novo:
+- **D1.** Endpoint pra `push` registrar `drive_link` quando um markdown novo referencia um `fileId` ainda sem link (origem `_inbox/`).
+- **D2.** Após registrar, dispara a reconciliação da Fase B → arquivo sai da `_inbox/` pra pasta do projeto.
+- **D3.** Seção Drive no template `AGENTS.md` (`init.ts`): como ler o índice, preservar `fileId` nos links, usar `drive get`, processar a `_inbox/`.
+- **Aceite:** jogar arquivo na `_inbox/`, a IA criar nota num projeto → após `pull`/`push` o arquivo está na pasta do projeto e a inbox zera.
 
-```markdown
-## Anexos do Drive
+### Fase E — Drift sweep + polimento
+- **E1.** `doit-sync drive sync` (ou passo no `pull`): re-deriva o `driveFolderId` esperado de cada `drive_link` e corrige divergências (moves que falharam, mexidas manuais no Drive).
+- **E2.** Tratamento de órfãos: comando pra mover anexos sem nota pra `_orphans/`.
+- **E3.** (Opcional) preview inline de imagem/PDF na nota.
 
-- Arquivos em `drive/` são espelhados do Google Drive. O ID canônico de cada arquivo está em `.doitsync/drive-index.json`.
-- Links pra arquivos do Drive em notas têm o formato `https://drive.google.com/file/d/<fileId>/view`. **Nunca edite o `<fileId>`** — ele é a identidade do arquivo.
-- Pra saber qual arquivo local corresponde a um link, busque o `<fileId>` em `drive-index.json` → use o campo `path`.
-- Pra processar a inbox: leia `.doitsync/inbox.json`, crie notas referenciando os `fileId`s via link markdown, mova os arquivos com `mv` pra pastas semânticas dentro de `drive/`.
-```
+---
 
-## 8. Segurança
+## 8. Critérios de aceitação (feature completa)
 
-- Escopo OAuth restrito a `drive.file` (não `drive` completo) — app só vê arquivos criados/abertos por ele.
-- Tokens OAuth criptografados no DB com chave em env var (`GOOGLE_TOKEN_ENC_KEY`).
-- `webViewLink` exige autenticação Google do usuário pra abrir — não é link público.
-- Nunca chamar `permissions.create` com `type: anyone` em V1.
+- [ ] Anexo novo cai na pasta do Drive que espelha o folder da nota.
+- [ ] Mover nota de projeto (UI e via IA/`sync-agent`) migra o anexo no Drive sem quebrar o link.
+- [ ] Renomear/mover folder no doit.md propaga pra pasta-espelho.
+- [ ] `doit-sync drive get` baixa anexo sem Drive for Desktop.
+- [ ] Arquivo da `_inbox/` processado pela IA acaba na pasta do projeto certo.
+- [ ] `doit-sync status` reporta broken/órfãos/inbox corretamente após esses fluxos.
+- [ ] Nenhum link quebrado em uso real (medido por `status`).
 
-## 9. Critérios de aceitação
+---
 
-- [ ] Usuário conecta conta Google em Settings, escolhe pasta raiz, vê status "Conectado".
-- [ ] Drag-drop de arquivo no editor sobe pro Drive e insere link na nota em <3s pra arquivos até 10MB.
-- [ ] Link na nota, clicado, abre o arquivo no Drive logado.
-- [ ] `doit-sync pull` cria/atualiza `.doitsync/drive-index.json` corretamente após rename/move feitos pela IA.
-- [ ] `doit-sync status` lista broken/órfãos/inbox-pendentes com contagem correta.
-- [ ] IA, seguindo o `AGENTS.md`, consegue: ler arquivo da `_inbox/`, criar nota referenciando, mover pra subpasta — sem quebrar o link.
-- [ ] Arquivo deletado no Drive web aparece como `broken` no próximo `status`; restaurar da lixeira o "conserta" no `pull` seguinte.
-- [ ] Token OAuth revogado é detectado e UI pede reauth.
-
-## 10. Riscos e mitigações
+## 9. Riscos
 
 | Risco | Mitigação |
 |---|---|
-| Usuário sem Drive for Desktop instalado | Fallback automático pra `files.get?alt=media` via API; documentar que sem o desktop fica mais lento |
-| API quota do Drive (queries/dia) | Cache do índice; só refazer lista completa quando `modifiedTime` da pasta raiz mudou (`files.list` com `q` por data) |
-| Conflito de nome de arquivo no Drive (duplicatas) | `fileId` resolve identidade; renomeia visualmente com sufixo se necessário |
-| IA "alucina" um `fileId` inexistente | Reconciliação detecta no `status` como broken; nunca passa pelo `push` sem revisão |
-| Arquivo enorme trava upload no browser | Limite de 100MB em V1; UI bloqueia maiores com mensagem |
+| Rate limit do Drive em reconciliações em lote | Moves são poucos (1 por anexo); backoff + drift sweep (E1) reprocessa o que falhar. |
+| Corrida criando a mesma pasta-espelho 2× | `ensureFolderPath` faz `findFolderByName` antes do `create` + lock otimista no `folders.driveFolderId`. |
+| Escopo `drive.file` não enxerga arquivo da `_inbox/` criado fora do app | Documentar: a `_inbox/` deve receber arquivos via o próprio app ou pasta criada por ele; senão usar fallback de reauth com escopo. Avaliar em D1. |
+| Mudança de `folderId` sem `drive_link` (item sem anexo) | Hook B2 sai cedo se o item não tem `drive_links` — custo zero. |
+| `push` movendo muitos itens de uma vez | Reconciliação assíncrona/em fila se o volume crescer; V1 síncrono é suficiente pra uso pessoal. |
 
-## 11. Métricas de sucesso
+---
 
-- 80%+ dos anexos criados via app abrem sem erro pelo link na nota após 30 dias.
-- Zero links quebrados causados por moves/renames da IA em uso real (medido por `status`).
-- Tempo médio de upload <3s pra arquivos <10MB.
+## 10. Estimativa
 
-## 12. Fases sugeridas
-
-1. **Fase 1 — OAuth + upload manual:** conectar Google, subir via UI, link na nota. Sem `sync-agent`.
-2. **Fase 2 — Índice + reconciliação:** `doit-sync` mantém `drive-index.json`, reporta broken/órfãos.
-3. **Fase 3 — Inbox + IA:** `_inbox/` automática, `inbox.json` pra IA, instruções no `AGENTS.md`.
-4. **Fase 4 — Polimento:** preview inline (imagens/PDFs), busca por arquivos do Drive na busca global.
+- Fase A: ~1 dia · Fase B: ~2 dias · Fase C: ~0,5 dia · Fase D: ~1 dia · Fase E: ~1 dia.

@@ -5,6 +5,7 @@ import type { UpdateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
+import { reconcileItemAttachments } from '@/lib/drive-reconcile'
 
 export const dynamic = 'force-dynamic'
 
@@ -179,6 +180,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     ).lean()
 
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // Anexo segue a nota: se o folder mudou, reposiciona os arquivos no Drive.
+    if (
+      Object.prototype.hasOwnProperty.call(body, 'folderId') &&
+      (body.folderId ?? null) !== (current['folderId'] ?? null)
+    ) {
+      await reconcileItemAttachments(userId, id)
+    }
 
     return NextResponse.json({ item: mapDocToItem(item) })
   } catch (err) {

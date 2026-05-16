@@ -6,6 +6,7 @@ import { pullCommand } from './commands/pull.js'
 import { diffCommand } from './commands/diff.js'
 import { pushCommand } from './commands/push.js'
 import { statusCommand } from './commands/status.js'
+import { driveGetCommand, driveSyncCommand } from './commands/drive.js'
 
 const program = new Command()
 
@@ -46,5 +47,17 @@ program
   .command('status')
   .description('Mostra estado atual do workspace')
   .action(statusCommand)
+
+const drive = program.command('drive').description('Anexos do Google Drive')
+
+drive
+  .command('get <fileId> [dest]')
+  .description('Baixa um anexo do Drive para leitura local')
+  .action(driveGetCommand)
+
+drive
+  .command('sync')
+  .description('Reconcilia a organização dos anexos no Drive com os projetos')
+  .action(driveSyncCommand)
 
 program.parse()

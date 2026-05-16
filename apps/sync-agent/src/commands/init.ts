@@ -62,15 +62,16 @@ Mudanças destrutivas (delete, mudança de complexity, movimento entre pastas ra
 
 ## Anexos via Google Drive
 
-Quando o usuário conectou o Drive, arquivos privados ficam em \`drive/\` (espelho do Google Drive for Desktop).
+Quando o usuário conecta o Drive, os anexos (PDFs, imagens, planilhas) ficam guardados no Google Drive dele — **não há cópia local** neste workspace. A organização das pastas no Drive **espelha automaticamente** a árvore de pastas deste workspace: o anexo de uma nota fica na pasta do Drive correspondente à pasta da nota.
 
-- O ID canônico de cada arquivo está em \`_system/drive-index.json\`. Para saber a qual arquivo local um link \`https://drive.google.com/file/d/<fileId>/view\` se refere, busque o \`<fileId>\` no índice e use o campo \`path\`.
-- **Nunca edite o \`<fileId>\`** dentro de URLs do Drive — ele é a identidade do arquivo, sobrevive a renames e moves.
-- Você pode **mover, renomear e organizar** livremente os arquivos dentro de \`drive/\` (subpastas semânticas, etc.). O \`fileId\` é preservado e o índice é refeito no próximo \`pull\`.
-- A pasta \`drive/_inbox/\` recebe arquivos novos que o usuário ainda não associou a nenhuma nota. A lista de pendentes está em \`_system/inbox.json\`. Para processar cada pendente:
-  1. Leia o arquivo do disco (\`path\` do índice).
-  2. Crie ou enriqueça uma nota Markdown referenciando o arquivo via \`[nome](https://drive.google.com/file/d/<fileId>/view)\`.
-  3. Mova o arquivo de \`drive/_inbox/\` para uma subpasta semântica dentro de \`drive/\` (ex.: \`drive/Projetos/X/\`).
+- Cada anexo aparece numa nota como um link \`https://drive.google.com/file/d/<fileId>/view\`. **Nunca edite o \`<fileId>\`** — é a identidade do arquivo, sobrevive a renames e moves.
+- O índice \`_system/drive-index.json\` mapeia cada \`<fileId>\` para nome, tipo e localização no Drive.
+- **Para reorganizar anexos, mova as NOTAS entre pastas.** Ao mover uma nota para outra pasta, o anexo dela migra sozinho para a pasta correspondente no Drive no próximo \`push\`. Você nunca mexe no Drive diretamente.
+- **Para ler o conteúdo de um anexo**, rode \`doit-sync drive get <fileId>\` — baixa o arquivo para \`_system/drive-cache/<fileId>\` e imprime o caminho.
+- A \`_inbox/\` do Drive recebe arquivos que o usuário ainda não associou a nenhuma nota. Os pendentes estão em \`_system/inbox.json\`. Para processar cada pendente:
+  1. Se precisar inspecionar o conteúdo, use \`doit-sync drive get <fileId>\`.
+  2. Crie uma nota Markdown na pasta de projeto adequada, referenciando o arquivo via \`[nome](https://drive.google.com/file/d/<fileId>/view)\`.
+  3. No próximo \`push\`, o anexo sai da \`_inbox/\` e migra para a pasta do projeto da nota — automaticamente.
 
 ## Saída esperada
 
