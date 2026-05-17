@@ -15,7 +15,10 @@ export type MobileNavItem = { id: MobileNavItemId; visible: boolean }
 export type Preferences = {
   showInbox: boolean
   mobileNav: MobileNavItem[]
+  theme: ThemePreference
 }
+
+export type ThemePreference = 'light' | 'dark' | 'system'
 
 const MOBILE_NAV_DEFAULT: MobileNavItem[] = [
   { id: 'inbox', visible: true },
@@ -29,6 +32,7 @@ const MOBILE_NAV_DEFAULT: MobileNavItem[] = [
 const DEFAULTS: Preferences = {
   showInbox: true,
   mobileNav: MOBILE_NAV_DEFAULT,
+  theme: 'system',
 }
 
 const STORAGE_KEY = 'doit:preferences'
@@ -68,9 +72,11 @@ function read(): Preferences {
     if (!raw) return DEFAULTS
     const parsed = JSON.parse(raw) as Partial<Preferences>
     const showInbox = parsed.showInbox !== false
+    const theme = parsed.theme === 'light' || parsed.theme === 'dark' ? parsed.theme : 'system'
     return {
       showInbox,
       mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
+      theme,
     }
   } catch {
     return DEFAULTS
@@ -93,6 +99,9 @@ export function usePreferences() {
 
   function update(patch: Partial<Preferences>) {
     const next = { ...read(), ...patch }
+    if (next.theme !== 'light' && next.theme !== 'dark' && next.theme !== 'system') {
+      next.theme = 'system'
+    }
     if (patch.mobileNav) {
       next.mobileNav = normalizeMobileNav(patch.mobileNav, next.showInbox)
     }

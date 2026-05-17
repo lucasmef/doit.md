@@ -10,7 +10,12 @@ import { AuditSection } from '@/components/audit/audit-section'
 import { ProfileSection } from '@/components/settings/profile-section'
 import { CliTokensSection } from '@/components/settings/cli-tokens-section'
 import { useItems } from '@/hooks/use-items'
-import { usePreferences, type MobileNavItem, type MobileNavItemId } from '@/hooks/use-preferences'
+import {
+  usePreferences,
+  type MobileNavItem,
+  type MobileNavItemId,
+  type ThemePreference,
+} from '@/hooks/use-preferences'
 import { MOBILE_NAV_LABELS } from '@/components/layout/bottom-nav'
 import { useDialog } from '@/components/ui/dialog'
 import Link from 'next/link'
@@ -147,6 +152,11 @@ function ShortcutsSection() {
 
 function AppearanceSection() {
   const { prefs, update } = usePreferences()
+  const themeOptions: Array<{ id: ThemePreference; label: string; description: string }> = [
+    { id: 'light', label: 'Claro', description: 'Usar sempre a interface clara.' },
+    { id: 'dark', label: 'Escuro', description: 'Usar sempre a interface escura.' },
+    { id: 'system', label: 'Automatico', description: 'Seguir o tema do sistema.' },
+  ]
 
   function moveNavItem(id: MobileNavItemId, direction: -1 | 1) {
     const list = [...prefs.mobileNav]
@@ -174,6 +184,40 @@ function AppearanceSection() {
 
   return (
     <section className="space-y-4">
+      <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+        <div className="border-b border-ui-border-soft px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Tema</h2>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Escolha entre modo claro, escuro ou automatico pelo sistema.
+          </p>
+        </div>
+        <div className="grid gap-2 px-5 py-5 sm:grid-cols-3">
+          {themeOptions.map((option) => {
+            const selected = prefs.theme === option.id
+            return (
+              <label
+                key={option.id}
+                className={`cursor-pointer rounded-xl border px-4 py-3 transition-colors ${
+                  selected
+                    ? 'border-brand-300 bg-brand-50 text-brand-700'
+                    : 'border-ui-border bg-white text-slate-700 hover:bg-surface-soft'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="theme"
+                  className="sr-only"
+                  checked={selected}
+                  onChange={() => update({ theme: option.id })}
+                />
+                <span className="block text-sm font-semibold">{option.label}</span>
+                <span className="mt-1 block text-xs text-slate-400">{option.description}</span>
+              </label>
+            )
+          })}
+        </div>
+      </div>
+
       <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
         <div className="border-b border-ui-border-soft px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-700">Navegacao</h2>

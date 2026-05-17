@@ -5,6 +5,60 @@
 @layer base {
   :root {
     --brand-gradient: linear-gradient(135deg, #2f6bff 0%, #28c7b7 100%);
+    --navy-50: 236 240 245;
+    --navy-100: 217 225 234;
+    --navy-200: 182 194 210;
+    --navy-300: 123 137 164;
+    --navy-400: 92 110 140;
+    --navy-500: 70 88 122;
+    --navy-600: 48 68 101;
+    --navy-700: 31 53 89;
+    --navy-800: 22 39 68;
+    --navy-900: 15 35 66;
+    --navy-950: 8 19 38;
+    --surface: 248 250 252;
+    --surface-window: 248 250 252;
+    --surface-sidebar: 255 255 255;
+    --surface-panel: 255 255 255;
+    --surface-soft: 236 240 245;
+    --surface-selected: 224 234 255;
+    --surface-muted: 236 240 245;
+    --surface-subtle: 217 225 234;
+    --surface-inverse: 15 35 66;
+    --ui-border: 217 225 234;
+    --ui-border-panel: 217 225 234;
+    --ui-border-soft: 236 240 245;
+    --ui-border-selected: 184 207 253;
+    --ui-border-strong: 182 194 210;
+  }
+
+  :root[data-theme='dark'] {
+    --brand-gradient: linear-gradient(135deg, #5f89ff 0%, #28c7b7 100%);
+    --navy-50: 15 23 42;
+    --navy-100: 30 41 59;
+    --navy-200: 51 65 85;
+    --navy-300: 100 116 139;
+    --navy-400: 148 163 184;
+    --navy-500: 203 213 225;
+    --navy-600: 226 232 240;
+    --navy-700: 241 245 249;
+    --navy-800: 248 250 252;
+    --navy-900: 248 250 252;
+    --navy-950: 248 250 252;
+    --surface: 11 18 32;
+    --surface-window: 7 13 24;
+    --surface-sidebar: 11 18 32;
+    --surface-panel: 15 23 42;
+    --surface-soft: 30 41 59;
+    --surface-selected: 30 58 112;
+    --surface-muted: 30 41 59;
+    --surface-subtle: 51 65 85;
+    --surface-inverse: 248 250 252;
+    --ui-border: 51 65 85;
+    --ui-border-panel: 51 65 85;
+    --ui-border-soft: 30 41 59;
+    --ui-border-selected: 96 125 190;
+    --ui-border-strong: 71 85 105;
   }
 
   * {
@@ -18,8 +72,8 @@
   }
 
   body {
-    background: #f8fafc;
-    color: #0f2342;
+    background: rgb(var(--surface-window));
+    color: rgb(var(--navy-900));
   }
 
   ::selection {
@@ -307,5 +361,108 @@
   }
   .ProseMirror a:hover {
     color: theme('colors.brand.700', #4338ca);
+  }
+
+  :root[data-theme='dark'] .bg-white,
+  :root[data-theme='dark'] .hover\:bg-white:hover {
+    background-color: rgb(var(--surface-panel));
+  }
+
+  :root[data-theme='dark'] .bg-slate-50,
+  :root[data-theme='dark'] .hover\:bg-slate-50:hover {
+    background-color: rgb(var(--surface));
+  }
+
+  :root[data-theme='dark'] .bg-slate-100,
+  :root[data-theme='dark'] .hover\:bg-slate-100:hover {
+    background-color: rgb(var(--surface-soft));
+  }
+
+  :root[data-theme='dark'] .bg-brand-50,
+  :root[data-theme='dark'] .bg-brand-100,
+  :root[data-theme='dark'] .hover\:bg-brand-50:hover {
+    background-color: rgb(30 58 112);
+  }
+
+  :root[data-theme='dark'] .bg-red-50,
+  :root[data-theme='dark'] .bg-red-100 {
+    background-color: rgb(69 10 10);
+  }
+
+  :root[data-theme='dark'] .bg-amber-50,
+  :root[data-theme='dark'] .bg-amber-100 {
+    background-color: rgb(69 45 7);
+  }
+
+  :root[data-theme='dark'] .bg-green-50,
+  :root[data-theme='dark'] .bg-green-100,
+  :root[data-theme='dark'] .bg-emerald-50 {
+    background-color: rgb(5 46 22);
+  }
+
+  :root[data-theme='dark'] .bg-blue-50,
+  :root[data-theme='dark'] .bg-teal-50,
+  :root[data-theme='dark'] .bg-teal-100,
+  :root[data-theme='dark'] .bg-orange-50 {
+    background-color: rgb(var(--surface-soft));
+  }
+
+  :root[data-theme='dark'] .border-slate-100,
+  :root[data-theme='dark'] .border-slate-200,
+  :root[data-theme='dark'] .border-slate-300,
+  :root[data-theme='dark'] .border-white {
+    border-color: rgb(var(--ui-border));
+  }
+
+  :root[data-theme='dark'] .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+  :root[data-theme='dark'] .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgb(var(--ui-border-soft));
+  }
+
+  :root[data-theme='dark'] .text-slate-300 {
+    color: rgb(148 163 184);
+  }
+
+  :root[data-theme='dark'] .text-slate-400 {
+    color: rgb(148 163 184);
+  }
+
+  :root[data-theme='dark'] .text-slate-500,
+  :root[data-theme='dark'] .text-slate-600 {
+    color: rgb(203 213 225);
+  }
+
+  :root[data-theme='dark'] .text-slate-700,
+  :root[data-theme='dark'] .text-slate-800,
+  :root[data-theme='dark'] .text-slate-900,
+  :root[data-theme='dark'] .text-slate-950 {
+    color: rgb(241 245 249);
+  }
+
+  :root[data-theme='dark'] .text-brand-700,
+  :root[data-theme='dark'] .text-brand-800 {
+    color: rgb(142 176 255);
+  }
+
+  :root[data-theme='dark'] .text-red-500,
+  :root[data-theme='dark'] .text-red-600,
+  :root[data-theme='dark'] .text-red-700,
+  :root[data-theme='dark'] .text-red-800 {
+    color: rgb(252 165 165);
+  }
+
+  :root[data-theme='dark'] .text-amber-600,
+  :root[data-theme='dark'] .text-amber-700,
+  :root[data-theme='dark'] .text-amber-800,
+  :root[data-theme='dark'] .text-amber-900,
+  :root[data-theme='dark'] .text-amber-950 {
+    color: rgb(252 211 77);
+  }
+
+  :root[data-theme='dark'] .text-green-600,
+  :root[data-theme='dark'] .text-green-700,
+  :root[data-theme='dark'] .text-green-800,
+  :root[data-theme='dark'] .text-emerald-700 {
+    color: rgb(134 239 172);
   }
 }

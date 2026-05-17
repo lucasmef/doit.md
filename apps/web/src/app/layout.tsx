@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
+import { ThemeManager } from '@/components/theme/theme-manager'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -26,7 +27,10 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#2f6bff',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#2f6bff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0b1220' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -36,8 +40,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { try { const raw = localStorage.getItem('doit:preferences'); const pref = raw ? JSON.parse(raw).theme : 'system'; const theme = pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme; document.documentElement.classList.toggle('dark', theme === 'dark'); } catch { } })();`,
+          }}
+        />
+      </head>
       <body className="bg-surface text-navy-900 antialiased">
+        <ThemeManager />
         {children}
         <ServiceWorkerRegister />
       </body>
