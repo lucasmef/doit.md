@@ -6,6 +6,8 @@ import { ensureDB } from '@/lib/db'
 import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
 import { reconcileItemAttachments } from '@/lib/drive-reconcile'
+import { pickItemPatch, validateItemReferences } from '@/lib/api/item-guards'
+import { createManualAuditLog } from '@/lib/api/audit-log'
 
 export const dynamic = 'force-dynamic'
 
@@ -122,9 +124,14 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     await ensureDB()
     const { id } = await params
-    const body = (await req.json()) as UpdateItemInput
+    const body = pickItemPatch(await req.json())
     const current = await ItemModel.findOne({ _id: id, userId }).lean()
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    const referenceError = await validateItemReferences(body, userId)
+    if (referenceError) {
+      return NextResponse.json({ error: referenceError }, { status: 400 })
+    }
 
     const patch = { ...body } as UpdateItemInput
     if (
@@ -189,6 +196,25 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       await reconcileItemAttachments(userId, id)
     }
 
+    if (
+      Object.prototype.hasOwnProperty.call(body, 'status') ||
+      Object.prototype.hasOwnProperty.call(body, 'folderId') ||
+      Object.prototype.hasOwnProperty.call(body, 'areaId') ||
+      Object.prototype.hasOwnProperty.call(body, 'complexity')
+    ) {
+      await createManualAuditLog({
+        userId,
+        itemId: id,
+        action: 'item_updated',
+        summary: `Item atualizado manualmente: ${id}`,
+        fieldChanges: Object.keys(body).map((field) => ({
+          field,
+          before: current[field],
+          after: (body as Record<string, unknown>)[field],
+        })),
+      })
+    }
+
     return NextResponse.json({ item: mapDocToItem(item) })
   } catch (err) {
     console.error('[PATCH /api/items/:id]', err)
@@ -212,6 +238,13 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
         updatedAt: new Date().toISOString(),
       },
     )
+
+    await createManualAuditLog({
+      userId,
+      itemId: id,
+      action: 'item_archived',
+      summary: `Item arquivado manualmente: ${id}`,
+    })
 
     return NextResponse.json({ ok: true })
   } catch (err) {

@@ -6,6 +6,8 @@ import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
 import type { BulkItemActionInput, Item, UpdateItemInput } from '@doit/types'
 import { reconcileItemAttachments } from '@/lib/drive-reconcile'
+import { pickItemPatch, validateItemReferences } from '@/lib/api/item-guards'
+import { createManualAuditLog } from '@/lib/api/audit-log'
 
 export const dynamic = 'force-dynamic'
 
@@ -107,7 +109,7 @@ async function createItemVersionIfChanged(item: Record<string, unknown>, userId:
 }
 
 function buildPatch(current: Record<string, unknown>, body: BulkItemActionInput, now: string) {
-  const patch: LoosePatch = { ...(body.patch ?? {}) }
+  const patch: LoosePatch = { ...pickItemPatch(body.patch ?? {}) }
   if (body.tagAction) patch.tags = mergeTags(current['tags'], body.tagAction)
 
   if (
@@ -181,11 +183,23 @@ export async function PATCH(req: NextRequest) {
 
     await ensureDB()
 
-    const body = (await req.json()) as BulkItemActionInput
+    const rawBody = (await req.json()) as BulkItemActionInput
+    const body: BulkItemActionInput = {
+      ids: rawBody.ids,
+      patch: rawBody.patch ? pickItemPatch(rawBody.patch) : undefined,
+      tagAction: rawBody.tagAction,
+    }
     const ids = Array.from(new Set((body.ids ?? []).filter(Boolean)))
     if (ids.length === 0) return NextResponse.json({ error: 'ids are required' }, { status: 400 })
     if (!body.patch && !body.tagAction)
       return NextResponse.json({ error: 'patch or tagAction is required' }, { status: 400 })
+
+    if (body.patch) {
+      const referenceError = await validateItemReferences(body.patch, userId)
+      if (referenceError) {
+        return NextResponse.json({ error: referenceError }, { status: 400 })
+      }
+    }
 
     const now = new Date().toISOString()
     const updated: Item[] = []
@@ -227,6 +241,25 @@ export async function PATCH(req: NextRequest) {
       }
     } catch (err) {
       console.warn('[items/bulk] reconciliação do Drive falhou:', err)
+    }
+
+    if (
+      updated.length > 0 &&
+      body.patch &&
+      (Object.prototype.hasOwnProperty.call(body.patch, 'status') ||
+        Object.prototype.hasOwnProperty.call(body.patch, 'folderId') ||
+        Object.prototype.hasOwnProperty.call(body.patch, 'areaId') ||
+        Object.prototype.hasOwnProperty.call(body.patch, 'complexity'))
+    ) {
+      await createManualAuditLog({
+        userId,
+        action: 'items_bulk_updated',
+        summary: `${updated.length} item(ns) atualizado(s) em massa manualmente.`,
+        fieldChanges: Object.keys(body.patch).map((field) => ({
+          field,
+          after: (body.patch as Record<string, unknown>)[field],
+        })),
+      })
     }
 
     return NextResponse.json({ items: updated })

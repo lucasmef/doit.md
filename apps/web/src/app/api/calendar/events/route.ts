@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { CalendarEventModel, GoogleAccountModel, ItemModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
-import { getCalendarClient, refreshAccessToken } from '@/lib/google'
+import { ensureValidAccessToken, getCalendarClient, type GoogleAccountRow } from '@/lib/google'
 import { newEventId } from '@doit/core'
 
 export const dynamic = 'force-dynamic'
@@ -11,6 +11,27 @@ function addDays(dateKey: string, days: number): string {
   const date = new Date(`${dateKey}T00:00:00`)
   date.setDate(date.getDate() + days)
   return date.toISOString().slice(0, 10)
+}
+
+function cleanString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined
+  const trimmed = value.trim()
+  return trimmed || undefined
+}
+
+function googleDateTimeBody(input: { start: string; end: string; allDay: boolean }) {
+  if (input.allDay) {
+    const startDate = input.start.slice(0, 10)
+    const endDate = input.end.slice(0, 10) || startDate
+    return {
+      start: { date: startDate },
+      end: { date: addDays(endDate, 1) },
+    }
+  }
+  return {
+    start: { dateTime: input.start },
+    end: { dateTime: input.end },
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -67,70 +88,74 @@ export async function POST(req: NextRequest) {
 
     await ensureDB()
 
-    const { itemId } = (await req.json()) as { itemId: string }
-    if (!itemId) return NextResponse.json({ error: 'itemId required' }, { status: 400 })
+    const body = (await req.json()) as Record<string, unknown>
+    const itemId = cleanString(body['itemId'])
+    const calendarId = cleanString(body['calendarId']) ?? 'primary'
+    const timestamp = new Date().toISOString()
 
-    const item = (await ItemModel.findOne({ _id: itemId, userId }).lean()) as Record<
-      string,
-      unknown
-    > | null
-    if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
+    let title = cleanString(body['title'])
+    let description = typeof body['description'] === 'string' ? body['description'] : ''
+    let start = cleanString(body['start'])
+    let end = cleanString(body['end'])
+    let allDay = typeof body['allDay'] === 'boolean' ? body['allDay'] : false
+    let linkedItemIds: string[] = []
 
-    const dueDate = item['dueDate'] as string | undefined
-    if (!dueDate) return NextResponse.json({ error: 'Item has no dueDate' }, { status: 400 })
+    if (itemId) {
+      const item = (await ItemModel.findOne({ _id: itemId, userId }).lean()) as Record<
+        string,
+        unknown
+      > | null
+      if (!item) return NextResponse.json({ error: 'Item not found' }, { status: 404 })
 
-    const account = (await GoogleAccountModel.findOne({ userId }).lean()) as Record<
-      string,
-      unknown
-    > | null
+      const dueDate = item['dueDate'] as string | undefined
+      if (!dueDate) return NextResponse.json({ error: 'Item has no dueDate' }, { status: 400 })
+
+      title = cleanString(item['title']) ?? title
+      description = (item['contentMd'] as string | undefined) ?? description
+      start = dueDate
+      end = dueDate
+      allDay = true
+      linkedItemIds = [itemId]
+    }
+
+    if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 })
+    if (!start || !end)
+      return NextResponse.json({ error: 'start and end required' }, { status: 400 })
+
+    const account = (await GoogleAccountModel.findOne({ userId }).lean()) as GoogleAccountRow | null
     if (!account)
       return NextResponse.json({ error: 'Google account not connected' }, { status: 400 })
 
-    let accessToken = account['accessToken'] as string
-    const expiresAt = account['expiresAt'] as number
-    const refreshToken = account['refreshToken'] as string | undefined
-
-    if (expiresAt && Date.now() > expiresAt - 60_000 && refreshToken) {
-      const refreshed = await refreshAccessToken(refreshToken)
-      accessToken = refreshed.accessToken
-      await GoogleAccountModel.findOneAndUpdate(
-        { userId },
-        { accessToken, expiresAt: refreshed.expiresAt, updatedAt: new Date().toISOString() },
-      )
-    }
-
-    const calendar = await getCalendarClient(accessToken, refreshToken)
-
-    const eventBody = {
-      summary: item['title'] as string,
-      description: (item['contentMd'] as string | undefined) ?? '',
-      start: { date: dueDate },
-      end: { date: addDays(dueDate, 1) },
-    }
+    const accessToken = await ensureValidAccessToken(account)
+    const calendar = await getCalendarClient(accessToken, account.refreshToken ?? undefined)
 
     const { data: created } = await calendar.events.insert({
-      calendarId: 'primary',
-      requestBody: eventBody,
+      calendarId,
+      requestBody: {
+        summary: title,
+        description,
+        ...googleDateTimeBody({ start, end, allDay }),
+      },
     })
 
     if (!created.id) return NextResponse.json({ error: 'Failed to create event' }, { status: 500 })
 
     // Salva localmente para aparecer no calendário sem precisar de sync
     const saved = await CalendarEventModel.findOneAndUpdate(
-      { googleEventId: created.id, userId },
+      { googleEventId: created.id, googleCalendarId: calendarId, userId },
       {
         $setOnInsert: { _id: newEventId() },
         userId,
-        title: created.summary ?? (item['title'] as string),
+        title: created.summary ?? title,
         description: created.description ?? undefined,
-        start: dueDate,
-        end: dueDate,
-        allDay: true,
+        start,
+        end,
+        allDay,
         source: 'google',
-        googleCalendarId: 'primary',
+        googleCalendarId: calendarId,
         googleEventId: created.id,
-        linkedItemIds: [itemId],
-        updatedAt: new Date().toISOString(),
+        linkedItemIds,
+        updatedAt: timestamp,
       },
       { upsert: true, new: true },
     )

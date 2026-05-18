@@ -3,11 +3,19 @@ import bcrypt from 'bcryptjs'
 import { UserModel } from '@doit/db'
 import { newUserId } from '@doit/core'
 import { ensureDB } from '@/lib/db'
+import { checkRateLimit, clientIp } from '@/lib/api/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    const limited = await checkRateLimit({
+      key: `auth:register:${clientIp(req)}`,
+      limit: 10,
+      windowMs: 15 * 60_000,
+    })
+    if (limited) return limited
+
     await ensureDB()
     const body = (await req.json()) as { email?: string; password?: string; name?: string }
     const email = body.email?.trim().toLowerCase()

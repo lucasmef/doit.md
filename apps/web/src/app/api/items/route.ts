@@ -4,6 +4,7 @@ import { ItemModel } from '@doit/db'
 import { newItemId, isUserAgentsItem } from '@doit/core'
 import type { CreateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
+import { validateItemReferences } from '@/lib/api/item-guards'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,6 +114,10 @@ export async function POST(req: NextRequest) {
     const validationError = validateItemInput(body)
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 })
+    }
+    const referenceError = await validateItemReferences(body, userId)
+    if (referenceError) {
+      return NextResponse.json({ error: referenceError }, { status: 400 })
     }
 
     const now = new Date().toISOString()

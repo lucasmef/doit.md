@@ -59,7 +59,8 @@ export function AgentsEditorModal({
         <div className="border-b border-ui-border-soft px-5 py-4">
           <h2 className="text-[15px] font-semibold text-navy-900">{title}</h2>
           <p className="mt-0.5 text-xs text-navy-400">
-            Este arquivo sera sincronizado como nota e baixado pelo CLI como AGENTS.md.
+            Este arquivo sera sincronizado como nota e baixado pelo CLI como AGENTS.local.md,
+            complementando o AGENTS.md padrao do app.
           </p>
         </div>
         <div className="min-h-0 flex-1 px-5 py-4">

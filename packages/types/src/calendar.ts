@@ -19,3 +19,11 @@ export type CalendarEvent = {
   createdAt: string
   updatedAt: string
 }
+
+export type GoogleCalendar = {
+  id: string
+  summary: string
+  primary: boolean
+  accessRole?: string
+  backgroundColor?: string
+}

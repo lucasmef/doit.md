@@ -4,6 +4,7 @@ import { ItemVersionModel, ItemModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
+import { createManualAuditLog } from '@/lib/api/audit-log'
 
 export const dynamic = 'force-dynamic'
 
@@ -88,6 +89,13 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const item = await ItemModel.findOneAndUpdate({ _id: id, userId }, patch, { new: true }).lean()
+
+    await createManualAuditLog({
+      userId,
+      itemId: id,
+      action: 'item_version_restored',
+      summary: `Versao restaurada manualmente: ${versionId}`,
+    })
 
     return NextResponse.json({ item })
   } catch {

@@ -59,7 +59,7 @@ export async function applyApprovedChanges(): Promise<{ applied: number }> {
   const res = await fetch('/api/sync/push', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ changes: approved }),
+    body: JSON.stringify({ ids: approved.map((change) => change.id) }),
   })
   if (!res.ok) {
     const err = await res.json()

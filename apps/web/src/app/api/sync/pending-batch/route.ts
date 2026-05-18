@@ -3,6 +3,7 @@ import { authWithCli } from '@/lib/auth'
 import { PendingChangeModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 import type { PendingChange } from '@doit/types'
+import { checkRateLimit, clientIp } from '@/lib/api/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -27,6 +28,13 @@ export async function POST(req: NextRequest) {
   try {
     const { userId } = await authWithCli(req)
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const limited = await checkRateLimit({
+      key: `sync:pending-batch:${userId}:${clientIp(req)}`,
+      limit: 120,
+      windowMs: 15 * 60_000,
+    })
+    if (limited) return limited
 
     await ensureDB()
 

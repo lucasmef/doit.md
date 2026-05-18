@@ -8,12 +8,13 @@ import { getConfig } from '../lib/config.js'
 import { readJson, writeJson, slugify, SPECIAL_DIRS } from '../lib/workspace.js'
 import { parseItemFile, serializeItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
-import { isUserAgentsItem, USER_AGENTS_TITLE } from '@doit/core'
+import { isUserAgentsItem, USER_AGENTS_FILENAME, USER_AGENTS_TITLE } from '@doit/core'
 import type { Folder, Item } from '@doit/types'
 import type { FolderManifestEntry, Manifest, ManifestEntry } from '@doit/sync'
 import { buildDriveIndex } from '../drive/indexer.js'
 import { reconcileDrive } from '../drive/reconcile.js'
 import { DriveNotConnectedError } from '../drive/client.js'
+import { DEFAULT_AGENTS_MD } from '../lib/agents-template.js'
 
 type FolderNode = Folder & { children: FolderNode[]; relativePath: string }
 type PullConflict = { relativePath: string; action: 'overwrite' | 'remove' }
@@ -130,7 +131,10 @@ async function localUntrackedMarkdownPaths(
   return new Set(
     paths
       .map((path) => toRelative(workspacePath, path))
-      .filter((path) => path !== USER_AGENTS_TITLE && !trackedPaths.has(path)),
+      .filter(
+        (path) =>
+          path !== USER_AGENTS_TITLE && path !== USER_AGENTS_FILENAME && !trackedPaths.has(path),
+      ),
   )
 }
 
@@ -305,7 +309,7 @@ export async function pullCommand() {
       const folderRel = isAgents
         ? agentsFolder(item, folderById)
         : resolveItemFolder(item, folderById)
-      const baseSlug = isAgents ? USER_AGENTS_TITLE : `${slugify(item.title, item.id)}.md`
+      const baseSlug = isAgents ? USER_AGENTS_FILENAME : `${slugify(item.title, item.id)}.md`
       const filename = dedupeFilename(usedPaths, folderRel, baseSlug)
       const relativePath = joinRelative(folderRel, filename)
 
@@ -381,6 +385,7 @@ export async function pullCommand() {
     }
 
     const stale = await removeStaleFiles(config.workspacePath, previousManifest, entries)
+    await writeFile(join(config.workspacePath, USER_AGENTS_TITLE), DEFAULT_AGENTS_MD, 'utf-8')
 
     const manifest = {
       version: 1 as const,

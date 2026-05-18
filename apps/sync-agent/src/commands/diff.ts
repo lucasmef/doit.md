@@ -7,7 +7,7 @@ import { readJson, writeJson, SPECIAL_DIRS } from '../lib/workspace.js'
 import { parseItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import { assessRisk } from '@doit/audit'
-import { newChangeId, USER_AGENTS_TAG, USER_AGENTS_TITLE } from '@doit/core'
+import { newChangeId, USER_AGENTS_FILENAME, USER_AGENTS_TAG, USER_AGENTS_TITLE } from '@doit/core'
 import type { FolderManifestEntry, Manifest, ManifestEntry } from '@doit/sync'
 import type { ChangeType, PendingChange } from '@doit/types'
 
@@ -89,7 +89,7 @@ function toRelative(workspaceRoot: string, absolute: string): string {
 }
 
 function isAgentsPath(relativePath: string): boolean {
-  return relativePath.split('/').at(-1) === USER_AGENTS_TITLE
+  return relativePath.split('/').at(-1) === USER_AGENTS_FILENAME
 }
 
 function fieldDiff(before: Record<string, unknown>, after: Record<string, unknown>) {
@@ -172,9 +172,10 @@ export async function diffCommand() {
     try {
       const raw = await readFile(abs, 'utf-8')
       const relativePath = toRelative(config.workspacePath, abs)
+      if (relativePath === USER_AGENTS_TITLE) continue
       const manifestEntry = manifestByPath.get(relativePath)
       if (isAgentsPath(relativePath)) {
-        if (!manifestEntry && relativePath === USER_AGENTS_TITLE) continue
+        if (!manifestEntry && relativePath === USER_AGENTS_FILENAME) continue
         localFiles.push({
           relativePath,
           raw,

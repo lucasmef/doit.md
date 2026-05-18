@@ -4,7 +4,8 @@ import { google, Auth } from 'googleapis'
 import { GoogleAccountModel } from '@doit/db'
 
 export const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
-export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+export const CALENDAR_EVENTS_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar'
 
 setDefaultResultOrder('ipv4first')
 setDefaultAutoSelectFamily(false)
@@ -51,7 +52,11 @@ export function getGoogleOAuthConfigStatus(): {
     .filter(([, value]) => !value.trim() || isPlaceholder(value))
     .map(([key]) => key)
 
-  if (CLIENT_ID && !isPlaceholder(CLIENT_ID) && !CLIENT_ID.endsWith('.apps.googleusercontent.com')) {
+  if (
+    CLIENT_ID &&
+    !isPlaceholder(CLIENT_ID) &&
+    !CLIENT_ID.endsWith('.apps.googleusercontent.com')
+  ) {
     issues.push('GOOGLE_CLIENT_ID')
   }
 
@@ -74,6 +79,7 @@ export function getAuthUrl(state: string | undefined, redirectUri?: string): str
     prompt: 'consent',
     scope: [
       CALENDAR_SCOPE,
+      CALENDAR_EVENTS_SCOPE,
       DRIVE_SCOPE,
       'https://www.googleapis.com/auth/userinfo.email',
     ],
@@ -127,7 +133,7 @@ export function hasDriveScope(account: Pick<GoogleAccountRow, 'scope'>): boolean
 }
 
 export function hasCalendarScope(account: Pick<GoogleAccountRow, 'scope'>): boolean {
-  return accountHasScope(account, CALENDAR_SCOPE)
+  return accountHasScope(account, CALENDAR_SCOPE) || accountHasScope(account, CALENDAR_EVENTS_SCOPE)
 }
 
 export async function ensureValidAccessToken(account: GoogleAccountRow): Promise<string> {

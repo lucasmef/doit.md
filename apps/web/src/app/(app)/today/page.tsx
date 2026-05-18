@@ -10,15 +10,31 @@ import { isLooseInboxItem, sortTodayWithInboxBelow } from '@/lib/item-order'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 import { useToast } from '@/components/ui/toast'
 
-function EventCard({ title, start, end, allDay }: { title: string; start: string; end: string; allDay: boolean }) {
+function EventCard({
+  title,
+  start,
+  end,
+  allDay,
+  isPast,
+}: {
+  title: string
+  start: string
+  end: string
+  allDay: boolean
+  isPast: boolean
+}) {
   function fmt(dt: string) {
     if (allDay) return ''
     return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
-    <div className="group flex items-center gap-3 border-b border-ui-border-soft py-2">
-      <div className="h-8 w-1 shrink-0 rounded-full bg-brand-500" />
+    <div
+      className={`group flex items-center gap-3 border-b border-ui-border-soft py-2 transition-opacity ${
+        isPast ? 'opacity-45 grayscale' : ''
+      }`}
+    >
+      <div className={`h-8 w-1 shrink-0 rounded-full ${isPast ? 'bg-navy-200' : 'bg-brand-500'}`} />
       <div className="w-14 shrink-0">
         <span className="font-mono text-[12px] font-medium text-navy-500">
           {allDay ? 'Dia todo' : fmt(start)}
@@ -56,13 +72,16 @@ export default function TodayPage() {
       })
   const todayItems = sortTodayWithInboxBelow(datedTodayItems, hiddenInboxItems)
   const overdueItems = datedTodayItems.filter(
-    (item) => item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
+    (item) =>
+      item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
   )
 
-  const todayEvents = events.filter((e) => {
-    const d = e.start.slice(0, 10)
-    return d === today
-  }).sort((a, b) => a.start.localeCompare(b.start))
+  const todayEvents = events
+    .filter((e) => {
+      const d = e.start.slice(0, 10)
+      return d === today
+    })
+    .sort((a, b) => a.start.localeCompare(b.start))
 
   async function handleRescheduleOverdue() {
     if (overdueItems.length === 0) return
@@ -86,7 +105,14 @@ export default function TodayPage() {
           </h2>
           <div className="space-y-1">
             {todayEvents.map((e) => (
-              <EventCard key={e.id} title={e.title} start={e.start} end={e.end} allDay={e.allDay} />
+              <EventCard
+                key={e.id}
+                title={e.title}
+                start={e.start}
+                end={e.end}
+                allDay={e.allDay}
+                isPast={!e.allDay && new Date(e.end).getTime() < Date.now()}
+              />
             ))}
           </div>
         </section>

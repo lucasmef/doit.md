@@ -3,6 +3,10 @@ import { google } from 'googleapis'
 import { GoogleAccountModel, UserModel } from '@doit/db'
 import { ensureDB } from '@/lib/db'
 import { createOAuthClient, originFromRequest, resolveRedirectUri } from '@/lib/google'
+import { GOOGLE_OAUTH_STATE_COOKIE, verifyGoogleOAuthState } from '@/lib/api/oauth-state'
+import { checkRateLimit, clientIp } from '@/lib/api/rate-limit'
+import { createManualAuditLog } from '@/lib/api/audit-log'
+import { auth } from '@/lib/auth'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,9 +37,16 @@ function getCallbackFailureReason(err: unknown): string {
 }
 
 export async function GET(req: NextRequest) {
+  const limited = await checkRateLimit({
+    key: `google:callback:${clientIp(req)}`,
+    limit: 30,
+    windowMs: 15 * 60_000,
+  })
+  if (limited) return limited
+
   const { searchParams } = new URL(req.url)
   const code = searchParams.get('code')
-  const userId = searchParams.get('state')
+  const state = searchParams.get('state')
   const googleError = searchParams.get('error')
   const origin = originFromRequest(req)
 
@@ -44,12 +55,29 @@ export async function GET(req: NextRequest) {
     return redirectWithError(origin, googleError)
   }
 
-  if (!code || !userId) {
+  const stateResult = verifyGoogleOAuthState(
+    state,
+    req.cookies.get(GOOGLE_OAUTH_STATE_COOKIE)?.value,
+  )
+  if ('error' in stateResult) {
+    const res = redirectWithError(origin, stateResult.error)
+    res.cookies.delete(GOOGLE_OAUTH_STATE_COOKIE)
+    return res
+  }
+
+  if (!code) {
     return redirectWithError(origin, 'missing-code-or-state')
   }
 
   try {
     await ensureDB()
+    const { userId } = stateResult
+    const session = await auth()
+    if (session.userId !== userId) {
+      const res = redirectWithError(origin, 'invalid-state')
+      res.cookies.delete(GOOGLE_OAUTH_STATE_COOKIE)
+      return res
+    }
 
     const existing = (await GoogleAccountModel.findOne({ userId }).lean()) as
       | Record<string, unknown>
@@ -103,9 +131,19 @@ export async function GET(req: NextRequest) {
       { upsert: true, new: true },
     )
 
-    return NextResponse.redirect(`${origin}/settings?tab=integrations&google=connected`)
+    await createManualAuditLog({
+      userId,
+      action: 'google_connected',
+      summary: `Conta Google conectada: ${email}`,
+    })
+
+    const res = NextResponse.redirect(`${origin}/settings?tab=integrations&google=connected`)
+    res.cookies.delete(GOOGLE_OAUTH_STATE_COOKIE)
+    return res
   } catch (err) {
     console.error('[Google OAuth callback]', err)
-    return redirectWithError(origin, getCallbackFailureReason(err))
+    const res = redirectWithError(origin, getCallbackFailureReason(err))
+    res.cookies.delete(GOOGLE_OAUTH_STATE_COOKIE)
+    return res
   }
 }

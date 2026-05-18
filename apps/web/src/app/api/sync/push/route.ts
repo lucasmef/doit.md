@@ -14,6 +14,7 @@ import {
   newVersionId,
   slugify,
   USER_AGENTS_TAG,
+  USER_AGENTS_FILENAME,
   USER_AGENTS_TITLE,
 } from '@doit/core'
 import { hashContent } from '@doit/sync'
@@ -25,6 +26,7 @@ import {
   reconcileItemAttachments,
   registerInboxLinks,
 } from '@/lib/drive-reconcile'
+import { checkRateLimit, clientIp } from '@/lib/api/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,10 +50,36 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const authedUserId = userId
 
+    const limited = await checkRateLimit({
+      key: `sync:push:${userId}:${clientIp(req)}`,
+      limit: 60,
+      windowMs: 15 * 60_000,
+    })
+    if (limited) return limited
+
     await ensureDB()
 
-    const body = (await req.json()) as { changes: PendingChange[] }
-    const changes: PendingChange[] = body.changes ?? []
+    const body = (await req.json()) as { changes?: PendingChange[]; ids?: string[] }
+    const requestedIds = new Set([
+      ...(body.ids ?? []),
+      ...((body.changes ?? []).map((change) => change.id).filter(Boolean)),
+    ])
+
+    const pendingRows = (await PendingChangeModel.find({ userId }).lean()) as Array<
+      PendingChange & { _id?: string }
+    >
+    const normalizedPendingRows = pendingRows.map((change) => ({
+      ...change,
+      id: change.id ?? change._id ?? '',
+    }))
+    const changes =
+      requestedIds.size > 0
+        ? normalizedPendingRows.filter((change) => requestedIds.has(change.id))
+        : normalizedPendingRows
+
+    if (requestedIds.size > 0 && changes.length !== requestedIds.size) {
+      return NextResponse.json({ error: 'Unknown pending change id' }, { status: 404 })
+    }
 
     if (changes.length === 0) {
       return NextResponse.json({ applied: 0 })
@@ -62,6 +90,12 @@ export async function POST(req: NextRequest) {
     if (blocked.length > 0) {
       return NextResponse.json(
         { error: `${blocked.length} mudança(s) de alto risco precisam de aprovação explícita.` },
+        { status: 422 },
+      )
+    }
+    if (requestedIds.size > 0 && approved.length !== changes.length) {
+      return NextResponse.json(
+        { error: 'Only approved pending changes can be pushed.' },
         { status: 422 },
       )
     }
@@ -244,7 +278,8 @@ export async function POST(req: NextRequest) {
     }
 
     function isAgentsPath(path: string | undefined): boolean {
-      return path?.split('/').filter(Boolean).at(-1) === USER_AGENTS_TITLE
+      const fileName = path?.split('/').filter(Boolean).at(-1)
+      return fileName === USER_AGENTS_TITLE || fileName === USER_AGENTS_FILENAME
     }
 
     for (const change of approved) {

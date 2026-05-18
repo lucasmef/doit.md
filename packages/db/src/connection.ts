@@ -372,6 +372,11 @@ const sqliteSchema = [
   )`,
   `CREATE INDEX IF NOT EXISTS notification_alerts_user_ack_idx ON notification_alerts (userId, acknowledgedAt, createdAt)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS notification_alerts_dedupe_idx ON notification_alerts (userId, itemId, type, scheduledFor) WHERE itemId IS NOT NULL AND scheduledFor IS NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS rate_limits (
+    id TEXT PRIMARY KEY,
+    count INTEGER NOT NULL,
+    resetAt INTEGER NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS cli_tokens (
     id TEXT PRIMARY KEY,
     userId TEXT NOT NULL,
@@ -455,6 +460,7 @@ const postgresIdentifiers = [
   'riskLevel',
   'expiresAt',
   'folderId',
+  'resetAt',
   'viewModeManual',
   'viewMode',
   'localPath',

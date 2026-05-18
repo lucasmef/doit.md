@@ -65,7 +65,7 @@ export async function pushCommand() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${config.apiKey}`,
       },
-      body: JSON.stringify({ changes: approved, userId: config.userId }),
+      body: JSON.stringify({ ids: approved.map((change) => change.id), userId: config.userId }),
     })
 
     if (!res.ok) {

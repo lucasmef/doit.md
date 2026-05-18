@@ -5,6 +5,7 @@ import { ensureValidAccessToken, getCalendarClient, type GoogleAccountRow } from
 type Row = Record<string, unknown>
 
 const DEFAULT_CALENDAR_ID = 'primary'
+const WRITABLE_ROLES = new Set(['owner', 'writer'])
 
 function addDays(dateKey: string, days: number): string {
   const date = new Date(`${dateKey}T00:00:00`)
@@ -25,7 +26,7 @@ export async function syncGoogleCalendarForUser(
   const account = (await GoogleAccountModel.findOne({ userId }).lean()) as GoogleAccountRow | null
   if (!account) throw new Error('Google account not connected')
 
-  const calendarId = options.calendarId ?? DEFAULT_CALENDAR_ID
+  const requestedCalendarId = options.calendarId
   const lookAheadDays = options.lookAheadDays ?? 90
   const lookBackDays = options.lookBackDays ?? 30
   const now = Date.now()
@@ -35,6 +36,50 @@ export async function syncGoogleCalendarForUser(
   const accessToken = await ensureValidAccessToken(account)
   const calendar = await getCalendarClient(accessToken, account.refreshToken ?? undefined)
 
+  const calendarIds = requestedCalendarId
+    ? [requestedCalendarId]
+    : await listSyncableCalendarIds(calendar)
+
+  let synced = 0
+  let removed = 0
+
+  for (const calendarId of calendarIds) {
+    const result = await syncGoogleCalendar(calendar, userId, calendarId, timeMin, timeMax)
+    synced += result.synced
+    removed += result.removed
+  }
+
+  return { synced, removed }
+}
+
+async function listSyncableCalendarIds(
+  calendar: Awaited<ReturnType<typeof getCalendarClient>>,
+): Promise<string[]> {
+  try {
+    const { data } = await calendar.calendarList.list({
+      minAccessRole: 'reader',
+      showDeleted: false,
+    })
+    const ids = (data.items ?? [])
+      .filter(
+        (item) =>
+          item.id &&
+          (!item.accessRole || item.accessRole === 'reader' || WRITABLE_ROLES.has(item.accessRole)),
+      )
+      .map((item) => item.id as string)
+    return ids.length > 0 ? ids : [DEFAULT_CALENDAR_ID]
+  } catch {
+    return [DEFAULT_CALENDAR_ID]
+  }
+}
+
+async function syncGoogleCalendar(
+  calendar: Awaited<ReturnType<typeof getCalendarClient>>,
+  userId: string,
+  calendarId: string,
+  timeMin: string,
+  timeMax: string,
+): Promise<{ synced: number; removed: number }> {
   const { data } = await calendar.events.list({
     calendarId,
     timeMin,
@@ -63,7 +108,7 @@ export async function syncGoogleCalendarForUser(
     seenGoogleIds.add(ev.id)
 
     await CalendarEventModel.findOneAndUpdate(
-      { googleEventId: ev.id, userId },
+      { googleEventId: ev.id, googleCalendarId: calendarId, userId },
       {
         $setOnInsert: { _id: newEventId() },
         userId,

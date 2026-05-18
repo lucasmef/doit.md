@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
     const parent = body.parentId
       ? await FolderModel.findOne({ _id: body.parentId, userId }).lean()
       : null
+    if (body.parentId && !parent) {
+      return NextResponse.json({ error: 'parentId is invalid' }, { status: 400 })
+    }
     const now = new Date().toISOString()
     const folder = await FolderModel.create({
       _id: newFolderId(),

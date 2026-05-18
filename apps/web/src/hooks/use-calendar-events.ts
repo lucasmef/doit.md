@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR, { mutate as globalMutate } from 'swr'
-import type { CalendarEvent } from '@doit/types'
+import type { CalendarEvent, GoogleCalendar } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -14,6 +14,18 @@ export function useCalendarEvents(from?: string, to?: string) {
   const { data, error, isLoading } = useSWR<{ events: CalendarEvent[] }>(url, fetcher)
   return {
     events: data?.events ?? [],
+    isLoading,
+    isError: !!error,
+  }
+}
+
+export function useGoogleCalendars() {
+  const { data, error, isLoading } = useSWR<{ calendars: GoogleCalendar[] }>(
+    '/api/calendar/calendars',
+    fetcher,
+  )
+  return {
+    calendars: data?.calendars ?? [],
     isLoading,
     isError: !!error,
   }
@@ -36,6 +48,22 @@ export type CalendarEventUpdate = {
   start: string
   end: string
   allDay: boolean
+}
+
+export type CalendarEventCreate = CalendarEventUpdate & {
+  calendarId?: string
+}
+
+export async function createCalendarEvent(input: CalendarEventCreate): Promise<CalendarEvent> {
+  const res = await fetch('/api/calendar/events', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  })
+  const result = await res.json()
+  if (!res.ok) throw new Error(result.error ?? 'Falha ao criar evento')
+  await globalMutate((key: string) => typeof key === 'string' && key.startsWith('/api/calendar'))
+  return result.event as CalendarEvent
 }
 
 export async function updateCalendarEvent(

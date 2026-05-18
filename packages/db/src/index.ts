@@ -55,6 +55,10 @@ export const NotificationAlertModel = new SqlModel({
   table: 'notification_alerts',
 })
 
+export const RateLimitModel = new SqlModel({
+  table: 'rate_limits',
+})
+
 export const CliTokenModel = new SqlModel({
   table: 'cli_tokens',
 })

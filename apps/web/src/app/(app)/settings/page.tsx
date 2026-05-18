@@ -357,8 +357,8 @@ function AiSection() {
       <div className="px-5 py-4">
         <h2 className="text-sm font-semibold text-slate-700">AGENTS.md global</h2>
         <p className="mt-0.5 text-xs text-slate-400">
-          Instrucoes globais do seu workspace local. O CLI baixa este conteudo como AGENTS.md na
-          raiz.
+          Instrucoes globais do seu workspace local. O CLI baixa este conteudo como
+          AGENTS.local.md, complementando o AGENTS.md padrao gerado pelo app.
         </p>
       </div>
       <div className="px-5 py-5">

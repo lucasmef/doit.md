@@ -4,10 +4,29 @@ import { FolderModel, ItemModel } from '@doit/db'
 import type { UpdateFolderInput } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 import { reconcileFolderMirror } from '@/lib/drive-reconcile'
+import { createManualAuditLog } from '@/lib/api/audit-log'
 
 export const dynamic = 'force-dynamic'
 
 type Params = { params: Promise<{ id: string }> }
+
+const FOLDER_PATCH_FIELDS = new Set<keyof UpdateFolderInput>([
+  'name',
+  'parentId',
+  'order',
+  'viewMode',
+  'viewModeManual',
+])
+
+function pickFolderPatch(input: unknown): UpdateFolderInput {
+  if (!input || typeof input !== 'object') return {}
+
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(input)) {
+    if (FOLDER_PATCH_FIELDS.has(key as keyof UpdateFolderInput)) out[key] = value
+  }
+  return out as UpdateFolderInput
+}
 
 export async function GET(_req: NextRequest, { params }: Params) {
   try {
@@ -31,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     await ensureDB()
     const { id } = await params
-    const body = (await req.json()) as UpdateFolderInput
+    const body = pickFolderPatch(await req.json())
 
     if (body.parentId === id) {
       return NextResponse.json({ error: 'Folder cannot be its own parent' }, { status: 400 })
@@ -44,6 +63,41 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       name?: string
       parentId?: string | null
     } | null
+    if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    if (body.parentId) {
+      const allFolders = (await FolderModel.find({ userId }).lean()) as Array<{
+        _id?: string
+        id?: string
+        parentId?: string | null
+      }>
+      const parentExists = allFolders.some(
+        (folder) => String(folder._id ?? folder.id) === body.parentId,
+      )
+      if (!parentExists) {
+        return NextResponse.json({ error: 'parentId is invalid' }, { status: 400 })
+      }
+
+      const descendants = new Set<string>([id])
+      let added = true
+      while (added) {
+        added = false
+        for (const candidate of allFolders) {
+          const candidateId = String(candidate._id ?? candidate.id)
+          if (
+            candidate.parentId &&
+            descendants.has(candidate.parentId) &&
+            !descendants.has(candidateId)
+          ) {
+            descendants.add(candidateId)
+            added = true
+          }
+        }
+      }
+      if (descendants.has(body.parentId)) {
+        return NextResponse.json({ error: 'Folder cannot be moved into its descendants' }, { status: 400 })
+      }
+    }
 
     const now = new Date().toISOString()
     const patch: Record<string, unknown> = { ...body, updatedAt: now }
@@ -99,6 +153,23 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       }
     }
 
+    if (
+      typeof body.name === 'string' ||
+      Object.prototype.hasOwnProperty.call(body, 'parentId') ||
+      body.viewMode
+    ) {
+      await createManualAuditLog({
+        userId,
+        action: 'folder_updated',
+        summary: `Pasta atualizada manualmente: ${id}`,
+        fieldChanges: Object.keys(body).map((field) => ({
+          field,
+          before: before[field as keyof typeof before],
+          after: (body as Record<string, unknown>)[field],
+        })),
+      })
+    }
+
     return NextResponse.json({ folder })
   } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
@@ -136,6 +207,12 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
         { folderId: null, updatedAt: new Date().toISOString() },
       )
     }
+
+    await createManualAuditLog({
+      userId,
+      action: 'folder_deleted',
+      summary: `Pasta removida manualmente: ${id}; ${descendants.size} pasta(s) afetada(s).`,
+    })
 
     return NextResponse.json({ ok: true, removed: descendants.size })
   } catch (err) {
