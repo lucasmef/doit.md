@@ -87,8 +87,8 @@ function IconSettings() {
 export const MOBILE_NAV_LABELS: Record<MobileNavItemId, string> = {
   inbox: 'Inbox',
   today: 'Hoje',
-  upcoming: 'Proximos',
-  calendar: 'Calendario',
+  upcoming: 'Próximos',
+  calendar: 'Calendário',
   notas: 'Notas',
   settings: 'Config',
 }

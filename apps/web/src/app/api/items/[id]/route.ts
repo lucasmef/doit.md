@@ -6,7 +6,12 @@ import { ensureDB } from '@/lib/db'
 import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
 import { reconcileItemAttachments } from '@/lib/drive-reconcile'
-import { pickItemPatch, validateItemReferences } from '@/lib/api/item-guards'
+import {
+  pickItemPatch,
+  validateItemPatchInput,
+  validateItemReferences,
+  validateItemState,
+} from '@/lib/api/item-guards'
 import { createManualAuditLog } from '@/lib/api/audit-log'
 
 export const dynamic = 'force-dynamic'
@@ -16,10 +21,6 @@ type Params = { params: Promise<{ id: string }> }
 function mapDocToItem(doc: unknown): Item {
   const { _id, ...rest } = doc as { _id: string; [key: string]: unknown }
   return { id: _id, ...rest } as unknown as Item
-}
-
-function validateItemState() {
-  return null
 }
 
 function titleFromNoteContent(contentMd: string | undefined) {
@@ -128,6 +129,11 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const current = await ItemModel.findOne({ _id: id, userId }).lean()
     if (!current) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    const inputError = validateItemPatchInput(body)
+    if (inputError) {
+      return NextResponse.json({ error: inputError }, { status: 400 })
+    }
+
     const referenceError = await validateItemReferences(body, userId)
     if (referenceError) {
       return NextResponse.json({ error: referenceError }, { status: 400 })
@@ -165,7 +171,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       if (title) merged.title = title
     }
 
-    const validationError = validateItemState()
+    const validationError = validateItemState(merged)
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 })
     }

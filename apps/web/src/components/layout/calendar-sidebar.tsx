@@ -25,7 +25,7 @@ function CalendarPanel({ onClose }: { onClose: () => void }) {
     <div className="flex h-full flex-col">
       <div className="flex h-14 shrink-0 items-center justify-between border-b border-ui-border px-5">
         <div>
-          <h2 className="text-[15px] font-bold text-navy-900">Calendario</h2>
+          <h2 className="text-[15px] font-bold text-navy-900">Calendário</h2>
           <p className="font-mono text-[10px] text-navy-300">Shift+C</p>
         </div>
         <button

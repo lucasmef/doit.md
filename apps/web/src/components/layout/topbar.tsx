@@ -14,13 +14,13 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json())
 const ROUTE_LABELS: Record<string, string> = {
   inbox: 'Inbox',
   today: 'Hoje',
-  upcoming: 'Proximos',
-  calendar: 'Calendario',
+  upcoming: 'Próximos',
+  calendar: 'Calendário',
   archive: 'Arquivo',
   projects: 'Projetos',
   tags: 'Tags',
   audit: 'Auditoria',
-  settings: 'Configuracoes',
+  settings: 'Configurações',
 }
 
 function SearchIcon() {
@@ -53,6 +53,41 @@ function CalendarIcon() {
       <path strokeLinecap="round" strokeLinejoin="round" d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" />
     </svg>
   )
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+function formatSearchDate(dateStr: string): string {
+  const today = toDateKey(new Date())
+  const tomorrowDate = new Date()
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+  const tomorrow = toDateKey(tomorrowDate)
+  if (dateStr === today) return 'Hoje'
+  if (dateStr === tomorrow) return 'Amanhã'
+  return new Date(`${dateStr}T12:00:00`).toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'short',
+  })
+}
+
+function toDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function Topbar() {
@@ -100,12 +135,13 @@ export function Topbar() {
     return () => window.removeEventListener('doit:focus-search', focusSearch)
   }, [query])
 
-  const { data } = useSWR<{ items: Item[] }>(
+  const { data, isLoading, isValidating } = useSWR<{ items: Item[] }>(
     debounced.length > 1 ? `/api/items/search?q=${encodeURIComponent(debounced)}` : null,
     fetcher,
   )
 
   const items = data?.items || []
+  const isSearching = query.trim().length > 1 && (query !== debounced || isLoading || isValidating)
 
   const mobilePageTitle = useMemo(() => {
     const parts = pathname.split('/').filter(Boolean)
@@ -134,7 +170,7 @@ export function Topbar() {
         ))}
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center gap-2 sm:hidden">
+      <div className={`min-w-0 flex-1 items-center gap-2 sm:hidden ${mobileSearchOpen ? 'hidden' : 'flex'}`}>
         <Link
           href="/today"
           aria-label="Inicio"
@@ -155,7 +191,9 @@ export function Topbar() {
       <button
         type="button"
         onClick={() => setMobileSearchOpen(true)}
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ui-border bg-white text-navy-500 sm:hidden"
+        className={`h-10 w-10 shrink-0 items-center justify-center rounded-md border border-ui-border bg-white text-navy-500 sm:hidden ${
+          mobileSearchOpen ? 'hidden' : 'inline-flex'
+        }`}
         aria-label="Buscar"
         title="Buscar"
       >
@@ -165,7 +203,9 @@ export function Topbar() {
       <button
         type="button"
         onClick={() => setQuickCaptureOpen(true)}
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white shadow-sm sm:hidden"
+        className={`h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white shadow-sm sm:hidden ${
+          mobileSearchOpen ? 'hidden' : 'inline-flex'
+        }`}
         aria-label="Novo"
         title="Novo"
       >
@@ -189,7 +229,7 @@ export function Topbar() {
         <input
           ref={inputRef}
           type="text"
-          placeholder="Search or jump..."
+          placeholder="Buscar ou ir para..."
           value={query}
           onChange={(e) => {
             setQuery(e.target.value)
@@ -209,7 +249,7 @@ export function Topbar() {
           className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-navy-400 sm:hidden"
           aria-label="Fechar busca"
         >
-          x
+          <CloseIcon />
         </button>
         <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 rounded border border-ui-border-strong bg-white px-1.5 py-0.5 font-mono text-[10px] text-navy-500 sm:block">
           Ctrl K
@@ -220,8 +260,10 @@ export function Topbar() {
 
         {open && debounced.length > 1 && (
           <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
-            {items.length === 0 ? (
-              <div className="p-4 text-center text-sm text-navy-300">Nenhum item encontrado.</div>
+            {isSearching ? (
+              <div className="p-4 text-center text-sm text-navy-500">Buscando...</div>
+            ) : items.length === 0 ? (
+              <div className="p-4 text-center text-sm text-navy-500">Nenhum item encontrado.</div>
             ) : (
               <div className="space-y-1">
                 {items.map((item) => (
@@ -235,8 +277,8 @@ export function Topbar() {
                   >
                     <span className="block truncate font-medium text-navy-900">{item.title}</span>
                     {item.dueDate && (
-                      <span className="mt-0.5 block font-mono text-[11px] text-navy-300">
-                        {item.dueDate}
+                      <span className="mt-0.5 block font-mono text-[11px] text-navy-500">
+                        {formatSearchDate(item.dueDate)}
                       </span>
                     )}
                   </button>
@@ -248,10 +290,6 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="hidden items-center gap-1.5 font-mono text-[11px] text-navy-300 md:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />
-          Saved
-        </span>
         <button
           onClick={() => setCalendarOpen(!calendarOpen)}
           className={`hidden h-9 w-9 items-center justify-center rounded-md transition-colors lg:inline-flex ${
@@ -259,7 +297,7 @@ export function Topbar() {
               ? 'bg-surface-selected text-brand-600'
               : 'text-navy-500 hover:bg-surface-soft'
           }`}
-          title="Alternar calendario (Shift+C)"
+          title="Alternar calendário (Shift+C)"
         >
           <CalendarIcon />
         </button>

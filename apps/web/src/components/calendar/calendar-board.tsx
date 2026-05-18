@@ -760,7 +760,7 @@ function NewEventSheet({
           {writableCalendars.length > 1 ? (
             <label className="block">
               <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Calendario
+                Calendário
               </span>
               <select
                 value={calendarId}

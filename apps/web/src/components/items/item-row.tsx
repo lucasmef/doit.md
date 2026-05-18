@@ -59,7 +59,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
   const longPressTriggered = useRef(false)
   const longPressStart = useRef<{ x: number; y: number } | null>(null)
 
-  async function toggleDone(e: React.MouseEvent) {
+  async function toggleDone(e: React.SyntheticEvent) {
     e.stopPropagation()
     if (item.status === 'archived') {
       await updateItem(item.id, { status: 'todo' })
@@ -139,6 +139,12 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     setSingleSelection(item.id)
   }
 
+  function handleRowKeyDown(e: React.KeyboardEvent) {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    setSingleSelection(item.id)
+  }
+
   function handleContextMenu(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
@@ -171,15 +177,15 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
 
   return (
     <div
-      role="button"
       tabIndex={0}
+      aria-label={`Abrir item ${item.title}`}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={clearLongPressTimer}
       onPointerCancel={clearLongPressTimer}
-      onKeyDown={(e) => e.key === 'Enter' && setSingleSelection(item.id)}
+      onKeyDown={handleRowKeyDown}
       data-item-id={item.id}
       style={{ animationDelay: staggerDelay }}
       className={`group flex w-full cursor-pointer select-none items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
@@ -193,35 +199,43 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
       {/* Checkbox — só task/capture */}
       {(item.complexity === 'task' || item.complexity === 'capture') ? (
         <button
+          type="button"
           onClick={toggleDone}
           onPointerDown={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.stopPropagation()}
-          className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] transition-all ${
-            displayDone
-              ? 'border-teal-500 bg-teal-500'
-              : justCompleted
-              ? 'border-brand-500 animate-ring-pulse'
-              : `${checkboxBorder} hover:border-brand-500`
-          }`}
+          aria-label={displayDone ? `Marcar ${item.title} como pendente` : `Concluir ${item.title}`}
+          aria-pressed={displayDone}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-soft"
         >
-          {displayDone && (
-            <svg
-              className={`w-3 h-3 text-white ${justCompleted ? 'animate-check-pop' : ''}`}
-              fill="none"
-              viewBox="0 0 12 12"
-            >
-              <path
-                d="M2 6l3 3 5-5"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
+          <span
+            className={`flex h-[18px] w-[18px] items-center justify-center rounded-[5px] border-[1.5px] transition-all ${
+              displayDone
+                ? 'border-teal-500 bg-teal-500'
+                : justCompleted
+                ? 'border-brand-500 animate-ring-pulse'
+                : `${checkboxBorder} hover:border-brand-500`
+            }`}
+          >
+            {displayDone && (
+              <svg
+                className={`w-3 h-3 text-white ${justCompleted ? 'animate-check-pop' : ''}`}
+                fill="none"
+                viewBox="0 0 12 12"
+                aria-hidden="true"
+              >
+                <path
+                  d="M2 6l3 3 5-5"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            )}
+          </span>
         </button>
       ) : (
-        <div className="flex h-[18px] w-[18px] shrink-0 items-center justify-center text-navy-300">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-navy-500">
           {item.complexity === 'note'
             ? <IconNoteFilled className="h-4 w-4" />
             : p < 4
@@ -233,7 +247,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
           className={`text-[14px] leading-5 font-normal truncate transition-all ${
-            displayDone ? 'line-through text-navy-300' : 'text-navy-900'
+            displayDone ? 'line-through text-navy-500' : 'text-navy-900'
           }`}
         >
           {item.title}
@@ -249,7 +263,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
             <span className="font-mono text-navy-200">/</span>
           )}
           {item.tags.length > 0 && (
-            <span className="truncate font-mono text-[11px] text-navy-300">
+            <span className="truncate font-mono text-[11px] text-navy-500">
               {item.tags.slice(0, 3).map((tag) => `#${tag}`).join(' ')}
             </span>
           )}
@@ -257,7 +271,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
             <span className="font-mono text-navy-200">/</span>
           )}
           {item.recurrence && (
-            <span className="truncate font-mono text-[11px] text-navy-300">
+            <span className="truncate font-mono text-[11px] text-navy-500">
               {formatRecurrenceLabel(item.recurrence, item.dueDate)}
             </span>
           )}

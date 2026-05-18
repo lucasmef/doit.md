@@ -87,8 +87,19 @@ export default function TodayPage() {
     if (overdueItems.length === 0) return
     setRescheduling(true)
     try {
+      const snapshot = overdueItems.map((item) => ({ id: item.id, dueDate: item.dueDate }))
       await Promise.all(overdueItems.map((item) => updateItem(item.id, { dueDate: today })))
-      toast(`${overdueItems.length} tarefa(s) reagendada(s) para hoje.`, 'success')
+      toast(`${overdueItems.length} tarefa(s) reagendada(s) para hoje.`, 'success', {
+        label: 'Desfazer',
+        onClick: () => {
+          void Promise.all(
+            snapshot.map((item) => updateItem(item.id, { dueDate: item.dueDate })),
+          ).then(
+            () => toast('Reagendamento desfeito.', 'success'),
+            () => toast('Erro ao desfazer reagendamento.', 'error'),
+          )
+        },
+      })
     } catch {
       toast('Erro ao reagendar tarefas.', 'error')
     } finally {
@@ -121,7 +132,7 @@ export default function TodayPage() {
       <section className="mb-4">
         <div className="mb-2 flex items-center justify-between gap-3">
           <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Itens / {todayItems.length}
+            Itens{isLoading ? '' : ` / ${todayItems.length}`}
           </h2>
           <div className="flex items-center gap-2">
             {overdueItems.length > 0 && (
@@ -136,7 +147,25 @@ export default function TodayPage() {
             )}
           </div>
         </div>
-        <ItemList items={todayItems} isLoading={isLoading} emptyMessage="Nenhum item para hoje." />
+        <ItemList
+          items={todayItems}
+          isLoading={isLoading}
+          emptySlot={
+            <div className="rounded-xl border border-dashed border-ui-border-strong bg-white px-5 py-10 text-center">
+              <p className="text-[15px] font-semibold text-navy-900">Nada para hoje</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-navy-500">
+                Tarefas com vencimento para hoje e atrasadas aparecerão aqui.
+              </p>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new Event('doit:focus-search'))}
+                className="mt-4 rounded-lg border border-ui-border bg-surface-soft px-3 py-2 text-[13px] font-semibold text-navy-700 hover:bg-white"
+              >
+                Buscar itens
+              </button>
+            </div>
+          }
+        />
       </section>
     </div>
   )

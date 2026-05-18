@@ -7,6 +7,11 @@ import { ensureDB } from '@/lib/db'
 
 export const dynamic = 'force-dynamic'
 
+function mapDocToFolder(doc: unknown) {
+  const { _id, ...rest } = doc as { _id: string; [key: string]: unknown }
+  return { id: _id, ...rest }
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await authWithCli(req)
@@ -14,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     await ensureDB()
     const folders = await FolderModel.find({ userId }).sort({ order: 1 }).lean()
-    return NextResponse.json({ folders })
+    return NextResponse.json({ folders: folders.map(mapDocToFolder) })
   } catch (err) {
     console.error('[GET /api/folders]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
       updatedAt: now,
     })
 
-    return NextResponse.json({ folder }, { status: 201 })
+    return NextResponse.json({ folder: mapDocToFolder(folder.toObject()) }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/folders]', err)
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

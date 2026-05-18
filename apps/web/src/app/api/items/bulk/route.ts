@@ -6,7 +6,12 @@ import { newVersionId } from '@doit/core'
 import { hashContent } from '@doit/sync'
 import type { BulkItemActionInput, Item, UpdateItemInput } from '@doit/types'
 import { reconcileItemAttachments } from '@/lib/drive-reconcile'
-import { pickItemPatch, validateItemReferences } from '@/lib/api/item-guards'
+import {
+  pickItemPatch,
+  validateItemPatchInput,
+  validateItemReferences,
+  validateItemState,
+} from '@/lib/api/item-guards'
 import { createManualAuditLog } from '@/lib/api/audit-log'
 
 export const dynamic = 'force-dynamic'
@@ -195,6 +200,11 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'patch or tagAction is required' }, { status: 400 })
 
     if (body.patch) {
+      const inputError = validateItemPatchInput(body.patch)
+      if (inputError) {
+        return NextResponse.json({ error: inputError }, { status: 400 })
+      }
+
       const referenceError = await validateItemReferences(body.patch, userId)
       if (referenceError) {
         return NextResponse.json({ error: referenceError }, { status: 400 })
@@ -210,6 +220,11 @@ export async function PATCH(req: NextRequest) {
       if (!current) continue
 
       const { set, unset, versionPatch } = buildPatch(current, body, now)
+      const validationError = validateItemState({ ...mapDocToItem(current), ...set })
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 })
+      }
+
       if (shouldVersionNote(current, versionPatch)) {
         await createItemVersionIfChanged(current, userId)
       }

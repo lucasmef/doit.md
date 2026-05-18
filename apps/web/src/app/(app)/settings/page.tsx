@@ -64,8 +64,8 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string[]; lab
       { keys: ['W'], label: 'Nova nota' },
       { keys: ['Ctrl/Cmd', 'K'], label: 'Buscar' },
       { keys: ['H'], label: 'Ir para Hoje' },
-      { keys: ['P'], label: 'Ir para Proximos' },
-      { keys: ['Shift', 'C'], label: 'Abrir/fechar calendario' },
+      { keys: ['P'], label: 'Ir para Próximos' },
+      { keys: ['Shift', 'C'], label: 'Abrir/fechar calendário' },
       { keys: ['Esc'], label: 'Fechar modal/painel ou salvar e sair de nota' },
     ],
   },
@@ -620,7 +620,7 @@ function SettingsContent() {
                 <div>
                   <p className="text-sm text-slate-600">Nenhuma conta conectada.</p>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    Conecte para ver seus eventos do Google Calendar na visao Hoje e Calendario.
+                    Conecte para ver seus eventos do Google Calendar na visão Hoje e Calendário.
                   </p>
                 </div>
                 <a
@@ -669,7 +669,7 @@ function SettingsContent() {
                 ) : null}
                 {push.support === 'denied' ? (
                   <p className="mt-2 text-xs text-red-500">
-                    A permissao foi bloqueada no navegador. Altere nas configuracoes do site.
+                    A permissão foi bloqueada no navegador. Altere nas configurações do site.
                   </p>
                 ) : null}
               </div>
@@ -741,7 +741,7 @@ function SettingsContent() {
                 onClick={() => selectTab('cli')}
                 className="font-medium text-brand-600 hover:underline"
               >
-                Configuracoes &rarr; CLI
+                Configurações &rarr; CLI
               </button>{' '}
               e crie um novo token.
             </p>

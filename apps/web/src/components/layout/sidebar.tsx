@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import useSWR from 'swr'
 import { useItems } from '@/hooks/use-items'
 import { useFolders, buildFolderTree, createFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useUI } from '@/store/ui'
@@ -11,6 +12,8 @@ import { usePreferences } from '@/hooks/use-preferences'
 import { toLocalDateKey } from '@doit/core'
 
 type IconKey = 'today' | 'inbox' | 'upcoming' | 'settings' | 'folder' | 'tag'
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; className?: string }) {
   const common = { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
@@ -62,11 +65,11 @@ function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; cla
 const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/today', label: 'Hoje', icon: 'today' },
-  { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
+  { href: '/upcoming', label: 'Próximos', icon: 'upcoming' },
 ]
 
 const BOTTOM_NAV: { href: string; label: string; icon: IconKey }[] = [
-  { href: '/settings', label: 'Configuracoes', icon: 'settings' },
+  { href: '/settings', label: 'Configurações', icon: 'settings' },
 ]
 
 function NavLink({
@@ -253,8 +256,14 @@ export function Sidebar() {
   const pathname = usePathname()
   const { prefs, update } = usePreferences()
   const { prompt } = useDialog()
+  const { data: profileData } = useSWR<{ profile: { name: string; email: string } }>(
+    '/api/profile',
+    fetcher,
+  )
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const collapsed = prefs.sidebarCollapsed
+  const profileName = profileData?.profile.name?.trim() || profileData?.profile.email?.trim() || 'Usuário'
+  const profileInitial = profileName.slice(0, 1).toLocaleUpperCase('pt-BR')
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
   const allParentIds = useMemo(() => collectIds(tree), [tree])
@@ -332,7 +341,7 @@ export function Sidebar() {
         <span className="text-[14px] text-navy-500">+</span>
         {!collapsed && (
           <>
-            <span className="min-w-0 flex-1 truncate">Capture or jump...</span>
+            <span className="min-w-0 flex-1 truncate">Capturar ou ir para...</span>
             <kbd className="rounded border border-ui-border-strong bg-white px-1.5 py-0.5 text-[10px] text-navy-500">
               q
             </kbd>
@@ -437,14 +446,14 @@ export function Sidebar() {
           className={`flex items-center py-1.5 ${
             collapsed ? 'justify-center px-0' : 'gap-2 px-2.5'
           }`}
-          title={collapsed ? 'Lucas - local workspace' : undefined}
+          title={collapsed ? profileName : undefined}
         >
           <span className="brand-gradient flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white">
-            L
+            {profileInitial}
           </span>
           {!collapsed && <div className="min-w-0">
-            <p className="truncate text-[12px] font-semibold text-navy-900">Lucas</p>
-            <p className="font-mono text-[10px] text-navy-300">local workspace</p>
+            <p className="truncate text-[12px] font-semibold text-navy-900">{profileName}</p>
+            <p className="font-mono text-[10px] text-navy-500">Conta conectada</p>
           </div>}
         </div>
       </div>

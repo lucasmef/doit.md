@@ -70,7 +70,7 @@ export default function UpcomingPage() {
               : 'text-navy-500 hover:bg-white'
           }`}
         >
-          Calendario
+          Calendário
         </button>
       </div>
     </div>
