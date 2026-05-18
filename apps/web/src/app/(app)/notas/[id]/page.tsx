@@ -25,6 +25,7 @@ import {
 import { bulkUpdateItems, useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
 import { ItemRow as SharedItemRow } from '@/components/items/item-row'
+import { DONE_FEEDBACK_MS } from '@/components/items/completion-feedback'
 import { sortForcedItemOrder } from '@/lib/item-order'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
@@ -91,7 +92,6 @@ function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
 }
 
 const FOLDER_DRAG_MIME = 'application/x-folder-id'
-
 function KanbanCard({
   item,
   selected,
@@ -487,6 +487,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
   const [mobileColumnKey, setMobileColumnKey] = useState<string | null>(null)
   const [agentsOpen, setAgentsOpen] = useState(false)
+  const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
+  const previousStatuses = useRef<Record<string, Item['status']>>({})
 
   async function changeView(mode: ViewMode) {
     await updateFolder(id, { viewMode: mode, viewModeManual: true })
@@ -494,9 +496,26 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const childFolders = node?.children ?? []
+  const statusTrackingItems = useMemo(() => {
+    const byId = new Map<string, Item>()
+    for (const item of allItems) byId.set(item.id, item)
+    for (const item of directItems) byId.set(item.id, item)
+    return Array.from(byId.values())
+  }, [allItems, directItems])
+  const isVisibleFolderItem = (item: Item) => {
+    if (item.status === 'archived') return false
+    if (item.status !== 'done') return true
+
+    const previous = previousStatuses.current[item.id]
+    return Boolean(recentlyDoneIds[item.id] || (previous && previous !== 'done'))
+  }
   const directOpenItems = sortForcedItemOrder(
-    directItems.filter((i) => i.status !== 'archived' && i.status !== 'done'),
+    directItems.filter((item) => item.status !== 'archived'),
   )
+  const directVisibleItems = sortForcedItemOrder(
+    directItems.filter((item) => isVisibleFolderItem(item)),
+  )
+  const directOpenCount = directOpenItems.filter((item) => item.status !== 'done').length
   const viewMode: ViewMode = folder?.viewMode === 'kanban' ? 'kanban' : 'list'
   const moveTargets = useMemo<MoveTarget[]>(() => {
     const targets = childFolders.map((child) => ({ id: child.id, label: child.name }))
@@ -507,7 +526,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const itemsByFolder = useMemo(() => {
     const map = new Map<string, Item[]>()
     for (const item of allItems) {
-      if (item.status === 'archived' || item.status === 'done') continue
+      if (!isVisibleFolderItem(item)) continue
       if (!item.folderId) continue
       const list = map.get(item.folderId) ?? []
       list.push(item)
@@ -517,7 +536,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       map.set(folderId, sortForcedItemOrder(folderItems))
     }
     return map
-  }, [allItems])
+  }, [allItems, recentlyDoneIds])
 
   const activeItemsById = useMemo(() => {
     const map = new Map<string, Item>()
@@ -533,7 +552,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
         {
           key: `folder:${id}`,
           title: folder?.name ?? 'Itens',
-          items: directOpenItems,
+          items: directVisibleItems,
           childFolders: [],
           addFolderId: id,
         },
@@ -550,18 +569,51 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       folderId: sub.id,
     }))
 
-    if (directOpenItems.length > 0) {
+    if (directVisibleItems.length > 0) {
       columns.push({
         key: `folder:${id}`,
         title: 'Sem pasta',
-        items: directOpenItems,
+        items: directVisibleItems,
         childFolders: [],
         addFolderId: id,
       })
     }
 
     return columns
-  }, [childFolders, directOpenItems, folder?.name, id, itemsByFolder])
+  }, [childFolders, directVisibleItems, folder?.name, id, itemsByFolder])
+
+  useEffect(() => {
+    const now = Date.now()
+    const transitions = statusTrackingItems.filter((item) => {
+      const previous = previousStatuses.current[item.id]
+      return previous && previous !== 'done' && item.status === 'done'
+    })
+
+    previousStatuses.current = Object.fromEntries(
+      statusTrackingItems.map((item) => [item.id, item.status]),
+    )
+    if (transitions.length === 0) return
+
+    setRecentlyDoneIds((current) => {
+      const next = { ...current }
+      for (const item of transitions) next[item.id] = now
+      return next
+    })
+  }, [statusTrackingItems])
+
+  useEffect(() => {
+    const timers = Object.entries(recentlyDoneIds).map(([itemId, startedAt]) => {
+      const delay = Math.max(0, DONE_FEEDBACK_MS - (Date.now() - startedAt))
+      return setTimeout(() => {
+        setRecentlyDoneIds((current) => {
+          const next = { ...current }
+          delete next[itemId]
+          return next
+        })
+      }, delay)
+    })
+    return () => timers.forEach(clearTimeout)
+  }, [recentlyDoneIds])
 
   useEffect(() => {
     if (kanbanColumns.length === 0) {
@@ -890,16 +942,16 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           <section>
             <div className="mb-2 flex items-center justify-between gap-2">
               <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Itens / {directOpenItems.length}
+                Itens / {directOpenCount}
               </h2>
             </div>
-            {directOpenItems.length === 0 ? (
+            {directVisibleItems.length === 0 ? (
               <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-8 text-center text-sm text-navy-300">
                 Nenhum item nesta pasta.
               </div>
             ) : (
               <div className="rounded-xl border border-ui-border bg-white px-2 pb-2">
-                <ItemList items={directOpenItems} />
+                <ItemList items={directVisibleItems} />
               </div>
             )}
           </section>
@@ -963,11 +1015,11 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                 <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
                 <KanbanColumn
                   title={folder.name}
-                  items={directOpenItems}
+                  items={directVisibleItems}
                   childFolders={[]}
                   addFolderId={id}
                   selectedItemIds={selectedItemIds}
-                  orderedIds={directOpenItems.map((item) => item.id)}
+                  orderedIds={directVisibleItems.map((item) => item.id)}
                   dragging={draggingIds.length > 0}
                   onDropItems={handleDropItems}
                   moveTargets={moveTargets}
@@ -1002,20 +1054,20 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                       onMoveItem={handleMoveItemMobile}
                     />
                     <ColumnInserter
-                      edge={idx === childFolders.length - 1 && directOpenItems.length === 0}
+                      edge={idx === childFolders.length - 1 && directVisibleItems.length === 0}
                       onAdd={() => void addColumnAt(idx + 1)}
                     />
                   </Fragment>
                 ))}
-                {directOpenItems.length > 0 && (
+                {directVisibleItems.length > 0 && (
                   <>
                     <KanbanColumn
                       title="Sem pasta"
-                      items={directOpenItems}
+                      items={directVisibleItems}
                       childFolders={[]}
                       addFolderId={id}
                       selectedItemIds={selectedItemIds}
-                      orderedIds={directOpenItems.map((item) => item.id)}
+                      orderedIds={directVisibleItems.map((item) => item.id)}
                       dragging={draggingIds.length > 0}
                       onDropItems={handleDropItems}
                       moveTargets={moveTargets}

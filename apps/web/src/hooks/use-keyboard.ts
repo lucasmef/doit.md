@@ -20,9 +20,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 export function isShortcutFocusTarget(target: EventTarget | null): boolean {
-  if (isTypingTarget(target)) return true
-  if (!(target instanceof HTMLElement)) return false
-  return Boolean(target.closest('button, a, [role="button"], [tabindex]:not([tabindex="-1"])'))
+  return isTypingTarget(target)
 }
 
 export function hasShortcutBlocker(): boolean {

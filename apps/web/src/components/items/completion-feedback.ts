@@ -1,0 +1,2 @@
+export const DONE_FEEDBACK_MS = 1600
+export const DONE_CHECK_ANIMATION_MS = 1200

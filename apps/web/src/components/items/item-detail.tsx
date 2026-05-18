@@ -420,6 +420,31 @@ export function ItemDetail() {
     void flushAndClose()
   }
 
+  function insertTextareaLineBreak(textarea: HTMLTextAreaElement) {
+    const start = textarea.selectionStart ?? title.length
+    const end = textarea.selectionEnd ?? start
+    const next = `${title.slice(0, start)}\n${title.slice(end)}`
+    setTitle(next)
+    scheduleAutosave({ title: next })
+    requestAnimationFrame(() => {
+      textarea.setSelectionRange(start + 1, start + 1)
+      autosizeTextarea(textarea)
+    })
+  }
+
+  function handleTaskTitleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (e.ctrlKey || e.metaKey) {
+      insertTextareaLineBreak(e.currentTarget)
+      return
+    }
+
+    void flushAndClose()
+  }
+
   useEffect(() => {
     if (item) {
       setTitle(item.title)
@@ -1174,6 +1199,7 @@ export function ItemDetail() {
                 <textarea
                   ref={taskTitleRef}
                   value={title}
+                  onKeyDown={handleTaskTitleKeyDown}
                   onChange={(e) => {
                     handleTitleChange(e)
                     autosizeTextarea(e.currentTarget)

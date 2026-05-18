@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Item } from '@doit/types'
 import { ItemRow } from './item-row'
+import { DONE_FEEDBACK_MS } from './completion-feedback'
 import { useUI } from '@/store/ui'
 
 type Props = {
@@ -12,8 +13,6 @@ type Props = {
   emptySlot?: React.ReactNode
   hideDoneAfterDelay?: boolean
 }
-
-const DONE_FEEDBACK_MS = 900
 
 export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot, hideDoneAfterDelay = true }: Props) {
   const { selectedItemId, selectedItemIds } = useUI()

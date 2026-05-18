@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import type { Item } from '@doit/types'
 import { PRIORITY_CONFIG, PriorityFlag } from './priority-select'
 import type { Priority } from './priority-select'
+import { DONE_CHECK_ANIMATION_MS } from './completion-feedback'
 import { updateItem } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
 import {
@@ -68,7 +69,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     if (item.status !== 'done' && item.recurrence) {
       setOptimisticDone(true)
       setJustCompleted(true)
-      setTimeout(() => setJustCompleted(false), 600)
+      setTimeout(() => setJustCompleted(false), DONE_CHECK_ANIMATION_MS)
       try {
         await updateItem(item.id, {
           status: 'todo',
@@ -84,7 +85,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     if (next === 'done') {
       setOptimisticDone(true)
       setJustCompleted(true)
-      setTimeout(() => setJustCompleted(false), 600)
+      setTimeout(() => setJustCompleted(false), DONE_CHECK_ANIMATION_MS)
     } else {
       setOptimisticDone(false)
     }
