@@ -16,6 +16,7 @@ export type Preferences = {
   showInbox: boolean
   mobileNav: MobileNavItem[]
   theme: ThemePreference
+  sidebarCollapsed: boolean
 }
 
 export type ThemePreference = 'light' | 'dark' | 'system'
@@ -33,6 +34,7 @@ const DEFAULTS: Preferences = {
   showInbox: true,
   mobileNav: MOBILE_NAV_DEFAULT,
   theme: 'system',
+  sidebarCollapsed: false,
 }
 
 const STORAGE_KEY = 'doit:preferences'
@@ -77,6 +79,7 @@ function read(): Preferences {
       showInbox,
       mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
       theme,
+      sidebarCollapsed: parsed.sidebarCollapsed === true,
     }
   } catch {
     return DEFAULTS
