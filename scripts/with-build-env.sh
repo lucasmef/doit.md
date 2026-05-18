@@ -29,4 +29,7 @@ set -a
 source "$ENV_FILE"
 set +a
 
+export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2304}"
+
 exec "$@"
