@@ -310,29 +310,40 @@
     height: 1rem;
     align-items: center;
     justify-content: center;
-    margin-right: 0.35rem;
-    border: 1px solid theme('colors.ui.border-soft', #e2e8f0);
-    border-radius: 0.25rem;
-    background: #fff;
-    color: #64748b;
-    font-size: 0.75rem;
-    line-height: 1;
-    vertical-align: 0.1rem;
+    margin-right: 0.2rem;
+    border: 0;
+    border-radius: 0.2rem;
+    background: transparent;
+    color: theme('colors.navy.300', #94a3b8);
+    vertical-align: 0.08rem;
     cursor: pointer;
+    opacity: 0.85;
     -webkit-user-select: none;
     user-select: none;
   }
+  .doit-heading-collapse-toggle::before {
+    content: '';
+    width: 0.38rem;
+    height: 0.38rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(45deg) translate(-1px, -1px);
+    transition: transform 120ms ease;
+  }
+  .doit-heading-collapse-toggle.is-collapsed::before {
+    transform: rotate(-45deg);
+  }
   .doit-heading-collapse-toggle:hover {
-    border-color: theme('colors.brand.300', #93c5fd);
-    color: theme('colors.brand.600', #2f6bff);
+    background: theme('colors.surface.soft', #f6f8fb);
+    color: theme('colors.navy.700', #334155);
+    opacity: 1;
   }
   .doit-heading-collapsed-content {
     display: none !important;
   }
-  /* Touch / no-hover devices: keep handles always visible */
   @media (hover: none) {
     .doit-block-handle {
-      opacity: 0.6;
+      display: none;
     }
   }
   body.doit-block-dragging,

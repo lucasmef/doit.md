@@ -54,11 +54,69 @@ type UploadState = {
   webViewLink?: string
 }
 
+type MarkdownSerializableContent = Parameters<NonNullable<Editor['markdown']>['serialize']>[0]
+
 const attachmentsFetcher = (url: string) =>
   fetch(url).then(async (res) => {
     if (!res.ok) throw new Error('Falha ao carregar anexos')
     return (await res.json()) as { links: DriveAttachment[] }
   })
+
+const TABLE_ROW_RE = /^\s*\|.*\|\s*$/
+const TABLE_DELIMITER_RE = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/
+const MARKDOWN_BLOCK_RE = /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>\s|```|~~~|\[( |x|X)\]\s)/
+const MARKDOWN_INLINE_RE = /(\*\*[^*\n]+\*\*|__[^_\n]+__|`[^`\n]+`|\[[^\]\n]+\]\([^)]+\))/
+
+function normalizeMarkdownTableSpacing(markdown: string) {
+  const lines = markdown.replace(/\r\n?/g, '\n').split('\n')
+  const normalized: string[] = []
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index] ?? ''
+    const previous = normalized[normalized.length - 1]
+    const next = lines[index + 1]
+
+    if (
+      line.trim() === '' &&
+      previous &&
+      next &&
+      TABLE_ROW_RE.test(previous) &&
+      (TABLE_ROW_RE.test(next) || TABLE_DELIMITER_RE.test(next))
+    ) {
+      continue
+    }
+
+    normalized.push(line)
+  }
+
+  return normalized.join('\n')
+}
+
+function hasMarkdownTable(markdown: string) {
+  const lines = normalizeMarkdownTableSpacing(markdown).split('\n')
+
+  return lines.some((line, index) => {
+    const next = lines[index + 1]
+    return TABLE_ROW_RE.test(line) && !!next && TABLE_DELIMITER_RE.test(next)
+  })
+}
+
+function isLikelyMarkdown(markdown: string) {
+  return hasMarkdownTable(markdown) || MARKDOWN_BLOCK_RE.test(markdown) || MARKDOWN_INLINE_RE.test(markdown)
+}
+
+function getSelectedMarkdown(editor: Editor) {
+  if (editor.state.selection.empty || !editor.markdown) return null
+
+  const content = editor.state.selection.content().content.toJSON()
+  const doc = {
+    type: 'doc',
+    content: Array.isArray(content) ? content : [content],
+  } as MarkdownSerializableContent
+  const markdown = editor.markdown.serialize(doc).trim()
+
+  return markdown ? normalizeMarkdownTableSpacing(markdown) : null
+}
 
 async function uploadToDrive(itemId: string, file: File): Promise<DriveUploadResult> {
   const form = new FormData()
@@ -234,21 +292,39 @@ export function MarkdownEditor({
   )
 
   useEffect(() => {
-    if (!editor || !itemId) return
+    if (!editor) return
     const dom = editor.view.dom
     const onDrop = (event: DragEvent) => {
       const files = event.dataTransfer?.files
-      if (!files || files.length === 0) return
+      if (!itemId || !files || files.length === 0) return
       event.preventDefault()
       event.stopPropagation()
       void handleFiles(files)
     }
     const onPaste = (event: ClipboardEvent) => {
       const files = event.clipboardData?.files
-      if (!files || files.length === 0) return
+      if (itemId && files && files.length > 0) {
+        event.preventDefault()
+        event.stopPropagation()
+        void handleFiles(files)
+        return
+      }
+
+      const text = event.clipboardData?.getData('text/plain') ?? ''
+      const markdown = normalizeMarkdownTableSpacing(text)
+      if (!text || !isLikelyMarkdown(markdown)) return
+
       event.preventDefault()
       event.stopPropagation()
-      void handleFiles(files)
+      editor.commands.insertContent(markdown, { contentType: 'markdown' })
+    }
+    const onCopy = (event: ClipboardEvent) => {
+      const markdown = getSelectedMarkdown(editor)
+      if (!markdown) return
+
+      event.preventDefault()
+      event.clipboardData?.setData('text/plain', markdown)
+      event.clipboardData?.setData('text/markdown', markdown)
     }
     const onDragOver = (event: DragEvent) => {
       if (event.dataTransfer?.types.includes('Files')) {
@@ -258,10 +334,12 @@ export function MarkdownEditor({
 
     dom.addEventListener('drop', onDrop)
     dom.addEventListener('paste', onPaste)
+    dom.addEventListener('copy', onCopy)
     dom.addEventListener('dragover', onDragOver)
     return () => {
       dom.removeEventListener('drop', onDrop)
       dom.removeEventListener('paste', onPaste)
+      dom.removeEventListener('copy', onCopy)
       dom.removeEventListener('dragover', onDragOver)
     }
   }, [editor, itemId, handleFiles])
@@ -321,7 +399,7 @@ function ToolbarBtn({ onClick, active, disabled, title, className = '', children
       className={`inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm transition-colors sm:h-8 sm:min-w-8 ${
         active
           ? 'bg-brand-100 text-brand-700'
-          : 'text-ui-text-muted hover:bg-ui-fill-subtle hover:text-ui-text'
+          : 'text-navy-400 hover:bg-surface-soft hover:text-navy-900'
       } disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
@@ -354,7 +432,7 @@ function IconUploadButton({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onUploadFiles}
       disabled={!canUpload || uploadingFiles > 0}
-      className={`relative inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 ${className}`}
+      className={`relative inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-navy-400 transition-colors hover:bg-surface-soft hover:text-navy-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 ${className}`}
     >
       <EditorIcon name="paperclip" />
       {uploadingFiles > 0 ? (
@@ -384,7 +462,7 @@ function MobileToolbarBtn({
       className={`flex h-9 min-w-0 items-center justify-center rounded-md text-sm transition-colors ${
         active
           ? 'bg-brand-100 text-brand-700'
-          : 'text-ui-text-muted hover:bg-ui-fill-subtle hover:text-ui-text'
+          : 'text-navy-400 hover:bg-surface-soft hover:text-navy-900'
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
@@ -394,7 +472,7 @@ function MobileToolbarBtn({
 
 function ToolbarGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-ui-border-soft bg-white p-0.5">
+    <div className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-ui-border-soft bg-surface-panel p-0.5">
       {children}
     </div>
   )
@@ -756,7 +834,7 @@ function EditorToolbarAccessible({
   const { prompt } = useDialog()
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   if (!editor) {
-    return <div className="h-[48px] border-b border-ui-border-soft bg-ui-fill-subtle/40" />
+    return <div className="h-[48px] border-b border-ui-border-soft bg-surface-soft/40" />
   }
 
   const insertLink = async () => {
@@ -882,7 +960,7 @@ function EditorToolbarAccessible({
   ) : null
 
   return (
-    <div className="border-b border-ui-border-soft bg-white/95 px-2 py-1.5 shadow-sm backdrop-blur sm:bg-ui-fill-subtle/60">
+    <div className="border-b border-ui-border-soft bg-surface-panel/95 px-2 py-1.5 shadow-sm backdrop-blur sm:bg-surface-soft/60">
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 sm:flex">
         <ToolbarGroup>
           <ToolbarBtn
@@ -1056,7 +1134,7 @@ function EditorToolbarAccessible({
       </div>
 
       {mobileSheetOpen ? (
-        <div className="mt-2 rounded-xl border border-ui-border-soft bg-white p-2 shadow-cool-sm sm:hidden">
+        <div className="mt-2 rounded-xl border border-ui-border-soft bg-surface-panel p-2 shadow-cool-sm sm:hidden">
           <div className="mb-2 flex items-center justify-between px-1">
             <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
               Ferramentas
@@ -1092,7 +1170,7 @@ export function EditorToolbar({
 }) {
   const { prompt } = useDialog()
   if (!editor) {
-    return <div className="h-10 border-b border-ui-border-soft bg-ui-fill-subtle/40" />
+    return <div className="h-10 border-b border-ui-border-soft bg-surface-soft/40" />
   }
 
   const insertLink = async () => {
@@ -1253,7 +1331,7 @@ export function EditorToolbar({
         onMouseDown={(e) => e.preventDefault()}
         onClick={onUploadFiles}
         disabled={!canUpload || uploadingFiles > 0}
-        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-ui-text-muted transition-colors hover:bg-ui-fill-subtle hover:text-ui-text disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex h-8 items-center gap-1 rounded-md px-2 text-xs font-semibold text-navy-400 transition-colors hover:bg-surface-soft hover:text-navy-900 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <span className="text-sm leading-none">{uploadingFiles > 0 ? '...' : '+'}</span>
         <span>Anexar</span>

@@ -58,6 +58,7 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
   const [showEvents, setShowEvents] = useState(true)
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const [creatingEvent, setCreatingEvent] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([])
   const carouselRef = useRef<HTMLDivElement | null>(null)
   const { setSelectedItemId } = useUI()
@@ -222,6 +223,17 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
     </>
   )
 
+  const mobileFilterButton = (
+    <button
+      type="button"
+      onClick={() => setFiltersOpen(true)}
+      className="inline-flex h-9 items-center gap-2 rounded-md border border-ui-border bg-white px-3 font-mono text-[11px] font-bold uppercase tracking-wide text-navy-600 shadow-cool-sm"
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+      Filtros
+    </button>
+  )
+
   return (
     <div
       className={`flex flex-1 min-h-0 flex-col gap-2 overflow-hidden ${compactSide ? 'p-3' : 'px-0 pb-0 pt-2 lg:p-3'}`}
@@ -325,7 +337,7 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
             onDayClick={selectDay}
             onEventClick={setOpenEvent}
             selectedDate={selectedDate}
-            headerControls={filterButtons}
+            headerControls={mobileFilterButton}
             hideMobileNav
             fillHeight
           />
@@ -360,6 +372,166 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
           onClose={() => setCreatingEvent(false)}
         />
       ) : null}
+      {filtersOpen ? (
+        <CalendarFilterSheet
+          calendars={calendars}
+          selectedCalendarIds={selectedCalendarIds}
+          showItems={showItems}
+          showEvents={showEvents}
+          onClose={() => setFiltersOpen(false)}
+          onToggleItems={() => setShowItems((value) => !value)}
+          onToggleEvents={() => setShowEvents((value) => !value)}
+          onToggleCalendar={toggleCalendar}
+          onSelectAllCalendars={() =>
+            setSelectedCalendarIds(calendars.map((calendar) => calendar.id))
+          }
+          onCreateEvent={() => {
+            setFiltersOpen(false)
+            setCreatingEvent(true)
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+function CalendarFilterSheet({
+  calendars,
+  selectedCalendarIds,
+  showItems,
+  showEvents,
+  onClose,
+  onToggleItems,
+  onToggleEvents,
+  onToggleCalendar,
+  onSelectAllCalendars,
+  onCreateEvent,
+}: {
+  calendars: GoogleCalendar[]
+  selectedCalendarIds: string[]
+  showItems: boolean
+  showEvents: boolean
+  onClose: () => void
+  onToggleItems: () => void
+  onToggleEvents: () => void
+  onToggleCalendar: (calendarId: string) => void
+  onSelectAllCalendars: () => void
+  onCreateEvent: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm lg:hidden"
+      role="dialog"
+      aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div className="w-full rounded-2xl border border-ui-border bg-white p-4 shadow-cool-lg">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
+              Calendario
+            </p>
+            <h2 className="text-lg font-bold text-navy-900">Filtros</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-400 hover:bg-surface-soft"
+            aria-label="Fechar filtros"
+          >
+            x
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <button
+            type="button"
+            onClick={onToggleItems}
+            className={`flex h-11 w-full items-center justify-between rounded-lg border px-3 text-left text-[14px] font-semibold ${
+              showItems
+                ? 'border-brand-200 bg-brand-50 text-navy-900'
+                : 'border-ui-border bg-white text-navy-400'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-brand-500" />
+              Itens
+            </span>
+            <span>{showItems ? 'Visivel' : 'Oculto'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleEvents}
+            className={`flex h-11 w-full items-center justify-between rounded-lg border px-3 text-left text-[14px] font-semibold ${
+              showEvents
+                ? 'border-teal-200 bg-teal-50 text-navy-900'
+                : 'border-ui-border bg-white text-navy-400'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-teal-500" />
+              Eventos
+            </span>
+            <span>{showEvents ? 'Visivel' : 'Oculto'}</span>
+          </button>
+        </div>
+
+        {calendars.length > 1 ? (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                Calendarios
+              </h3>
+              <button
+                type="button"
+                onClick={onSelectAllCalendars}
+                className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600"
+              >
+                Todos
+              </button>
+            </div>
+            <div className="max-h-52 space-y-1 overflow-y-auto pr-1">
+              {calendars.map((calendar) => {
+                const selected =
+                  selectedCalendarIds.length === 0 || selectedCalendarIds.includes(calendar.id)
+                return (
+                  <button
+                    key={calendar.id}
+                    type="button"
+                    onClick={() => onToggleCalendar(calendar.id)}
+                    className={`flex h-10 w-full items-center gap-2 rounded-lg border px-3 text-left text-[13px] font-medium ${
+                      selected
+                        ? 'border-teal-200 bg-teal-50 text-navy-900'
+                        : 'border-ui-border bg-white text-navy-400'
+                    }`}
+                  >
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full bg-teal-500"
+                      style={
+                        calendar.backgroundColor
+                          ? { backgroundColor: calendar.backgroundColor }
+                          : undefined
+                      }
+                    />
+                    <span className="min-w-0 flex-1 truncate">{calendar.summary}</span>
+                    <span className="font-mono text-[10px]">{selected ? 'ON' : 'OFF'}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={onCreateEvent}
+          className="mt-4 flex h-11 w-full items-center justify-center rounded-lg bg-brand-600 text-[14px] font-semibold text-white"
+        >
+          + Evento
+        </button>
+      </div>
     </div>
   )
 }

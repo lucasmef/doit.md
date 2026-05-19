@@ -17,16 +17,17 @@ export type Preferences = {
   mobileNav: MobileNavItem[]
   theme: ThemePreference
   sidebarCollapsed: boolean
+  pinnedFolderIds: string[]
 }
 
 export type ThemePreference = 'light' | 'dark' | 'system'
 
 const MOBILE_NAV_DEFAULT: MobileNavItem[] = [
-  { id: 'inbox', visible: true },
   { id: 'today', visible: true },
-  { id: 'upcoming', visible: true },
   { id: 'calendar', visible: true },
+  { id: 'inbox', visible: true },
   { id: 'notas', visible: true },
+  { id: 'upcoming', visible: true },
   { id: 'settings', visible: true },
 ]
 
@@ -35,6 +36,7 @@ const DEFAULTS: Preferences = {
   mobileNav: MOBILE_NAV_DEFAULT,
   theme: 'system',
   sidebarCollapsed: false,
+  pinnedFolderIds: [],
 }
 
 const STORAGE_KEY = 'doit:preferences'
@@ -80,6 +82,9 @@ function read(): Preferences {
       mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
       theme,
       sidebarCollapsed: parsed.sidebarCollapsed === true,
+      pinnedFolderIds: Array.isArray(parsed.pinnedFolderIds)
+        ? parsed.pinnedFolderIds.filter((id): id is string => typeof id === 'string')
+        : [],
     }
   } catch {
     return DEFAULTS
@@ -110,6 +115,11 @@ export function usePreferences() {
     }
     if (patch.showInbox !== undefined) {
       next.mobileNav = normalizeMobileNav(next.mobileNav, next.showInbox)
+    }
+    if (patch.pinnedFolderIds) {
+      next.pinnedFolderIds = Array.from(
+        new Set(patch.pinnedFolderIds.filter((id): id is string => typeof id === 'string')),
+      )
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     window.dispatchEvent(new Event(EVENT))

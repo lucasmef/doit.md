@@ -31,6 +31,7 @@ import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
 import { useDialog } from '@/components/ui/dialog'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
+import { usePreferences } from '@/hooks/use-preferences'
 import type { Folder, Item } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -86,6 +87,25 @@ function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
+      />
+    </svg>
+  )
+}
+
+function StarIcon({ filled = false, className = 'h-4 w-4' }: { filled?: boolean; className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill={filled ? 'currentColor' : 'none'}
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m12 3.8 2.6 5.2 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.8Z"
       />
     </svg>
   )
@@ -475,8 +495,10 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const { selectedItemIds, setSingleSelection } = useUI()
   const { toast } = useToast()
   const { confirm, prompt } = useDialog()
+  const { prefs, update } = usePreferences()
 
   const folder = data?.folder
+  const pinned = prefs.pinnedFolderIds.includes(id)
   const tree = useMemo(() => buildFolderTree(folders), [folders])
   const node = useMemo(() => findNode(tree, id), [tree, id])
   const breadcrumb = useMemo(() => buildBreadcrumb(folders, id), [folders, id])
@@ -487,6 +509,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
   const [mobileColumnKey, setMobileColumnKey] = useState<string | null>(null)
   const [agentsOpen, setAgentsOpen] = useState(false)
+  const [folderActionsOpen, setFolderActionsOpen] = useState(false)
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
   const previousStatuses = useRef<Record<string, Item['status']>>({})
 
@@ -816,6 +839,14 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     if (typeof window !== 'undefined') window.location.href = '/notas'
   }
 
+  function togglePinned() {
+    update({
+      pinnedFolderIds: pinned
+        ? prefs.pinnedFolderIds.filter((folderId) => folderId !== id)
+        : [id, ...prefs.pinnedFolderIds],
+    })
+  }
+
   return (
     <div
       className={`${viewMode === 'kanban' ? 'w-full px-4' : 'mx-auto max-w-3xl px-5'} pb-24 pt-3 lg:pb-4`}
@@ -865,7 +896,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
             </h1>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
+        <div className="relative flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
           <div className="flex rounded-md border border-ui-border bg-white p-0.5">
             <button
               type="button"
@@ -883,23 +914,97 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
             </button>
           </div>
           <button
+            type="button"
+            onClick={togglePinned}
+            className={`hidden h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs hover:bg-surface-soft sm:inline-flex ${
+              pinned ? 'border-brand-200 text-brand-700' : 'border-ui-border text-navy-600'
+            }`}
+          >
+            <StarIcon filled={pinned} className="h-3.5 w-3.5" />
+            {pinned ? 'Fixada' : 'Fixar'}
+          </button>
+          <button
             onClick={handleNewSub}
-            className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft"
+            className="hidden rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft sm:inline-flex"
           >
             + Subpasta
           </button>
           <button
             onClick={() => setAgentsOpen(true)}
-            className="rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft"
+            className="hidden rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft sm:inline-flex"
           >
             AGENTS.md
           </button>
           <button
             onClick={handleDelete}
-            className="rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50"
+            className="hidden rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 sm:inline-flex"
           >
             Apagar
           </button>
+          <button
+            type="button"
+            onClick={() => setFolderActionsOpen((value) => !value)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-ui-border bg-white text-navy-500 sm:hidden"
+            aria-label="Acoes da pasta"
+            title="Acoes"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.5v.01M12 12v.01M12 17.5v.01" />
+            </svg>
+          </button>
+          {folderActionsOpen ? (
+            <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-lg border border-ui-border bg-white p-1.5 shadow-cool-md sm:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setFolderActionsOpen(false)
+                  togglePinned()
+                }}
+                className={`flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium hover:bg-surface-soft ${
+                  pinned ? 'text-brand-700' : 'text-navy-700'
+                }`}
+              >
+                {pinned ? 'Desafixar' : 'Fixar'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFolderActionsOpen(false)
+                  void handleNewSub()
+                }}
+                className="flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium text-navy-700 hover:bg-surface-soft"
+              >
+                + Subpasta
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFolderActionsOpen(false)
+                  setAgentsOpen(true)
+                }}
+                className="flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium text-navy-700 hover:bg-surface-soft"
+              >
+                AGENTS.md
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFolderActionsOpen(false)
+                  void handleDelete()
+                }}
+                className="flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium text-red-600 hover:bg-red-50"
+              >
+                Apagar
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
 

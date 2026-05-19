@@ -62,6 +62,31 @@ function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; cla
   )
 }
 
+function StarIcon({
+  filled = false,
+  className = 'h-3.5 w-3.5',
+}: {
+  filled?: boolean
+  className?: string
+}) {
+  return (
+    <svg
+      className={className}
+      fill={filled ? 'currentColor' : 'none'}
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m12 3.8 2.6 5.2 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.8Z"
+      />
+    </svg>
+  )
+}
+
 const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/today', label: 'Hoje', icon: 'today' },
@@ -179,6 +204,8 @@ function FolderTreeRow({
   expanded,
   toggle,
   pathname,
+  pinnedIds,
+  togglePinned,
   collapsed = false,
 }: {
   node: FolderTreeNode
@@ -186,12 +213,15 @@ function FolderTreeRow({
   expanded: Set<string>
   toggle: (id: string) => void
   pathname: string
+  pinnedIds: Set<string>
+  togglePinned: (id: string) => void
   collapsed?: boolean
 }) {
   const href = `/notas/${node.id}`
   const active = pathname === href || pathname.startsWith(href + '/')
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
+  const pinned = pinnedIds.has(node.id)
 
   return (
     <>
@@ -230,6 +260,23 @@ function FolderTreeRow({
           </span>
           {!collapsed && <span className="min-w-0 flex-1 truncate">{node.name}</span>}
         </Link>
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              togglePinned(node.id)
+            }}
+            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded opacity-0 transition-opacity hover:bg-white group-hover:opacity-100 ${
+              pinned ? 'text-brand-600 opacity-100' : 'text-navy-300 hover:text-navy-700'
+            }`}
+            title={pinned ? 'Desafixar' : 'Fixar'}
+            aria-label={`${pinned ? 'Desafixar' : 'Fixar'} ${node.name}`}
+          >
+            <StarIcon filled={pinned} />
+          </button>
+        )}
       </div>
       {!collapsed && hasChildren && isOpen && node.children.map((child) => (
         <FolderTreeRow
@@ -239,6 +286,8 @@ function FolderTreeRow({
           expanded={expanded}
           toggle={toggle}
           pathname={pathname}
+          pinnedIds={pinnedIds}
+          togglePinned={togglePinned}
           collapsed={collapsed}
         />
       ))}
@@ -266,6 +315,16 @@ export function Sidebar() {
   const profileInitial = profileName.slice(0, 1).toLocaleUpperCase('pt-BR')
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
+  const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder])), [folders])
+  const pinnedFolderIds = useMemo(
+    () => prefs.pinnedFolderIds.filter((folderId) => folderById.has(folderId)),
+    [folderById, prefs.pinnedFolderIds],
+  )
+  const pinnedFolderIdSet = useMemo(() => new Set(pinnedFolderIds), [pinnedFolderIds])
+  const pinnedFolders = useMemo(
+    () => pinnedFolderIds.map((folderId) => folderById.get(folderId)).filter(Boolean),
+    [folderById, pinnedFolderIds],
+  )
   const allParentIds = useMemo(() => collectIds(tree), [tree])
   const allExpanded = allParentIds.length > 0 && allParentIds.every((id) => expanded.has(id))
 
@@ -280,6 +339,14 @@ export function Sidebar() {
 
   function toggleAll() {
     setExpanded(allExpanded ? new Set() : new Set(allParentIds))
+  }
+
+  function togglePinned(folderId: string) {
+    update({
+      pinnedFolderIds: pinnedFolderIds.includes(folderId)
+        ? pinnedFolderIds.filter((id) => id !== folderId)
+        : [folderId, ...pinnedFolderIds],
+    })
   }
 
   async function handleNewFolder() {
@@ -419,6 +486,45 @@ export function Sidebar() {
           Notas
         </SectionTitle>
       )}
+      {!collapsed && pinnedFolders.length > 0 && (
+        <>
+          <SectionTitle>Fixadas</SectionTitle>
+          <div className="flex flex-col gap-px px-2">
+            {pinnedFolders.map((folder) =>
+              folder ? (
+                <Link
+                  key={folder.id}
+                  href={`/notas/${folder.id}`}
+                  className={`group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+                    pathname === `/notas/${folder.id}` ||
+                    pathname.startsWith(`/notas/${folder.id}/`)
+                      ? 'bg-surface-selected text-brand-600'
+                      : 'text-navy-900 hover:bg-surface-soft'
+                  }`}
+                >
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center text-brand-600">
+                    <StarIcon filled className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.preventDefault()
+                      event.stopPropagation()
+                      togglePinned(folder.id)
+                    }}
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-navy-300 opacity-0 hover:bg-white hover:text-navy-700 group-hover:opacity-100"
+                    title="Desafixar"
+                    aria-label={`Desafixar ${folder.name}`}
+                  >
+                    <StarIcon filled />
+                  </button>
+                </Link>
+              ) : null,
+            )}
+          </div>
+        </>
+      )}
       <div className="flex flex-col px-1">
         {tree.length === 0 && !collapsed && (
           <span className="px-2.5 py-1 font-mono text-[11px] text-navy-300">Nenhuma pasta</span>
@@ -431,6 +537,8 @@ export function Sidebar() {
             expanded={expanded}
             toggle={toggle}
             pathname={pathname}
+            pinnedIds={pinnedFolderIdSet}
+            togglePinned={togglePinned}
             collapsed={collapsed}
           />
         ))}

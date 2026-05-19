@@ -30,7 +30,7 @@ function makeToggle(view: EditorView, pos: number, collapsed: boolean): HTMLElem
   button.setAttribute('contenteditable', 'false')
   button.setAttribute('aria-label', collapsed ? 'Expandir topico' : 'Recolher topico')
   button.title = collapsed ? 'Expandir topico' : 'Recolher topico'
-  button.textContent = collapsed ? '+' : '-'
+  button.textContent = ''
   button.addEventListener('mousedown', (event) => event.preventDefault())
   button.addEventListener('click', (event) => {
     event.preventDefault()

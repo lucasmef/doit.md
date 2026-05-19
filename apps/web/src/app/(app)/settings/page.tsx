@@ -152,6 +152,14 @@ function ShortcutsSection() {
 
 function AppearanceSection() {
   const { prefs, update } = usePreferences()
+  const recommendedMobileNav: MobileNavItemId[] = [
+    'today',
+    'calendar',
+    'inbox',
+    'notas',
+    'upcoming',
+    'settings',
+  ]
   const themeOptions: Array<{ id: ThemePreference; label: string; description: string }> = [
     { id: 'light', label: 'Claro', description: 'Usar sempre a interface clara.' },
     { id: 'dark', label: 'Escuro', description: 'Usar sempre a interface escura.' },
@@ -180,6 +188,16 @@ function AppearanceSection() {
     } else {
       update({ mobileNav: list })
     }
+  }
+
+  function applyRecommendedMobileNav() {
+    const visibility = new Map(prefs.mobileNav.map((entry) => [entry.id, entry.visible]))
+    update({
+      mobileNav: recommendedMobileNav.map((id) => ({
+        id,
+        visible: visibility.get(id) !== false,
+      })),
+    })
   }
 
   return (
@@ -243,11 +261,22 @@ function AppearanceSection() {
 
       <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
         <div className="border-b border-ui-border-soft px-5 py-4">
-          <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>
-          <p className="mt-0.5 text-xs text-slate-400">
-            Escolha quais itens aparecem no menu de baixo no celular e em que ordem. O botao + de
-            captura fica sempre no centro.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>
+              <p className="mt-0.5 text-xs text-slate-400">
+                Escolha quais itens aparecem no menu de baixo no celular e em que ordem. O botao +
+                de captura fica sempre no centro.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={applyRecommendedMobileNav}
+              className="h-8 rounded-lg border border-ui-border bg-white px-3 text-xs font-medium text-navy-600 hover:bg-surface-soft"
+            >
+              Usar ordem app
+            </button>
+          </div>
         </div>
         <ul className="divide-y divide-ui-border-soft">
           {prefs.mobileNav.map((entry, index) => {

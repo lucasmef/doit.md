@@ -24,6 +24,26 @@ import { useItems } from '@/hooks/use-items'
 import { useDialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
+import { usePreferences } from '@/hooks/use-preferences'
+
+function StarIcon({ filled = false, className = 'h-4 w-4' }: { filled?: boolean; className?: string }) {
+  return (
+    <svg
+      className={className}
+      fill={filled ? 'currentColor' : 'none'}
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m12 3.8 2.6 5.2 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.8Z"
+      />
+    </svg>
+  )
+}
 
 function FolderRow({
   node,
@@ -34,6 +54,8 @@ function FolderRow({
   index,
   siblingsCount,
   onMove,
+  pinned,
+  onTogglePinned,
   busy,
 }: {
   node: FolderTreeNode
@@ -44,6 +66,8 @@ function FolderRow({
   index: number
   siblingsCount: number
   onMove: (parentId: string | null, fromIndex: number, direction: -1 | 1) => Promise<void>
+  pinned: boolean
+  onTogglePinned: (id: string) => void
   busy: boolean
 }) {
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -219,6 +243,17 @@ function FolderRow({
         <div className="hidden shrink-0 items-center gap-1 sm:flex sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
           <button
             type="button"
+            onClick={() => onTogglePinned(node.id)}
+            className={`flex h-9 w-9 items-center justify-center rounded-lg hover:bg-surface-soft ${
+              pinned ? 'text-brand-600' : 'text-navy-500'
+            }`}
+            title={pinned ? 'Desafixar' : 'Fixar'}
+            aria-label={`${pinned ? 'Desafixar' : 'Fixar'} ${node.name}`}
+          >
+            <StarIcon filled={pinned} />
+          </button>
+          <button
+            type="button"
             onClick={handleNewSub}
             className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
             title="Subpasta"
@@ -297,7 +332,7 @@ function FolderRow({
       </div>
       {actionsOpen && (
         <div
-          className="grid grid-cols-6 gap-1 border-b border-ui-border-soft bg-surface-soft px-3 py-2 sm:hidden"
+          className="grid grid-cols-7 gap-1 border-b border-ui-border-soft bg-surface-soft px-3 py-2 sm:hidden"
           style={{ paddingLeft: `${10 + depth * 14}px` }}
         >
           <button
@@ -315,6 +350,15 @@ function FolderRow({
             className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500 disabled:opacity-30"
           >
             Descer
+          </button>
+          <button
+            type="button"
+            onClick={() => onTogglePinned(node.id)}
+            className={`h-10 rounded-lg bg-white text-[11px] font-medium ${
+              pinned ? 'text-brand-600' : 'text-navy-500'
+            }`}
+          >
+            {pinned ? 'Soltar' : 'Fixar'}
           </button>
           <button
             type="button"
@@ -365,6 +409,8 @@ function FolderRow({
             index={childIndex}
             siblingsCount={node.children.length}
             onMove={onMove}
+            pinned={pinned}
+            onTogglePinned={onTogglePinned}
             busy={busy}
           />
         ))}
@@ -406,11 +452,21 @@ export default function NotasPage() {
   const { items } = useItems()
   const { prompt } = useDialog()
   const { toast } = useToast()
+  const { prefs, update } = usePreferences()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [reorderBusy, setReorderBusy] = useState(false)
   const [dragging, setDragging] = useState(false)
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
+  const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder])), [folders])
+  const pinnedFolderIds = useMemo(
+    () => prefs.pinnedFolderIds.filter((folderId) => folderById.has(folderId)),
+    [folderById, prefs.pinnedFolderIds],
+  )
+  const pinnedFolders = useMemo(
+    () => pinnedFolderIds.map((folderId) => folderById.get(folderId)).filter(Boolean),
+    [folderById, pinnedFolderIds],
+  )
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -514,6 +570,13 @@ export default function NotasPage() {
     setExpanded(allExpanded ? new Set() : new Set(allParentIds))
   }
 
+  function togglePinned(folderId: string) {
+    const next = pinnedFolderIds.includes(folderId)
+      ? pinnedFolderIds.filter((id) => id !== folderId)
+      : [folderId, ...pinnedFolderIds]
+    update({ pinnedFolderIds: next })
+  }
+
   async function handleNewRoot() {
     const name = await prompt({
       title: 'Nova pasta',
@@ -567,6 +630,33 @@ export default function NotasPage() {
         </div>
       )}
 
+      {!isLoading && pinnedFolders.length > 0 && (
+        <section className="mb-4">
+          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+            Fixadas
+          </h2>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {pinnedFolders.map((folder) =>
+              folder ? (
+                <Link
+                  key={folder.id}
+                  href={`/notas/${folder.id}`}
+                  className="flex min-h-12 items-center gap-3 rounded-lg border border-ui-border bg-white px-3 py-2 text-[14px] text-navy-900 shadow-cool-sm hover:bg-surface-soft"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                    <StarIcon filled />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium">{folder.name}</span>
+                  <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-surface-soft px-2 font-mono text-[11px] text-navy-400">
+                    {noteCounts.get(folder.id) ?? 0}
+                  </span>
+                </Link>
+              ) : null,
+            )}
+          </div>
+        </section>
+      )}
+
       {tree.length > 0 && (
         <DndContext
           sensors={dndSensors}
@@ -589,6 +679,8 @@ export default function NotasPage() {
                 index={index}
                 siblingsCount={tree.length}
                 onMove={handleMove}
+                pinned={pinnedFolderIds.includes(node.id)}
+                onTogglePinned={togglePinned}
                 busy={reorderBusy}
               />
             ))}

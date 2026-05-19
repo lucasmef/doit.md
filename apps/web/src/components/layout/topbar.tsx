@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useUI } from '@/store/ui'
@@ -21,6 +20,7 @@ const ROUTE_LABELS: Record<string, string> = {
   tags: 'Tags',
   audit: 'Auditoria',
   settings: 'Configurações',
+  notas: 'Notas',
 }
 
 function SearchIcon() {
@@ -37,6 +37,21 @@ function SearchIcon() {
         strokeLinejoin="round"
         d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z"
       />
+    </svg>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      aria-hidden="true"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
     </svg>
   )
 }
@@ -90,6 +105,15 @@ function toDateKey(date: Date) {
   return `${year}-${month}-${day}`
 }
 
+const MOBILE_NAV_ITEMS = [
+  { href: '/today', label: 'Hoje' },
+  { href: '/calendar', label: 'Calendario' },
+  { href: '/inbox', label: 'Inbox' },
+  { href: '/upcoming', label: 'Proximos' },
+  { href: '/notas', label: 'Notas' },
+  { href: '/settings', label: 'Configuracoes' },
+]
+
 export function Topbar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -98,6 +122,7 @@ export function Topbar() {
   const [debounced, setDebounced] = useState('')
   const [open, setOpen] = useState(false)
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -111,6 +136,10 @@ export function Topbar() {
     const t = setTimeout(() => setDebounced(query), 300)
     return () => clearTimeout(t)
   }, [query])
+
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -147,8 +176,11 @@ export function Topbar() {
   const mobilePageTitle = useMemo(() => {
     const parts = pathname.split('/').filter(Boolean)
     const last = parts[parts.length - 1]
-    if (!last) return ''
-    if (last === 'upcoming' || last === 'calendar') return ''
+    if (!last) return 'Hoje'
+    if (parts[0] === 'notas' && parts.length > 1) return 'Notas'
+    if (last === 'calendar') return 'Calendario'
+    if (last === 'upcoming') return 'Proximos'
+    if (last === 'settings') return 'Configuracoes'
     return ROUTE_LABELS[last] ?? last
   }, [pathname])
 
@@ -171,22 +203,21 @@ export function Topbar() {
         ))}
       </div>
 
-      <div className={`min-w-0 flex-1 items-center gap-2 sm:hidden ${mobileSearchOpen ? 'hidden' : 'flex'}`}>
-        <Link
-          href="/today"
-          aria-label="Inicio"
-          className="inline-flex h-9 shrink-0 items-center gap-2 font-mono text-[15px] font-bold text-navy-900"
+      <div
+        className={`min-w-0 flex-1 items-center gap-2 sm:hidden ${mobileSearchOpen ? 'hidden' : 'flex'}`}
+      >
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(true)}
+          className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-navy-600 hover:bg-surface-soft"
+          aria-label="Abrir menu"
+          title="Menu"
         >
-          <Image src="/brand/logo-icon.svg" alt="" width={28} height={28} className="rounded-lg" />
-          <span>
-            doit<span className="text-brand-600">.md</span>
-          </span>
-        </Link>
-        {mobilePageTitle && (
-          <span className="min-w-0 truncate font-mono text-[12px] font-semibold uppercase tracking-wide text-navy-400">
-            / {mobilePageTitle}
-          </span>
-        )}
+          <MenuIcon />
+        </button>
+        <span className="min-w-0 truncate text-[17px] font-semibold text-navy-900">
+          {mobilePageTitle}
+        </span>
       </div>
 
       <button
@@ -199,26 +230,6 @@ export function Topbar() {
         title="Buscar"
       >
         <SearchIcon />
-      </button>
-
-      <button
-        type="button"
-        onClick={() => setQuickCaptureOpen(true)}
-        className={`h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-600 text-white shadow-sm sm:hidden ${
-          mobileSearchOpen ? 'hidden' : 'inline-flex'
-        }`}
-        aria-label="Novo"
-        title="Novo"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-        </svg>
       </button>
 
       <div
@@ -314,6 +325,66 @@ export function Topbar() {
         </button>
         <SignOutButton className="hidden sm:inline-flex" />
       </div>
+
+      {mobileMenuOpen ? (
+        <div
+          className="fixed inset-0 z-[80] bg-navy-900/30 backdrop-blur-sm sm:hidden"
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setMobileMenuOpen(false)
+          }}
+        >
+          <div className="h-full w-[min(82vw,320px)] border-r border-ui-border bg-surface-window px-3 py-3 shadow-cool-lg">
+            <div className="mb-3 flex items-center justify-between">
+              <span className="font-mono text-[12px] font-bold text-navy-900">
+                doit<span className="text-brand-600">.md</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(false)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-500 hover:bg-surface-soft"
+                aria-label="Fechar menu"
+              >
+                <CloseIcon />
+              </button>
+            </div>
+            <nav className="space-y-1">
+              {MOBILE_NAV_ITEMS.map((item) => {
+                const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex h-11 items-center rounded-md px-3 text-[15px] font-medium ${
+                      active
+                        ? 'bg-surface-selected text-brand-700'
+                        : 'text-navy-700 hover:bg-surface-soft'
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                )
+              })}
+            </nav>
+            <div className="mt-3 border-t border-ui-border-soft pt-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false)
+                  setQuickCaptureOpen(true)
+                }}
+                className="flex h-11 w-full items-center rounded-md bg-brand-600 px-3 text-[15px] font-semibold text-white"
+              >
+                Novo item
+              </button>
+              <div className="mt-3">
+                <SignOutButton className="w-full justify-center" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </header>
   )
 }
