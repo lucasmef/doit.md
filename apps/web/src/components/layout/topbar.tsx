@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useUI } from '@/store/ui'
 import useSWR from 'swr'
 import type { Item } from '@doit/types'
@@ -92,6 +92,7 @@ function toDateKey(date: Date) {
 
 export function Topbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { setQuickCaptureOpen, setSelectedItemId, calendarOpen, setCalendarOpen } = useUI()
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -291,13 +292,17 @@ export function Topbar() {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => setCalendarOpen(!calendarOpen)}
+          onClick={() => {
+            setCalendarOpen(false)
+            window.dispatchEvent(new Event('doit:open-calendar-view'))
+            router.push('/upcoming?view=calendar')
+          }}
           className={`hidden h-9 w-9 items-center justify-center rounded-md transition-colors lg:inline-flex ${
-            calendarOpen
+            calendarOpen || pathname === '/upcoming'
               ? 'bg-surface-selected text-brand-600'
               : 'text-navy-500 hover:bg-surface-soft'
           }`}
-          title="Alternar calendário (Shift+C)"
+          title="Abrir calendário (Shift+C)"
         >
           <CalendarIcon />
         </button>

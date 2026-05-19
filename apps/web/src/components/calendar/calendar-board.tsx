@@ -279,21 +279,34 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
         </div>
       )}
 
-      <div className="hidden flex-1 min-h-0 lg:flex">
-        <CalendarGrid
-          items={showItems ? activeItems : []}
-          events={showEvents ? visibleEvents : []}
-          year={year}
-          month={month}
-          onYearChange={setYear}
-          onMonthChange={setMonth}
-          onDayClick={selectDay}
-          onEventClick={setOpenEvent}
-          selectedDate={selectedDate}
-          headerControls={filterButtons}
-          compact={compactSide}
-          fillHeight={!compactSide}
-        />
+      <div className="hidden min-h-0 flex-1 gap-3 lg:flex">
+        <div className="min-w-0 flex-1">
+          <CalendarGrid
+            items={showItems ? activeItems : []}
+            events={showEvents ? visibleEvents : []}
+            year={year}
+            month={month}
+            onYearChange={setYear}
+            onMonthChange={setMonth}
+            onDayClick={selectDay}
+            onEventClick={setOpenEvent}
+            selectedDate={selectedDate}
+            headerControls={filterButtons}
+            compact={compactSide}
+            fillHeight={!compactSide}
+          />
+        </div>
+        {!compactSide ? (
+          <aside className="min-h-0 w-[min(30vw,380px)] shrink-0">
+            <DayList
+              date={selectedDate}
+              items={showItems ? selectedItems : []}
+              events={showEvents ? selectedEvents : []}
+              onItemClick={setSelectedItemId}
+              onEventClick={setOpenEvent}
+            />
+          </aside>
+        ) : null}
       </div>
 
       <div
@@ -375,7 +388,7 @@ function DayList({
   onEventClick: (event: CalendarEvent) => void
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm">
+    <div className="flex h-full min-h-0 flex-1 flex-col rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm">
       <div className="mb-3 shrink-0 border-b border-ui-border-soft pb-3">
         <h2 className="text-lg font-bold capitalize text-navy-900">{formatDate(date)}</h2>
         <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">

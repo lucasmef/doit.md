@@ -30,20 +30,20 @@ function EventCard({
 
   return (
     <div
-      className={`group flex items-center gap-3 border-b border-ui-border-soft py-2 transition-opacity ${
+      className={`group flex min-h-8 items-center gap-2 border-b border-ui-border-soft py-1 transition-opacity ${
         isPast ? 'opacity-45 grayscale' : ''
       }`}
     >
-      <div className={`h-8 w-1 shrink-0 rounded-full ${isPast ? 'bg-navy-200' : 'bg-brand-500'}`} />
-      <div className="w-14 shrink-0">
-        <span className="font-mono text-[12px] font-medium text-navy-500">
+      <div className={`h-5 w-1 shrink-0 rounded-full ${isPast ? 'bg-navy-200' : 'bg-brand-500'}`} />
+      <div className="w-12 shrink-0">
+        <span className="font-mono text-[10px] font-semibold text-navy-500">
           {allDay ? 'Dia todo' : fmt(start)}
         </span>
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="truncate text-[14px] font-medium text-navy-900">{title}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-medium text-navy-900">{title}</p>
         {!allDay && (
-          <p className="truncate font-mono text-[11px] text-navy-300">Termina as {fmt(end)}</p>
+          <span className="sr-only">Termina as {fmt(end)}</span>
         )}
       </div>
     </div>
@@ -110,11 +110,11 @@ export default function TodayPage() {
   return (
     <div className="mx-auto w-full max-w-[760px] px-5 pb-24 pt-3 lg:pb-4">
       {todayEvents.length > 0 && (
-        <section className="mb-4 rounded-xl border border-ui-border bg-white p-4 shadow-cool-sm">
-          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+        <section className="mb-3 rounded-lg border border-ui-border bg-white px-3 py-2 shadow-cool-sm">
+          <h2 className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
             Eventos / {todayEvents.length}
           </h2>
-          <div className="space-y-1">
+          <div>
             {todayEvents.map((e) => (
               <EventCard
                 key={e.id}

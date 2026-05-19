@@ -1,6 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
 import { CalendarBoard } from '@/components/calendar/calendar-board'
@@ -31,6 +32,7 @@ const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde']
 
 export default function UpcomingPage() {
   const { items, isLoading } = useItems()
+  const router = useRouter()
   const [view, setView] = useState<'list' | 'calendar'>('list')
   const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
@@ -47,12 +49,25 @@ export default function UpcomingPage() {
     return acc
   }, {})
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setView(params.get('view') === 'calendar' ? 'calendar' : 'list')
+    const openCalendar = () => setView('calendar')
+    window.addEventListener('doit:open-calendar-view', openCalendar)
+    return () => window.removeEventListener('doit:open-calendar-view', openCalendar)
+  }, [])
+
+  function setViewMode(nextView: 'list' | 'calendar') {
+    setView(nextView)
+    router.replace(nextView === 'calendar' ? '/upcoming?view=calendar' : '/upcoming')
+  }
+
   const ViewSwitch = (
     <div className="fixed bottom-20 right-4 z-40 rounded-xl border border-ui-border bg-white p-1 shadow-cool-lg lg:bottom-5">
       <div className="flex rounded-lg bg-surface-soft p-1">
         <button
           type="button"
-          onClick={() => setView('list')}
+          onClick={() => setViewMode('list')}
           className={`rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors ${
             view === 'list'
               ? 'bg-white text-brand-600 shadow-cool-sm'
@@ -63,7 +78,7 @@ export default function UpcomingPage() {
         </button>
         <button
           type="button"
-          onClick={() => setView('calendar')}
+          onClick={() => setViewMode('calendar')}
           className={`rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors ${
             view === 'calendar'
               ? 'bg-white text-brand-600 shadow-cool-sm'
@@ -85,7 +100,7 @@ export default function UpcomingPage() {
     const deltaX = touch.clientX - start.x
     const deltaY = touch.clientY - start.y
     if (deltaX < -60 && Math.abs(deltaY) < 50) {
-      setView('calendar')
+      setViewMode('calendar')
     }
   }
 

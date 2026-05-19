@@ -198,7 +198,12 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     {
       key: 'C',
       shift: true,
-      handler: (e) => { e.preventDefault(); setCalendarOpen(!calendarOpen) },
+      handler: (e) => {
+        e.preventDefault()
+        setCalendarOpen(false)
+        window.dispatchEvent(new Event('doit:open-calendar-view'))
+        goTo('/upcoming?view=calendar')
+      },
     },
     {
       key: '?',
