@@ -30,6 +30,14 @@ source "$ENV_FILE"
 set +a
 
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
-export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2304}"
+if [[ "${NODE_OPTIONS:-}" != *"--max-old-space-size="* ]]; then
+  if [[ -n "${NODE_OPTIONS:-}" ]]; then
+    export NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=2304"
+  else
+    export NODE_OPTIONS="--max-old-space-size=2304"
+  fi
+else
+  export NODE_OPTIONS
+fi
 
 exec "$@"
