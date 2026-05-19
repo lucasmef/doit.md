@@ -196,6 +196,7 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'google_accounts', 'driveTrashFolderId', 'TEXT')
   await ensureColumn(db, 'folders', 'driveFolderId', 'TEXT')
   await ensureColumnType(db, 'google_accounts', 'expiresAt', 'BIGINT')
+  await ensureColumnType(db, 'rate_limits', 'resetAt', 'BIGINT')
 }
 
 const sqliteSchema = [
@@ -375,7 +376,7 @@ const sqliteSchema = [
   `CREATE TABLE IF NOT EXISTS rate_limits (
     id TEXT PRIMARY KEY,
     count INTEGER NOT NULL,
-    resetAt INTEGER NOT NULL
+    resetAt BIGINT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS cli_tokens (
     id TEXT PRIMARY KEY,
