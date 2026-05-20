@@ -273,7 +273,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
   const fullscreenMonthSelector = (
     <div
       ref={stripRef}
-      className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto scroll-smooth py-1 [&::-webkit-scrollbar]:hidden"
+      className="flex min-w-0 w-full items-center gap-1.5 overflow-x-auto scroll-smooth py-1 [&::-webkit-scrollbar]:hidden"
       style={{ scrollbarWidth: 'none' }}
     >
       {monthList.map((m) => {
@@ -305,7 +305,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
 
   if (fullscreen) {
     return (
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface-window">
+      <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden bg-surface-window">
         <CalendarGrid
           items={[]}
           events={showEvents ? visibleEvents : []}

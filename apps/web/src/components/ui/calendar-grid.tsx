@@ -153,15 +153,15 @@ export function CalendarGrid({
 
   const containerClass = fillHeight
     ? googleLike
-      ? 'flex h-full min-h-0 select-none flex-col bg-surface-panel'
-      : 'flex flex-1 min-h-0 select-none flex-col rounded-none border-y border-ui-border bg-white p-2 shadow-cool-sm lg:rounded-xl lg:border lg:p-3'
-    : 'select-none rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
+      ? 'flex h-full min-w-0 min-h-0 w-full select-none flex-col overflow-hidden bg-surface-panel'
+      : 'flex flex-1 min-w-0 min-h-0 w-full select-none flex-col overflow-hidden rounded-none border-y border-ui-border bg-white p-2 shadow-cool-sm lg:rounded-xl lg:border lg:p-3'
+    : 'min-w-0 w-full select-none overflow-hidden rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
 
   const gridClass = fillHeight
     ? googleLike
-      ? 'grid flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden border-t border-ui-border bg-ui-border'
-      : 'grid flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
-    : 'grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
+      ? 'grid min-w-0 w-full flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden border-t border-ui-border bg-ui-border'
+      : 'grid min-w-0 w-full flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
+    : 'grid min-w-0 w-full grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
 
   const gridStyle = fillHeight
     ? { gridTemplateRows: `repeat(${weekRows}, minmax(0, 1fr))` }
