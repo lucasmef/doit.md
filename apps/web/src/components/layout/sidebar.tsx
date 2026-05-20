@@ -11,7 +11,7 @@ import { useDialog } from '@/components/ui/dialog'
 import { usePreferences } from '@/hooks/use-preferences'
 import { toLocalDateKey } from '@doit/core'
 
-type IconKey = 'today' | 'inbox' | 'upcoming' | 'settings' | 'folder' | 'tag'
+type IconKey = 'today' | 'inbox' | 'upcoming' | 'calendar' | 'settings' | 'folder' | 'tag'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -37,6 +37,14 @@ function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; cla
       <svg className={className} {...common}>
         <path d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
         <path d="M9 14h4m-2-2 2 2-2 2" />
+      </svg>
+    )
+  }
+  if (kind === 'calendar') {
+    return (
+      <svg className={className} {...common}>
+        <path d="M7 3v3M17 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" />
+        <path d="M8 12h2M12 12h2M16 12h2M8 16h2M12 16h2M16 16h2" />
       </svg>
     )
   }
@@ -91,6 +99,7 @@ const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/today', label: 'Hoje', icon: 'today' },
   { href: '/upcoming', label: 'Próximos', icon: 'upcoming' },
+  { href: '/calendar', label: 'Calendario', icon: 'calendar' },
 ]
 
 const BOTTOM_NAV: { href: string; label: string; icon: IconKey }[] = [

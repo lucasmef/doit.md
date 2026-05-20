@@ -18,6 +18,8 @@ type Props = {
   onEventClick?: (event: CalendarEvent) => void
   headerControls?: ReactNode
   hideMobileNav?: boolean
+  googleLike?: boolean
+  calendarColors?: Map<string, string | undefined>
 }
 
 function getDaysInMonth(year: number, month: number) {
@@ -59,6 +61,8 @@ export function CalendarGrid({
   onEventClick,
   headerControls,
   hideMobileNav = false,
+  googleLike = false,
+  calendarColors,
 }: Props) {
   const today = new Date()
   const [yearState, setYearState] = useState(today.getFullYear())
@@ -90,6 +94,12 @@ export function CalendarGrid({
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
   }
 
+  function dateKey(date: Date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate(),
+    ).padStart(2, '0')}`
+  }
+
   function itemsForDay(d: number) {
     const ds = dayStr(d)
     return (items || []).filter(
@@ -113,21 +123,35 @@ export function CalendarGrid({
     return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
-  const cells = [
-    ...Array(firstDay).fill(null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ]
-  const weekRows = Math.ceil(cells.length / 7)
+  type CalendarCell = { date: Date; day: number; outside: boolean } | null
+  const cells: CalendarCell[] = googleLike
+    ? Array.from({ length: 42 }, (_, i) => {
+        const date = new Date(year, month, 1 - firstDay + i)
+        return { date, day: date.getDate(), outside: date.getMonth() !== month }
+      })
+    : [
+        ...Array(firstDay).fill(null),
+        ...Array.from({ length: daysInMonth }, (_, i) => ({
+          date: new Date(year, month, i + 1),
+          day: i + 1,
+          outside: false,
+        })),
+      ]
+  const weekRows = googleLike ? 6 : Math.ceil(cells.length / 7)
   while (cells.length < weekRows * 7) cells.push(null)
 
   const cellHeight = compact ? 'h-9' : fillHeight ? '' : 'h-20 lg:h-24 xl:h-28'
 
   const containerClass = fillHeight
-    ? 'flex flex-1 min-h-0 select-none flex-col rounded-none border-y border-ui-border bg-white p-2 shadow-cool-sm lg:rounded-xl lg:border lg:p-3'
+    ? googleLike
+      ? 'flex h-full min-h-0 select-none flex-col bg-surface-panel'
+      : 'flex flex-1 min-h-0 select-none flex-col rounded-none border-y border-ui-border bg-white p-2 shadow-cool-sm lg:rounded-xl lg:border lg:p-3'
     : 'select-none rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
 
   const gridClass = fillHeight
-    ? 'grid flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
+    ? googleLike
+      ? 'grid flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden border-t border-ui-border bg-ui-border'
+      : 'grid flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
     : 'grid grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
 
   const gridStyle = fillHeight
@@ -136,49 +160,76 @@ export function CalendarGrid({
 
   return (
     <div className={containerClass}>
-      <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h2 className={`${compact ? 'text-[14px]' : 'text-lg'} font-bold text-navy-900`}>
+      <div
+        className={`flex shrink-0 items-center gap-2 ${
+          googleLike ? 'border-b border-ui-border bg-surface-panel px-2 py-2 sm:px-4' : 'mb-3 flex-wrap items-start justify-between'
+        }`}
+      >
+        <div
+          className={`flex min-w-0 items-center ${
+            googleLike ? 'order-1 flex-1 gap-2' : 'gap-3'
+          }`}
+        >
+          {googleLike && headerControls ? (
+            <div className="flex shrink-0">{headerControls}</div>
+          ) : null}
+          <h2
+            className={`${compact ? 'text-[14px]' : googleLike ? 'truncate text-[18px] font-normal sm:text-[22px]' : 'text-lg font-bold'} text-navy-900`}
+          >
             {MONTHS[month]} {year}
           </h2>
-          {headerControls ? (
-            <div className="mt-1 flex flex-wrap gap-1.5">{headerControls}</div>
+          {!googleLike && headerControls ? (
+            <div className={googleLike ? 'flex shrink-0' : 'mt-1 flex flex-wrap gap-1.5'}>
+              {headerControls}
+            </div>
           ) : null}
         </div>
         <div
-          className={`items-center gap-1 rounded-lg bg-surface-soft p-1 ${
+          className={`items-center gap-1 ${googleLike ? 'order-2 shrink-0' : 'rounded-lg bg-surface-soft p-1'} ${
             hideMobileNav ? 'hidden lg:flex' : 'flex'
           }`}
         >
           <button
             onClick={prevMonth}
-            className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
+            className={`rounded-md px-2 py-1 text-navy-500 transition-colors hover:bg-surface-soft ${
+              googleLike ? 'text-lg leading-none' : 'font-mono text-[11px] font-medium'
+            }`}
+            aria-label="Mes anterior"
           >
-            {compact ? '<' : 'Anterior'}
+            {googleLike || compact ? '<' : 'Anterior'}
           </button>
           <button
             onClick={() => {
               setYear(today.getFullYear())
               setMonth(today.getMonth())
             }}
-            className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
+            className={`rounded-md px-3 py-1 transition-colors hover:bg-surface-soft ${
+              googleLike
+                ? 'border border-ui-border text-[13px] font-medium text-navy-700'
+                : 'font-mono text-[11px] font-medium text-navy-500 hover:bg-white'
+            }`}
           >
             Hoje
           </button>
           <button
             onClick={nextMonth}
-            className="rounded-md px-2 py-1 font-mono text-[11px] font-medium text-navy-500 transition-colors hover:bg-white"
+            className={`rounded-md px-2 py-1 text-navy-500 transition-colors hover:bg-surface-soft ${
+              googleLike ? 'text-lg leading-none' : 'font-mono text-[11px] font-medium'
+            }`}
+            aria-label="Proximo mes"
           >
-            {compact ? '>' : 'Proximo'}
+            {googleLike || compact ? '>' : 'Proximo'}
           </button>
         </div>
       </div>
 
-      <div className="mb-2 grid shrink-0 grid-cols-7">
+      <div className={`${googleLike ? 'grid border-b border-ui-border bg-surface-panel' : 'mb-2 grid'} shrink-0 grid-cols-7`}>
         {WEEKDAYS.map((d) => (
           <div
             key={d}
-            className="py-1.5 text-center font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300"
+            className={`py-1.5 text-center text-[10px] font-medium uppercase text-navy-400 ${
+              googleLike ? '' : 'font-mono font-bold tracking-wide'
+            }`}
           >
             {compact ? d.slice(0, 1) : d.toUpperCase()}
           </div>
@@ -189,15 +240,27 @@ export function CalendarGrid({
         {cells.map((day, i) => {
           if (!day) return <div key={`empty-${i}`} className={`${cellHeight} bg-white`} />
 
-          const ds = dayStr(day)
-          const dayItems = itemsForDay(day)
-          const dayEvents = eventsForDay(day)
+          const ds = googleLike ? dateKey(day.date) : dayStr(day.day)
+          const dayItems = googleLike || day.outside ? [] : itemsForDay(day.day)
+          const dayEvents = googleLike
+            ? (events || [])
+                .filter((e) => e.start.slice(0, 10) === ds)
+                .sort((a, b) => a.start.localeCompare(b.start))
+            : eventsForDay(day.day)
           const isToday = ds === todayStr
           const isSelected = ds === selectedDate
 
           const entries: Array<
             | { kind: 'item'; id: string; title: string; complexity?: Item['complexity'] }
-            | { kind: 'event'; id: string; title: string; start: string; allDay: boolean }
+            | {
+                kind: 'event'
+                id: string
+                title: string
+                start: string
+                end: string
+                allDay: boolean
+                googleCalendarId?: string
+              }
           > = [
             ...dayItems.map((it) => ({
               kind: 'item' as const,
@@ -210,11 +273,13 @@ export function CalendarGrid({
               id: ev.id,
               title: ev.title,
               start: ev.start,
+              end: ev.end,
               allDay: ev.allDay,
+              googleCalendarId: ev.googleCalendarId,
             })),
           ]
 
-          const visible = compact ? [] : entries.slice(0, fillHeight ? 5 : 3)
+          const visible = compact ? [] : entries.slice(0, googleLike ? 6 : fillHeight ? 5 : 3)
           const hidden = entries.length - visible.length
 
           return (
@@ -229,14 +294,22 @@ export function CalendarGrid({
                   onDayClick?.(ds)
                 }
               }}
-              className={`relative flex ${cellHeight} min-h-0 flex-col items-start overflow-hidden bg-white p-1.5 text-left transition-colors hover:bg-surface-soft ${isSelected ? 'z-10 ring-2 ring-inset ring-brand-400' : ''}`}
+              className={`relative flex ${cellHeight} min-h-0 flex-col items-start overflow-hidden ${
+                googleLike ? 'bg-surface-panel px-1 py-1 sm:p-1.5' : 'bg-white p-1.5'
+              } text-left transition-colors hover:bg-surface-soft ${
+                isSelected && !googleLike ? 'z-10 ring-2 ring-inset ring-brand-400' : ''
+              } ${day.outside ? 'text-navy-300' : ''}`}
             >
               <span
                 className={`${compact ? 'h-6 w-6 text-[11px]' : 'mb-1 h-7 w-7 text-[13px]'} flex shrink-0 items-center justify-center rounded-full font-medium ${
-                  isToday ? 'bg-brand-600 text-white' : 'text-navy-700'
+                  isToday
+                    ? 'bg-brand-600 text-white'
+                    : day.outside
+                      ? 'text-navy-300'
+                      : 'text-navy-700'
                 }`}
               >
-                {day}
+                {day.day}
               </span>
 
               {compact ? (
@@ -254,6 +327,11 @@ export function CalendarGrid({
                   {visible.map((entry) => {
                     if (entry.kind === 'event') {
                       const time = formatEventTime(entry.start, entry.allDay)
+                      const isPast =
+                        new Date(entry.end || entry.start).getTime() < new Date().getTime()
+                      const eventColor = entry.googleCalendarId
+                        ? calendarColors?.get(entry.googleCalendarId)
+                        : undefined
                       return (
                         <button
                           type="button"
@@ -263,11 +341,22 @@ export function CalendarGrid({
                             const calendarEvent = dayEvents.find((ev) => ev.id === entry.id)
                             if (calendarEvent) onEventClick?.(calendarEvent)
                           }}
-                          className="flex w-full items-center gap-1 truncate rounded-md bg-brand-100 px-1.5 py-0.5 text-left text-[10px] font-medium text-navy-700"
+                          className={`flex w-full items-center truncate rounded-md px-1.5 py-0.5 text-left font-medium transition-opacity ${
+                            googleLike
+                              ? 'min-h-5 bg-brand-600 text-[10px] text-white hover:brightness-95 sm:text-[11px]'
+                              : 'gap-1 bg-brand-100 text-[10px] text-navy-700'
+                          } ${isPast ? 'opacity-35 grayscale' : ''}`}
+                          style={googleLike && eventColor ? { backgroundColor: eventColor } : undefined}
                           title={entry.title}
                         >
-                          {time && (
-                            <span className="font-mono text-[9px] text-navy-500">{time}</span>
+                          {time && !googleLike && (
+                            <span
+                              className={`font-mono text-[9px] ${
+                                googleLike ? 'text-white/85' : 'text-navy-500'
+                              }`}
+                            >
+                              {time}
+                            </span>
                           )}
                           <span className="truncate">{entry.title}</span>
                         </button>

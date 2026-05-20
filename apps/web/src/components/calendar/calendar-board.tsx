@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/toast'
 type Props = {
   items: Item[]
   compactSide?: boolean
+  fullscreen?: boolean
 }
 
 const MONTH_SHORT = [
@@ -48,13 +49,13 @@ function buildMonthList(baseYear: number, baseMonth: number) {
   return list
 }
 
-export function CalendarBoard({ items, compactSide = false }: Props) {
+export function CalendarBoard({ items, compactSide = false, fullscreen = false }: Props) {
   const today = new Date()
   const todayKey = toLocalDateKey(today)
   const [year, setYear] = useState(today.getFullYear())
   const [month, setMonth] = useState(today.getMonth())
   const [selectedDate, setSelectedDate] = useState(todayKey)
-  const [showItems, setShowItems] = useState(true)
+  const [showItems, setShowItems] = useState(!fullscreen)
   const [showEvents, setShowEvents] = useState(true)
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const [creatingEvent, setCreatingEvent] = useState(false)
@@ -64,10 +65,10 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
   const { setSelectedItemId } = useUI()
 
   const { from, to } = useMemo(() => {
-    const start = new Date(year, month, 1)
-    const end = new Date(year, month + 1, 0, 23, 59, 59)
+    const start = new Date(year, month, fullscreen ? -7 : 1)
+    const end = new Date(year, month + 1, fullscreen ? 7 : 0, 23, 59, 59)
     return { from: start.toISOString(), to: end.toISOString() }
-  }, [year, month])
+  }, [year, month, fullscreen])
 
   const { events } = useCalendarEvents(from, to)
   const { calendars } = useGoogleCalendars()
@@ -233,6 +234,89 @@ export function CalendarBoard({ items, compactSide = false }: Props) {
       Filtros
     </button>
   )
+
+  const fullscreenMenuButton = (
+    <button
+      type="button"
+      onClick={() => setFiltersOpen(true)}
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ui-border bg-surface-panel text-navy-700 shadow-cool-sm transition-colors hover:bg-surface-soft"
+      aria-label="Abrir configuracoes do calendario"
+      title="Configuracoes"
+    >
+      <svg
+        className="h-5 w-5"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={1.8}
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+      </svg>
+    </button>
+  )
+
+  if (fullscreen) {
+    return (
+      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-surface-window">
+        <CalendarGrid
+          items={[]}
+          events={showEvents ? visibleEvents : []}
+          year={year}
+          month={month}
+          onYearChange={setYear}
+          onMonthChange={setMonth}
+          onDayClick={selectDay}
+          onEventClick={setOpenEvent}
+          selectedDate={selectedDate}
+          headerControls={fullscreenMenuButton}
+          fillHeight
+          googleLike
+          calendarColors={new Map(calendars.map((calendar) => [calendar.id, calendar.backgroundColor]))}
+        />
+
+        {openEvent ? (
+          <EventSheet
+            event={openEvent}
+            onSaved={setOpenEvent}
+            onDeleted={() => setOpenEvent(null)}
+            onClose={() => setOpenEvent(null)}
+          />
+        ) : null}
+        {creatingEvent ? (
+          <NewEventSheet
+            selectedDate={selectedDate}
+            calendars={calendars}
+            onSaved={(event) => {
+              setCreatingEvent(false)
+              setOpenEvent(event)
+            }}
+            onClose={() => setCreatingEvent(false)}
+          />
+        ) : null}
+        {filtersOpen ? (
+          <CalendarFilterSheet
+            calendars={calendars}
+            selectedCalendarIds={selectedCalendarIds}
+            showItems={false}
+            showEvents={showEvents}
+            eventOnly
+            onClose={() => setFiltersOpen(false)}
+            onToggleItems={() => undefined}
+            onToggleEvents={() => setShowEvents((value) => !value)}
+            onToggleCalendar={toggleCalendar}
+            onSelectAllCalendars={() =>
+              setSelectedCalendarIds(calendars.map((calendar) => calendar.id))
+            }
+            onCreateEvent={() => {
+              setFiltersOpen(false)
+              setCreatingEvent(true)
+            }}
+          />
+        ) : null}
+      </div>
+    )
+  }
 
   return (
     <div
@@ -400,6 +484,7 @@ function CalendarFilterSheet({
   selectedCalendarIds,
   showItems,
   showEvents,
+  eventOnly = false,
   onClose,
   onToggleItems,
   onToggleEvents,
@@ -411,6 +496,7 @@ function CalendarFilterSheet({
   selectedCalendarIds: string[]
   showItems: boolean
   showEvents: boolean
+  eventOnly?: boolean
   onClose: () => void
   onToggleItems: () => void
   onToggleEvents: () => void
@@ -446,21 +532,23 @@ function CalendarFilterSheet({
         </div>
 
         <div className="space-y-2">
-          <button
-            type="button"
-            onClick={onToggleItems}
-            className={`flex h-11 w-full items-center justify-between rounded-lg border px-3 text-left text-[14px] font-semibold ${
-              showItems
-                ? 'border-brand-200 bg-brand-50 text-navy-900'
-                : 'border-ui-border bg-white text-navy-400'
-            }`}
-          >
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-brand-500" />
-              Itens
-            </span>
-            <span>{showItems ? 'Visivel' : 'Oculto'}</span>
-          </button>
+          {eventOnly ? null : (
+            <button
+              type="button"
+              onClick={onToggleItems}
+              className={`flex h-11 w-full items-center justify-between rounded-lg border px-3 text-left text-[14px] font-semibold ${
+                showItems
+                  ? 'border-brand-200 bg-brand-50 text-navy-900'
+                  : 'border-ui-border bg-white text-navy-400'
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-brand-500" />
+                Itens
+              </span>
+              <span>{showItems ? 'Visivel' : 'Oculto'}</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onToggleEvents}
