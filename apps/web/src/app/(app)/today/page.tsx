@@ -16,12 +16,14 @@ function EventCard({
   end,
   allDay,
   isPast,
+  dayLabel,
 }: {
   title: string
   start: string
   end: string
   allDay: boolean
   isPast: boolean
+  dayLabel?: string
 }) {
   function fmt(dt: string) {
     if (allDay) return ''
@@ -42,6 +44,11 @@ function EventCard({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-medium text-navy-900">{title}</p>
+        {dayLabel ? (
+          <span className="block truncate font-mono text-[10px] font-semibold uppercase tracking-wide text-navy-300">
+            {dayLabel}
+          </span>
+        ) : null}
         {!allDay && (
           <span className="sr-only">Termina as {fmt(end)}</span>
         )}
@@ -56,7 +63,11 @@ export default function TodayPage() {
   const { toast } = useToast()
   const { prefs } = usePreferences()
   const today = toLocalDateKey()
-  const { events } = useCalendarEvents(today + 'T00:00:00Z', today + 'T23:59:59Z')
+  const now = new Date()
+  const tomorrowDate = new Date(now)
+  tomorrowDate.setDate(now.getDate() + 1)
+  const tomorrow = toLocalDateKey(tomorrowDate)
+  const { events } = useCalendarEvents(today + 'T00:00:00Z', tomorrow + 'T23:59:59Z')
 
   const datedTodayItems = items.filter((i) => {
     if (i.status === 'archived') return false
@@ -76,10 +87,29 @@ export default function TodayPage() {
       item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived',
   )
 
+  function currentTimeIsAfter(time: string) {
+    const [hourText, minuteText] = time.split(':')
+    const hour = Number(hourText)
+    const minute = Number(minuteText)
+    if (!Number.isFinite(hour) || !Number.isFinite(minute)) return false
+    return now.getHours() * 60 + now.getMinutes() >= hour * 60 + minute
+  }
+
+  function shouldHidePastEvent(end: string, allDay: boolean) {
+    if (allDay) return false
+    const endTime = new Date(end).getTime()
+    if (Number.isNaN(endTime)) return false
+    const graceMs = prefs.todayCalendarHidePastAfterHours * 60 * 60 * 1000
+    return now.getTime() - endTime >= graceMs
+  }
+
+  const showTomorrowEvents = currentTimeIsAfter(prefs.todayCalendarShowTomorrowAfterTime)
+
   const todayEvents = events
     .filter((e) => {
       const d = e.start.slice(0, 10)
-      return d === today
+      if (d !== today && !(showTomorrowEvents && d === tomorrow)) return false
+      return !shouldHidePastEvent(e.end, e.allDay)
     })
     .sort((a, b) => a.start.localeCompare(b.start))
 
@@ -123,6 +153,7 @@ export default function TodayPage() {
                 end={e.end}
                 allDay={e.allDay}
                 isPast={!e.allDay && new Date(e.end).getTime() < Date.now()}
+                dayLabel={e.start.slice(0, 10) === tomorrow ? 'Amanha' : undefined}
               />
             ))}
           </div>

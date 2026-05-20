@@ -18,6 +18,8 @@ export type Preferences = {
   theme: ThemePreference
   sidebarCollapsed: boolean
   pinnedFolderIds: string[]
+  todayCalendarHidePastAfterHours: number
+  todayCalendarShowTomorrowAfterTime: string
 }
 
 export type ThemePreference = 'light' | 'dark' | 'system'
@@ -37,6 +39,8 @@ const DEFAULTS: Preferences = {
   theme: 'system',
   sidebarCollapsed: false,
   pinnedFolderIds: [],
+  todayCalendarHidePastAfterHours: 2,
+  todayCalendarShowTomorrowAfterTime: '18:00',
 }
 
 const STORAGE_KEY = 'doit:preferences'
@@ -77,6 +81,17 @@ function read(): Preferences {
     const parsed = JSON.parse(raw) as Partial<Preferences>
     const showInbox = parsed.showInbox !== false
     const theme = parsed.theme === 'light' || parsed.theme === 'dark' ? parsed.theme : 'system'
+    const hidePastHours =
+      typeof parsed.todayCalendarHidePastAfterHours === 'number' &&
+      Number.isFinite(parsed.todayCalendarHidePastAfterHours) &&
+      parsed.todayCalendarHidePastAfterHours >= 0
+        ? Math.min(24, parsed.todayCalendarHidePastAfterHours)
+        : DEFAULTS.todayCalendarHidePastAfterHours
+    const showTomorrowTime =
+      typeof parsed.todayCalendarShowTomorrowAfterTime === 'string' &&
+      /^\d{2}:\d{2}$/.test(parsed.todayCalendarShowTomorrowAfterTime)
+        ? parsed.todayCalendarShowTomorrowAfterTime
+        : DEFAULTS.todayCalendarShowTomorrowAfterTime
     return {
       showInbox,
       mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
@@ -85,6 +100,8 @@ function read(): Preferences {
       pinnedFolderIds: Array.isArray(parsed.pinnedFolderIds)
         ? parsed.pinnedFolderIds.filter((id): id is string => typeof id === 'string')
         : [],
+      todayCalendarHidePastAfterHours: hidePastHours,
+      todayCalendarShowTomorrowAfterTime: showTomorrowTime,
     }
   } catch {
     return DEFAULTS
@@ -120,6 +137,17 @@ export function usePreferences() {
       next.pinnedFolderIds = Array.from(
         new Set(patch.pinnedFolderIds.filter((id): id is string => typeof id === 'string')),
       )
+    }
+    if (
+      !Number.isFinite(next.todayCalendarHidePastAfterHours) ||
+      next.todayCalendarHidePastAfterHours < 0
+    ) {
+      next.todayCalendarHidePastAfterHours = DEFAULTS.todayCalendarHidePastAfterHours
+    } else {
+      next.todayCalendarHidePastAfterHours = Math.min(24, next.todayCalendarHidePastAfterHours)
+    }
+    if (!/^\d{2}:\d{2}$/.test(next.todayCalendarShowTomorrowAfterTime)) {
+      next.todayCalendarShowTomorrowAfterTime = DEFAULTS.todayCalendarShowTomorrowAfterTime
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
     window.dispatchEvent(new Event(EVENT))

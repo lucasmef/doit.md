@@ -261,6 +261,60 @@ function AppearanceSection() {
 
       <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
         <div className="border-b border-ui-border-soft px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Tela Hoje</h2>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Ajuste como eventos do calendario aparecem no resumo do dia.
+          </p>
+        </div>
+        <div className="grid gap-4 px-5 py-5 sm:grid-cols-2">
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-800">
+              Ocultar eventos passados apos
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-400">
+              Eventos encerrados somem depois desse numero de horas.
+            </span>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                max={24}
+                step={0.5}
+                value={prefs.todayCalendarHidePastAfterHours}
+                onChange={(event) =>
+                  update({
+                    todayCalendarHidePastAfterHours: Number(event.target.value),
+                  })
+                }
+                className="h-10 w-24 rounded-lg border border-ui-border bg-white px-3 text-sm text-navy-900 outline-none focus:border-brand-300"
+              />
+              <span className="text-sm text-slate-500">horas</span>
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-800">
+              Mostrar eventos de amanha apos
+            </span>
+            <span className="mt-0.5 block text-xs text-slate-400">
+              Depois desse horario, a tela Hoje inclui eventos do dia seguinte.
+            </span>
+            <input
+              type="time"
+              value={prefs.todayCalendarShowTomorrowAfterTime}
+              onChange={(event) =>
+                update({
+                  todayCalendarShowTomorrowAfterTime: event.target.value,
+                })
+              }
+              className="mt-2 h-10 w-32 rounded-lg border border-ui-border bg-white px-3 text-sm text-navy-900 outline-none focus:border-brand-300"
+            />
+          </label>
+        </div>
+      </div>
+
+      <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+        <div className="border-b border-ui-border-soft px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>
