@@ -17,6 +17,8 @@ type Props = {
   onMonthChange?: (month: number) => void
   onEventClick?: (event: CalendarEvent) => void
   headerControls?: ReactNode
+  monthSelector?: ReactNode
+  hideMonthControls?: boolean
   hideMobileNav?: boolean
   googleLike?: boolean
   calendarColors?: Map<string, string | undefined>
@@ -63,6 +65,8 @@ export function CalendarGrid({
   onMonthChange,
   onEventClick,
   headerControls,
+  monthSelector,
+  hideMonthControls = false,
   hideMobileNav = false,
   googleLike = false,
   calendarColors,
@@ -167,7 +171,7 @@ export function CalendarGrid({
     <div className={containerClass}>
       <div
         className={`flex shrink-0 items-center gap-2 ${
-          googleLike ? 'border-b border-ui-border bg-surface-panel px-2 py-2 sm:px-4' : 'mb-3 flex-wrap items-start justify-between'
+          googleLike ? 'h-14 border-b border-ui-border bg-surface-window px-2 sm:px-4' : 'mb-3 flex-wrap items-start justify-between'
         }`}
       >
         <div
@@ -178,54 +182,60 @@ export function CalendarGrid({
           {googleLike && headerControls ? (
             <div className="flex shrink-0">{headerControls}</div>
           ) : null}
-          <h2
-            className={`${compact ? 'text-[14px]' : googleLike ? 'truncate text-[18px] font-normal sm:text-[22px]' : 'text-lg font-bold'} text-navy-900`}
-          >
-            {MONTHS[month]} {year}
-          </h2>
+          {googleLike && monthSelector ? (
+            <div className="min-w-0 flex-1">{monthSelector}</div>
+          ) : (
+            <h2
+              className={`${compact ? 'text-[14px]' : googleLike ? 'truncate text-[18px] font-normal sm:text-[22px]' : 'text-lg font-bold'} text-navy-900`}
+            >
+              {MONTHS[month]} {year}
+            </h2>
+          )}
           {!googleLike && headerControls ? (
             <div className={googleLike ? 'flex shrink-0' : 'mt-1 flex flex-wrap gap-1.5'}>
               {headerControls}
             </div>
           ) : null}
         </div>
-        <div
-          className={`items-center gap-1 ${googleLike ? 'order-2 shrink-0' : 'rounded-lg bg-surface-soft p-1'} ${
-            hideMobileNav ? 'hidden lg:flex' : 'flex'
-          }`}
-        >
-          <button
-            onClick={prevMonth}
-            className={`rounded-md px-2 py-1 text-navy-500 transition-colors hover:bg-surface-soft ${
-              googleLike ? 'text-lg leading-none' : 'font-mono text-[11px] font-medium'
-            }`}
-            aria-label="Mes anterior"
-          >
-            {googleLike || compact ? '<' : 'Anterior'}
-          </button>
-          <button
-            onClick={() => {
-              setYear(today.getFullYear())
-              setMonth(today.getMonth())
-            }}
-            className={`rounded-md px-3 py-1 transition-colors hover:bg-surface-soft ${
-              googleLike
-                ? 'border border-ui-border text-[13px] font-medium text-navy-700'
-                : 'font-mono text-[11px] font-medium text-navy-500 hover:bg-white'
+        {!hideMonthControls ? (
+          <div
+            className={`items-center gap-1 ${googleLike ? 'order-2 shrink-0' : 'rounded-lg bg-surface-soft p-1'} ${
+              hideMobileNav ? 'hidden lg:flex' : 'flex'
             }`}
           >
-            Hoje
-          </button>
-          <button
-            onClick={nextMonth}
-            className={`rounded-md px-2 py-1 text-navy-500 transition-colors hover:bg-surface-soft ${
-              googleLike ? 'text-lg leading-none' : 'font-mono text-[11px] font-medium'
-            }`}
-            aria-label="Proximo mes"
-          >
-            {googleLike || compact ? '>' : 'Proximo'}
-          </button>
-        </div>
+            <button
+              onClick={prevMonth}
+              className={`rounded-md px-2 py-1 text-navy-500 transition-colors hover:bg-surface-soft ${
+                googleLike ? 'text-lg leading-none' : 'font-mono text-[11px] font-medium'
+              }`}
+              aria-label="Mes anterior"
+            >
+              {googleLike || compact ? '<' : 'Anterior'}
+            </button>
+            <button
+              onClick={() => {
+                setYear(today.getFullYear())
+                setMonth(today.getMonth())
+              }}
+              className={`rounded-md px-3 py-1 transition-colors hover:bg-surface-soft ${
+                googleLike
+                  ? 'border border-ui-border text-[13px] font-medium text-navy-700'
+                  : 'font-mono text-[11px] font-medium text-navy-500 hover:bg-white'
+              }`}
+            >
+              Hoje
+            </button>
+            <button
+              onClick={nextMonth}
+              className={`rounded-md px-2 py-1 text-navy-500 transition-colors hover:bg-surface-soft ${
+                googleLike ? 'text-lg leading-none' : 'font-mono text-[11px] font-medium'
+              }`}
+              aria-label="Proximo mes"
+            >
+              {googleLike || compact ? '>' : 'Proximo'}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className={`${googleLike ? 'grid border-b border-ui-border bg-surface-panel' : 'mb-2 grid'} shrink-0 grid-cols-7`}>
@@ -303,13 +313,13 @@ export function CalendarGrid({
                 }
               }}
               className={`relative flex ${cellHeight} min-h-0 flex-col items-start overflow-hidden ${
-                googleLike ? 'bg-surface-panel px-1 py-1 sm:p-1.5' : 'bg-white p-1.5'
+                googleLike ? 'bg-surface-panel px-0.5 py-0.5 sm:p-1' : 'bg-white p-1.5'
               } text-left transition-colors hover:bg-surface-soft ${
                 isSelected && !googleLike ? 'z-10 ring-2 ring-inset ring-brand-400' : ''
               } ${day.outside ? 'text-navy-300' : ''}`}
             >
               <span
-                className={`${compact ? 'h-6 w-6 text-[11px]' : 'mb-1 h-7 w-7 text-[13px]'} flex shrink-0 items-center justify-center rounded-full font-medium ${
+                className={`${compact ? 'h-6 w-6 text-[11px]' : googleLike ? 'mb-0.5 h-6 w-6 text-[12px]' : 'mb-1 h-7 w-7 text-[13px]'} flex shrink-0 items-center justify-center rounded-full font-medium ${
                   isToday
                     ? 'bg-brand-600 text-white'
                     : day.outside
@@ -331,7 +341,7 @@ export function CalendarGrid({
                   ))}
                 </div>
               ) : (
-                <div className="flex w-full min-h-0 flex-1 flex-col gap-0.5 overflow-hidden sm:gap-1">
+                <div className="flex w-full min-h-0 flex-1 flex-col gap-px overflow-hidden sm:gap-0.5">
                   {visible.map((entry, entryIndex) => {
                     if (entry.kind === 'event') {
                       const time = formatEventTime(entry.start, entry.allDay)
@@ -351,7 +361,7 @@ export function CalendarGrid({
                           }}
                           className={`flex w-full items-center truncate rounded-md px-1.5 py-0.5 text-left font-medium transition-opacity ${
                             googleLike
-                              ? `min-h-4 bg-brand-600 px-1 py-0 text-[9px] leading-4 text-white hover:brightness-95 sm:min-h-5 sm:px-1.5 sm:py-0.5 sm:text-[11px] ${entryIndex >= 2 ? 'lg:hidden' : ''}`
+                              ? `min-h-4 bg-brand-600 px-1 py-0 text-[9px] leading-4 text-white hover:brightness-95 sm:min-h-5 sm:px-1 sm:py-0 sm:text-[11px] ${entryIndex >= 2 ? 'lg:hidden' : ''}`
                               : 'gap-1 bg-brand-100 text-[10px] text-navy-700'
                           } ${isPast ? 'opacity-35 grayscale' : ''}`}
                           style={googleLike && eventColor ? { backgroundColor: eventColor } : undefined}

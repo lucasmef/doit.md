@@ -253,9 +253,9 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
     <button
       type="button"
       onClick={() => setFiltersOpen(true)}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-ui-border bg-surface-panel text-navy-700 shadow-cool-sm transition-colors hover:bg-surface-soft"
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-navy-600 transition-colors hover:bg-surface-soft"
       aria-label="Abrir configuracoes do calendario"
-      title="Configuracoes"
+      title="Menu"
     >
       <svg
         className="h-5 w-5"
@@ -268,6 +268,39 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
         <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
       </svg>
     </button>
+  )
+
+  const fullscreenMonthSelector = (
+    <div
+      ref={stripRef}
+      className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto scroll-smooth py-1 [&::-webkit-scrollbar]:hidden"
+      style={{ scrollbarWidth: 'none' }}
+    >
+      {monthList.map((m) => {
+        const isCurrent = m.year === todayYear && m.month === todayMonth
+        const isSelected = m.year === year && m.month === month
+        return (
+          <button
+            key={m.key}
+            ref={(el) => {
+              if (el) monthRefs.current.set(m.key, el)
+              else monthRefs.current.delete(m.key)
+            }}
+            onClick={() => selectMonth(m.year, m.month)}
+            className={`flex h-10 shrink-0 flex-col items-center justify-center rounded-lg px-3 font-mono text-[10px] font-bold uppercase tracking-wide transition-colors ${
+              isSelected
+                ? 'bg-brand-600 text-white'
+                : isCurrent
+                  ? 'bg-brand-50 text-navy-900'
+                  : 'text-navy-500 hover:bg-surface-soft hover:text-navy-900'
+            }`}
+          >
+            <span className="text-[9px] leading-3 opacity-70">{m.year}</span>
+            <span className="text-[12px] leading-4">{MONTH_SHORT[m.month]}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 
   if (fullscreen) {
@@ -284,6 +317,8 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
           onEventClick={setOpenEvent}
           selectedDate={selectedDate}
           headerControls={fullscreenMenuButton}
+          monthSelector={fullscreenMonthSelector}
+          hideMonthControls
           fillHeight
           googleLike
           calendarColors={new Map(calendars.map((calendar) => [calendar.id, calendar.backgroundColor]))}
