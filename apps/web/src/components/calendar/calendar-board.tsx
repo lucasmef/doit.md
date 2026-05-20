@@ -13,6 +13,7 @@ import {
 import { CalendarGrid } from '@/components/ui/calendar-grid'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
+import { usePreferences, type CalendarWeekStart } from '@/hooks/use-preferences'
 
 type Props = {
   items: Item[]
@@ -60,9 +61,11 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const [creatingEvent, setCreatingEvent] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [openDayDate, setOpenDayDate] = useState<string | null>(null)
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([])
   const carouselRef = useRef<HTMLDivElement | null>(null)
   const { setSelectedItemId } = useUI()
+  const { prefs, update: updatePreferences } = usePreferences()
 
   const { from, to } = useMemo(() => {
     const start = new Date(year, month, fullscreen ? -7 : 1)
@@ -128,6 +131,11 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
     }
   }
 
+  function selectFullscreenDay(date: string) {
+    setSelectedDate(date)
+    setOpenDayDate(date)
+  }
+
   function selectedItemsForDay() {
     return activeItems.filter(
       (item) => item.dueDate === selectedDate || item.scheduledDate === selectedDate,
@@ -142,6 +150,12 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
   function selectedEventsForDay() {
     return visibleEvents
       .filter((event) => event.start.slice(0, 10) === selectedDate)
+      .sort((a, b) => a.start.localeCompare(b.start))
+  }
+
+  function eventsForDate(date: string) {
+    return visibleEvents
+      .filter((event) => event.start.slice(0, 10) === date)
       .sort((a, b) => a.start.localeCompare(b.start))
   }
 
@@ -266,15 +280,28 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
           month={month}
           onYearChange={setYear}
           onMonthChange={setMonth}
-          onDayClick={selectDay}
+          onDayClick={selectFullscreenDay}
           onEventClick={setOpenEvent}
           selectedDate={selectedDate}
           headerControls={fullscreenMenuButton}
           fillHeight
           googleLike
           calendarColors={new Map(calendars.map((calendar) => [calendar.id, calendar.backgroundColor]))}
+          weekStartsOn={prefs.calendarWeekStartsOn}
         />
 
+        {openDayDate ? (
+          <FullscreenDayEventsSheet
+            date={openDayDate}
+            events={showEvents ? eventsForDate(openDayDate) : []}
+            calendars={calendars}
+            onEventClick={(event) => {
+              setOpenDayDate(null)
+              setOpenEvent(event)
+            }}
+            onClose={() => setOpenDayDate(null)}
+          />
+        ) : null}
         {openEvent ? (
           <EventSheet
             event={openEvent}
@@ -301,9 +328,12 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
             showItems={false}
             showEvents={showEvents}
             eventOnly
+            fullscreen
+            weekStartsOn={prefs.calendarWeekStartsOn}
             onClose={() => setFiltersOpen(false)}
             onToggleItems={() => undefined}
             onToggleEvents={() => setShowEvents((value) => !value)}
+            onWeekStartChange={(value) => updatePreferences({ calendarWeekStartsOn: value })}
             onToggleCalendar={toggleCalendar}
             onSelectAllCalendars={() =>
               setSelectedCalendarIds(calendars.map((calendar) => calendar.id))
@@ -390,6 +420,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
             headerControls={filterButtons}
             compact={compactSide}
             fillHeight={!compactSide}
+            weekStartsOn={prefs.calendarWeekStartsOn}
           />
         </div>
         {!compactSide ? (
@@ -405,12 +436,8 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
         ) : null}
       </div>
 
-      <div
-        ref={carouselRef}
-        className="flex flex-1 snap-x snap-mandatory overflow-x-auto scroll-smooth lg:hidden [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: 'none' }}
-      >
-        <section className="flex min-w-full snap-start flex-col pr-2">
+      <div className="flex min-h-0 flex-1 overflow-hidden lg:hidden">
+        <section className="flex min-w-0 flex-1 flex-col">
           <CalendarGrid
             items={showItems ? activeItems : []}
             events={showEvents ? visibleEvents : []}
@@ -418,25 +445,30 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
             month={month}
             onYearChange={setYear}
             onMonthChange={setMonth}
-            onDayClick={selectDay}
+            onDayClick={selectFullscreenDay}
             onEventClick={setOpenEvent}
             selectedDate={selectedDate}
             headerControls={mobileFilterButton}
-            hideMobileNav
             fillHeight
-          />
-        </section>
-        <section className="flex min-w-full snap-start flex-col pl-2">
-          <DayList
-            date={selectedDate}
-            items={showItems ? selectedItems : []}
-            events={showEvents ? selectedEvents : []}
-            onItemClick={setSelectedItemId}
-            onEventClick={setOpenEvent}
+            googleLike
+            calendarColors={new Map(calendars.map((calendar) => [calendar.id, calendar.backgroundColor]))}
+            weekStartsOn={prefs.calendarWeekStartsOn}
           />
         </section>
       </div>
 
+      {openDayDate ? (
+        <FullscreenDayEventsSheet
+          date={openDayDate}
+          events={showEvents ? eventsForDate(openDayDate) : []}
+          calendars={calendars}
+          onEventClick={(event) => {
+            setOpenDayDate(null)
+            setOpenEvent(event)
+          }}
+          onClose={() => setOpenDayDate(null)}
+        />
+      ) : null}
       {openEvent ? (
         <EventSheet
           event={openEvent}
@@ -462,9 +494,11 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
           selectedCalendarIds={selectedCalendarIds}
           showItems={showItems}
           showEvents={showEvents}
+          weekStartsOn={prefs.calendarWeekStartsOn}
           onClose={() => setFiltersOpen(false)}
           onToggleItems={() => setShowItems((value) => !value)}
           onToggleEvents={() => setShowEvents((value) => !value)}
+          onWeekStartChange={(value) => updatePreferences({ calendarWeekStartsOn: value })}
           onToggleCalendar={toggleCalendar}
           onSelectAllCalendars={() =>
             setSelectedCalendarIds(calendars.map((calendar) => calendar.id))
@@ -485,9 +519,12 @@ function CalendarFilterSheet({
   showItems,
   showEvents,
   eventOnly = false,
+  fullscreen = false,
+  weekStartsOn,
   onClose,
   onToggleItems,
   onToggleEvents,
+  onWeekStartChange,
   onToggleCalendar,
   onSelectAllCalendars,
   onCreateEvent,
@@ -497,23 +534,34 @@ function CalendarFilterSheet({
   showItems: boolean
   showEvents: boolean
   eventOnly?: boolean
+  fullscreen?: boolean
+  weekStartsOn: CalendarWeekStart
   onClose: () => void
   onToggleItems: () => void
   onToggleEvents: () => void
+  onWeekStartChange: (value: CalendarWeekStart) => void
   onToggleCalendar: (calendarId: string) => void
   onSelectAllCalendars: () => void
   onCreateEvent: () => void
 }) {
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm lg:hidden"
+      className={`fixed inset-0 z-[120] flex bg-navy-900/35 p-3 backdrop-blur-sm ${
+        fullscreen
+          ? 'items-start justify-start sm:p-4 lg:p-5'
+          : 'items-end lg:hidden'
+      }`}
       role="dialog"
       aria-modal="true"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <div className="w-full rounded-2xl border border-ui-border bg-white p-4 shadow-cool-lg">
+      <div
+        className={`w-full rounded-2xl border border-ui-border bg-surface-panel p-4 shadow-cool-lg ${
+          fullscreen ? 'mt-12 max-w-sm lg:ml-2 lg:w-80' : ''
+        }`}
+      >
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
@@ -564,6 +612,31 @@ function CalendarFilterSheet({
             </span>
             <span>{showEvents ? 'Visivel' : 'Oculto'}</span>
           </button>
+        </div>
+
+        <div className="mt-4">
+          <h3 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+            Primeiro dia
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { value: 'monday' as const, label: 'Segunda' },
+              { value: 'sunday' as const, label: 'Domingo' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onWeekStartChange(option.value)}
+                className={`h-10 rounded-lg border px-3 text-[13px] font-semibold transition-colors ${
+                  weekStartsOn === option.value
+                    ? 'border-brand-200 bg-brand-50 text-navy-900'
+                    : 'border-ui-border bg-white text-navy-400 hover:text-navy-700'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {calendars.length > 1 ? (
@@ -632,6 +705,97 @@ function formatDate(dateStr: string) {
 function formatTime(dt: string, allDay: boolean) {
   if (allDay) return 'Dia todo'
   return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function FullscreenDayEventsSheet({
+  date,
+  events,
+  calendars,
+  onEventClick,
+  onClose,
+}: {
+  date: string
+  events: CalendarEvent[]
+  calendars: GoogleCalendar[]
+  onEventClick: (event: CalendarEvent) => void
+  onClose: () => void
+}) {
+  const calendarColors = new Map(calendars.map((calendar) => [calendar.id, calendar.backgroundColor]))
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
+      role="dialog"
+      aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <section className="flex max-h-[min(680px,calc(100vh-2rem))] w-full flex-col rounded-2xl border border-ui-border bg-surface-panel p-4 shadow-cool-lg sm:max-w-lg">
+        <div className="mb-3 flex shrink-0 items-start justify-between gap-3 border-b border-ui-border-soft pb-3">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
+              Eventos do dia
+            </p>
+            <h2 className="mt-1 text-xl font-bold capitalize text-navy-900">{formatDate(date)}</h2>
+            <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              {events.length} evento(s)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-400 hover:bg-surface-soft hover:text-navy-700"
+            aria-label="Fechar eventos do dia"
+          >
+            x
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {events.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-ui-border-strong px-3 py-4 text-[13px] text-navy-300">
+              Nenhum evento para este dia.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {events.map((event) => {
+                const eventColor = event.googleCalendarId
+                  ? calendarColors.get(event.googleCalendarId)
+                  : undefined
+                return (
+                  <button
+                    key={event.id}
+                    type="button"
+                    onClick={() => onEventClick(event)}
+                    className="flex w-full items-center gap-3 rounded-lg border border-ui-border bg-white px-3 py-2.5 text-left shadow-cool-sm transition-colors hover:bg-surface-soft"
+                  >
+                    <span
+                      className="h-10 w-1 shrink-0 rounded-full bg-brand-500"
+                      style={eventColor ? { backgroundColor: eventColor } : undefined}
+                    />
+                    <span className="w-16 shrink-0 font-mono text-[11px] font-semibold text-navy-500">
+                      {formatTime(event.start, event.allDay)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[14px] font-semibold text-navy-900">
+                        {event.title}
+                      </span>
+                      {!event.allDay ? (
+                        <span className="block truncate font-mono text-[11px] text-navy-300">
+                          Termina {formatTime(event.end, false)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  )
 }
 
 function DayList({

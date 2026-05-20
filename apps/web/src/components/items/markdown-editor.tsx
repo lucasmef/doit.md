@@ -118,6 +118,86 @@ function getSelectedMarkdown(editor: Editor) {
   return markdown ? normalizeMarkdownTableSpacing(markdown) : null
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function splitMarkdownTableRow(line: string) {
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '')
+  return trimmed.split('|').map((cell) => cell.trim())
+}
+
+function markdownTableToHtml(markdown: string) {
+  const lines = normalizeMarkdownTableSpacing(markdown).split('\n')
+  const start = lines.findIndex((line, index) => {
+    const next = lines[index + 1]
+    return TABLE_ROW_RE.test(line) && !!next && TABLE_DELIMITER_RE.test(next)
+  })
+  if (start < 0) return null
+
+  const header = splitMarkdownTableRow(lines[start] ?? '')
+  const rows: string[][] = []
+  for (let index = start + 2; index < lines.length; index += 1) {
+    const line = lines[index] ?? ''
+    if (!TABLE_ROW_RE.test(line)) break
+    rows.push(splitMarkdownTableRow(line))
+  }
+
+  const headerHtml = header.map((cell) => `<th>${escapeHtml(cell)}</th>`).join('')
+  const bodyHtml = rows
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`)
+    .join('')
+
+  return `<table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`
+}
+
+function downloadMarkdown(markdown: string) {
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  const stamp = new Date().toISOString().slice(0, 10)
+  anchor.href = url
+  anchor.download = `nota-${stamp}.md`
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+  URL.revokeObjectURL(url)
+}
+
+function printEditorHtml(html: string) {
+  const printWindow = window.open('', '_blank', 'width=900,height=700')
+  if (!printWindow) {
+    window.print()
+    return
+  }
+
+  printWindow.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Imprimir nota</title>
+  <style>
+    body { margin: 32px; color: #0f2342; font-family: Inter, system-ui, sans-serif; line-height: 1.55; }
+    h1, h2, h3 { line-height: 1.2; margin: 1rem 0 .35rem; }
+    table { border-collapse: collapse; width: 100%; margin: 1rem 0; table-layout: fixed; }
+    th, td { border: 1px solid #d9e1ea; padding: .45rem .6rem; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; font-weight: 700; }
+    pre { white-space: pre-wrap; background: #f8fafc; padding: .75rem; border-radius: 8px; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    ul[data-type='taskList'] { list-style: none; padding-left: 0; }
+  </style>
+</head>
+<body>${html}</body>
+</html>`)
+  printWindow.document.close()
+  printWindow.focus()
+  printWindow.print()
+}
+
 async function uploadToDrive(itemId: string, file: File): Promise<DriveUploadResult> {
   const form = new FormData()
   form.append('itemId', itemId)
@@ -316,7 +396,12 @@ export function MarkdownEditor({
 
       event.preventDefault()
       event.stopPropagation()
-      editor.commands.insertContent(markdown, { contentType: 'markdown' })
+      const tableHtml = hasMarkdownTable(markdown) ? markdownTableToHtml(markdown) : null
+      if (tableHtml) {
+        editor.commands.insertContent(tableHtml)
+      } else {
+        editor.commands.insertContent(markdown, { contentType: 'markdown' })
+      }
     }
     const onCopy = (event: ClipboardEvent) => {
       const markdown = getSelectedMarkdown(editor)
@@ -483,6 +568,8 @@ function ToolbarSep() {
 }
 
 type EditorIconName =
+  | 'undo'
+  | 'redo'
   | 'bold'
   | 'italic'
   | 'strike'
@@ -501,6 +588,8 @@ type EditorIconName =
   | 'rowAdd'
   | 'columnRemove'
   | 'rowRemove'
+  | 'download'
+  | 'print'
   | 'trash'
 
 function EditorIcon({ name }: { name: EditorIconName }) {
@@ -515,6 +604,20 @@ function EditorIcon({ name }: { name: EditorIconName }) {
     'aria-hidden': true,
   }
 
+  if (name === 'undo' || name === 'redo') {
+    return (
+      <svg {...common}>
+        <path d={name === 'undo' ? 'M9 7H4v5' : 'M15 7h5v5'} />
+        <path
+          d={
+            name === 'undo'
+              ? 'M4 12a8 8 0 0 1 13.7-5.7L20 8.6'
+              : 'M20 12A8 8 0 0 0 6.3 6.3L4 8.6'
+          }
+        />
+      </svg>
+    )
+  }
   if (name === 'bold') {
     return (
       <svg {...common}>
@@ -652,6 +755,24 @@ function EditorIcon({ name }: { name: EditorIconName }) {
         <path d="M4 11h16" />
         <path d="M9 20h6" />
         {name === 'rowAdd' ? <path d="M12 17v6" /> : null}
+      </svg>
+    )
+  }
+  if (name === 'download') {
+    return (
+      <svg {...common}>
+        <path d="M12 4v10" />
+        <path d="m8 10 4 4 4-4" />
+        <path d="M5 20h14" />
+      </svg>
+    )
+  }
+  if (name === 'print') {
+    return (
+      <svg {...common}>
+        <path d="M7 8V4h10v4" />
+        <path d="M7 17H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" />
+        <path d="M7 14h10v6H7z" />
       </svg>
     )
   }
@@ -856,6 +977,14 @@ function EditorToolbarAccessible({
     editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
   }
 
+  const exportMarkdown = () => {
+    downloadMarkdown(normalizeMarkdownTableSpacing(editor.getMarkdown()))
+  }
+
+  const printNote = () => {
+    printEditorHtml(editor.getHTML())
+  }
+
   const inTable = editor.isActive('table')
   const headingSummary = getHeadingCollapseSummary(editor)
   const canToggleHeadings = headingSummary.total > 0
@@ -962,6 +1091,23 @@ function EditorToolbarAccessible({
   return (
     <div className="border-b border-ui-border-soft bg-surface-panel/95 px-2 py-1.5 shadow-sm backdrop-blur sm:bg-surface-soft/60">
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 sm:flex">
+        <ToolbarGroup>
+          <ToolbarBtn
+            title="Desfazer (Ctrl+Z)"
+            onClick={() => editor.chain().focus().undo().run()}
+            disabled={!editor.can().undo()}
+          >
+            <EditorIcon name="undo" />
+          </ToolbarBtn>
+          <ToolbarBtn
+            title="Refazer (Ctrl+Shift+Z)"
+            onClick={() => editor.chain().focus().redo().run()}
+            disabled={!editor.can().redo()}
+          >
+            <EditorIcon name="redo" />
+          </ToolbarBtn>
+        </ToolbarGroup>
+
         <ToolbarGroup>
           <ToolbarBtn
             title="Negrito (Ctrl+B)"
@@ -1080,9 +1226,25 @@ function EditorToolbarAccessible({
         </ToolbarGroup>
 
         {tableTools}
+
+        <ToolbarGroup>
+          <ToolbarBtn title="Exportar Markdown" onClick={exportMarkdown}>
+            <EditorIcon name="download" />
+          </ToolbarBtn>
+          <ToolbarBtn title="Imprimir nota" onClick={printNote}>
+            <EditorIcon name="print" />
+          </ToolbarBtn>
+        </ToolbarGroup>
       </div>
 
       <div className="grid w-full grid-cols-7 gap-1 sm:hidden">
+        <MobileToolbarBtn
+            title="Desfazer (Ctrl+Z)"
+            disabled={!editor.can().undo()}
+            onClick={() => editor.chain().focus().undo().run()}
+          >
+            <EditorIcon name="undo" />
+        </MobileToolbarBtn>
         <MobileToolbarBtn
             title="Negrito (Ctrl+B)"
             active={editor.isActive('bold')}
@@ -1118,12 +1280,6 @@ function EditorToolbarAccessible({
           >
             <EditorIcon name="link" />
         </MobileToolbarBtn>
-        <IconUploadButton
-          canUpload={canUpload}
-          uploadingFiles={uploadingFiles}
-          onUploadFiles={onUploadFiles}
-          className="!h-9 !min-w-0 !px-0"
-        />
         <MobileToolbarBtn
             title={mobileSheetOpen ? 'Fechar ferramentas' : 'Mais ferramentas'}
             active={mobileSheetOpen}
@@ -1148,6 +1304,26 @@ function EditorToolbarAccessible({
             </button>
           </div>
           <div className="flex flex-wrap gap-1.5">
+            <ToolbarGroup>
+              <ToolbarBtn
+                title="Refazer (Ctrl+Shift+Z)"
+                onClick={() => editor.chain().focus().redo().run()}
+                disabled={!editor.can().redo()}
+              >
+                <EditorIcon name="redo" />
+              </ToolbarBtn>
+              <ToolbarBtn title="Exportar Markdown" onClick={exportMarkdown}>
+                <EditorIcon name="download" />
+              </ToolbarBtn>
+              <ToolbarBtn title="Imprimir nota" onClick={printNote}>
+                <EditorIcon name="print" />
+              </ToolbarBtn>
+              <IconUploadButton
+                canUpload={canUpload}
+                uploadingFiles={uploadingFiles}
+                onUploadFiles={onUploadFiles}
+              />
+            </ToolbarGroup>
             {advancedTools}
             {tableTools}
           </div>

@@ -26,7 +26,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               <main
                 className={`flex-1 bg-surface-window ${
                   calendarFullscreen
-                    ? 'overflow-hidden pb-0'
+                    ? 'overflow-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0'
                     : 'overflow-y-auto pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-0'
                 }`}
               >
@@ -38,7 +38,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {calendarFullscreen ? null : <BottomNav />}
+      <BottomNav />
     </>
   )
 }

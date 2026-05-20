@@ -315,6 +315,37 @@ function AppearanceSection() {
 
       <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
         <div className="border-b border-ui-border-soft px-5 py-4">
+          <h2 className="text-sm font-semibold text-slate-700">Calendario</h2>
+          <p className="mt-0.5 text-xs text-slate-400">
+            Ajuste a organizacao da grade mensal.
+          </p>
+        </div>
+        <div className="px-5 py-5">
+          <span className="block text-sm font-medium text-slate-800">Primeiro dia da semana</span>
+          <div className="mt-2 grid max-w-sm grid-cols-2 gap-2">
+            {[
+              { value: 'monday' as const, label: 'Segunda' },
+              { value: 'sunday' as const, label: 'Domingo' },
+            ].map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => update({ calendarWeekStartsOn: option.value })}
+                className={`h-10 rounded-lg border px-3 text-sm font-semibold ${
+                  prefs.calendarWeekStartsOn === option.value
+                    ? 'border-brand-200 bg-brand-50 text-navy-900'
+                    : 'border-ui-border bg-white text-navy-500 hover:bg-surface-soft'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-[16px] border border-ui-border-panel bg-surface-panel shadow-sm">
+        <div className="border-b border-ui-border-soft px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>

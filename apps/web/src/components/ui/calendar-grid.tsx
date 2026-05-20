@@ -20,18 +20,21 @@ type Props = {
   hideMobileNav?: boolean
   googleLike?: boolean
   calendarColors?: Map<string, string | undefined>
+  weekStartsOn?: 'monday' | 'sunday'
 }
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
 
-function getFirstDayOfWeek(year: number, month: number) {
+function getFirstDayOfWeek(year: number, month: number, weekStartsOn: 'monday' | 'sunday') {
   const day = new Date(year, month, 1).getDay()
+  if (weekStartsOn === 'sunday') return day
   return day === 0 ? 6 : day - 1
 }
 
-const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
+const WEEKDAYS_MONDAY = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
+const WEEKDAYS_SUNDAY = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 const MONTHS = [
   'Janeiro',
   'Fevereiro',
@@ -63,6 +66,7 @@ export function CalendarGrid({
   hideMobileNav = false,
   googleLike = false,
   calendarColors,
+  weekStartsOn = 'monday',
 }: Props) {
   const today = new Date()
   const [yearState, setYearState] = useState(today.getFullYear())
@@ -73,8 +77,9 @@ export function CalendarGrid({
   const setMonth = onMonthChange ?? setMonthState
 
   const daysInMonth = getDaysInMonth(year, month)
-  const firstDay = getFirstDayOfWeek(year, month)
+  const firstDay = getFirstDayOfWeek(year, month, weekStartsOn)
   const todayStr = toLocalDateKey(today)
+  const weekdays = weekStartsOn === 'sunday' ? WEEKDAYS_SUNDAY : WEEKDAYS_MONDAY
 
   function prevMonth() {
     if (month === 0) {
@@ -224,7 +229,7 @@ export function CalendarGrid({
       </div>
 
       <div className={`${googleLike ? 'grid border-b border-ui-border bg-surface-panel' : 'mb-2 grid'} shrink-0 grid-cols-7`}>
-        {WEEKDAYS.map((d) => (
+        {weekdays.map((d) => (
           <div
             key={d}
             className={`py-1.5 text-center text-[10px] font-medium uppercase text-navy-400 ${
@@ -279,8 +284,11 @@ export function CalendarGrid({
             })),
           ]
 
-          const visible = compact ? [] : entries.slice(0, googleLike ? 6 : fillHeight ? 5 : 3)
+          const visibleLimit = googleLike && entries.length > 3 ? 3 : googleLike ? 3 : fillHeight ? 5 : 3
+          const visible = compact ? [] : entries.slice(0, visibleLimit)
           const hidden = entries.length - visible.length
+          const desktopHidden = googleLike && entries.length > 3 ? entries.length - 2 : hidden
+          const mobileHidden = hidden
 
           return (
             <div
@@ -323,8 +331,8 @@ export function CalendarGrid({
                   ))}
                 </div>
               ) : (
-                <div className="flex w-full min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-                  {visible.map((entry) => {
+                <div className="flex w-full min-h-0 flex-1 flex-col gap-0.5 overflow-hidden sm:gap-1">
+                  {visible.map((entry, entryIndex) => {
                     if (entry.kind === 'event') {
                       const time = formatEventTime(entry.start, entry.allDay)
                       const isPast =
@@ -343,7 +351,7 @@ export function CalendarGrid({
                           }}
                           className={`flex w-full items-center truncate rounded-md px-1.5 py-0.5 text-left font-medium transition-opacity ${
                             googleLike
-                              ? 'min-h-5 bg-brand-600 text-[10px] text-white hover:brightness-95 sm:text-[11px]'
+                              ? `min-h-4 bg-brand-600 px-1 py-0 text-[9px] leading-4 text-white hover:brightness-95 sm:min-h-5 sm:px-1.5 sm:py-0.5 sm:text-[11px] ${entryIndex >= 2 ? 'lg:hidden' : ''}`
                               : 'gap-1 bg-brand-100 text-[10px] text-navy-700'
                           } ${isPast ? 'opacity-35 grayscale' : ''}`}
                           style={googleLike && eventColor ? { backgroundColor: eventColor } : undefined}
@@ -372,16 +380,23 @@ export function CalendarGrid({
                     return (
                       <div
                         key={`item-${entry.id}`}
-                        className={`w-full truncate rounded-md px-1.5 py-0.5 text-left text-[10px] font-medium ${badgeClass}`}
+                        className={`w-full truncate rounded-md px-1 py-0 text-left text-[9px] font-medium leading-4 sm:px-1.5 sm:py-0.5 sm:text-[10px] ${googleLike && entryIndex >= 2 ? 'lg:hidden' : ''} ${badgeClass}`}
                         title={entry.title}
                       >
                         {entry.title}
                       </div>
                     )
                   })}
-                  {hidden > 0 && (
-                    <span className="px-1 font-mono text-[10px] font-medium text-navy-300">
-                      + {hidden} {hidden === 1 ? 'item' : 'itens'}
+                  {(googleLike ? desktopHidden > 0 : hidden > 0) && (
+                    <span className="px-1 font-mono text-[9px] font-medium leading-4 text-navy-300 sm:text-[10px]">
+                      {googleLike ? (
+                        <>
+                          <span className="lg:hidden">mais {mobileHidden}</span>
+                          <span className="hidden lg:inline">mais {desktopHidden}</span>
+                        </>
+                      ) : (
+                        `+ ${hidden} ${hidden === 1 ? 'item' : 'itens'}`
+                      )}
                     </span>
                   )}
                 </div>

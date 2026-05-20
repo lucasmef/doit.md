@@ -41,7 +41,7 @@ Unifica notas, tarefas, projetos e calendário em uma única entidade chamada **
 - `projectId` / `areaId` — alteração requer aprovação (risk: médio)
 - `status: archived` — nunca restaurar via sync; use a UI
 - Arquivos de schema (`packages/db/src/schemas/`)
-- Arquivo `AGENTS.md` em si
+- Arquivo `AGENTS.md` em si, exceto quando o usuário pedir explicitamente para atualizar estas instruções
 
 ### Campos protegidos (de `packages/core/src/item-rules.ts`)
 
@@ -142,11 +142,19 @@ GOOGLE_REDIRECT_URI=http://localhost:3000/api/google/callback
 
 ---
 
-## Restrição de Execução Local
+## Execução Local e Testes de Usabilidade
 
-Agentes **não devem rodar o site localmente** (`pnpm dev`, `pnpm --filter @doit/web dev`, `next dev`, `next start` ou comandos equivalentes que iniciem servidor persistente).
+Agentes podem rodar o site localmente para **teste de usabilidade, validação visual e fluxos no navegador**, desde que o servidor seja temporário e controlado.
 
-É permitido executar apenas validações que encerram sozinhas, como type-check, build e testes pontuais. Se algum teste precisar iniciar o app, o servidor deve ser encerrado imediatamente ao terminar a validação.
+Regras obrigatórias:
+
+- Preferir validações que encerram sozinhas quando teste visual não for necessário, como type-check, build e testes pontuais.
+- Se for necessário testar a UI, o agente pode iniciar `pnpm dev`, `pnpm --filter @doit/web dev`, `next dev` ou comando equivalente.
+- Antes de iniciar, verificar se já existe servidor rodando na porta pretendida. Se houver, reutilizar esse servidor ou escolher outra porta.
+- Registrar o PID/processo iniciado pelo agente.
+- Encerrar todos os processos iniciados pelo agente ao terminar o teste, inclusive servidores, watchers e processos filhos relacionados.
+- Não deixar servidor persistente rodando após a resposta final.
+- Se o servidor não puder ser encerrado automaticamente, informar isso claramente e indicar o PID/comando para encerramento manual.
 
 ---
 

@@ -18,11 +18,13 @@ export type Preferences = {
   theme: ThemePreference
   sidebarCollapsed: boolean
   pinnedFolderIds: string[]
+  calendarWeekStartsOn: CalendarWeekStart
   todayCalendarHidePastAfterHours: number
   todayCalendarShowTomorrowAfterTime: string
 }
 
 export type ThemePreference = 'light' | 'dark' | 'system'
+export type CalendarWeekStart = 'monday' | 'sunday'
 
 const MOBILE_NAV_DEFAULT: MobileNavItem[] = [
   { id: 'today', visible: true },
@@ -39,6 +41,7 @@ const DEFAULTS: Preferences = {
   theme: 'system',
   sidebarCollapsed: false,
   pinnedFolderIds: [],
+  calendarWeekStartsOn: 'monday',
   todayCalendarHidePastAfterHours: 2,
   todayCalendarShowTomorrowAfterTime: '18:00',
 }
@@ -92,6 +95,8 @@ function read(): Preferences {
       /^\d{2}:\d{2}$/.test(parsed.todayCalendarShowTomorrowAfterTime)
         ? parsed.todayCalendarShowTomorrowAfterTime
         : DEFAULTS.todayCalendarShowTomorrowAfterTime
+    const calendarWeekStartsOn =
+      parsed.calendarWeekStartsOn === 'sunday' ? 'sunday' : DEFAULTS.calendarWeekStartsOn
     return {
       showInbox,
       mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
@@ -100,6 +105,7 @@ function read(): Preferences {
       pinnedFolderIds: Array.isArray(parsed.pinnedFolderIds)
         ? parsed.pinnedFolderIds.filter((id): id is string => typeof id === 'string')
         : [],
+      calendarWeekStartsOn,
       todayCalendarHidePastAfterHours: hidePastHours,
       todayCalendarShowTomorrowAfterTime: showTomorrowTime,
     }
@@ -137,6 +143,9 @@ export function usePreferences() {
       next.pinnedFolderIds = Array.from(
         new Set(patch.pinnedFolderIds.filter((id): id is string => typeof id === 'string')),
       )
+    }
+    if (next.calendarWeekStartsOn !== 'monday' && next.calendarWeekStartsOn !== 'sunday') {
+      next.calendarWeekStartsOn = DEFAULTS.calendarWeekStartsOn
     }
     if (
       !Number.isFinite(next.todayCalendarHidePastAfterHours) ||
