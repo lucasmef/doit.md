@@ -227,6 +227,7 @@ export function MarkdownEditor({
   itemId,
   focusAtStart = false,
 }: Props) {
+  const editorRef = useRef<Editor | null>(null)
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -257,6 +258,28 @@ export function MarkdownEditor({
       attributes: {
         class: `${plain ? 'doit-note-editor' : 'prose prose-slate'} max-w-none ${minHeight} pl-9 pr-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
       },
+      handlePaste: (_view, event) => {
+        const activeEditor = editorRef.current
+        const text = event.clipboardData?.getData('text/plain') ?? ''
+        const markdown = normalizeMarkdownTableSpacing(text)
+        if (!activeEditor || !text || !isLikelyMarkdown(markdown)) return false
+
+        event.preventDefault()
+        const tableHtml = hasMarkdownTable(markdown) ? markdownTableToHtml(markdown) : null
+        if (tableHtml) {
+          activeEditor.commands.insertContent(tableHtml)
+        } else {
+          activeEditor.commands.insertContent(markdown, { contentType: 'markdown' })
+        }
+
+        return true
+      },
+    },
+    onCreate: ({ editor }) => {
+      editorRef.current = editor
+    },
+    onDestroy: () => {
+      editorRef.current = null
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getMarkdown())
@@ -387,20 +410,6 @@ export function MarkdownEditor({
         event.preventDefault()
         event.stopPropagation()
         void handleFiles(files)
-        return
-      }
-
-      const text = event.clipboardData?.getData('text/plain') ?? ''
-      const markdown = normalizeMarkdownTableSpacing(text)
-      if (!text || !isLikelyMarkdown(markdown)) return
-
-      event.preventDefault()
-      event.stopPropagation()
-      const tableHtml = hasMarkdownTable(markdown) ? markdownTableToHtml(markdown) : null
-      if (tableHtml) {
-        editor.commands.insertContent(tableHtml)
-      } else {
-        editor.commands.insertContent(markdown, { contentType: 'markdown' })
       }
     }
     const onCopy = (event: ClipboardEvent) => {
