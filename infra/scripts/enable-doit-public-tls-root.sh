@@ -38,7 +38,7 @@ certbot certonly \
   --email "$EMAIL"
 
 sed "s/DOIT_PUBLIC_DOMAIN/$DOMAIN/g" \
-  /srv/doit/dev/app/infra/nginx/sites-available/doit.conf \
+  /srv/doit/prod/app/infra/nginx/sites-available/doit.conf \
   > /etc/nginx/sites-available/doit
 
 ln -sfn /etc/nginx/sites-available/doit /etc/nginx/sites-enabled/doit

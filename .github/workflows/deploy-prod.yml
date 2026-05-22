@@ -1,6 +1,8 @@
 name: Deploy PROD
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -17,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: main
           fetch-depth: 0
       - run: corepack prepare pnpm@9.0.0 --activate
       - run: corepack pnpm install --frozen-lockfile
@@ -31,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: main
       - run: corepack prepare pnpm@9.0.0 --activate
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm audit --audit-level high
@@ -42,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: main
           fetch-depth: 0
       - name: Secret pattern scan
         run: |
@@ -52,30 +54,27 @@ jobs:
             exit 1
           fi
 
-  promote:
-    name: Promote dev to main
+  resolve-sha:
+    name: Resolve main SHA
     needs: [quality, security, scan-secrets]
     runs-on: self-hosted
     outputs:
-      sha: ${{ steps.promote.outputs.sha }}
+      sha: ${{ steps.resolve.outputs.sha }}
     steps:
-      - name: Checkout branch dev
+      - name: Checkout branch main
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: main
           fetch-depth: 0
 
-      - name: Promover dev para main
-        id: promote
+      - name: Resolve deployed SHA
+        id: resolve
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git push origin HEAD:main
           echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy PROD
-    needs: promote
+    needs: resolve-sha
     runs-on: self-hosted
 
     steps:
@@ -87,8 +86,8 @@ jobs:
 
       - name: Validar commit promovido
         run: |
-          if [ "$(git rev-parse HEAD)" != "${{ needs.promote.outputs.sha }}" ]; then
-            echo "O checkout de main nao corresponde ao commit promovido de dev."
+          if [ "$(git rev-parse HEAD)" != "${{ needs.resolve-sha.outputs.sha }}" ]; then
+            echo "O checkout de main nao corresponde ao commit validado."
             exit 1
           fi
 
@@ -119,6 +118,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: `refs/tags/${tag}`,
-              sha: '${{ needs.promote.outputs.sha }}',
+              sha: '${{ needs.resolve-sha.outputs.sha }}',
             })
             core.notice(`Tag criada: ${tag}`)

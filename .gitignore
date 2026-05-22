@@ -17,6 +17,12 @@ coverage
 *.tsbuildinfo
 .claude/
 .agents/
+!.agents/
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/builderflow/
+!.agents/skills/builderflow/SKILL.md
 .doitmd/
 apps/web/.mobile-qa/
 brain/

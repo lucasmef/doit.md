@@ -1,4 +1,13 @@
-# Dev standby on the shared VPS
+# Legacy dev standby on the shared VPS
+
+This document is historical. The active workflow is documented in `docs/CICD.md`
+and uses:
+
+```text
+dev local -> dev git -> main git -> main vps
+```
+
+There is no active dev deployment on the VPS in the standard flow.
 
 The development deployments prepare the latest build on disk but intentionally
 leave dev services stopped to save RAM. Production workflows are unchanged and
