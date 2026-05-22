@@ -1,4 +1,4 @@
-name: Deploy DEV
+name: Gates DEV
 
 on:
   push:
@@ -6,13 +6,13 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: doit-deploy-dev
+  group: doit-gates-dev
   cancel-in-progress: true
 
 jobs:
   quality:
     name: Quality Gate
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,11 +21,11 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm --filter @doit/web exec tsc --noEmit
       - run: bash scripts/lint-incremental.sh
-      - run: bash scripts/with-build-env.sh dev corepack pnpm --filter @doit/web build
+      - run: bash scripts/with-build-env.sh ci corepack pnpm --filter @doit/web build
 
   security:
     name: Security Gate
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: corepack prepare pnpm@9.0.0 --activate
@@ -34,7 +34,7 @@ jobs:
 
   scan-secrets:
     name: Secret Scan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,32 +47,9 @@ jobs:
             exit 1
           fi
 
-  deploy:
-    name: Deploy DEV
+  gates-complete:
+    name: DEV gates complete
     needs: [quality, security, scan-secrets]
-    runs-on: self-hosted
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout branch dev
-        uses: actions/checkout@v4
-        with:
-          ref: dev
-          clean: true
-
-      - name: Sincronizar checkout dev no VPS
-        run: |
-          install -d /srv/doit/dev/app
-          rsync -a --delete \
-            --exclude='.env' \
-            --exclude='.env.local' \
-            --exclude='apps/web/.env.local' \
-            --exclude='node_modules' \
-            --exclude='apps/web/node_modules' \
-            --exclude='.next' \
-            --exclude='apps/web/.next' \
-            "$GITHUB_WORKSPACE/" /srv/doit/dev/app/
-
-      - name: Executar script de deploy
-        env:
-          DOIT_DEV_STANDBY: "1"
-        run: bash /srv/doit/dev/app/scripts/deploy.sh dev
+      - run: echo "DEV gates passed. No VPS deploy is performed for dev."

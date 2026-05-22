@@ -149,6 +149,9 @@ Agentes podem rodar o site localmente para **teste de usabilidade, validação v
 Regras obrigatórias:
 
 - Preferir validações que encerram sozinhas quando teste visual não for necessário, como type-check, build e testes pontuais.
+- Quando uma mudança tiver impacto de frontend, layout, navegação, estados visuais, formulários ou telas visíveis, o agente deve rodar o servidor local temporariamente, testar o fluxo afetado no navegador, capturar screenshots e salvar os arquivos em `specs/artifacts/<spec-slug>/` antes de encerrar a tarefa.
+- Screenshots devem ter nomes ordenados e descritivos, por exemplo `01-inbox-empty-state.png` ou `02-editor-saving-state.png`.
+- A spec viva em `specs/` deve registrar o comando do servidor, porta, PID/processo, telas/fluxos testados, caminhos dos screenshots e resultado do encerramento do servidor.
 - Se for necessário testar a UI, o agente pode iniciar `pnpm dev`, `pnpm --filter @doit/web dev`, `next dev` ou comando equivalente.
 - Antes de iniciar, verificar se já existe servidor rodando na porta pretendida. Se houver, reutilizar esse servidor ou escolher outra porta.
 - Registrar o PID/processo iniciado pelo agente.
@@ -174,3 +177,36 @@ pnpm --filter @doit/web build
 pnpm --filter @doit/sync-agent build
 doit-sync init
 ```
+
+---
+
+## BuilderFlow
+
+This repository uses BuilderFlow for AI-assisted development.
+
+When the user says `Use BuilderFlow`, Codex must use the `builderflow` skill.
+
+BuilderFlow is the primary process for planning and executing tasks. It owns task classification, Grill Gate questions, living specs, ADR handling, validation reporting, and final summaries.
+
+The existing `doit-workflow` skill is a companion for domain-specific doit.md rules only. Use it when a task touches Items, Markdown sync files, sync/audit behavior, app/package boundaries, protected fields, auth/API rules, calendar/Drive behavior, or private user data.
+
+Default workflow:
+
+1. Read repository context before acting.
+2. Work one feature or task at a time.
+3. Create or update one living spec in `specs/`.
+4. Ask questions only after reading docs and code.
+5. Prefer small, reversible, verifiable changes.
+6. Register ADRs only for architectural or hard-to-reverse decisions.
+7. Update the living spec before ending the task.
+8. For frontend-impacting work, complete local browser validation and save screenshots in `specs/artifacts/<spec-slug>/` before marking the task done.
+
+Important files:
+
+- `docs/CONTEXT.md` - current project context
+- `docs/ADR.md` - durable architectural decisions
+- `.agents/skills/builderflow/SKILL.md` - BuilderFlow skill
+- `specs/` - one living spec per task or feature
+- `specs/artifacts/` - screenshots and visual validation evidence grouped by spec slug
+
+Do not create separate PRD, TASKS, STATUS, HANDOFF, or NOTES files unless the user explicitly asks.
