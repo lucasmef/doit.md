@@ -19,6 +19,8 @@ export type Preferences = {
   sidebarCollapsed: boolean
   pinnedFolderIds: string[]
   calendarWeekStartsOn: CalendarWeekStart
+  defaultCalendarId: string
+  defaultCalendarEventDurationMinutes: number
   todayCalendarHidePastAfterHours: number
   todayCalendarShowTomorrowAfterTime: string
 }
@@ -42,6 +44,8 @@ const DEFAULTS: Preferences = {
   sidebarCollapsed: false,
   pinnedFolderIds: [],
   calendarWeekStartsOn: 'monday',
+  defaultCalendarId: 'primary',
+  defaultCalendarEventDurationMinutes: 30,
   todayCalendarHidePastAfterHours: 2,
   todayCalendarShowTomorrowAfterTime: '18:00',
 }
@@ -97,6 +101,16 @@ function read(): Preferences {
         : DEFAULTS.todayCalendarShowTomorrowAfterTime
     const calendarWeekStartsOn =
       parsed.calendarWeekStartsOn === 'sunday' ? 'sunday' : DEFAULTS.calendarWeekStartsOn
+    const defaultCalendarId =
+      typeof parsed.defaultCalendarId === 'string' && parsed.defaultCalendarId.trim()
+        ? parsed.defaultCalendarId
+        : DEFAULTS.defaultCalendarId
+    const defaultCalendarEventDurationMinutes =
+      typeof parsed.defaultCalendarEventDurationMinutes === 'number' &&
+      Number.isFinite(parsed.defaultCalendarEventDurationMinutes) &&
+      parsed.defaultCalendarEventDurationMinutes > 0
+        ? Math.min(480, Math.max(5, Math.round(parsed.defaultCalendarEventDurationMinutes)))
+        : DEFAULTS.defaultCalendarEventDurationMinutes
     return {
       showInbox,
       mobileNav: normalizeMobileNav(parsed.mobileNav, showInbox),
@@ -106,6 +120,8 @@ function read(): Preferences {
         ? parsed.pinnedFolderIds.filter((id): id is string => typeof id === 'string')
         : [],
       calendarWeekStartsOn,
+      defaultCalendarId,
+      defaultCalendarEventDurationMinutes,
       todayCalendarHidePastAfterHours: hidePastHours,
       todayCalendarShowTomorrowAfterTime: showTomorrowTime,
     }
@@ -146,6 +162,20 @@ export function usePreferences() {
     }
     if (next.calendarWeekStartsOn !== 'monday' && next.calendarWeekStartsOn !== 'sunday') {
       next.calendarWeekStartsOn = DEFAULTS.calendarWeekStartsOn
+    }
+    if (typeof next.defaultCalendarId !== 'string' || !next.defaultCalendarId.trim()) {
+      next.defaultCalendarId = DEFAULTS.defaultCalendarId
+    }
+    if (
+      !Number.isFinite(next.defaultCalendarEventDurationMinutes) ||
+      next.defaultCalendarEventDurationMinutes <= 0
+    ) {
+      next.defaultCalendarEventDurationMinutes = DEFAULTS.defaultCalendarEventDurationMinutes
+    } else {
+      next.defaultCalendarEventDurationMinutes = Math.min(
+        480,
+        Math.max(5, Math.round(next.defaultCalendarEventDurationMinutes)),
+      )
     }
     if (
       !Number.isFinite(next.todayCalendarHidePastAfterHours) ||

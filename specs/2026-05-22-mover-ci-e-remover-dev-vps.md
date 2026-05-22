@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Status: blocked
+- Status: done
 - Mode: architecture
 - Complexity: architectural
 - Created: 2026-05-22
@@ -48,11 +48,11 @@ Answers:
 
 ## Acceptance criteria
 
-- [ ] Push/PR em `dev` roda gates em GitHub-hosted runner.
+- [x] Push/PR em `dev` roda gates em GitHub-hosted runner.
 - [x] Gates nao dependem de `/srv/doit/prod/doit-config/web.env`.
 - [x] Deploy em `main` continua restrito a VPS/producao.
-- [ ] `doit-dev.service` e timers dev ficam parados/desabilitados/removidos.
-- [ ] `/srv/doit/dev` e banco dev sao removidos ou ha bloqueio root documentado.
+- [x] `doit-dev.service` e timers dev ficam parados/desabilitados/removidos.
+- [x] `/srv/doit/dev` e banco dev sao removidos ou ha bloqueio root documentado.
 - [x] Workflow YAML e scripts passam validacao.
 
 ## Implementation plan
@@ -61,8 +61,8 @@ Answers:
 - [x] Criar modo de env seguro para CI.
 - [x] Atualizar workflows para GitHub-hosted runners nos gates.
 - [x] Validar localmente sintaxe/YAML.
-- [ ] Aplicar limpeza do dev remoto no VPS.
-- [ ] Commitar/pushar e acompanhar gates.
+- [x] Aplicar limpeza do dev remoto no VPS.
+- [x] Commitar/pushar e acompanhar gates.
 - [x] Atualizar spec com evidencias.
 
 ## Progress
@@ -81,6 +81,7 @@ Answers:
 - 2026-05-22 12:15 - Protected `main` on GitHub: PR required, required checks `Type Check, Lint & Build`, `Dependency Audit`, and `Secret Scan`, admin enforcement enabled, force pushes/deletions disabled, conversation resolution required.
 - 2026-05-22 12:20 - Simplified `Deploy PROD` to deploy only; duplicated quality/security/secret scan jobs were removed because `main` is protected by required checks.
 - 2026-05-22 14:05 - Pushed commit `f8e8fe5`; DEV gates run `26301308121` passed after production workflow simplification.
+- 2026-05-22 14:25 - User ran the root cleanup script on the VPS. Verified `doit-dev` units are removed, Nginx dev site is gone, `/srv/doit/dev` is gone, `doitmd_dev` is gone, production health is OK, and stopped the remaining orphan process on port 8111.
 
 ## Decisions
 
@@ -126,6 +127,12 @@ Commands run:
 - [x] `gh api --method PUT repos/lucasmef/doit.md/branches/main/protection --input -`
 - [x] `pnpm dlx js-yaml .github/workflows/deploy-prod.yml`
 - [x] `gh run watch 26301308121 --exit-status`
+- [x] `systemctl is-active/is-enabled doit-dev.service doit-dev-reminders.timer doit-dev-calendar-sync.timer`
+- [x] `ls -ld /srv/doit/dev /srv/doit/prod /srv/doit/prod/app`
+- [x] `nginx -t`
+- [x] `curl --fail --silent --show-error http://127.0.0.1:8110/api/health`
+- [x] `ss -ltnp | grep -E ':8110|:8111'`
+- [x] `select datname from pg_database where datname in ('doitmd_dev','doitmd_prod')`
 
 Results:
 
@@ -137,7 +144,14 @@ Results:
 - GitHub branch protection for `main` was applied successfully.
 - Simplified production workflow YAML parsed successfully.
 - DEV gates run `26301308121` passed after the simplification.
-- Live cleanup command failed because the SSH user lacks passwordless sudo for service cleanup.
+- Live cleanup completed after user ran the root script.
+- `doit-dev*` systemd units are not found.
+- `/srv/doit/dev` is absent.
+- Nginx config test passed; only production Doit Nginx sites remain.
+- Production service and reminders timer are active.
+- Production healthcheck returned `{"ok":true,...}`.
+- Port `8111` had one orphan `next-server` process with deleted cwd under `/srv/doit/dev`; it was stopped. Only port `8110` remains listening.
+- Database query returned only `doitmd_prod`; `doitmd_dev` is gone.
 
 Frontend evidence:
 
@@ -147,9 +161,9 @@ Frontend evidence:
 
 - Risk: Removing dev server resources is destructive.
   Mitigation: Limit commands to `doit-dev`, `/srv/doit/dev`, Nginx `doit-dev-tailscale`, and the dev DB name parsed from dev env.
-- Risk: Current SSH user lacks root privileges for service and filesystem cleanup.
-  Mitigation: Added `infra/scripts/remove-doit-dev-root.sh`; run it as root on the VPS to finish live cleanup.
+- Risk: Future deploy scripts may accidentally reintroduce a dev VPS runtime.
+  Mitigation: Removed versioned dev units/Nginx template and removed dev mode from deploy scripts.
 
 ## Next step
 
-Commit and push workflow changes, then run `sudo bash /srv/doit/prod/app/infra/scripts/remove-doit-dev-root.sh` on the VPS after the script is deployed to `main`, or run the local script content as root manually.
+Optionally remove redundant `push: [main]` triggers from standalone `Quality` and `Security` workflows if production pushes should only run `Deploy PROD`.
