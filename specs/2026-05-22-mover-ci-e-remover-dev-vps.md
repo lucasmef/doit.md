@@ -77,6 +77,7 @@ Answers:
 - 2026-05-22 12:00 - Added `infra/scripts/remove-doit-dev-root.sh` for root-only live cleanup.
 - 2026-05-22 12:00 - Identified dev database as `doitmd_dev` and dev role as `doit_dev` without printing credentials.
 - 2026-05-22 12:00 - Attempted live service cleanup, but `sudo -n systemctl disable --now doit-dev.service doit-dev-reminders.timer` requires a password and root SSH is blocked by tailnet policy.
+- 2026-05-22 12:05 - Pushed commit `1461028` to `dev`; GitHub run `26294700220` passed fully on GitHub-hosted runners.
 
 ## Decisions
 
@@ -118,6 +119,7 @@ Commands run:
 - [x] `git diff --check`
 - [x] `bash scripts/with-build-env.sh ci corepack pnpm --filter @doit/web exec tsc --noEmit`
 - [x] `ssh salomao-vps "sudo -n systemctl disable --now doit-dev.service doit-dev-reminders.timer ..."`
+- [x] `gh run watch 26294700220 --exit-status`
 
 Results:
 
@@ -125,6 +127,7 @@ Results:
 - Workflow YAML parsing passed.
 - Diff whitespace check passed with only CRLF warnings from Git.
 - CI-mode TypeScript check passed without reading VPS env.
+- GitHub DEV gates passed on `ubuntu-latest`: Quality Gate, Security Gate, Secret Scan, and DEV gates complete.
 - Live cleanup command failed because the SSH user lacks passwordless sudo for service cleanup.
 
 Frontend evidence:
