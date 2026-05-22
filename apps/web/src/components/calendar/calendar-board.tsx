@@ -59,12 +59,11 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
   const [showItems, setShowItems] = useState(!fullscreen)
   const [showEvents, setShowEvents] = useState(true)
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
-  const [creatingEvent, setCreatingEvent] = useState(false)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [openDayDate, setOpenDayDate] = useState<string | null>(null)
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([])
   const carouselRef = useRef<HTMLDivElement | null>(null)
-  const { setSelectedItemId } = useUI()
+  const { setSelectedItemId, openCalendarEventCapture } = useUI()
   const { prefs, update: updatePreferences } = usePreferences()
 
   const { from, to } = useMemo(() => {
@@ -200,7 +199,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
       </button>
       <button
         type="button"
-        onClick={() => setCreatingEvent(true)}
+        onClick={() => openCalendarEventCapture(selectedDate)}
         title="Criar evento no Google Calendar"
         className="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-2 py-1 font-mono text-[10px] font-medium text-brand-700 transition-colors hover:bg-brand-50"
       >
@@ -250,24 +249,46 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
   )
 
   const fullscreenMenuButton = (
-    <button
-      type="button"
-      onClick={() => setFiltersOpen(true)}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-navy-600 transition-colors hover:bg-surface-soft"
-      aria-label="Abrir configuracoes do calendario"
-      title="Menu"
-    >
-      <svg
-        className="h-5 w-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={1.8}
-        aria-hidden="true"
+    <div className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        onClick={() => setFiltersOpen(true)}
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-navy-600 transition-colors hover:bg-surface-soft"
+        aria-label="Abrir configuracoes do calendario"
+        title="Menu"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
-      </svg>
-    </button>
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        onClick={goToToday}
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-navy-600 transition-colors hover:bg-surface-soft"
+        aria-label="Voltar para o mes atual"
+        title="Mes atual"
+      >
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          aria-hidden="true"
+        >
+          <rect x="3" y="5" width="18" height="16" rx="2" />
+          <path strokeLinecap="round" d="M3 9h18M8 3v4M16 3v4" />
+          <circle cx="12" cy="14" r="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
+    </div>
   )
 
   const fullscreenMonthSelector = (
@@ -345,17 +366,6 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
             onClose={() => setOpenEvent(null)}
           />
         ) : null}
-        {creatingEvent ? (
-          <NewEventSheet
-            selectedDate={selectedDate}
-            calendars={calendars}
-            onSaved={(event) => {
-              setCreatingEvent(false)
-              setOpenEvent(event)
-            }}
-            onClose={() => setCreatingEvent(false)}
-          />
-        ) : null}
         {filtersOpen ? (
           <CalendarFilterSheet
             calendars={calendars}
@@ -375,7 +385,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
             }
             onCreateEvent={() => {
               setFiltersOpen(false)
-              setCreatingEvent(true)
+              openCalendarEventCapture(selectedDate)
             }}
           />
         ) : null}
@@ -512,17 +522,6 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
           onClose={() => setOpenEvent(null)}
         />
       ) : null}
-      {creatingEvent ? (
-        <NewEventSheet
-          selectedDate={selectedDate}
-          calendars={calendars}
-          onSaved={(event) => {
-            setCreatingEvent(false)
-            setOpenEvent(event)
-          }}
-          onClose={() => setCreatingEvent(false)}
-        />
-      ) : null}
       {filtersOpen ? (
         <CalendarFilterSheet
           calendars={calendars}
@@ -540,7 +539,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
           }
           onCreateEvent={() => {
             setFiltersOpen(false)
-            setCreatingEvent(true)
+            openCalendarEventCapture(selectedDate)
           }}
         />
       ) : null}

@@ -6,6 +6,7 @@ import { UIContext, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
 import { archiveItem, createItem } from '@/hooks/use-items'
+import { toLocalDateKey } from '@doit/core'
 
 async function archiveIfStillEmpty(id: string) {
   try {
@@ -30,6 +31,8 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [quickCaptureEditId, setQuickCaptureEditId] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [calendarEventCaptureOpen, setCalendarEventCaptureOpen] = useState(false)
+  const [calendarEventCaptureDate, setCalendarEventCaptureDate] = useState<string | null>(null)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([])
   const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null)
@@ -134,6 +137,11 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new Event('doit:focus-search'))
   }, [])
 
+  const openCalendarEventCapture = useCallback((date?: string | null) => {
+    setCalendarEventCaptureDate(date ?? toLocalDateKey(new Date()))
+    setCalendarEventCaptureOpen(true)
+  }, [])
+
   const goTo = useCallback((href: string) => {
     router.push(href)
   }, [router])
@@ -162,6 +170,7 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         if (shortcutsOpen) { setShortcutsOpen(false); return }
         if (selectedItemIds.length > 1) { clearSelection(); return }
         if (quickCaptureOpen) { setQuickCaptureOpen(false); return }
+        if (calendarEventCaptureOpen) { setCalendarEventCaptureOpen(false); return }
         if (calendarOpen) { setCalendarOpen(false); return }
         if (selectedItemId) setSingleSelection(null)
       },
@@ -169,6 +178,13 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     {
       key: 'q',
       handler: (e) => { e.preventDefault(); setQuickCaptureOpen(true) },
+    },
+    {
+      key: 'c',
+      handler: (e) => {
+        e.preventDefault()
+        openCalendarEventCapture()
+      },
     },
     {
       key: 'w',
@@ -262,6 +278,10 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         setEditingItemId,
         calendarOpen,
         setCalendarOpen,
+        calendarEventCaptureOpen,
+        calendarEventCaptureDate,
+        openCalendarEventCapture,
+        setCalendarEventCaptureOpen,
         shortcutsOpen,
         setShortcutsOpen,
         markPendingEmptyNote,

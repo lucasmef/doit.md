@@ -509,6 +509,7 @@ export function QuickCapture() {
     setQuickCaptureEditId,
     setSingleSelection,
     markPendingEmptyNote,
+    openCalendarEventCapture,
   } = useUI()
   const editMode = !!quickCaptureEditId
   const isOpen = quickCaptureOpen || editMode
@@ -1038,19 +1039,35 @@ export function QuickCapture() {
               )}
               {isNote && <div className="min-w-0 flex-1" />}
               {canSwitchMode && (
-                <button
-                  type="button"
-                  title={isNote ? 'Trocar para tarefa' : 'Trocar para nota'}
-                  onClick={() => handleComplexityChange(isNote ? 'task' : 'note')}
-                  className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
-                    isNote
-                      ? 'border-ui-border-selected bg-surface-selected text-brand-700'
-                      : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
-                  }`}
-                >
-                  <IconNote className="h-3.5 w-3.5" />
-                  Nota
-                </button>
+                <div className="flex shrink-0 items-center overflow-hidden rounded-[10px] border border-ui-border-soft bg-surface-soft">
+                  <button
+                    type="button"
+                    title={isNote ? 'Trocar para tarefa' : 'Trocar para nota'}
+                    onClick={() => handleComplexityChange(isNote ? 'task' : 'note')}
+                    className={`inline-flex h-8 w-9 items-center justify-center transition-colors ${
+                      isNote
+                        ? 'bg-surface-selected text-brand-700'
+                        : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                    }`}
+                    aria-label={isNote ? 'Trocar para tarefa' : 'Trocar para nota'}
+                  >
+                    <IconNote className="h-3.5 w-3.5" />
+                  </button>
+                  {!editMode && (
+                    <button
+                      type="button"
+                      title="Criar evento de calendario"
+                      onClick={() => {
+                        closeAll()
+                        openCalendarEventCapture(dueDate || null)
+                      }}
+                      className="inline-flex h-8 w-9 items-center justify-center border-l border-ui-border-soft text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                      aria-label="Criar evento de calendario"
+                    >
+                      <IconCalendar className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               )}
               {isNote && (
                 <button

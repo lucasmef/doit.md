@@ -30,6 +30,10 @@ export type UIState = {
   setEditingItemId: (id: string | null) => void
   calendarOpen: boolean
   setCalendarOpen: (open: boolean) => void
+  calendarEventCaptureOpen: boolean
+  calendarEventCaptureDate: string | null
+  openCalendarEventCapture: (date?: string | null) => void
+  setCalendarEventCaptureOpen: (open: boolean) => void
   shortcutsOpen: boolean
   setShortcutsOpen: (open: boolean) => void
   markPendingEmptyNote: (id: string | null) => void
@@ -57,6 +61,10 @@ export const UIContext = createContext<UIState>({
   setEditingItemId: () => {},
   calendarOpen: false,
   setCalendarOpen: () => {},
+  calendarEventCaptureOpen: false,
+  calendarEventCaptureDate: null,
+  openCalendarEventCapture: () => {},
+  setCalendarEventCaptureOpen: () => {},
   shortcutsOpen: false,
   setShortcutsOpen: () => {},
   markPendingEmptyNote: () => {},
