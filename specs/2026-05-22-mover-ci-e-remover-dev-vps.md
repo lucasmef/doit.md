@@ -80,6 +80,7 @@ Answers:
 - 2026-05-22 12:05 - Pushed commit `1461028` to `dev`; GitHub run `26294700220` passed fully on GitHub-hosted runners.
 - 2026-05-22 12:15 - Protected `main` on GitHub: PR required, required checks `Type Check, Lint & Build`, `Dependency Audit`, and `Secret Scan`, admin enforcement enabled, force pushes/deletions disabled, conversation resolution required.
 - 2026-05-22 12:20 - Simplified `Deploy PROD` to deploy only; duplicated quality/security/secret scan jobs were removed because `main` is protected by required checks.
+- 2026-05-22 14:05 - Pushed commit `f8e8fe5`; DEV gates run `26301308121` passed after production workflow simplification.
 
 ## Decisions
 
@@ -123,6 +124,8 @@ Commands run:
 - [x] `ssh salomao-vps "sudo -n systemctl disable --now doit-dev.service doit-dev-reminders.timer ..."`
 - [x] `gh run watch 26294700220 --exit-status`
 - [x] `gh api --method PUT repos/lucasmef/doit.md/branches/main/protection --input -`
+- [x] `pnpm dlx js-yaml .github/workflows/deploy-prod.yml`
+- [x] `gh run watch 26301308121 --exit-status`
 
 Results:
 
@@ -132,6 +135,8 @@ Results:
 - CI-mode TypeScript check passed without reading VPS env.
 - GitHub DEV gates passed on `ubuntu-latest`: Quality Gate, Security Gate, Secret Scan, and DEV gates complete.
 - GitHub branch protection for `main` was applied successfully.
+- Simplified production workflow YAML parsed successfully.
+- DEV gates run `26301308121` passed after the simplification.
 - Live cleanup command failed because the SSH user lacks passwordless sudo for service cleanup.
 
 Frontend evidence:
