@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useItem, updateItem, archiveItem, useItems } from '@/hooks/use-items'
+import { usePreferences } from '@/hooks/use-preferences'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
@@ -370,6 +371,7 @@ function ToolButton({
 export function ItemDetail() {
   const pathname = usePathname()
   const { selectedItemId, setSelectedItemId } = useUI()
+  const { prefs } = usePreferences()
   const { item, isLoading } = useItem(selectedItemId)
   const { projects } = useProjects()
   const { items } = useItems()
@@ -479,6 +481,16 @@ export function ItemDetail() {
   }, [content])
 
   const activeProjects = projects.filter((p) => p.status !== 'archived')
+  const noteBackdropStyle = {
+    '--item-detail-sidebar-offset': prefs.sidebarCollapsed ? '68px' : '260px',
+  } as CSSProperties
+  const noteFullscreenStyle = {
+    ...noteBackdropStyle,
+    paddingTop: 'env(safe-area-inset-top, 0px)',
+    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+    paddingLeft: 'env(safe-area-inset-left, 0px)',
+    paddingRight: 'env(safe-area-inset-right, 0px)',
+  } as CSSProperties
   const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
   const tagList = useMemo(() => parseTags(tags), [tags])
   const knownTags = useMemo(() => {
@@ -849,20 +861,16 @@ export function ItemDetail() {
     return (
       <>
         <div
-          className="fixed inset-0 z-[55] hidden lg:block lg:left-[260px]"
+          className="fixed inset-0 z-[55] hidden lg:block lg:left-[var(--item-detail-sidebar-offset)]"
+          style={noteBackdropStyle}
           onClick={() => void flushAndClose()}
           aria-hidden="true"
         />
         <div
-          className="fixed inset-0 z-[60] flex flex-col bg-white lg:left-[260px] lg:border-l lg:border-ui-border"
+          className="fixed inset-0 z-[60] flex flex-col bg-white lg:left-[var(--item-detail-sidebar-offset)] lg:border-l lg:border-ui-border"
           role="dialog"
           aria-modal="true"
-          style={{
-            paddingTop: 'env(safe-area-inset-top, 0px)',
-            paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-            paddingLeft: 'env(safe-area-inset-left, 0px)',
-            paddingRight: 'env(safe-area-inset-right, 0px)',
-          }}
+          style={noteFullscreenStyle}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault()
