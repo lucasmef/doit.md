@@ -4,6 +4,28 @@ import useSWR, { mutate as globalMutate } from 'swr'
 import type { CalendarEvent, GoogleCalendar } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
+const CALENDARS_CACHE_KEY = 'doit:google-calendars-cache'
+
+function readCachedCalendars(): GoogleCalendar[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(CALENDARS_CACHE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as unknown
+    return Array.isArray(parsed) ? (parsed as GoogleCalendar[]) : []
+  } catch {
+    return []
+  }
+}
+
+function writeCachedCalendars(calendars: GoogleCalendar[]) {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(CALENDARS_CACHE_KEY, JSON.stringify(calendars))
+  } catch {
+    // ignore quota errors
+  }
+}
 
 export function useCalendarEvents(from?: string, to?: string) {
   const params = new URLSearchParams()
@@ -23,6 +45,10 @@ export function useGoogleCalendars() {
   const { data, error, isLoading } = useSWR<{ calendars: GoogleCalendar[] }>(
     '/api/calendar/calendars',
     fetcher,
+    {
+      fallbackData: { calendars: readCachedCalendars() },
+      onSuccess: (result) => writeCachedCalendars(result.calendars ?? []),
+    },
   )
   return {
     calendars: data?.calendars ?? [],

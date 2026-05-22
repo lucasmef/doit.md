@@ -2,6 +2,7 @@ import { AppChrome } from '@/components/layout/app-chrome'
 import { ItemDetail } from '@/components/items/item-detail'
 import { BulkActionBar, ItemContextMenu } from '@/components/items/bulk-actions'
 import { QuickCapture } from '@/components/items/quick-capture'
+import { CalendarEventCapture } from '@/components/calendar/calendar-event-capture'
 import { ShortcutHelpModal } from '@/components/layout/shortcut-help-modal'
 import { UIProvider } from '@/store/ui-provider'
 import { ToastProvider } from '@/components/ui/toast'
@@ -16,6 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <ItemDetail />
           <QuickCapture />
+          <CalendarEventCapture />
           <ItemContextMenu />
           <BulkActionBar />
           <ShortcutHelpModal />

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/components/ui/toast'
-import { syncGoogleCalendar } from '@/hooks/use-calendar-events'
+import { syncGoogleCalendar, useGoogleCalendars } from '@/hooks/use-calendar-events'
 import { usePushNotifications } from '@/hooks/use-push-notifications'
 import { ArchiveSection } from '@/components/archive/archive-section'
 import { AuditSection } from '@/components/audit/audit-section'
@@ -62,6 +62,7 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string[]; lab
       { keys: ['Shift', '?'], label: 'Mostrar atalhos' },
       { keys: ['Q'], label: 'Nova tarefa' },
       { keys: ['W'], label: 'Nova nota' },
+      { keys: ['C'], label: 'Novo evento de calendario' },
       { keys: ['Ctrl/Cmd', 'K'], label: 'Buscar' },
       { keys: ['H'], label: 'Ir para Hoje' },
       { keys: ['P'], label: 'Ir para Próximos' },
@@ -152,6 +153,11 @@ function ShortcutsSection() {
 
 function AppearanceSection() {
   const { prefs, update } = usePreferences()
+  const { calendars } = useGoogleCalendars()
+  const writableCalendars = calendars.filter(
+    (calendar) =>
+      !calendar.accessRole || calendar.accessRole === 'owner' || calendar.accessRole === 'writer',
+  )
   const recommendedMobileNav: MobileNavItemId[] = [
     'today',
     'calendar',
@@ -317,30 +323,70 @@ function AppearanceSection() {
         <div className="border-b border-ui-border-soft px-5 py-4">
           <h2 className="text-sm font-semibold text-slate-700">Calendario</h2>
           <p className="mt-0.5 text-xs text-slate-400">
-            Ajuste a organizacao da grade mensal.
+            Ajuste a organizacao da grade mensal e a criacao de eventos.
           </p>
         </div>
-        <div className="px-5 py-5">
-          <span className="block text-sm font-medium text-slate-800">Primeiro dia da semana</span>
-          <div className="mt-2 grid max-w-sm grid-cols-2 gap-2">
-            {[
-              { value: 'monday' as const, label: 'Segunda' },
-              { value: 'sunday' as const, label: 'Domingo' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => update({ calendarWeekStartsOn: option.value })}
-                className={`h-10 rounded-lg border px-3 text-sm font-semibold ${
-                  prefs.calendarWeekStartsOn === option.value
-                    ? 'border-brand-200 bg-brand-50 text-navy-900'
-                    : 'border-ui-border bg-white text-navy-500 hover:bg-surface-soft'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+        <div className="grid gap-5 px-5 py-5 lg:grid-cols-3">
+          <div>
+            <span className="block text-sm font-medium text-slate-800">
+              Primeiro dia da semana
+            </span>
+            <div className="mt-2 grid max-w-sm grid-cols-2 gap-2">
+              {[
+                { value: 'monday' as const, label: 'Segunda' },
+                { value: 'sunday' as const, label: 'Domingo' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => update({ calendarWeekStartsOn: option.value })}
+                  className={`h-10 rounded-lg border px-3 text-sm font-semibold ${
+                    prefs.calendarWeekStartsOn === option.value
+                      ? 'border-brand-200 bg-brand-50 text-navy-900'
+                      : 'border-ui-border bg-white text-navy-500 hover:bg-surface-soft'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-800">Calendario padrao</span>
+            <select
+              value={prefs.defaultCalendarId}
+              onChange={(event) => update({ defaultCalendarId: event.target.value })}
+              className="mt-2 h-10 w-full rounded-lg border border-ui-border bg-white px-3 text-sm text-navy-900 outline-none focus:border-brand-300"
+            >
+              <option value="primary">Principal</option>
+              {writableCalendars.map((calendar) => (
+                <option key={calendar.id} value={calendar.id}>
+                  {calendar.summary}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-800">Duracao padrao</span>
+            <div className="mt-2 flex items-center gap-2">
+              <input
+                type="number"
+                min={5}
+                max={480}
+                step={5}
+                value={prefs.defaultCalendarEventDurationMinutes}
+                onChange={(event) =>
+                  update({
+                    defaultCalendarEventDurationMinutes: Number(event.target.value),
+                  })
+                }
+                className="h-10 w-24 rounded-lg border border-ui-border bg-white px-3 text-sm text-navy-900 outline-none focus:border-brand-300"
+              />
+              <span className="text-sm text-slate-500">min</span>
+            </div>
+          </label>
         </div>
       </div>
 
