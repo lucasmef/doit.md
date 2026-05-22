@@ -2,7 +2,7 @@
 
 ## Arquitetura
 
-O Doit roda no mesmo VPS do Salomao usando o self-hosted runner do GitHub Actions, systemd e o Nginx do host.
+O Doit roda em producao no mesmo VPS do Salomao usando systemd e o Nginx do host. Os gates de CI rodam em GitHub-hosted runners; o self-hosted runner da VPS fica restrito ao deploy de producao.
 
 Nao usar o `docker-compose.yml` para producao neste VPS compartilhado, porque ele tenta subir um Nginx proprio nas portas `80/443`.
 
@@ -15,7 +15,7 @@ Nao usar o `docker-compose.yml` para producao neste VPS compartilhado, porque el
 | main git | Branch `main` no GitHub | Fonte de producao | Sim |
 | main vps | `/srv/doit/prod/app` na VPS | Runtime de producao | Sim |
 
-Nao existe ambiente `dev` ativo na VPS no fluxo padrao. Qualquer arquivo legado de `dev` na VPS e historico ou auxiliar de rollback, nao uma etapa normal de deploy.
+Nao existe ambiente `dev` ativo na VPS no fluxo padrao.
 
 ## Fluxo
 
@@ -45,12 +45,14 @@ dev git
   -> scan de secrets
 ```
 
+Os gates usam `ubuntu-latest` e `scripts/with-build-env.sh ci`, que define valores dummy nao secretos para validacao de build. CI nao deve ler `/srv/doit/prod/doit-config/web.env`.
+
 Deploy de producao acontece a partir de `main`:
 
 ```text
 push main ou workflow_dispatch Deploy PROD
-  -> quality gate em main
-  -> security gate em main
+  -> quality gate em main no GitHub-hosted runner
+  -> security gate em main no GitHub-hosted runner
   -> rsync para /srv/doit/prod/app
   -> scripts/deploy.sh prod
 ```

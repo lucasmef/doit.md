@@ -15,7 +15,7 @@ concurrency:
 jobs:
   quality:
     name: Quality Gate
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,11 +25,11 @@ jobs:
       - run: corepack pnpm install --frozen-lockfile
       - run: corepack pnpm --filter @doit/web exec tsc --noEmit
       - run: bash scripts/lint-incremental.sh
-      - run: bash scripts/with-build-env.sh prod corepack pnpm --filter @doit/web build
+      - run: bash scripts/with-build-env.sh ci corepack pnpm --filter @doit/web build
 
   security:
     name: Security Gate
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,7 +40,7 @@ jobs:
 
   scan-secrets:
     name: Secret Scan
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,7 +57,7 @@ jobs:
   resolve-sha:
     name: Resolve main SHA
     needs: [quality, security, scan-secrets]
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.resolve.outputs.sha }}
     steps:

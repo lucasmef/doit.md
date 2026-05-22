@@ -93,9 +93,53 @@ change on local dev
 ### Risks
 
 - There is no persistent remote dev environment for browser testing.
-- Existing legacy dev VPS scripts or systemd units may remain for rollback or historical reference.
 
 ### Alternatives considered
 
 - Keep a dev VPS environment behind Tailscale.
 - Keep manual production promotion from `dev` inside the deploy workflow.
+
+---
+
+## ADR-003 - CI off production VPS
+
+Status: active
+Date: 2026-05-22
+
+### Context
+
+The self-hosted GitHub Actions runner shares the same VPS as the production Doit runtime. Build and audit jobs consumed enough memory to cause a failed `next build` gate with `SIGKILL`.
+
+The VPS should be treated as production runtime and deploy target, not as the normal CI execution host.
+
+### Decision
+
+Run CI gates on GitHub-hosted Linux runners:
+
+- typecheck
+- incremental lint
+- production build validation with non-secret CI environment values
+- dependency audit
+- secret scan
+
+Keep only the production deploy job on the self-hosted VPS runner. The deploy job runs only for `main` and uses `/srv/doit/prod/doit-config/web.env`.
+
+Remove the remote Doit dev environment from the VPS, including versioned dev systemd/Nginx templates and live `doit-dev` runtime resources.
+
+### Consequences
+
+- CI no longer competes with production runtime memory and CPU on the VPS.
+- CI no longer needs access to production environment files.
+- The VPS has one Doit runtime: production.
+- GitHub-hosted Actions minutes are consumed for gates.
+
+### Risks
+
+- GitHub-hosted runner usage may count against private repository Actions minutes.
+- Production deploy still performs install/build on the VPS unless a later artifact-based deploy replaces it.
+
+### Alternatives considered
+
+- Keep self-hosted CI and increase VPS memory/swap.
+- Add a second self-hosted runner on another machine.
+- Build deploy artifacts on GitHub-hosted runners and copy only artifacts to the VPS.

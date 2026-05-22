@@ -3,9 +3,8 @@
 
 set -euo pipefail
 
-TARGET_ENV="${1:?Usage: $0 <dev|prod>}"
+TARGET_ENV="${1:?Usage: $0 <prod>}"
 PORT="${2:-}"
-STANDBY_DEV="${DOIT_DEV_STANDBY:-0}"
 
 case "$TARGET_ENV" in
   prod)
@@ -14,14 +13,8 @@ case "$TARGET_ENV" in
     SERVICE_NAME="${DOIT_PROD_SERVICE:-doit.service}"
     PORT="${PORT:-8110}"
     ;;
-  dev)
-    APP_DIR="${DOIT_DEV_APP_DIR:-/srv/doit/dev/app}"
-    ENV_FILE="${DOIT_DEV_ENV_FILE:-/srv/doit/dev/doit-config/web.env}"
-    SERVICE_NAME="${DOIT_DEV_SERVICE:-doit-dev.service}"
-    PORT="${PORT:-8111}"
-    ;;
   *)
-    echo "Environment must be 'dev' or 'prod'."
+    echo "Environment must be 'prod'."
     exit 1
     ;;
 esac
@@ -55,82 +48,6 @@ require_env_key() {
   if [[ -z "$value" || "$value" =~ ^\<.*\>$ ]]; then
     echo "Required env key missing, placeholder, or empty in $ENV_FILE: $key"
     exit 1
-  fi
-}
-
-generate_secret() {
-  if command -v openssl >/dev/null 2>&1; then
-    openssl rand -base64 48
-    return
-  fi
-
-  if command -v node >/dev/null 2>&1; then
-    node -e "process.stdout.write(require('crypto').randomBytes(48).toString('base64'))"
-    return
-  fi
-
-  echo "Required command not found: openssl or node"
-  exit 1
-}
-
-write_env_key() {
-  local key="$1"
-  local value="$2"
-  local temp_file
-  temp_file="$(mktemp)"
-
-  if grep -q "^${key}=" "$ENV_FILE"; then
-    awk -v key="$key" -v value="$value" 'BEGIN { FS = OFS = "=" } $1 == key { $0 = key "=" value } { print }' "$ENV_FILE" > "$temp_file"
-  else
-    cat "$ENV_FILE" > "$temp_file"
-    printf '\n%s=%s\n' "$key" "$value" >> "$temp_file"
-  fi
-
-  cat "$temp_file" > "$ENV_FILE"
-  rm -f "$temp_file"
-}
-
-ensure_dev_nextauth_secret() {
-  if [[ "$TARGET_ENV" != "dev" ]]; then
-    return
-  fi
-
-  if [[ -n "$(read_env_value NEXTAUTH_SECRET)" ]]; then
-    return
-  fi
-
-  echo "NEXTAUTH_SECRET missing in dev env; generating a persistent secret."
-  write_env_key NEXTAUTH_SECRET "$(generate_secret)"
-}
-
-ensure_dev_default_url_env() {
-  if [[ "$TARGET_ENV" != "dev" ]]; then
-    return
-  fi
-
-  local nextauth_url
-  local google_redirect_uri
-  nextauth_url="$(read_env_value NEXTAUTH_URL)"
-  google_redirect_uri="$(read_env_value GOOGLE_REDIRECT_URI)"
-
-  if [[ -n "$nextauth_url" && -n "$google_redirect_uri" ]]; then
-    return
-  fi
-
-  local dev_url="${DOIT_DEV_PUBLIC_URL:-}"
-  if [[ -z "$dev_url" ]]; then
-    echo "DOIT_DEV_PUBLIC_URL is required for dev deploy when NEXTAUTH_URL or GOOGLE_REDIRECT_URI are missing."
-    exit 1
-  fi
-
-  if [[ -z "$nextauth_url" ]]; then
-    echo "NEXTAUTH_URL missing in dev env; using $dev_url."
-    write_env_key NEXTAUTH_URL "$dev_url"
-  fi
-
-  if [[ -z "$google_redirect_uri" ]]; then
-    echo "GOOGLE_REDIRECT_URI missing in dev env; using $dev_url/api/google/callback."
-    write_env_key GOOGLE_REDIRECT_URI "$dev_url/api/google/callback"
   fi
 }
 
@@ -257,16 +174,12 @@ require_file "$APP_DIR/package.json" "repository package.json"
 require_file "$APP_DIR/apps/web/package.json" "web package.json"
 require_file "$ENV_FILE" "runtime env file"
 
-ensure_dev_nextauth_secret
-ensure_dev_default_url_env
 require_env_key DATABASE_URL
 require_env_key NEXTAUTH_SECRET
 require_env_key NEXTAUTH_URL
-if [[ "$TARGET_ENV" == "prod" ]]; then
-  require_env_key NEXT_PUBLIC_VAPID_PUBLIC_KEY
-  require_env_key VAPID_PRIVATE_KEY
-  require_env_key VAPID_EMAIL
-fi
+require_env_key NEXT_PUBLIC_VAPID_PUBLIC_KEY
+require_env_key VAPID_PRIVATE_KEY
+require_env_key VAPID_EMAIL
 
 echo "======================================================"
 echo "Deploying doit.md to $TARGET_ENV"
@@ -297,13 +210,6 @@ fi
 
 cd "$APP_DIR"
 
-if [[ "$TARGET_ENV" == "dev" && "$STANDBY_DEV" == "1" ]]; then
-  echo "Dev standby requested; stopping $SERVICE_NAME before install/build to free RAM."
-  if ! sudo -n systemctl stop "$SERVICE_NAME" 2>/dev/null; then
-    echo "Warning: no non-interactive sudo permission to stop $SERVICE_NAME; continuing without restarting dev."
-  fi
-fi
-
 echo "Installing dependencies..."
 "${PNPM_CMD[@]}" install --frozen-lockfile --prod=false
 
@@ -320,18 +226,6 @@ fi
 
 echo "Cleaning orphan listeners on port $PORT..."
 cleanup_orphan_listener "$PORT"
-
-if [[ "$TARGET_ENV" == "dev" && "$STANDBY_DEV" == "1" ]]; then
-  echo "Dev standby requested; stopping $SERVICE_NAME and skipping restart/healthcheck."
-  if ! sudo -n systemctl daemon-reload 2>/dev/null; then
-    echo "Warning: no non-interactive sudo permission to reload systemd; continuing without restarting dev."
-  fi
-  if ! sudo -n systemctl stop "$SERVICE_NAME" 2>/dev/null; then
-    echo "Warning: no non-interactive sudo permission to stop $SERVICE_NAME; use docs/dev-standby.md for manual standby commands."
-  fi
-  echo "Deploy prepared: dev build is updated without restarting $SERVICE_NAME."
-  exit 0
-fi
 
 echo "Restarting service $SERVICE_NAME..."
 sudo systemctl daemon-reload

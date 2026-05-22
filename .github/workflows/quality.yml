@@ -11,7 +11,7 @@ jobs:
   quality:
     name: Type Check, Lint & Build
     # Roda no runner da própria VPS
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -30,4 +30,4 @@ jobs:
         run: bash scripts/lint-incremental.sh
 
       - name: Build
-        run: bash scripts/with-build-env.sh prod corepack pnpm --filter @doit/web build
+        run: bash scripts/with-build-env.sh ci corepack pnpm --filter @doit/web build
