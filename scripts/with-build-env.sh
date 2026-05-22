@@ -30,11 +30,12 @@ source "$ENV_FILE"
 set +a
 
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
+DOIT_NODE_MAX_OLD_SPACE_SIZE="${DOIT_NODE_MAX_OLD_SPACE_SIZE:-2048}"
 if [[ "${NODE_OPTIONS:-}" != *"--max-old-space-size="* ]]; then
   if [[ -n "${NODE_OPTIONS:-}" ]]; then
-    export NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=2304"
+    export NODE_OPTIONS="$NODE_OPTIONS --max-old-space-size=$DOIT_NODE_MAX_OLD_SPACE_SIZE"
   else
-    export NODE_OPTIONS="--max-old-space-size=2304"
+    export NODE_OPTIONS="--max-old-space-size=$DOIT_NODE_MAX_OLD_SPACE_SIZE"
   fi
 else
   export NODE_OPTIONS
