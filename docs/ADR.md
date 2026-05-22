@@ -122,7 +122,7 @@ Run CI gates on GitHub-hosted Linux runners:
 - dependency audit
 - secret scan
 
-Keep only the production deploy job on the self-hosted VPS runner. The deploy job runs only for `main` and uses `/srv/doit/prod/doit-config/web.env`.
+Keep only the production deploy job on the self-hosted VPS runner. The deploy job runs only for `main` and uses `/srv/doit/prod/doit-config/web.env`. `main` is protected with required PR checks, so the production workflow does not repeat CI gates.
 
 Remove the remote Doit dev environment from the VPS, including versioned dev systemd/Nginx templates and live `doit-dev` runtime resources.
 
@@ -137,6 +137,7 @@ Remove the remote Doit dev environment from the VPS, including versioned dev sys
 
 - GitHub-hosted runner usage may count against private repository Actions minutes.
 - Production deploy still performs install/build on the VPS unless a later artifact-based deploy replaces it.
+- Direct changes to `main` depend on GitHub branch protection remaining enabled.
 
 ### Alternatives considered
 

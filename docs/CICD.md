@@ -51,8 +51,7 @@ Deploy de producao acontece a partir de `main`:
 
 ```text
 push main ou workflow_dispatch Deploy PROD
-  -> quality gate em main no GitHub-hosted runner
-  -> security gate em main no GitHub-hosted runner
+  -> main ja protegido por PR + required checks
   -> rsync para /srv/doit/prod/app
   -> scripts/deploy.sh prod
 ```

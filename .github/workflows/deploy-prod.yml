@@ -13,68 +13,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  quality:
-    name: Quality Gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-      - run: corepack prepare pnpm@9.0.0 --activate
-      - run: corepack pnpm install --frozen-lockfile
-      - run: corepack pnpm --filter @doit/web exec tsc --noEmit
-      - run: bash scripts/lint-incremental.sh
-      - run: bash scripts/with-build-env.sh ci corepack pnpm --filter @doit/web build
-
-  security:
-    name: Security Gate
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-      - run: corepack prepare pnpm@9.0.0 --activate
-      - run: corepack pnpm install --frozen-lockfile
-      - run: corepack pnpm audit --audit-level high
-
-  scan-secrets:
-    name: Secret Scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-      - name: Secret pattern scan
-        run: |
-          SECRET_PATTERN='(s[k]_live_|s[k]_test_|p[k]_live_|p[k]_test_|GOCSP[X]-|mongo[d]b\+srv://[^[:space:]]+:[^[:space:]@]+@)'
-          if git grep -n -I -E "$SECRET_PATTERN" -- ':!*.example' ':!pnpm-lock.yaml'; then
-            echo "Potential committed secret found."
-            exit 1
-          fi
-
-  resolve-sha:
-    name: Resolve main SHA
-    needs: [quality, security, scan-secrets]
-    runs-on: ubuntu-latest
-    outputs:
-      sha: ${{ steps.resolve.outputs.sha }}
-    steps:
-      - name: Checkout branch main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Resolve deployed SHA
-        id: resolve
-        run: |
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
   deploy:
     name: Deploy PROD
-    needs: resolve-sha
     runs-on: self-hosted
 
     steps:
@@ -83,11 +23,12 @@ jobs:
         with:
           ref: main
           clean: true
+          fetch-depth: 0
 
-      - name: Validar commit promovido
+      - name: Validar checkout de main
         run: |
-          if [ "$(git rev-parse HEAD)" != "${{ needs.resolve-sha.outputs.sha }}" ]; then
-            echo "O checkout de main nao corresponde ao commit validado."
+          if [ "$(git rev-parse HEAD)" != "${{ github.sha }}" ]; then
+            echo "O checkout de main nao corresponde ao commit do workflow."
             exit 1
           fi
 
@@ -118,6 +59,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               ref: `refs/tags/${tag}`,
-              sha: '${{ needs.resolve-sha.outputs.sha }}',
+              sha: '${{ github.sha }}',
             })
             core.notice(`Tag criada: ${tag}`)

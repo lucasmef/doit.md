@@ -79,6 +79,7 @@ Answers:
 - 2026-05-22 12:00 - Attempted live service cleanup, but `sudo -n systemctl disable --now doit-dev.service doit-dev-reminders.timer` requires a password and root SSH is blocked by tailnet policy.
 - 2026-05-22 12:05 - Pushed commit `1461028` to `dev`; GitHub run `26294700220` passed fully on GitHub-hosted runners.
 - 2026-05-22 12:15 - Protected `main` on GitHub: PR required, required checks `Type Check, Lint & Build`, `Dependency Audit`, and `Secret Scan`, admin enforcement enabled, force pushes/deletions disabled, conversation resolution required.
+- 2026-05-22 12:20 - Simplified `Deploy PROD` to deploy only; duplicated quality/security/secret scan jobs were removed because `main` is protected by required checks.
 
 ## Decisions
 
@@ -93,7 +94,7 @@ Answers:
 ## Files changed
 
 - `.github/workflows/deploy-dev.yml` - run all dev gates on GitHub-hosted Linux runners.
-- `.github/workflows/deploy-prod.yml` - run pre-deploy gates on GitHub-hosted Linux runners; keep deploy on the self-hosted VPS runner.
+- `.github/workflows/deploy-prod.yml` - deploy only on the self-hosted VPS runner; CI gates are enforced by protected `main`.
 - `.github/workflows/quality.yml` - run quality workflow on GitHub-hosted Linux runners.
 - `.github/workflows/security.yml` - run security workflow on GitHub-hosted Linux runners.
 - `scripts/with-build-env.sh` - add safe `ci` build environment and remove dev env mode.
