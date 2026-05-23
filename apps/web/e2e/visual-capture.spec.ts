@@ -35,23 +35,39 @@ test('quick capture and calendar event surfaces render', async ({ page }, testIn
   })
 
   await page.keyboard.press('e')
-  await expect(page.getByRole('heading', { name: 'Novo evento' })).toBeVisible()
+  const isMobile = testInfo.project.name.includes('mobile')
 
-  const titleInput = page.getByPlaceholder('Evento hoje as 14h')
-  await titleInput.click()
-  await titleInput.pressSequentially('Reuniao hoje as 14h')
-  await expect(titleInput).toHaveValue('Reuniao hoje as 14h')
-  await expect(page.locator('input[type="time"]').first()).toHaveValue('14:00')
-  await expect(page.locator('input[type="time"]').nth(1)).toHaveValue('14:30')
+  const titleInput = isMobile
+    ? page.getByPlaceholder('Evento hoje as 14h').first()
+    : page.getByLabel('Titulo')
+  await expect(titleInput).toBeVisible()
+  if (isMobile) {
+    await expect(page.getByRole('button', { name: 'Criar' })).toBeDisabled()
+  }
   await page.screenshot({
     path: await artifactPath(projectName, '02-event-modal'),
   })
+  await titleInput.click()
+  await titleInput.pressSequentially('Reuniao hoje as 14h')
+  await expect(titleInput).toHaveValue('Reuniao hoje as 14h')
+  if (isMobile) {
+    await page.getByRole('button', { name: 'Expandir' }).click()
+    await expect(page.getByLabel('Titulo')).toBeVisible()
+  }
+  await expect(page.locator('input[type="time"]').first()).toHaveValue('14:00')
+  await expect(page.locator('input[type="time"]').nth(1)).toHaveValue('14:30')
 
-  await page.getByLabel('Fechar evento').click()
-  await expect(page.getByRole('heading', { name: 'Novo evento' })).toBeHidden()
+  await page.getByRole('button', { name: 'Cancelar' }).click()
+  await expect(page.getByLabel('Titulo')).toBeHidden()
 
   await page.keyboard.press('q')
-  await expect(page.getByPlaceholder('Nome da tarefa')).toBeVisible()
+  const taskInput = isMobile
+    ? page.getByPlaceholder('Nome da tarefa').first()
+    : page.getByRole('textbox', { name: 'Nome da tarefa' })
+  await expect(taskInput).toBeVisible()
+  if (isMobile) {
+    await expect(page.getByRole('button', { name: 'Adicionar' })).toBeDisabled()
+  }
   await expect(page.getByLabel('Capturar evento')).toBeVisible()
   await page.screenshot({
     path: await artifactPath(projectName, '03-quick-capture'),

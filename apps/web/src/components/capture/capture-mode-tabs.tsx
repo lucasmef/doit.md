@@ -46,9 +46,11 @@ export function CaptureModeTabs({
 export function createCaptureSwipeHandlers({
   mode,
   onModeChange,
+  onExpand,
 }: {
   mode: CaptureMode
   onModeChange: (mode: CaptureMode) => void
+  onExpand?: () => void
 }) {
   let startX = 0
   let startY = 0
@@ -70,6 +72,10 @@ export function createCaptureSwipeHandlers({
       if (!touch) return
       const deltaX = touch.clientX - startX
       const deltaY = touch.clientY - startY
+      if (deltaY < -64 && Math.abs(deltaY) > Math.abs(deltaX) * 1.2) {
+        onExpand?.()
+        return
+      }
       if (Math.abs(deltaX) < 56 || Math.abs(deltaX) < Math.abs(deltaY) * 1.2) return
 
       const index = MODES.findIndex((item) => item.mode === mode)
