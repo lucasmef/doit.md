@@ -12,6 +12,7 @@ import { isTypingTarget } from '@/hooks/use-keyboard'
 import { PRIORITY_CONFIG } from './priority-select'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
 import { RecurrencePopover } from './recurrence-popover'
+import { CaptureModeTabs, createCaptureSwipeHandlers } from '@/components/capture/capture-mode-tabs'
 import type { Priority } from './priority-select'
 import type { ItemComplexity, ItemRecurrence } from '@doit/types'
 import { formatRecurrenceLabel } from '@doit/core'
@@ -510,6 +511,8 @@ export function QuickCapture() {
     setSingleSelection,
     markPendingEmptyNote,
     openCalendarEventCapture,
+    captureMode,
+    openCapture,
   } = useUI()
   const editMode = !!quickCaptureEditId
   const isOpen = quickCaptureOpen || editMode
@@ -540,6 +543,17 @@ export function QuickCapture() {
   const selectedProject = activeProjects.find((p) => projectIdOf(p) === projectId)
   const isTodayContext = pathname === '/today'
   const isNote = complexity === 'note'
+  const swipeHandlers = createCaptureSwipeHandlers({
+    mode: isNote ? 'note' : 'task',
+    onModeChange: (nextMode) => {
+      if (nextMode === 'event') {
+        openCapture('event', dueDate || null)
+        return
+      }
+      openCapture(nextMode)
+      handleComplexityChange(nextMode)
+    },
+  })
 
   const knownTags = useMemo(() => {
     return Array.from(new Set(items.flatMap((item) => item.tags ?? []).map(normalizeToken))).sort()
@@ -613,17 +627,18 @@ export function QuickCapture() {
       } else if (quickCaptureOpen) {
         const draft = loadDraft()
         if (draft) {
+          const nextComplexity = captureMode === 'note' ? 'note' : 'task'
           setTitle(draft.title ?? '')
           setContentMd(draft.contentMd ?? '')
-          setComplexity(draft.complexity ?? 'task')
-          setDueDate(draft.dueDate ?? (isTodayContext ? todayDate() : ''))
-          setDueTime(draft.dueTime ?? '')
+          setComplexity(nextComplexity)
+          setDueDate(nextComplexity === 'task' ? draft.dueDate ?? (isTodayContext ? todayDate() : '') : '')
+          setDueTime(nextComplexity === 'task' ? draft.dueTime ?? '' : '')
           setProjectId(draft.projectId ?? quickCaptureFolderId ?? '')
           setTags(draft.tags ?? [])
           setPriority((draft.priority as Priority) ?? 4)
           setRecurrence((draft.recurrence as ItemRecurrence | '') ?? '')
         } else {
-          setComplexity('task')
+          setComplexity(captureMode === 'note' ? 'note' : 'task')
           setDueDate(isTodayContext ? todayDate() : '')
           if (quickCaptureFolderId) {
             setProjectId(quickCaptureFolderId)
@@ -662,7 +677,7 @@ export function QuickCapture() {
       setPopover(null)
       setQuickCaptureFolderId(null)
     }
-  }, [isOpen, editMode, editItem?.id, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
+  }, [isOpen, editMode, editItem?.id, captureMode, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
 
   useEffect(() => {
     if (!quickCaptureOpen || editMode) return
@@ -1001,6 +1016,7 @@ export function QuickCapture() {
       onClick={(e) => {
         if (e.target === e.currentTarget) closeAll()
       }}
+      {...swipeHandlers}
     >
       <div
         className={`w-full overflow-hidden border border-ui-border bg-white shadow-cool-lg sm:max-h-none sm:overflow-visible sm:rounded-xl ${
@@ -1013,6 +1029,21 @@ export function QuickCapture() {
           onSubmit={handleSubmit}
           className={`flex flex-col sm:max-h-none ${isNote ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
         >
+          {!editMode && (
+            <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-3">
+              <CaptureModeTabs
+                mode={isNote ? 'note' : 'task'}
+                onModeChange={(nextMode) => {
+                  if (nextMode === 'event') {
+                    openCapture('event', dueDate || null)
+                    return
+                  }
+                  openCapture(nextMode)
+                  handleComplexityChange(nextMode)
+                }}
+              />
+            </div>
+          )}
           <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5">
             <div className="flex items-center gap-3">
               {!isNote && (
@@ -1038,7 +1069,7 @@ export function QuickCapture() {
                 />
               )}
               {isNote && <div className="min-w-0 flex-1" />}
-              {canSwitchMode && (
+              {canSwitchMode && editMode && (
                 <div className="flex shrink-0 items-center overflow-hidden rounded-[10px] border border-ui-border-soft bg-surface-soft">
                   <button
                     type="button"

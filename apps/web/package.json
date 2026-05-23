@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test:visual": "playwright test e2e/visual-capture.spec.ts",
+    "playwright:install": "playwright install chromium",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
@@ -40,6 +43,7 @@
     "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/typography": "^0.5.19",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",

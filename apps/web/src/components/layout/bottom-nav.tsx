@@ -104,7 +104,7 @@ const MOBILE_NAV_DEF: Record<MobileNavItemId, { href: string; icon: React.ReactN
 
 export function BottomNav() {
   const pathname = usePathname()
-  const { quickCaptureOpen, quickCaptureEditId, selectedItemId, setQuickCaptureOpen } = useUI()
+  const { quickCaptureOpen, quickCaptureEditId, selectedItemId, openCapture } = useUI()
   const { prefs } = usePreferences()
   const overlayOpen = quickCaptureOpen || !!quickCaptureEditId || !!selectedItemId
 
@@ -146,7 +146,7 @@ export function BottomNav() {
         type="button"
         onClick={(event) => {
           event.stopPropagation()
-          setQuickCaptureOpen(true)
+          openCapture()
         }}
         className="flex min-h-[68px] flex-1 flex-col items-center justify-center"
         title="Novo item"

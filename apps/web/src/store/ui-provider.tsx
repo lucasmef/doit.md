@@ -1,11 +1,11 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
-import { UIContext, type ItemContextMenuState } from '@/store/ui'
+import { useRouter } from 'next/navigation'
+import { UIContext, type CaptureMode, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
-import { archiveItem, createItem } from '@/hooks/use-items'
+import { archiveItem } from '@/hooks/use-items'
 import { toLocalDateKey } from '@doit/core'
 
 async function archiveIfStillEmpty(id: string) {
@@ -23,10 +23,11 @@ async function archiveIfStillEmpty(id: string) {
 }
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname()
   const router = useRouter()
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
-  const [quickCaptureOpen, setQuickCaptureOpen] = useState(false)
+  const [quickCaptureOpen, setQuickCaptureOpenState] = useState(false)
+  const [captureMode, setCaptureMode] = useState<CaptureMode>('task')
+  const [lastCaptureMode, setLastCaptureMode] = useState<CaptureMode>('task')
   const [quickCaptureFolderId, setQuickCaptureFolderId] = useState<string | null>(null)
   const [quickCaptureEditId, setQuickCaptureEditId] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
@@ -137,30 +138,39 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     window.dispatchEvent(new Event('doit:focus-search'))
   }, [])
 
+  const setQuickCaptureOpen = useCallback((open: boolean) => {
+    if (open) {
+      setCaptureMode('task')
+      setLastCaptureMode('task')
+      setCalendarEventCaptureOpen(false)
+    }
+    setQuickCaptureOpenState(open)
+  }, [])
+
   const openCalendarEventCapture = useCallback((date?: string | null) => {
+    setCaptureMode('event')
+    setLastCaptureMode('event')
+    setQuickCaptureOpenState(false)
     setCalendarEventCaptureDate(date ?? toLocalDateKey(new Date()))
     setCalendarEventCaptureOpen(true)
   }, [])
 
+  const openCapture = useCallback((mode: CaptureMode = lastCaptureMode, date?: string | null) => {
+    setCaptureMode(mode)
+    setLastCaptureMode(mode)
+    if (mode === 'event') {
+      setQuickCaptureOpenState(false)
+      setCalendarEventCaptureDate(date ?? toLocalDateKey(new Date()))
+      setCalendarEventCaptureOpen(true)
+      return
+    }
+    setCalendarEventCaptureOpen(false)
+    setQuickCaptureOpenState(true)
+  }, [lastCaptureMode])
+
   const goTo = useCallback((href: string) => {
     router.push(href)
   }, [router])
-
-  function openNewNote() {
-    const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
-    const folderId = folderMatch?.[1]
-    void createItem({
-      complexity: 'note',
-      title: '',
-      contentMd: '',
-      folderId,
-    }).then((item) => {
-      if (item?.id) {
-        markPendingEmptyNote(item.id)
-        setSingleSelection(item.id)
-      }
-    })
-  }
 
   useKeyboard([
     {
@@ -177,20 +187,20 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     },
     {
       key: 'q',
-      handler: (e) => { e.preventDefault(); setQuickCaptureOpen(true) },
+      handler: (e) => { e.preventDefault(); openCapture('task') },
     },
     {
-      key: 'c',
+      key: 'e',
       handler: (e) => {
         e.preventDefault()
-        openCalendarEventCapture()
+        openCapture('event')
       },
     },
     {
       key: 'w',
       handler: (e) => {
         e.preventDefault()
-        openNewNote()
+        openCapture('note')
       },
     },
     {
@@ -238,13 +248,6 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       handler: (e) => { e.preventDefault(); navigateList('up') },
     },
     {
-      key: 'e',
-      handler: () => {
-        if (selectedItemId) setEditingItemId(selectedItemId)
-      },
-      when: !!selectedItemId,
-    },
-    {
       key: 'ArrowDown',
       handler: (e) => { e.preventDefault(); navigateList('down') },
     },
@@ -270,6 +273,9 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         closeContextMenu,
         quickCaptureOpen,
         setQuickCaptureOpen,
+        captureMode,
+        lastCaptureMode,
+        openCapture,
         quickCaptureFolderId,
         setQuickCaptureFolderId,
         quickCaptureEditId,

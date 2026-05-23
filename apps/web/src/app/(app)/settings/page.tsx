@@ -62,7 +62,7 @@ const SHORTCUT_GROUPS: Array<{ title: string; items: Array<{ keys: string[]; lab
       { keys: ['Shift', '?'], label: 'Mostrar atalhos' },
       { keys: ['Q'], label: 'Nova tarefa' },
       { keys: ['W'], label: 'Nova nota' },
-      { keys: ['C'], label: 'Novo evento de calendario' },
+      { keys: ['E'], label: 'Novo evento de calendario' },
       { keys: ['Ctrl/Cmd', 'K'], label: 'Buscar' },
       { keys: ['H'], label: 'Ir para Hoje' },
       { keys: ['P'], label: 'Ir para Próximos' },
