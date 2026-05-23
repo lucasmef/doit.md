@@ -2,6 +2,8 @@
 
 import { createContext, useContext } from 'react'
 
+export type CaptureMode = 'task' | 'note' | 'event'
+
 export type ItemContextMenuState = {
   itemId: string
   x: number
@@ -22,6 +24,9 @@ export type UIState = {
   closeContextMenu: () => void
   quickCaptureOpen: boolean
   setQuickCaptureOpen: (open: boolean) => void
+  captureMode: CaptureMode
+  lastCaptureMode: CaptureMode
+  openCapture: (mode?: CaptureMode, date?: string | null) => void
   quickCaptureFolderId: string | null
   setQuickCaptureFolderId: (folderId: string | null) => void
   quickCaptureEditId: string | null
@@ -53,6 +58,9 @@ export const UIContext = createContext<UIState>({
   closeContextMenu: () => {},
   quickCaptureOpen: false,
   setQuickCaptureOpen: () => {},
+  captureMode: 'task',
+  lastCaptureMode: 'task',
+  openCapture: () => {},
   quickCaptureFolderId: null,
   setQuickCaptureFolderId: () => {},
   quickCaptureEditId: null,

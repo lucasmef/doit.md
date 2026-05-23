@@ -7,6 +7,7 @@ import { createCalendarEvent, useGoogleCalendars } from '@/hooks/use-calendar-ev
 import { usePreferences } from '@/hooks/use-preferences'
 import { useToast } from '@/components/ui/toast'
 import { useUI } from '@/store/ui'
+import { CaptureModeTabs, createCaptureSwipeHandlers } from '@/components/capture/capture-mode-tabs'
 
 const DATE_WORD_SHORTCUT =
   /(?:^|\s)(hoje|amanh[aã]|depois de amanh[aã]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[aá]bado|domingo)\b/iu
@@ -173,6 +174,7 @@ export function CalendarEventCapture() {
   const {
     calendarEventCaptureOpen,
     calendarEventCaptureDate,
+    openCapture,
     setCalendarEventCaptureOpen,
   } = useUI()
   const { toast } = useToast()
@@ -193,6 +195,10 @@ export function CalendarEventCapture() {
   const [endTime, setEndTime] = useState(addMinutesToDateTime(selectedDate, '09:00', duration).time)
   const [calendarId, setCalendarId] = useState(resolveDefaultCalendar(calendars, preferredCalendarId))
   const [saving, setSaving] = useState(false)
+  const swipeHandlers = createCaptureSwipeHandlers({
+    mode: 'event',
+    onModeChange: (nextMode) => openCapture(nextMode, date),
+  })
 
   useEffect(() => {
     if (!calendarEventCaptureOpen) return
@@ -213,6 +219,12 @@ export function CalendarEventCapture() {
 
   function close() {
     setCalendarEventCaptureOpen(false)
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key !== 'Escape') return
+    event.preventDefault()
+    close()
   }
 
   function applyTitleShortcuts(value: string) {
@@ -266,17 +278,22 @@ export function CalendarEventCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
+      className="fixed inset-0 z-[220] flex items-end justify-center bg-navy-900/35 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(clickEvent) => {
         if (clickEvent.target === clickEvent.currentTarget) close()
       }}
+      onKeyDown={handleKeyDown}
+      {...swipeHandlers}
     >
       <form
         onSubmit={handleSubmit}
-        className="flex max-h-[calc(100dvh-1.5rem)] w-full flex-col overflow-hidden rounded-2xl border border-ui-border bg-white shadow-cool-lg sm:max-w-lg"
+        className="flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-ui-border bg-white shadow-cool-lg sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl"
       >
+        <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-3">
+          <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
+        </div>
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-ui-border-soft px-4 py-4">
           <div className="min-w-0">
             <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
@@ -444,7 +461,7 @@ export function CalendarEventCapture() {
         </div>
 
         <div className="flex shrink-0 items-center justify-between gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+          <span className="min-w-0 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
             {duration} min
           </span>
           <div className="flex gap-2">
