@@ -29,6 +29,7 @@ type Props = {
   plain?: boolean
   itemId?: string
   focusAtStart?: boolean
+  hideDocumentActions?: boolean
 }
 
 type DriveUploadResult = {
@@ -226,6 +227,7 @@ export function MarkdownEditor({
   plain = false,
   itemId,
   focusAtStart = false,
+  hideDocumentActions = false,
 }: Props) {
   const editorRef = useRef<Editor | null>(null)
   const editor = useEditor({
@@ -461,6 +463,7 @@ export function MarkdownEditor({
         canUpload={!!itemId}
         uploadingFiles={uploadingFiles}
         onUploadFiles={() => fileInputRef.current?.click()}
+        hideDocumentActions={hideDocumentActions}
       />
       <EditorContent editor={editor} className="flex-1 overflow-auto" />
       <AttachmentTray
@@ -955,11 +958,13 @@ function EditorToolbarAccessible({
   canUpload,
   uploadingFiles,
   onUploadFiles,
+  hideDocumentActions = false,
 }: {
   editor: Editor | null
   canUpload: boolean
   uploadingFiles: number
   onUploadFiles: () => void
+  hideDocumentActions?: boolean
 }) {
   const { prompt } = useDialog()
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -1236,14 +1241,16 @@ function EditorToolbarAccessible({
 
         {tableTools}
 
-        <ToolbarGroup>
-          <ToolbarBtn title="Exportar Markdown" onClick={exportMarkdown}>
-            <EditorIcon name="download" />
-          </ToolbarBtn>
-          <ToolbarBtn title="Imprimir nota" onClick={printNote}>
-            <EditorIcon name="print" />
-          </ToolbarBtn>
-        </ToolbarGroup>
+        {!hideDocumentActions ? (
+          <ToolbarGroup>
+            <ToolbarBtn title="Exportar Markdown" onClick={exportMarkdown}>
+              <EditorIcon name="download" />
+            </ToolbarBtn>
+            <ToolbarBtn title="Imprimir nota" onClick={printNote}>
+              <EditorIcon name="print" />
+            </ToolbarBtn>
+          </ToolbarGroup>
+        ) : null}
       </div>
 
       <div className="grid w-full grid-cols-7 gap-1 sm:hidden">
@@ -1321,12 +1328,16 @@ function EditorToolbarAccessible({
               >
                 <EditorIcon name="redo" />
               </ToolbarBtn>
-              <ToolbarBtn title="Exportar Markdown" onClick={exportMarkdown}>
-                <EditorIcon name="download" />
-              </ToolbarBtn>
-              <ToolbarBtn title="Imprimir nota" onClick={printNote}>
-                <EditorIcon name="print" />
-              </ToolbarBtn>
+              {!hideDocumentActions ? (
+                <>
+                  <ToolbarBtn title="Exportar Markdown" onClick={exportMarkdown}>
+                    <EditorIcon name="download" />
+                  </ToolbarBtn>
+                  <ToolbarBtn title="Imprimir nota" onClick={printNote}>
+                    <EditorIcon name="print" />
+                  </ToolbarBtn>
+                </>
+              ) : null}
               <IconUploadButton
                 canUpload={canUpload}
                 uploadingFiles={uploadingFiles}

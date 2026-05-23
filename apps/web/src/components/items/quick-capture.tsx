@@ -401,6 +401,14 @@ function IconRepeat({ className = 'h-4 w-4' }: { className?: string }) {
   )
 }
 
+function IconPlus({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function ToolButton({
   children,
   active,
@@ -535,6 +543,7 @@ export function QuickCapture() {
   const [titleCursor, setTitleCursor] = useState(0)
   const [saving, setSaving] = useState(false)
   const [creatingProject, setCreatingProject] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [popover, setPopover] = useState<Popover>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -545,6 +554,7 @@ export function QuickCapture() {
   const isNote = complexity === 'note'
   const swipeHandlers = createCaptureSwipeHandlers({
     mode: isNote ? 'note' : 'task',
+    onExpand: () => setExpanded(true),
     onModeChange: (nextMode) => {
       if (nextMode === 'event') {
         openCapture('event', dueDate || null)
@@ -675,6 +685,7 @@ export function QuickCapture() {
       setProjectQuery('')
       setTitleCursor(0)
       setPopover(null)
+      setExpanded(false)
       setQuickCaptureFolderId(null)
     }
   }, [isOpen, editMode, editItem?.id, captureMode, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
@@ -1003,6 +1014,7 @@ export function QuickCapture() {
   if (editMode && !editItem) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
+  const mobileExpanded = editMode || expanded
   const canSwitchMode =
     !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
@@ -1021,30 +1033,117 @@ export function QuickCapture() {
       <div
         className={`w-full overflow-hidden border border-ui-border bg-white shadow-cool-lg sm:max-h-none sm:overflow-visible sm:rounded-xl ${
           isNote
-            ? 'h-full max-h-none rounded-none border-0 sm:h-auto sm:max-w-[720px] sm:rounded-xl sm:border'
+            ? `${mobileExpanded ? 'h-full max-h-none rounded-none border-0' : 'max-h-[calc(100dvh-1rem)] rounded-t-2xl'} sm:h-auto sm:max-w-[720px] sm:rounded-xl sm:border`
             : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-2xl'
         }`}
       >
         <form
           onSubmit={handleSubmit}
-          className={`flex flex-col sm:max-h-none ${isNote ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
+          className={`flex flex-col sm:max-h-none ${isNote && mobileExpanded ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
         >
           {!editMode && (
             <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-3">
-              <CaptureModeTabs
-                mode={isNote ? 'note' : 'task'}
-                onModeChange={(nextMode) => {
-                  if (nextMode === 'event') {
-                    openCapture('event', dueDate || null)
-                    return
-                  }
-                  openCapture(nextMode)
-                  handleComplexityChange(nextMode)
-                }}
-              />
+              {!mobileExpanded && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="mx-auto mb-3 block h-1.5 w-11 rounded-full bg-slate-300 sm:hidden"
+                  aria-label="Expandir captura"
+                  title="Expandir"
+                />
+              )}
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <CaptureModeTabs
+                    mode={isNote ? 'note' : 'task'}
+                    onModeChange={(nextMode) => {
+                      if (nextMode === 'event') {
+                        openCapture('event', dueDate || null)
+                        return
+                      }
+                      openCapture(nextMode)
+                      handleComplexityChange(nextMode)
+                    }}
+                  />
+                </div>
+                {isNote && (
+                  <button
+                    type="button"
+                    title="Abrir em tela cheia"
+                    aria-label="Abrir em tela cheia"
+                    onClick={() => void handleOpenFullscreen()}
+                    disabled={saving}
+                    className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui-border-soft bg-surface-soft text-slate-500 transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-50 sm:inline-flex"
+                  >
+                    <svg
+                      className="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    >
+                      <path d="M4 9V4h5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 9V4h-5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M4 15v5h5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5">
+          {!mobileExpanded && (
+            <div className="px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
+              <div className="flex items-end gap-2 rounded-2xl border border-ui-border bg-white p-2 shadow-cool-sm">
+                {isNote ? (
+                  <textarea
+                    value={contentMd}
+                    onChange={(e) => setContentMd(e.target.value)}
+                    placeholder="Escreva uma nota"
+                    rows={1}
+                    className="block min-h-10 flex-1 resize-none border-none bg-transparent px-1 py-2 text-[16px] font-medium leading-5 text-slate-900 outline-none placeholder:text-slate-300"
+                  />
+                ) : (
+                  <textarea
+                    ref={inputRef}
+                    value={title}
+                    onChange={(e) => {
+                      applyTitleShortcuts(e.target.value)
+                      setTitleCursor(e.target.selectionStart ?? e.target.value.length)
+                    }}
+                    onPaste={handleTitlePaste}
+                    onClick={(e) => setTitleCursor(e.currentTarget.selectionStart ?? title.length)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        !e.shiftKey &&
+                        !e.metaKey &&
+                        !e.ctrlKey &&
+                        !e.altKey
+                      ) {
+                        e.preventDefault()
+                        void submitAndContinue()
+                      }
+                    }}
+                    placeholder="Nome da tarefa"
+                    rows={1}
+                    className="block min-h-10 flex-1 resize-none border-none bg-transparent px-1 py-2 text-[16px] font-semibold leading-5 text-slate-900 outline-none placeholder:text-slate-300"
+                  />
+                )}
+                <button
+                  type="submit"
+                  disabled={saveDisabled}
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
+                  aria-label="Adicionar"
+                  title="Adicionar"
+                >
+                  <IconPlus className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          )}
+          <div className={`${mobileExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5`}>
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -1100,7 +1199,7 @@ export function QuickCapture() {
                   )}
                 </div>
               )}
-              {isNote && (
+              {isNote && editMode && (
                 <button
                   type="button"
                   title="Abrir em tela cheia"
@@ -1186,6 +1285,7 @@ export function QuickCapture() {
                   placeholder="Escreva em Markdown..."
                   minHeight="min-h-[320px] max-h-[60vh] overflow-y-auto"
                   plain
+                  hideDocumentActions
                 />
               </div>
             ) : (
@@ -1449,7 +1549,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+          <div className={`${mobileExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]`}>
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"

@@ -195,8 +195,10 @@ export function CalendarEventCapture() {
   const [endTime, setEndTime] = useState(addMinutesToDateTime(selectedDate, '09:00', duration).time)
   const [calendarId, setCalendarId] = useState(resolveDefaultCalendar(calendars, preferredCalendarId))
   const [saving, setSaving] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const swipeHandlers = createCaptureSwipeHandlers({
     mode: 'event',
+    onExpand: () => setExpanded(true),
     onModeChange: (nextMode) => openCapture(nextMode, date),
   })
 
@@ -212,6 +214,7 @@ export function CalendarEventCapture() {
     setStartTime('09:00')
     setEndTime(nextEnd.time)
     setCalendarId(nextCalendarId)
+    setExpanded(false)
     requestAnimationFrame(() => titleRef.current?.focus())
   }, [calendarEventCaptureOpen, calendars, duration, preferredCalendarId, selectedDate])
 
@@ -292,49 +295,40 @@ export function CalendarEventCapture() {
         className="flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-ui-border bg-white shadow-cool-lg sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl"
       >
         <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-3">
+          {!expanded && (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="mx-auto mb-3 block h-1.5 w-11 rounded-full bg-slate-300 sm:hidden"
+              aria-label="Expandir captura"
+              title="Expandir"
+            />
+          )}
           <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
         </div>
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-ui-border-soft px-4 py-4">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
-              Google Calendar
-            </p>
-            <h2 className="mt-1 text-xl font-bold text-navy-900">Novo evento</h2>
-          </div>
-          <button
-            type="button"
-            onClick={close}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-400 hover:bg-surface-soft hover:text-navy-700"
-            aria-label="Fechar evento"
-          >
-            x
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 text-[14px] text-navy-700">
-          {writableCalendars.length > 0 ? (
-            <label className="block">
-              <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Calendario
-              </span>
-              <select
-                value={calendarId}
-                onChange={(inputEvent) => {
-                  const next = inputEvent.target.value
-                  setCalendarId(next)
-                  update({ defaultCalendarId: next })
-                }}
-                className="h-10 w-full rounded-lg border border-ui-border bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+        {!expanded && (
+          <div className="px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
+            <div className="flex items-center gap-2 rounded-2xl border border-ui-border bg-white p-2 shadow-cool-sm">
+              <input
+                ref={titleRef}
+                value={title}
+                onChange={(inputEvent) => applyTitleShortcuts(inputEvent.target.value)}
+                placeholder="Evento hoje as 14h"
+                className="h-10 min-w-0 flex-1 border-none bg-transparent px-1 text-[16px] font-semibold outline-none placeholder:text-slate-300"
+              />
+              <button
+                type="submit"
+                disabled={saving || !cleanTitle(title)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
+                aria-label="Criar"
+                title="Criar"
               >
-                {writableCalendars.map((calendar) => (
-                  <option key={calendar.id} value={calendar.id}>
-                    {calendar.summary}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : null}
-
+                <IconPlus className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
+        <div className={`${expanded ? 'block' : 'hidden sm:block'} min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3 text-[14px] text-navy-700`}>
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
               Titulo
@@ -454,16 +448,36 @@ export function CalendarEventCapture() {
             <textarea
               value={description}
               onChange={(inputEvent) => setDescription(inputEvent.target.value)}
-              rows={3}
+              rows={2}
               className="w-full resize-y rounded-lg border border-ui-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
             />
           </label>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
-          <span className="min-w-0 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            {duration} min
-          </span>
+        <div className={`${expanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center justify-between gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]`}>
+          <div className="min-w-0 flex flex-1 items-center gap-2">
+            {writableCalendars.length > 0 ? (
+              <select
+                value={calendarId}
+                onChange={(inputEvent) => {
+                  const next = inputEvent.target.value
+                  setCalendarId(next)
+                  update({ defaultCalendarId: next })
+                }}
+                aria-label="Calendario"
+                className="h-10 min-w-0 max-w-[220px] rounded-lg border border-ui-border bg-white px-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+              >
+                {writableCalendars.map((calendar) => (
+                  <option key={calendar.id} value={calendar.id}>
+                    {calendar.summary}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <span className="hidden font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300 sm:inline">
+              {duration} min
+            </span>
+          </div>
           <div className="flex gap-2">
             <button
               type="button"
@@ -484,5 +498,13 @@ export function CalendarEventCapture() {
         </div>
       </form>
     </div>
+  )
+}
+
+function IconPlus({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+      <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+    </svg>
   )
 }
