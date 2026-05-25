@@ -328,14 +328,14 @@ export function Topbar() {
 
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[80] bg-navy-900/30 backdrop-blur-sm sm:hidden"
+          className="fixed inset-0 z-[120] isolate bg-navy-900/45 backdrop-blur-sm sm:hidden"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
             if (event.target === event.currentTarget) setMobileMenuOpen(false)
           }}
         >
-          <div className="h-full w-[min(82vw,320px)] border-r border-ui-border bg-surface-window px-3 py-3 shadow-cool-lg">
+          <div className="h-full w-[min(84vw,320px)] border-r border-ui-border bg-surface-panel px-3 py-3 shadow-cool-lg">
             <div className="mb-3 flex items-center justify-between">
               <span className="font-mono text-[12px] font-bold text-navy-900">
                 doit<span className="text-brand-600">.md</span>

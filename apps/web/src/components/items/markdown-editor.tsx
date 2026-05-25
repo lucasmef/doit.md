@@ -258,7 +258,7 @@ export function MarkdownEditor({
     contentType: 'markdown',
     editorProps: {
       attributes: {
-        class: `${plain ? 'doit-note-editor' : 'prose prose-slate'} max-w-none ${minHeight} pl-9 pr-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
+        class: `${plain ? 'doit-note-editor' : 'prose prose-slate dark:prose-invert'} max-w-none ${minHeight} pl-9 pr-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
       },
       handlePaste: (_view, event) => {
         const activeEditor = editorRef.current
