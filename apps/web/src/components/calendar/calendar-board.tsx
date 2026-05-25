@@ -756,7 +756,7 @@ function FullscreenDayEventsSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/45 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-3"
       role="dialog"
       aria-modal="true"
       onClick={(event) => {
@@ -933,7 +933,7 @@ function buildDateTime(date: string, time: string) {
   return new Date(`${date}T${time}:00`).toISOString()
 }
 
-function EventSheet({
+export function EventSheet({
   event,
   onSaved,
   onDeleted,
@@ -1001,9 +1001,10 @@ function EventSheet({
     >
       <form
         onSubmit={handleSubmit}
-        className="w-full rounded-2xl border border-ui-border bg-white p-4 shadow-cool-lg sm:max-w-md"
+        className="flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-ui-border bg-surface-panel shadow-cool-lg sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-2xl"
       >
-        <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-4">
+          <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
               {event.source === 'google' ? 'Google Calendar' : 'Evento'}
@@ -1018,9 +1019,10 @@ function EventSheet({
           >
             x
           </button>
+          </div>
         </div>
 
-        <div className="space-y-3 text-[14px] text-navy-700">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-[14px] text-navy-700">
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
               Titulo
@@ -1042,7 +1044,7 @@ function EventSheet({
             Dia todo
           </label>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-2 min-[380px]:grid-cols-2 sm:gap-3">
             <label className="block">
               <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
                 Inicio
@@ -1054,7 +1056,7 @@ function EventSheet({
                   setDate(inputEvent.target.value)
                   if (endDate < inputEvent.target.value) setEndDate(inputEvent.target.value)
                 }}
-                className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-ui-border bg-white px-2 text-[16px] outline-none focus:ring-2 focus:ring-brand-100 sm:h-10 sm:px-3 sm:text-sm"
               />
             </label>
             <label className="block">
@@ -1066,13 +1068,13 @@ function EventSheet({
                 value={endDate}
                 min={date}
                 onChange={(inputEvent) => setEndDate(inputEvent.target.value)}
-                className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                className="h-11 w-full min-w-0 rounded-lg border border-ui-border bg-white px-2 text-[16px] outline-none focus:ring-2 focus:ring-brand-100 sm:h-10 sm:px-3 sm:text-sm"
               />
             </label>
           </div>
 
           {!allDay ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2 min-[380px]:grid-cols-2 sm:gap-3">
               <label className="block">
                 <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
                   Hora inicio
@@ -1081,7 +1083,7 @@ function EventSheet({
                   type="time"
                   value={startTime}
                   onChange={(inputEvent) => setStartTime(inputEvent.target.value)}
-                  className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                  className="h-11 w-full min-w-0 rounded-lg border border-ui-border bg-white px-2 text-[16px] outline-none focus:ring-2 focus:ring-brand-100 sm:h-10 sm:px-3 sm:text-sm"
                 />
               </label>
               <label className="block">
@@ -1092,7 +1094,7 @@ function EventSheet({
                   type="time"
                   value={endTime}
                   onChange={(inputEvent) => setEndTime(inputEvent.target.value)}
-                  className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                  className="h-11 w-full min-w-0 rounded-lg border border-ui-border bg-white px-2 text-[16px] outline-none focus:ring-2 focus:ring-brand-100 sm:h-10 sm:px-3 sm:text-sm"
                 />
               </label>
             </div>
@@ -1111,7 +1113,7 @@ function EventSheet({
           </label>
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-between gap-2">
+        <div className="flex shrink-0 flex-wrap justify-between gap-2 border-t border-ui-border-soft bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={handleDelete}

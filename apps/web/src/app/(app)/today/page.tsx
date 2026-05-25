@@ -6,60 +6,61 @@ import { updateItem } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
 import { ItemList } from '@/components/items/item-list'
+import { EventSheet } from '@/components/calendar/calendar-board'
 import { isLooseInboxItem, sortTodayWithInboxBelow } from '@/lib/item-order'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 import { useToast } from '@/components/ui/toast'
+import type { CalendarEvent } from '@doit/types'
 
 function EventCard({
-  title,
-  start,
-  end,
-  allDay,
+  event,
   isPast,
   dayLabel,
+  onClick,
 }: {
-  title: string
-  start: string
-  end: string
-  allDay: boolean
+  event: CalendarEvent
   isPast: boolean
   dayLabel?: string
+  onClick: () => void
 }) {
   function fmt(dt: string) {
-    if (allDay) return ''
+    if (event.allDay) return ''
     return new Date(dt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
-    <div
-      className={`group flex min-h-8 items-center gap-2 border-b border-ui-border-soft py-1 transition-opacity ${
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group flex min-h-8 w-full items-center gap-2 border-b border-ui-border-soft py-1 text-left transition-colors hover:bg-surface-soft/70 ${
         isPast ? 'opacity-45 grayscale' : ''
       }`}
     >
       <div className={`h-5 w-1 shrink-0 rounded-full ${isPast ? 'bg-navy-200' : 'bg-brand-500'}`} />
       <div className="w-12 shrink-0">
         <span className="font-mono text-[10px] font-semibold text-navy-500">
-          {allDay ? 'Dia todo' : fmt(start)}
+          {event.allDay ? 'Dia todo' : fmt(event.start)}
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-navy-900">{title}</p>
+        <p className="truncate text-[13px] font-medium text-navy-900">{event.title}</p>
         {dayLabel ? (
           <span className="block truncate font-mono text-[10px] font-semibold uppercase tracking-wide text-navy-300">
             {dayLabel}
           </span>
         ) : null}
-        {!allDay && (
-          <span className="sr-only">Termina as {fmt(end)}</span>
+        {!event.allDay && (
+          <span className="sr-only">Termina as {fmt(event.end)}</span>
         )}
       </div>
-    </div>
+    </button>
   )
 }
 
 export default function TodayPage() {
   const { items, isLoading } = useItems()
   const [rescheduling, setRescheduling] = useState(false)
+  const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const { toast } = useToast()
   const { prefs } = usePreferences()
   const today = toLocalDateKey()
@@ -148,17 +149,23 @@ export default function TodayPage() {
             {todayEvents.map((e) => (
               <EventCard
                 key={e.id}
-                title={e.title}
-                start={e.start}
-                end={e.end}
-                allDay={e.allDay}
+                event={e}
                 isPast={!e.allDay && new Date(e.end).getTime() < Date.now()}
                 dayLabel={e.start.slice(0, 10) === tomorrow ? 'Amanha' : undefined}
+                onClick={() => setOpenEvent(e)}
               />
             ))}
           </div>
         </section>
       )}
+      {openEvent ? (
+        <EventSheet
+          event={openEvent}
+          onSaved={setOpenEvent}
+          onDeleted={() => setOpenEvent(null)}
+          onClose={() => setOpenEvent(null)}
+        />
+      ) : null}
 
       <section className="mb-4">
         <div className="mb-2 flex items-center justify-between gap-3">

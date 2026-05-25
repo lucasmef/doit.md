@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
@@ -35,7 +35,7 @@ function formatDueDate(dateStr: string): string {
   const today = toLocalDateKey()
   const tomorrow = toLocalDateKey(tomorrowDate)
   if (dateStr === today) return 'Hoje'
-  if (dateStr === tomorrow) return 'Amanhã'
+  if (dateStr === tomorrow) return 'AmanhÃ£'
   const d = new Date(dateStr + 'T12:00:00')
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
@@ -74,7 +74,7 @@ function laterThisWeekDate() {
 
 const DATE_SUGGESTIONS = [
   { label: 'Hoje', getValue: todayDate },
-  { label: 'Amanhã', getValue: () => dateAfter(1) },
+  { label: 'AmanhÃ£', getValue: () => dateAfter(1) },
   { label: 'Mais tarde essa semana', getValue: laterThisWeekDate },
   { label: 'Final de semana', getValue: () => nextWeekday(6) },
   { label: 'Semana que vem', getValue: () => nextWeekday(1) },
@@ -91,10 +91,10 @@ const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
 const DATE_WORD_SHORTCUT =
-  /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
+  /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
-const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
 
 function normalizeToken(value: string) {
   return value.trim().toLocaleLowerCase('pt-BR')
@@ -824,7 +824,7 @@ export function ItemDetail() {
         const { error } = (await res.json()) as { error: string }
         toast(
           error === 'Google account not connected'
-            ? 'Conecte o Google Calendar em Configurações.'
+            ? 'Conecte o Google Calendar em ConfiguraÃ§Ãµes.'
             : 'Erro ao criar evento.',
           'error',
         )
@@ -1234,7 +1234,7 @@ export function ItemDetail() {
                   handleContentChange(e.target.value)
                   autosizeTextarea(e.currentTarget)
                 }}
-                placeholder="Descrição"
+                placeholder="DescriÃ§Ã£o"
                 rows={2}
                 className="mt-1 block min-h-[48px] w-full resize-none overflow-hidden border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
               />
@@ -1290,7 +1290,7 @@ export function ItemDetail() {
                       />
                       <div className="mt-2 border-t border-ui-border-soft pt-2">
                         <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">
-                          Horário
+                          HorÃ¡rio
                         </div>
                         <button
                           type="button"
@@ -1303,7 +1303,7 @@ export function ItemDetail() {
                         >
                           <IconCalendar className="h-3.5 w-3.5" />
                           <span className="flex-1">
-                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}
+                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horÃ¡rio'}
                           </span>
                           {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                         </button>
@@ -1351,7 +1351,7 @@ export function ItemDetail() {
                             onClick={() => handleDueTimeChange('')}
                             className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
                           >
-                            Remover horário
+                            Remover horÃ¡rio
                           </button>
                         )}
                       </div>
@@ -1413,7 +1413,7 @@ export function ItemDetail() {
 
                 <div className="relative">
                   <ToolButton
-                    title="Selecionar recorrência"
+                    title="Selecionar recorrÃªncia"
                     active={!!recurrence}
                     onClick={() => setPopover(popover === 'recurrence' ? null : 'recurrence')}
                   >
@@ -1665,11 +1665,11 @@ export function ItemDetail() {
           <div
             className={`p-6 space-y-6 ${isNote ? 'flex-1 lg:border-r border-ui-border-soft' : ''}`}
           >
-            {/* Título */}
+            {/* TÃ­tulo */}
             <input
               value={title}
               onChange={handleTitleChange}
-              placeholder="Título"
+              placeholder="TÃ­tulo"
               className={`w-full font-bold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300 ${
                 isNote ? 'text-3xl' : 'text-xl'
               }`}
@@ -1677,7 +1677,7 @@ export function ItemDetail() {
 
             {/* Editor Markdown */}
             <div className="min-h-[200px]">
-              <label className="text-xs text-slate-400 font-medium block mb-2">Conteúdo</label>
+              <label className="text-xs text-slate-400 font-medium block mb-2">ConteÃºdo</label>
               <MarkdownEditor value={content} onChange={handleContentChange} itemId={item.id} />
             </div>
           </div>

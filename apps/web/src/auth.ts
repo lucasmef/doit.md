@@ -8,6 +8,7 @@ import { consumeRateLimit } from '@/lib/api/rate-limit'
 const FIFTEEN_DAYS_IN_SECONDS = 15 * 24 * 60 * 60
 
 export const authOptions: AuthOptions = {
+  secret: process.env['NEXTAUTH_SECRET'],
   pages: {
     signIn: '/sign-in',
   },

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -27,11 +27,11 @@ type ActiveShortcut =
 const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
-const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|às\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
 const INLINE_METADATA_PATTERN =
-  /(\bp[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|\b(?:hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|às\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
+  /(\bp[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|(?:^|\s)(?:hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|\u00e0s\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
 const DATE_WORD_SHORTCUT =
-  /(?:^|\s)(hoje|amanh[ãa]|depois de amanh[ãa]|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter[cç]a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s[áa]bado|domingo)\b/iu
+  /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
@@ -93,7 +93,7 @@ function formatDueDate(dateStr: string) {
   const today = todayDate()
   const tomorrow = dateAfter(1)
   if (dateStr === today) return 'Hoje'
-  if (dateStr === tomorrow) return 'Amanhã'
+  if (dateStr === tomorrow) return 'AmanhÃ£'
   const date = new Date(`${dateStr}T12:00:00`)
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
 }
@@ -128,7 +128,7 @@ function laterThisWeekDate() {
 
 const DATE_SUGGESTIONS = [
   { label: 'Hoje', getValue: todayDate },
-  { label: 'Amanhã', getValue: () => dateAfter(1) },
+  { label: 'AmanhÃ£', getValue: () => dateAfter(1) },
   { label: 'Mais tarde essa semana', getValue: laterThisWeekDate },
   { label: 'Final de semana', getValue: () => nextWeekday(6) },
   { label: 'Semana que vem', getValue: () => nextWeekday(1) },
@@ -1292,7 +1292,7 @@ export function QuickCapture() {
               <textarea
                 value={contentMd}
                 onChange={(e) => setContentMd(e.target.value)}
-                placeholder="Descrição"
+                placeholder="DescriÃ§Ã£o"
                 rows={2}
                 className="mt-1 block max-h-[40vh] min-h-[48px] w-full resize-y border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
               />
@@ -1342,7 +1342,7 @@ export function QuickCapture() {
                       />
                       <div className="mt-2 border-t border-ui-border-soft pt-2">
                         <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">
-                          Horário
+                          HorÃ¡rio
                         </div>
                         <button
                           type="button"
@@ -1355,7 +1355,7 @@ export function QuickCapture() {
                         >
                           <IconCalendar className="h-3.5 w-3.5" />
                           <span className="flex-1">
-                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horário'}
+                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horÃ¡rio'}
                           </span>
                           {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                         </button>
@@ -1403,7 +1403,7 @@ export function QuickCapture() {
                             onClick={() => setDueTime('')}
                             className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
                           >
-                            Remover horário
+                            Remover horÃ¡rio
                           </button>
                         )}
                       </div>
@@ -1428,7 +1428,7 @@ export function QuickCapture() {
               {!isNote && (
                 <div className="relative">
                   <ToolButton
-                    title="Selecionar recorrência"
+                    title="Selecionar recorrÃªncia"
                     active={!!recurrence}
                     onClick={() => setPopover(popover === 'recurrence' ? null : 'recurrence')}
                   >
