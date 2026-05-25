@@ -197,6 +197,7 @@ export NODE_ENV=production
 export PORT="$PORT"
 export HOSTNAME="${HOSTNAME:-127.0.0.1}"
 export NEXT_TELEMETRY_DISABLED="${NEXT_TELEMETRY_DISABLED:-1}"
+export DOIT_SKIP_NEXT_BUILD_VALIDATION="${DOIT_SKIP_NEXT_BUILD_VALIDATION:-1}"
 DOIT_NODE_MAX_OLD_SPACE_SIZE="${DOIT_NODE_MAX_OLD_SPACE_SIZE:-1792}"
 if [[ "${NODE_OPTIONS:-}" != *"--max-old-space-size="* ]]; then
   if [[ -n "${NODE_OPTIONS:-}" ]]; then
