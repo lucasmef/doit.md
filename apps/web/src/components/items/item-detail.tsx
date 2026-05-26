@@ -772,7 +772,7 @@ export function ItemDetail() {
 
   function handleProjectChange(projectId: string) {
     if (!selectedItemId) return
-    updateItem(selectedItemId, { folderId: projectId || undefined })
+    updateItem(selectedItemId, nullablePatch({ folderId: projectId || null }))
   }
 
   async function addProject(value: string) {
