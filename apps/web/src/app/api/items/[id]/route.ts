@@ -140,6 +140,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
 
     const patch = { ...body } as UpdateItemInput
+    const rawPatch = patch as Record<string, unknown>
     if (
       body.complexity === 'note' &&
       current['complexity'] !== 'note' &&
@@ -176,6 +177,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: validationError }, { status: 400 })
     }
 
+    const unset: Record<string, ''> = {}
+    if (rawPatch['folderId'] === '' || rawPatch['folderId'] === null) {
+      delete (patch as { folderId?: unknown }).folderId
+      unset.folderId = ''
+    }
+
     const item = await ItemModel.findOneAndUpdate(
       { _id: id, userId },
       {
@@ -185,8 +192,15 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           ...(patch.status && patch.status !== 'archived' ? { deletedAt: null } : {}),
           updatedAt: new Date().toISOString(),
         },
-        ...(merged.complexity === 'note'
-          ? { $unset: { priority: '', recurrence: '', dueTime: '' } }
+        ...(merged.complexity === 'note' || Object.keys(unset).length > 0
+          ? {
+              $unset: {
+                ...(merged.complexity === 'note'
+                  ? { priority: '', recurrence: '', dueTime: '' }
+                  : {}),
+                ...unset,
+              },
+            }
           : {}),
       },
       { new: true },

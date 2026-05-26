@@ -110,8 +110,27 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
   function goToToday() {
     setYear(todayYear)
     setMonth(todayMonth)
+    setSelectedDate(todayKey)
     scrollToMonth(todayYear, todayMonth)
   }
+
+  useEffect(() => {
+    if (!fullscreen) return
+
+    const openFilters = () => setFiltersOpen(true)
+    const goToday = () => goToToday()
+    const createEvent = () => openCalendarEventCapture(selectedDate)
+
+    window.addEventListener('doit:open-calendar-filters', openFilters)
+    window.addEventListener('doit:calendar-go-today', goToday)
+    window.addEventListener('doit:calendar-new-event', createEvent)
+    return () => {
+      window.removeEventListener('doit:open-calendar-filters', openFilters)
+      window.removeEventListener('doit:calendar-go-today', goToday)
+      window.removeEventListener('doit:calendar-new-event', createEvent)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullscreen, selectedDate])
 
   function selectMonth(y: number, m: number) {
     setYear(y)
@@ -249,24 +268,6 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
 
   const fullscreenMenuButton = (
     <div className="flex shrink-0 items-center gap-1">
-      <button
-        type="button"
-        onClick={() => setFiltersOpen(true)}
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-navy-600 transition-colors hover:bg-surface-soft"
-        aria-label="Abrir configuracoes do calendario"
-        title="Menu"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
-        </svg>
-      </button>
       <button
         type="button"
         onClick={goToToday}

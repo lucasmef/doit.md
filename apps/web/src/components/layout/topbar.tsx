@@ -114,6 +114,10 @@ const MOBILE_NAV_ITEMS = [
   { href: '/settings', label: 'Configuracoes' },
 ]
 
+function dispatchCalendarAction(type: string) {
+  window.dispatchEvent(new Event(type))
+}
+
 export function Topbar() {
   const pathname = usePathname()
   const router = useRouter()
@@ -183,9 +187,11 @@ export function Topbar() {
     if (last === 'settings') return 'Configuracoes'
     return ROUTE_LABELS[last] ?? last
   }, [pathname])
+  const isCalendarPage = pathname === '/calendar'
 
   return (
-    <header className="z-30 flex h-14 shrink-0 items-center gap-3 border-b border-ui-border bg-surface-window/85 px-4 backdrop-blur-md">
+    <>
+    <header className="z-[130] flex h-14 shrink-0 items-center gap-3 border-b border-ui-border bg-surface-window/85 px-4 backdrop-blur-md">
       <div className="hidden min-w-0 items-center gap-1.5 font-mono text-[12px] text-navy-300 sm:flex">
         {crumbs.map((crumb, index) => (
           <span key={`${crumb}-${index}`} className="flex min-w-0 items-center gap-1.5">
@@ -325,17 +331,21 @@ export function Topbar() {
         </button>
         <SignOutButton className="hidden sm:inline-flex" />
       </div>
+    </header>
 
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[120] isolate bg-navy-900/45 backdrop-blur-sm sm:hidden"
+          className="fixed inset-0 z-[220] isolate bg-navy-900/45 backdrop-blur-sm sm:hidden"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
             if (event.target === event.currentTarget) setMobileMenuOpen(false)
           }}
         >
-          <div className="h-full w-[min(84vw,320px)] border-r border-ui-border bg-surface-panel px-3 py-3 shadow-cool-lg">
+          <div
+            className="h-full w-[min(84vw,320px)] border-r border-ui-border bg-white px-3 py-3 opacity-100 shadow-cool-lg"
+            style={{ backgroundColor: 'rgb(var(--surface-panel))' }}
+          >
             <div className="mb-3 flex items-center justify-between">
               <span className="font-mono text-[12px] font-bold text-navy-900">
                 doit<span className="text-brand-600">.md</span>
@@ -367,6 +377,45 @@ export function Topbar() {
                 )
               })}
             </nav>
+            {isCalendarPage ? (
+              <div className="mt-3 border-t border-ui-border-soft pt-3">
+                <p className="px-3 pb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+                  Calendario
+                </p>
+                <div className="space-y-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      dispatchCalendarAction('doit:open-calendar-filters')
+                    }}
+                    className="flex h-11 w-full items-center rounded-md px-3 text-left text-[15px] font-medium text-navy-700 hover:bg-surface-soft"
+                  >
+                    Filtros do calendario
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      dispatchCalendarAction('doit:calendar-go-today')
+                    }}
+                    className="flex h-11 w-full items-center rounded-md px-3 text-left text-[15px] font-medium text-navy-700 hover:bg-surface-soft"
+                  >
+                    Ir para hoje
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      dispatchCalendarAction('doit:calendar-new-event')
+                    }}
+                    className="flex h-11 w-full items-center rounded-md px-3 text-left text-[15px] font-medium text-navy-700 hover:bg-surface-soft"
+                  >
+                    Novo evento
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="mt-3 border-t border-ui-border-soft pt-3">
               <button
                 type="button"
@@ -385,6 +434,6 @@ export function Topbar() {
           </div>
         </div>
       ) : null}
-    </header>
+    </>
   )
 }
