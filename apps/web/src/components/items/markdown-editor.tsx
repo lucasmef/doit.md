@@ -493,10 +493,10 @@ function ToolbarBtn({ onClick, active, disabled, title, className = '', children
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm transition-colors sm:h-8 sm:min-w-8 ${
+      className={`inline-flex h-[30px] min-w-[30px] items-center justify-center rounded-[7px] px-1.5 text-[13px] font-semibold transition-colors ${
         active
-          ? 'bg-brand-100/90 text-brand-700 shadow-sm'
-          : 'text-navy-400 hover:bg-white/70 hover:text-navy-900'
+          ? 'bg-[linear-gradient(135deg,rgba(47,107,255,.10),rgba(40,199,183,.10))] text-brand-600 shadow-[inset_0_0_0_1px_rgba(47,107,255,.18)]'
+          : 'text-navy-500 hover:bg-navy-900/[0.04] hover:text-navy-900'
       } disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
@@ -569,14 +569,14 @@ function MobileToolbarBtn({
 
 function ToolbarGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/55 bg-white/50 p-0.5 shadow-sm backdrop-blur">
+    <div className="inline-flex shrink-0 items-center gap-px [&+&]:ml-1.5 [&+&]:border-l [&+&]:border-navy-900/[0.08] [&+&]:pl-1.5">
       {children}
     </div>
   )
 }
 
 function ToolbarSep() {
-  return <span className="mx-0.5 h-5 w-px bg-white/55" />
+  return <span className="mx-1.5 h-[18px] w-px bg-navy-900/[0.08]" />
 }
 
 type EditorIconName =
@@ -1103,8 +1103,8 @@ function EditorToolbarAccessible({
   ) : null
 
   return (
-    <div className="border-b border-white/45 bg-white/46 px-2 py-1.5 shadow-sm backdrop-blur-xl">
-      <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 sm:flex">
+    <div className="sticky top-0 z-[5] border-b border-navy-900/[0.04] bg-white/96 px-4 py-2 backdrop-blur-md">
+      <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-0 sm:flex">
         <ToolbarGroup>
           <ToolbarBtn
             title="Desfazer (Ctrl+Z)"
