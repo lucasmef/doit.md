@@ -216,7 +216,9 @@ export function Topbar() {
           href="/dashboard"
           className="hidden w-max items-center gap-3 rounded-full border border-white/60 bg-white/55 py-2 pl-2 pr-4 shadow-cool-sm backdrop-blur-xl lg:inline-flex"
         >
-          <img src="/brand/logo-icon.svg" alt="" className="h-8 w-8 rounded-[10px]" />
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
+            <img src="/brand/logo-icon.svg" alt="" className="h-[22px] w-[22px]" />
+          </span>
           <span className="text-[16px] font-black tracking-normal text-navy-900">
             doit<span className="text-brand-600">.md</span>
           </span>
@@ -325,7 +327,7 @@ export function Topbar() {
           >
             + Novo
           </button>
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/70 bg-gradient-to-br from-pink-300 via-violet-300 to-teal-300 text-[12px] font-bold text-white shadow-cool-sm">
+          <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-white/70 bg-gradient-to-br from-pink-400 via-violet-400 to-teal-500 text-[13px] font-bold text-white shadow-[0_2px_8px_rgba(15,35,66,.18)]">
             {profileInitial}
           </div>
           <SignOutButton className="hidden xl:inline-flex" />

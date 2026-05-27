@@ -1,1567 +1,717 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import Link from 'next/link'
-import type { Item } from '@doit/types'
-import {
-  DndContext,
-  PointerSensor,
-  TouchSensor,
-  useDraggable,
-  useDroppable,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  useFolders,
-  buildFolderTree,
-  createFolder,
-  deleteFolder,
-  updateFolder,
-  type FolderTreeNode,
-} from '@/hooks/use-folders'
+import type { Folder, Item } from '@doit/types'
+import { toLocalDateKey } from '@doit/core'
+import { BentoGrid, CardTitle, DarkGlowCard, GlassCard } from '@/components/ui/bento'
+import { useFolders } from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
-import { useDialog } from '@/components/ui/dialog'
-import { useToast } from '@/components/ui/toast'
-import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
-import { usePreferences } from '@/hooks/use-preferences'
-import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 import { useUI } from '@/store/ui'
 
-function StarIcon({
-  filled = false,
-  className = 'h-4 w-4',
-}: {
-  filled?: boolean
-  className?: string
-}) {
+const FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
+const NOTE_ACCENTS: Array<{ accent: string; fileColor: string }> = [
+  { accent: '#2F6BFF', fileColor: '#2F6BFF' },
+  { accent: '#7B5BFF', fileColor: '#7B5BFF' },
+  { accent: '#28C7B7', fileColor: '#0f8d80' },
+  { accent: '#FF6FAE', fileColor: '#C0297A' },
+  { accent: '#F5A524', fileColor: '#B56B00' },
+  { accent: '#1AAED7', fileColor: '#0A7DA0' },
+]
+
+function formatRelative(iso: string): string {
+  const updated = new Date(iso).getTime()
+  const now = Date.now()
+  const diff = Math.max(0, now - updated)
+  const sec = Math.round(diff / 1000)
+  if (sec < 60) return `${sec}s`
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}min`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h`
+  const days = Math.round(hr / 24)
+  if (days < 7) return `${days}d`
+  return new Date(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
+}
+
+function snippetFor(note: Item): string {
+  if (!note.contentMd) return 'Sem conteudo capturado ainda.'
+  const flat = note.contentMd.replace(/\s+/g, ' ').trim()
+  return flat.length > 160 ? `${flat.slice(0, 160)}...` : flat
+}
+
+function wordCountOf(note: Item): number {
+  if (!note.contentMd) return 0
+  return note.contentMd.trim().split(/\s+/).filter(Boolean).length
+}
+
+function readMinutesOf(note: Item): number {
+  return Math.max(1, Math.round(wordCountOf(note) / 200))
+}
+
+function isToday(iso: string, today: string): boolean {
+  return iso.slice(0, 10) === today
+}
+
+function pickAccent(index: number): { accent: string; fileColor: string } {
+  return NOTE_ACCENTS[index % NOTE_ACCENTS.length] ?? { accent: '#2F6BFF', fileColor: '#2F6BFF' }
+}
+
+function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      fill={filled ? 'currentColor' : 'none'}
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      aria-hidden="true"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m12 3.8 2.6 5.2 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.8Z"
-      />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   )
 }
 
-function FolderRow({
-  node,
-  depth,
-  expanded,
-  toggle,
-  noteCounts,
-  index,
-  siblingsCount,
-  onMove,
-  pinned,
-  onTogglePinned,
-  busy,
-}: {
-  node: FolderTreeNode
-  depth: number
-  expanded: Set<string>
-  toggle: (id: string) => void
-  noteCounts: Map<string, number>
-  index: number
-  siblingsCount: number
-  onMove: (parentId: string | null, fromIndex: number, direction: -1 | 1) => Promise<void>
-  pinned: boolean
-  onTogglePinned: (id: string) => void
-  busy: boolean
-}) {
-  const [actionsOpen, setActionsOpen] = useState(false)
-  const [agentsOpen, setAgentsOpen] = useState(false)
-  const hasChildren = node.children.length > 0
-  const isOpen = expanded.has(node.id)
-  const noteCount = noteCounts.get(node.id) ?? 0
-  const { confirm, prompt } = useDialog()
-  const canUp = index > 0 && !busy
-  const canDown = index < siblingsCount - 1 && !busy
-  const draggableId = `folder:${node.id}`
-  const droppableId = `folder-into:${node.id}`
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-    isDragging,
-  } = useDraggable({
-    id: draggableId,
-    data: { folderId: node.id },
-  })
-  const { setNodeRef: setDropRef, isOver } = useDroppable({
-    id: droppableId,
-    data: { folderId: node.id },
-  })
-
-  async function handleRename() {
-    const next = await prompt({
-      title: 'Renomear pasta',
-      message: 'Novo nome',
-      defaultValue: node.name,
-    })
-    if (!next?.trim() || next === node.name) return
-    await updateFolder(node.id, { name: next.trim() })
-  }
-
-  async function handleDelete() {
-    const ok = await confirm({
-      title: 'Apagar pasta',
-      message: `Apagar pasta "${node.name}" e todas as subpastas? As notas voltam para a raiz.`,
-      confirmLabel: 'Apagar',
-      variant: 'danger',
-    })
-    if (!ok) return
-    await deleteFolder(node.id)
-  }
-
-  async function handleNewSub() {
-    const name = await prompt({
-      title: 'Nova subpasta',
-      message: 'Nome da subpasta',
-      placeholder: 'Nome',
-    })
-    if (!name?.trim()) return
-    await createFolder({ name: name.trim(), parentId: node.id })
-  }
-
+function FileBadge({ name, color }: { name: string; color?: string }) {
   return (
-    <>
-      <div
-        ref={setDropRef}
-        className={`group flex min-h-14 items-center gap-2 border-b border-ui-border-soft py-2 pr-2 text-[14px] last:border-b-0 transition-colors ${
-          isDragging ? 'opacity-50' : ''
-        } ${isOver ? 'bg-brand-50' : ''}`}
-        style={{ paddingLeft: `${10 + depth * 14}px` }}
-      >
-        <button
-          ref={setDragRef}
-          {...attributes}
-          {...listeners}
-          type="button"
-          title="Arrastar"
-          aria-label={`Arrastar ${node.name}`}
-          className="hidden h-9 w-6 shrink-0 cursor-grab touch-none items-center justify-center text-navy-300 hover:text-navy-600 active:cursor-grabbing sm:flex"
-        >
-          <svg className="h-4 w-4" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-            <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={() => hasChildren && toggle(node.id)}
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-transparent ${
-            hasChildren
-              ? 'bg-surface-soft text-navy-500 hover:border-ui-border-soft hover:bg-white'
-              : 'text-transparent'
-          }`}
-          aria-label={hasChildren ? (isOpen ? 'Recolher' : 'Expandir') : ''}
-        >
-          {hasChildren ? (
-            <svg
-              className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-90' : ''}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="m9 6 6 6-6 6" />
-            </svg>
-          ) : null}
-        </button>
-        <Link
-          href={`/notas/${node.id}`}
-          className="flex min-w-0 flex-1 items-center gap-3 text-navy-900 hover:text-brand-600"
-        >
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-navy-400">
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
-              />
-            </svg>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate font-medium leading-5">{node.name}</span>
-            <span className="block font-mono text-[10px] leading-4 text-navy-300">
-              {node.children.length > 0
-                ? `${node.children.length} subpasta${node.children.length === 1 ? '' : 's'}`
-                : 'Pasta'}
-            </span>
-          </span>
-          <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-surface-soft px-2 font-mono text-[11px] text-navy-400">
-            {noteCount}
-          </span>
-        </Link>
-        <div className="hidden shrink-0 items-center gap-1 sm:flex">
-          <button
-            type="button"
-            onClick={() => void onMove(node.parentId ?? null, index, -1)}
-            disabled={!canUp}
-            title="Mover para cima"
-            aria-label={`Mover ${node.name} para cima`}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft disabled:opacity-30"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => void onMove(node.parentId ?? null, index, 1)}
-            disabled={!canDown}
-            title="Mover para baixo"
-            aria-label={`Mover ${node.name} para baixo`}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft disabled:opacity-30"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12l7 7 7-7" />
-            </svg>
-          </button>
-        </div>
-        <div className="hidden shrink-0 items-center gap-1 sm:flex sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-          <button
-            type="button"
-            onClick={() => onTogglePinned(node.id)}
-            className={`flex h-9 w-9 items-center justify-center rounded-lg hover:bg-surface-soft ${
-              pinned ? 'text-brand-600' : 'text-navy-500'
-            }`}
-            title={pinned ? 'Desafixar' : 'Fixar'}
-            aria-label={`${pinned ? 'Desafixar' : 'Fixar'} ${node.name}`}
-          >
-            <StarIcon filled={pinned} />
-          </button>
-          <button
-            type="button"
-            onClick={handleNewSub}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
-            title="Subpasta"
-            aria-label={`Criar subpasta em ${node.name}`}
-          >
-            +
-          </button>
-          <button
-            type="button"
-            onClick={handleRename}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
-            title="Renomear"
-            aria-label={`Renomear ${node.name}`}
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="m16.9 4.6 2.5 2.5M4 20h4.5L20 8.5a1.8 1.8 0 0 0 0-2.5L18 4a1.8 1.8 0 0 0-2.5 0L4 15.5V20Z"
-              />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAgentsOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-navy-500 hover:bg-surface-soft"
-            title="AGENTS.md"
-            aria-label={`Editar AGENTS.md de ${node.name}`}
-          >
-            <span className="font-mono text-[10px] font-bold">AI</span>
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50"
-            title="Apagar"
-            aria-label={`Apagar ${node.name}`}
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 7h14M10 11v6M14 11v6M9 7l1-3h4l1 3M7 7l1 13h8l1-13"
-              />
-            </svg>
-          </button>
-        </div>
-        <button
-          type="button"
-          onClick={() => setActionsOpen((open) => !open)}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui-border-soft bg-white text-navy-500 sm:hidden"
-          title="Acoes"
-          aria-label={`Acoes de ${node.name}`}
-          aria-expanded={actionsOpen}
-        >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <circle cx="5" cy="12" r="1.8" />
-            <circle cx="12" cy="12" r="1.8" />
-            <circle cx="19" cy="12" r="1.8" />
-          </svg>
-        </button>
-      </div>
-      {actionsOpen && (
-        <div
-          className="grid grid-cols-7 gap-1 border-b border-ui-border-soft bg-surface-soft px-3 py-2 sm:hidden"
-          style={{ paddingLeft: `${10 + depth * 14}px` }}
-        >
-          <button
-            type="button"
-            onClick={() => void onMove(node.parentId ?? null, index, -1)}
-            disabled={!canUp}
-            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500 disabled:opacity-30"
-          >
-            Subir
-          </button>
-          <button
-            type="button"
-            onClick={() => void onMove(node.parentId ?? null, index, 1)}
-            disabled={!canDown}
-            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500 disabled:opacity-30"
-          >
-            Descer
-          </button>
-          <button
-            type="button"
-            onClick={() => onTogglePinned(node.id)}
-            className={`h-10 rounded-lg bg-white text-[11px] font-medium ${
-              pinned ? 'text-brand-600' : 'text-navy-500'
-            }`}
-          >
-            {pinned ? 'Soltar' : 'Fixar'}
-          </button>
-          <button
-            type="button"
-            onClick={handleNewSub}
-            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500"
-          >
-            Sub
-          </button>
-          <button
-            type="button"
-            onClick={handleRename}
-            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={() => setAgentsOpen(true)}
-            className="h-10 rounded-lg bg-white text-[11px] font-medium text-navy-500"
-          >
-            IA
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            className="h-10 rounded-lg bg-white text-[11px] font-medium text-red-500"
-          >
-            Apagar
-          </button>
-        </div>
-      )}
-      <AgentsEditorModal
-        folderId={node.id}
-        title={`AGENTS.md / ${node.name}`}
-        open={agentsOpen}
-        onClose={() => setAgentsOpen(false)}
-      />
-      {hasChildren &&
-        isOpen &&
-        node.children.map((child, childIndex) => (
-          <FolderRow
-            key={child.id}
-            node={child}
-            depth={depth + 1}
-            expanded={expanded}
-            toggle={toggle}
-            noteCounts={noteCounts}
-            index={childIndex}
-            siblingsCount={node.children.length}
-            onMove={onMove}
-            pinned={pinned}
-            onTogglePinned={onTogglePinned}
-            busy={busy}
-          />
-        ))}
-    </>
+    <span className="font-mono text-[10px] font-bold" style={{ color: color ?? '#2F6BFF' }}>
+      M↓ {name}
+    </span>
   )
 }
 
-function collectIds(nodes: FolderTreeNode[], acc: string[] = []) {
-  for (const node of nodes) {
-    if (node.children.length > 0) {
-      acc.push(node.id)
-      collectIds(node.children, acc)
-    }
-  }
-  return acc
-}
-
-function RootDropZone() {
-  const { setNodeRef, isOver } = useDroppable({
-    id: 'folder-into:__root__',
-    data: { folderId: null },
-  })
+function StarFilled() {
   return (
-    <div
-      ref={setNodeRef}
-      className={`mb-3 flex h-12 items-center justify-center rounded-[18px] border border-dashed text-[12px] font-bold transition-colors ${
-        isOver
-          ? 'border-brand-400 bg-brand-50/90 text-brand-700'
-          : 'border-white/65 bg-white/38 text-navy-400'
-      }`}
-    >
-      Solte aqui para mover para a raiz
-    </div>
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[#F5A524]" fill="currentColor" aria-hidden="true">
+      <path d="m12 3.5 2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9L12 3.5Z" />
+    </svg>
   )
 }
 
-const lightCardTone =
-  '!border-white/80 !bg-white/[0.86] shadow-[0_1px_0_rgba(255,255,255,.86)_inset,0_-1px_0_rgba(15,35,66,.04)_inset,0_18px_40px_-16px_rgba(15,35,66,.20),0_4px_12px_rgba(15,35,66,.08)]'
-
-const noteAccents = [
-  {
-    card: 'border-brand-100 bg-white',
-    file: 'text-brand-700',
-    strip: 'from-brand-500 to-teal-500',
-    icon: 'bg-brand-50 text-brand-700',
-  },
-  {
-    card: 'border-violet-100 bg-[#fbf9ff]',
-    file: 'text-[#7B5BFF]',
-    strip: 'from-[#7B5BFF] to-[#FF6FAE]',
-    icon: 'bg-[#f0ecff] text-[#7B5BFF]',
-  },
-  {
-    card: 'border-teal-100 bg-[#f7fffd]',
-    file: 'text-teal-600',
-    strip: 'from-teal-500 to-cyan-500',
-    icon: 'bg-teal-50 text-teal-700',
-  },
-  {
-    card: 'border-pink-100 bg-[#fff8fc]',
-    file: 'text-[#c0297a]',
-    strip: 'from-[#FF6FAE] to-warning',
-    icon: 'bg-[#ffeaf4] text-[#c0297a]',
-  },
-  {
-    card: 'border-amber-100 bg-[#fffdf4]',
-    file: 'text-[#b56b00]',
-    strip: 'from-warning to-brand-500',
-    icon: 'bg-amber-50 text-[#b56b00]',
-  },
-  {
-    card: 'border-cyan-100 bg-[#f7fcff]',
-    file: 'text-[#0a7da0]',
-    strip: 'from-cyan-500 to-brand-500',
-    icon: 'bg-cyan-50 text-[#0a7da0]',
-  },
-]
-
-type NoteAccent = (typeof noteAccents)[number]
-
-function getNoteAccent(index: number): NoteAccent {
-  return noteAccents[index % noteAccents.length] ?? noteAccents[0]!
-}
-
-function stripMarkdown(content: string | undefined) {
-  return (content ?? '')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/!\[[^\]]*]\([^)]*\)/g, '')
-    .replace(/\[[^\]]+]\([^)]*\)/g, '$1')
-    .replace(/[`*_>#-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function noteFileName(item: Item) {
-  if (item.localPath) return item.localPath.split(/[\\/]/).pop() ?? `${item.title}.md`
-  const base = item.title
-    .toLocaleLowerCase('pt-BR')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/(^-|-$)/g, '')
-    .slice(0, 34)
-  return `${base || 'nota'}.md`
-}
-
-function relativeEditedLabel(value: string) {
-  const time = new Date(value).getTime()
-  if (!Number.isFinite(time)) return 'agora'
-  const diff = Date.now() - time
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
-  if (diff < minute) return 'agora'
-  if (diff < hour) return `${Math.floor(diff / minute)}m`
-  if (diff < day) return `${Math.floor(diff / hour)}h`
-  if (diff < day * 7) return `${Math.floor(diff / day)}d`
-  return new Date(value)
-    .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-    .replace('.', '')
-}
-
-function noteWordCount(item: Item) {
-  const text = stripMarkdown(item.contentMd || item.title)
-  return text ? text.split(/\s+/).length : 0
-}
-
-function NoteLibraryCard({
-  item,
-  index,
-  onOpen,
-}: {
-  item: Item
-  index: number
-  onOpen: (id: string) => void
-}) {
-  const accent = getNoteAccent(index)
-  const tags = item.tags.slice(0, 2)
-  const snippet =
-    stripMarkdown(item.contentMd) || 'Nota sem corpo ainda. Abra para continuar escrevendo.'
+function WritingRing({ percent }: { percent: number }) {
+  const safe = Math.max(0, Math.min(100, percent))
+  const circ = 2 * Math.PI * 36
   return (
-    <button
-      type="button"
-      onClick={() => onOpen(item.id)}
-      className={`group relative flex min-h-[145px] flex-col rounded-[18px] border p-4 text-left shadow-[0_1px_2px_rgba(15,35,66,.04),0_8px_20px_-10px_rgba(15,35,66,.15)] transition hover:-translate-y-0.5 hover:shadow-cool-lg ${accent.card}`}
-    >
-      <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent.strip}`} />
-      <span className="flex items-center gap-2">
-        <span className={`truncate font-mono text-[10px] font-bold ${accent.file}`}>
-          M↓ {noteFileName(item)}
-        </span>
-        {index < 2 ? (
-          <StarIcon filled className="ml-auto h-3.5 w-3.5 shrink-0 text-warning" />
-        ) : null}
-      </span>
-      <span className="mt-3 line-clamp-2 text-[15px] font-black leading-tight text-navy-950">
-        {item.title}
-      </span>
-      <span className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-navy-500">{snippet}</span>
-      <span className="mt-auto flex items-center gap-1.5 pt-3">
-        {tags.length > 0 ? (
-          tags.map((tag) => (
-            <span
-              key={tag}
-              className="rounded-full bg-navy-900/[0.04] px-2 py-0.5 font-mono text-[10px] text-navy-500"
-            >
-              #{tag}
-            </span>
-          ))
-        ) : (
-          <span className="rounded-full bg-navy-900/[0.04] px-2 py-0.5 font-mono text-[10px] text-navy-400">
-            #nota
-          </span>
-        )}
-        <span className="ml-auto font-mono text-[10px] text-navy-400">
-          {relativeEditedLabel(item.updatedAt)}
-        </span>
-      </span>
-    </button>
-  )
-}
-
-const starterNotes = [
-  {
-    file: 'release-notes.md',
-    title: 'Ship v0.4',
-    snippet: 'Template para notas de release, checkboxes e plano de publicacao.',
-    tags: ['release', 'docs'],
-  },
-  {
-    file: 'q3-plan.md',
-    title: 'Plano trimestral',
-    snippet: 'Metas, apostas, riscos aceitos e decisoes que precisam virar itens.',
-    tags: ['planning'],
-  },
-  {
-    file: 'meeting-notes.md',
-    title: 'Notas de reuniao',
-    snippet: 'Acoes capturadas, responsaveis e proximos passos em uma unica nota.',
-    tags: ['meeting'],
-  },
-  {
-    file: 'ideas.md',
-    title: 'Spark file',
-    snippet: 'Um arquivo vivo para ideias pequenas antes de virarem tarefas ou pastas.',
-    tags: ['idea'],
-  },
-  {
-    file: 'reading.md',
-    title: 'Lista de leitura',
-    snippet: 'Livros, posts e referencias para revisar quando houver tempo.',
-    tags: ['reading'],
-  },
-  {
-    file: 'arch.md',
-    title: 'Arquitetura',
-    snippet: 'Decisoes tecnicas, tradeoffs e links importantes do produto.',
-    tags: ['arch'],
-  },
-]
-
-function StarterNoteCard({
-  note,
-  index,
-  onCreate,
-}: {
-  note: (typeof starterNotes)[number]
-  index: number
-  onCreate: () => void
-}) {
-  const accent = getNoteAccent(index)
-  const bg =
-    ['#ffffff', '#fbf9ff', '#f7fffd', '#fff8fc', '#fffdf4', '#f7fcff'][index % 6] ?? '#ffffff'
-  return (
-    <button
-      type="button"
-      onClick={onCreate}
-      className={`group relative flex min-h-[145px] flex-col rounded-[18px] border p-4 text-left shadow-[0_1px_2px_rgba(15,35,66,.04),0_8px_20px_-10px_rgba(15,35,66,.15)] transition hover:-translate-y-0.5 hover:shadow-cool-lg ${accent.card}`}
-      style={{ backgroundColor: bg, color: '#0F2342' }}
-    >
-      <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent.strip}`} />
-      <span className={`truncate font-mono text-[10px] font-bold ${accent.file}`}>
-        M↓ {note.file}
-      </span>
-      <span
-        className="mt-3 line-clamp-2 text-[15px] font-black leading-tight"
-        style={{ color: '#0F2342' }}
-      >
-        {note.title}
-      </span>
-      <span className="mt-2 line-clamp-2 text-[12px] leading-relaxed" style={{ color: '#46587A' }}>
-        {note.snippet}
-      </span>
-      <span className="mt-auto flex items-center gap-1.5 pt-3">
-        {note.tags.map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full bg-navy-900/[0.04] px-2 py-0.5 font-mono text-[10px] text-navy-500"
-          >
-            #{tag}
-          </span>
-        ))}
-        <span className="ml-auto font-mono text-[10px] text-brand-700">template</span>
-      </span>
-    </button>
-  )
-}
-
-function MobileNoteRow({
-  item,
-  index,
-  onOpen,
-}: {
-  item: Item
-  index: number
-  onOpen: (id: string) => void
-}) {
-  const accent = getNoteAccent(index)
-  const tags = item.tags.slice(0, 2)
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(item.id)}
-      className={`relative w-full overflow-hidden rounded-[18px] border bg-white/88 p-4 text-left shadow-cool-sm ${accent.card}`}
-    >
-      <div className="flex items-center gap-2">
-        <span className={`truncate font-mono text-[10px] font-bold ${accent.file}`}>
-          M↓ {noteFileName(item)}
-        </span>
-        {index < 2 ? <StarIcon filled className="h-3.5 w-3.5 text-warning" /> : null}
-        <span className="ml-auto font-mono text-[10px] text-navy-400">
-          {relativeEditedLabel(item.updatedAt)}
-        </span>
-      </div>
-      <div className="mt-2 line-clamp-1 text-[16px] font-black text-navy-950">{item.title}</div>
-      <div className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-navy-500">
-        {stripMarkdown(item.contentMd) || 'Toque para continuar esta nota.'}
-      </div>
-      <div className="mt-3 flex items-center gap-1.5">
-        {(tags.length ? tags : ['nota']).map((tag) => (
-          <span
-            key={tag}
-            className="rounded-full bg-navy-900/[0.04] px-2 py-0.5 font-mono text-[10px] text-navy-500"
-          >
-            #{tag}
-          </span>
-        ))}
-        <span className="ml-auto text-navy-300">→</span>
-      </div>
-    </button>
-  )
-}
-
-function EditorSpotlight({
-  note,
-  folderName,
-  onOpen,
-  onNewNote,
-}: {
-  note?: Item
-  folderName?: string
-  onOpen: () => void
-  onNewNote: () => void
-}) {
-  const body = note ? stripMarkdown(note.contentMd) : ''
-  const words = note ? noteWordCount(note) : 0
-  return (
-    <div className="relative z-10 flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-navy-500">
-        <span className="text-navy-400">notes</span>
-        <span className="text-navy-300">/</span>
-        <span className="font-semibold text-brand-700">{folderName ?? 'inbox'}</span>
-        <span className="text-navy-300">/</span>
-        <span className="font-semibold text-brand-700">
-          {note ? noteFileName(note) : 'nova-nota.md'}
-        </span>
-        <span className="ml-auto inline-flex items-center gap-1.5 font-semibold text-teal-600">
-          <span className="h-1.5 w-1.5 rounded-full bg-teal-500 shadow-[0_0_6px_#28c7b7]" />
-          synced
-        </span>
-      </div>
-      <button type="button" onClick={note ? onOpen : onNewNote} className="mt-3 text-left">
-        <h2 className="text-[34px] font-black leading-[1.03] text-navy-950 sm:text-[40px]">
-          {note ? note.title : 'nova nota'}
-          <span className="block bg-[linear-gradient(120deg,#2F6BFF,#7B5BFF_45%,#28C7B7)] bg-clip-text text-transparent">
-            markdown vivo.
-          </span>
-        </h2>
-      </button>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {(note?.tags?.length ? note.tags.slice(0, 3) : ['draft', 'notes', 'sync']).map(
-          (tag, index) => (
-            <span
-              key={`${tag}-${index}`}
-              className={`rounded px-2 py-1 font-mono text-[11px] ${
-                index === 1
-                  ? 'bg-teal-500/15 text-teal-700'
-                  : index === 2
-                    ? 'bg-[#7B5BFF]/12 text-[#7B5BFF]'
-                    : 'bg-brand-500/10 text-brand-700'
-              }`}
-            >
-              #{tag}
-            </span>
-          ),
-        )}
-      </div>
-      <div className="mt-3 flex-1 overflow-hidden text-[13px] leading-relaxed text-navy-700">
-        {body ? (
-          <p className="line-clamp-5">{body}</p>
-        ) : (
-          <p>
-            Capture ideias, referencias e checklists em Markdown. Cada nota continua sendo um Item
-            sincronizavel.
-          </p>
-        )}
-      </div>
-      <div className="mt-3 flex items-center gap-3 font-mono text-[11px] text-navy-500">
-        <span>{words} words</span>
-        <span>{note ? relativeEditedLabel(note.updatedAt) : 'ready'}</span>
-        <button
-          type="button"
-          onClick={note ? onOpen : onNewNote}
-          className="ml-auto h-9 rounded-full bg-navy-900 px-4 text-[12px] font-bold text-white hover:bg-navy-800"
-        >
-          {note ? 'abrir nota' : 'criar nota'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function NotesGraph({ notes }: { notes: Item[] }) {
-  const graphNotes = notes.slice(0, 7)
-  const positions = [
-    'left-1/2 top-1/2',
-    'left-[16%] top-[25%]',
-    'left-[86%] top-[20%]',
-    'left-[14%] top-[78%]',
-    'left-[86%] top-[82%]',
-    'left-[60%] top-[12%]',
-    'left-[40%] top-[90%]',
-  ]
-  return (
-    <div className="relative min-h-0 flex-1 overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#0b1733,#0f2342_62%,#122a55)]">
-      <svg
-        className="absolute inset-0 h-full w-full"
-        viewBox="0 0 380 320"
-        preserveAspectRatio="none"
-        aria-hidden="true"
-      >
+    <div className="relative h-[86px] w-[86px] shrink-0">
+      <svg width="86" height="86" viewBox="0 0 86 86" className="-rotate-90">
         <defs>
-          <linearGradient id="notes-edge" x1="0" y1="0" x2="380" y2="320">
-            <stop offset="0" stopColor="#2F6BFF" stopOpacity=".55" />
-            <stop offset=".55" stopColor="#28C7B7" stopOpacity=".5" />
-            <stop offset="1" stopColor="#7B5BFF" stopOpacity=".5" />
+          <linearGradient id="notas-wg" x1="0" y1="0" x2="86" y2="86">
+            <stop offset="0" stopColor="#7B5BFF" />
+            <stop offset="0.5" stopColor="#2F6BFF" />
+            <stop offset="1" stopColor="#28C7B7" />
           </linearGradient>
         </defs>
-        <path
-          d="M190 160 L62 80 M190 160 L326 64 M190 160 L54 250 M190 160 L330 260 M190 160 L228 34 M190 160 L152 292"
-          stroke="url(#notes-edge)"
-          strokeWidth="1.4"
+        <circle cx="43" cy="43" r="36" fill="none" stroke="rgba(15,35,66,.12)" strokeWidth={7} />
+        <circle
+          cx="43"
+          cy="43"
+          r="36"
           fill="none"
-        />
-        <path
-          d="M62 80 L228 34 L326 64 M54 250 L152 292 L330 260"
-          stroke="rgba(255,255,255,.16)"
-          strokeWidth="1"
-          fill="none"
+          stroke="url(#notas-wg)"
+          strokeWidth={7}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={circ * (1 - safe / 100)}
         />
       </svg>
-      {graphNotes.length === 0 ? (
-        <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-white/58">
-          Crie notas para formar o grafo de conexoes.
+      <div className="absolute inset-0 grid place-items-center text-center">
+        <div>
+          <div className="bg-[linear-gradient(120deg,#7B5BFF,#2F6BFF,#28C7B7)] bg-clip-text text-[20px] font-black leading-none text-transparent">
+            {safe}%
+          </div>
+          <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-navy-500">goal</div>
         </div>
-      ) : (
-        graphNotes.map((note, index) => (
-          <span
-            key={note.id}
-            className={`absolute max-w-[130px] -translate-x-1/2 -translate-y-1/2 truncate rounded-full border px-2.5 py-1.5 font-mono text-[10px] font-bold shadow-[0_10px_28px_rgba(0,0,0,.18)] ${
-              index === 0
-                ? 'border-white/25 bg-white text-navy-900'
-                : index % 3 === 1
-                  ? 'border-[#7B5BFF]/35 bg-[#7B5BFF]/25 text-white'
-                  : index % 3 === 2
-                    ? 'border-teal-300/35 bg-teal-400/20 text-teal-50'
-                    : 'border-white/15 bg-white/12 text-white'
-            } ${positions[index]}`}
-          >
-            {noteFileName(note)}
-          </span>
-        ))
-      )}
+      </div>
     </div>
+  )
+}
+
+function WritingStatsCard({
+  totalNotes,
+  editedToday,
+  goalPercent,
+}: {
+  totalNotes: number
+  editedToday: number
+  goalPercent: number
+}) {
+  return (
+    <article className="flex flex-col rounded-[28px] border border-white/70 bg-[linear-gradient(160deg,#FFE9F4_0%,#E4DDFF_50%,#D4F4EF_100%)] p-6 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:col-span-3 lg:row-span-1">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle>escrita</CardTitle>
+        <span className="rounded-full bg-navy-900/[0.06] px-2 py-0.5 font-mono text-[10px] text-navy-500">esta semana</span>
+      </div>
+      <div className="mt-1 flex items-center gap-4">
+        <WritingRing percent={goalPercent} />
+        <div>
+          <div className="text-[28px] font-black leading-none text-navy-900">{totalNotes}</div>
+          <div className="mt-1 font-mono text-[11px] text-navy-500">notes na biblioteca</div>
+        </div>
+      </div>
+      <div className="mt-auto grid grid-cols-2 gap-2 border-t border-navy-900/[0.06] pt-3 font-mono text-[11px] text-navy-500">
+        <div>
+          <b className="block font-sans text-[15px] font-bold text-navy-900">{totalNotes}</b>
+          notes
+        </div>
+        <div>
+          <b className="block font-sans text-[15px] font-bold text-navy-900">{editedToday}</b>
+          editadas hoje
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function EditorSpotlightCard({ note, breadcrumb, onOpen }: { note: Item | null; breadcrumb: string[]; onOpen: (id: string) => void }) {
+  return (
+    <article className="relative flex flex-col overflow-hidden rounded-[28px] border border-white/55 bg-white/62 p-6 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_22px_55px_rgba(15,35,66,.16)] backdrop-blur-2xl lg:col-span-6 lg:row-span-1">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-20 -top-20 h-[360px] w-[360px] rounded-full"
+        style={{
+          background:
+            'radial-gradient(circle at 30% 30%, rgba(123,91,255,.30), transparent 60%), radial-gradient(circle at 70% 70%, rgba(40,199,183,.25), transparent 60%)',
+          filter: 'blur(20px)',
+        }}
+      />
+      <div className="relative mb-2 flex items-center justify-between">
+        <CardTitle>editando agora</CardTitle>
+        {note ? (
+          <button
+            type="button"
+            onClick={() => onOpen(note.id)}
+            className="grid h-7 w-7 place-items-center rounded-full bg-navy-900/[0.04] text-sm font-black leading-none text-navy-500 hover:bg-navy-900/[0.08]"
+            aria-label="Abrir nota"
+          >
+            ...
+          </button>
+        ) : null}
+      </div>
+
+      {note ? (
+        <>
+          <div className="relative mb-1.5 flex flex-wrap items-center gap-2 font-mono text-[11px] text-navy-500">
+            {breadcrumb.map((crumb, i) => (
+              <Fragment key={`${crumb}-${i}`}>
+                <span>{crumb}</span>
+                <span className="text-navy-900/25">/</span>
+              </Fragment>
+            ))}
+            <FileBadge name={(note.localPath ?? `${note.title.toLowerCase().replace(/\s+/g, '-')}.md`)} color="#2F6BFF" />
+            <span className="ml-auto inline-flex items-center gap-1 font-semibold text-teal-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-500 shadow-[0_0_6px_#28C7B7]" />
+              salvo · {formatRelative(note.updatedAt)}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpen(note.id)}
+            className="relative my-1 max-w-full text-left text-[32px] font-black leading-[1.05] -tracking-[.03em] text-navy-900 hover:opacity-80"
+          >
+            {note.title.split(' ').slice(0, -1).join(' ') || note.title}{' '}
+            {note.title.split(' ').length > 1 ? (
+              <span className="bg-[linear-gradient(120deg,#2F6BFF,#7B5BFF_45%,#28C7B7)] bg-clip-text text-transparent">
+                {note.title.split(' ').slice(-1).join(' ')}
+              </span>
+            ) : null}
+          </button>
+          {note.tags.length > 0 ? (
+            <div className="relative mb-2 flex flex-wrap gap-1.5">
+              {note.tags.slice(0, 3).map((tag, i) => {
+                const tones = [
+                  'bg-[rgba(47,107,255,.10)] text-brand-600',
+                  'bg-[rgba(40,199,183,.14)] text-teal-600',
+                  'bg-[rgba(123,91,255,.12)] text-violet-500',
+                ]
+                return (
+                  <span key={tag} className={`rounded font-mono text-[11px] px-2 py-0.5 ${tones[i % tones.length]}`}>
+                    #{tag}
+                  </span>
+                )
+              })}
+            </div>
+          ) : null}
+          <p className="relative line-clamp-2 flex-1 overflow-hidden text-[13px] leading-[1.55] text-navy-900">{snippetFor(note)}</p>
+          <div className="relative mt-2 flex items-center gap-3 font-mono text-[11px] text-navy-500">
+            <span>{wordCountOf(note)} palavras</span>
+            <span>·</span>
+            <span>{readMinutesOf(note)} min de leitura</span>
+            <span>·</span>
+            <span>editada {formatRelative(note.updatedAt)}</span>
+          </div>
+        </>
+      ) : (
+        <div className="relative flex flex-1 items-center justify-center text-center font-mono text-[12px] text-navy-500">
+          nenhuma nota ainda · capture sua primeira ideia
+        </div>
+      )}
+    </article>
+  )
+}
+
+function PinnedCard({ pins, onOpen }: { pins: Item[]; onOpen: (id: string) => void }) {
+  const pinTones = ['', 'v', 't', 'p'] as const
+  const toneClass: Record<typeof pinTones[number], string> = {
+    '': 'bg-[linear-gradient(135deg,rgba(47,107,255,.10),rgba(40,199,183,.10))] border-[rgba(47,107,255,.18)] text-brand-600',
+    v: 'bg-[linear-gradient(135deg,rgba(123,91,255,.10),rgba(255,111,174,.10))] border-[rgba(123,91,255,.22)] text-violet-500',
+    t: 'bg-[linear-gradient(135deg,rgba(40,199,183,.12),rgba(26,174,215,.12))] border-[rgba(40,199,183,.25)] text-teal-600',
+    p: 'bg-[linear-gradient(135deg,rgba(255,111,174,.12),rgba(245,165,36,.12))] border-[rgba(255,111,174,.25)] text-pink-600',
+  }
+  return (
+    <GlassCard className="flex flex-col p-6 lg:col-span-3 lg:row-span-1">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle>anexou</CardTitle>
+        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{pins.length}</span>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+        {pins.length === 0 ? (
+          <div className="grid flex-1 place-items-center text-center font-mono text-[11px] text-navy-500">
+            sem notas fixadas
+          </div>
+        ) : (
+          pins.slice(0, 4).map((pin, i) => {
+            const tone = pinTones[i % pinTones.length] ?? ''
+            return (
+              <button
+                key={pin.id}
+                type="button"
+                onClick={() => onOpen(pin.id)}
+                className="flex items-center gap-2.5 rounded-xl border border-navy-900/[0.04] bg-white p-2 text-left shadow-[0_1px_2px_rgba(15,35,66,.04)] hover:shadow-[0_4px_10px_rgba(15,35,66,.08)]"
+              >
+                <span className={`inline-grid h-[30px] w-[30px] place-items-center rounded-lg border font-mono text-[11px] font-bold ${toneClass[tone]}`}>
+                  M↓
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
+                  <span className="truncate text-[13px] font-semibold text-navy-900">{pin.title}</span>
+                  <span className="truncate font-mono text-[10px] text-navy-500">
+                    {pin.localPath ?? `${pin.title.toLowerCase().replace(/\s+/g, '-')}.md`} · {formatRelative(pin.updatedAt)}
+                  </span>
+                </span>
+              </button>
+            )
+          })
+        )}
+      </div>
+    </GlassCard>
+  )
+}
+
+function LibraryCard({
+  notes,
+  filters,
+  active,
+  onFilter,
+  onOpen,
+  totalNotes,
+}: {
+  notes: Item[]
+  filters: Array<{ id: string; label: string }>
+  active: string
+  onFilter: (id: string) => void
+  onOpen: (id: string) => void
+  totalNotes: number
+}) {
+  return (
+    <GlassCard className="flex flex-col p-6 lg:col-span-8 lg:row-span-2">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle>biblioteca</CardTitle>
+        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{totalNotes} notas</span>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {filters.map((f) => {
+          const isActive = f.id === active
+          return (
+            <button
+              key={f.id}
+              type="button"
+              onClick={() => onFilter(f.id)}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                isActive
+                  ? 'border border-navy-900/[0.04] bg-white text-navy-900 shadow-[0_1px_2px_rgba(15,35,66,.06),0_4px_10px_rgba(15,35,66,.06)]'
+                  : 'border border-transparent bg-navy-900/[0.05] text-navy-500 hover:text-navy-900'
+              }`}
+            >
+              {f.label}
+            </button>
+          )
+        })}
+        <span className="ml-auto font-mono text-[11px] text-navy-500">
+          sort · <b className="font-semibold text-navy-900">editadas</b>
+        </span>
+      </div>
+      <div className="grid flex-1 grid-cols-1 gap-3 overflow-hidden md:grid-cols-2 lg:grid-cols-3">
+        {notes.slice(0, 6).map((note, i) => {
+          const accent = pickAccent(i)
+          const isStarred = i === 0 || i === 3
+          return (
+            <button
+              key={note.id}
+              type="button"
+              onClick={() => onOpen(note.id)}
+              className="group relative flex flex-col gap-1.5 overflow-hidden rounded-2xl border border-navy-900/[0.04] bg-white p-3 text-left shadow-[0_1px_2px_rgba(15,35,66,.04),0_8px_18px_-10px_rgba(15,35,66,.15)] hover:shadow-[0_4px_12px_rgba(15,35,66,.10)]"
+            >
+              <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: accent.accent }} aria-hidden="true" />
+              <div className="flex items-center gap-1.5">
+                <FileBadge name={note.localPath ?? `${note.title.toLowerCase().replace(/\s+/g, '-')}.md`} color={accent.fileColor} />
+                {isStarred ? (
+                  <span className="ml-auto">
+                    <StarFilled />
+                  </span>
+                ) : null}
+              </div>
+              <div className="text-[14px] font-bold leading-tight -tracking-[.01em] text-navy-900">{note.title}</div>
+              <div className="line-clamp-3 flex-1 text-[11.5px] leading-[1.45] text-navy-500">{snippetFor(note)}</div>
+              <div className="flex items-center gap-1.5 pt-1">
+                {note.tags.slice(0, 1).map((tag) => (
+                  <span key={tag} className="rounded bg-navy-900/[0.05] px-1.5 py-0.5 font-mono text-[9px] text-navy-500">
+                    #{tag}
+                  </span>
+                ))}
+                <span className="ml-auto font-mono text-[10px] text-navy-300">{formatRelative(note.updatedAt)}</span>
+              </div>
+            </button>
+          )
+        })}
+        {notes.length === 0 ? (
+          <div className="col-span-full grid place-items-center py-10 text-center font-mono text-[12px] text-navy-500">
+            nenhuma nota neste filtro
+          </div>
+        ) : null}
+      </div>
+    </GlassCard>
+  )
+}
+
+function KnowledgeGraphCard({ notes }: { notes: Item[] }) {
+  const positions = [
+    { left: '16%', top: '25%', tone: 'violet' },
+    { left: '87%', top: '19%', tone: 'teal' },
+    { left: '13%', top: '78%', tone: '' },
+    { left: '89%', top: '84%', tone: 'pink' },
+    { left: '60%', top: '10%', tone: '' },
+    { left: '40%', top: '91%', tone: 'teal' },
+  ] as const
+  const toneClass: Record<string, string> = {
+    '': 'bg-white text-navy-900 border-white',
+    violet: 'bg-[linear-gradient(135deg,#B59BFF,#7B5BFF)] text-white border-white/40',
+    teal: 'bg-[linear-gradient(135deg,#5BE3D4,#28C7B7)] text-navy-900 border-white',
+    pink: 'bg-[linear-gradient(135deg,#FFB1D5,#FF6FAE)] text-white border-white',
+  }
+  const center = notes[0]?.title ? `${notes[0].title.toLowerCase().slice(0, 12)}.md` : 'hoje.md'
+  return (
+    <DarkGlowCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle className="text-white/85">links</CardTitle>
+        <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/80">
+          {notes.length} notas
+        </span>
+      </div>
+      <div className="relative -mx-2 flex-1">
+        <svg viewBox="0 0 380 320" preserveAspectRatio="xMidYMid meet" className="block h-full w-full">
+          <defs>
+            <linearGradient id="notas-edge" x1="0" y1="0" x2="380" y2="320">
+              <stop offset="0" stopColor="#2F6BFF" stopOpacity="0.5" />
+              <stop offset="1" stopColor="#28C7B7" stopOpacity="0.5" />
+            </linearGradient>
+          </defs>
+          <path d="M 190 160 Q 110 100 60 80" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
+          <path d="M 190 160 Q 290 80 330 60" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
+          <path d="M 190 160 Q 110 220 50 250" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
+          <path d="M 190 160 Q 290 240 340 270" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
+          <path d="M 190 160 Q 250 80 230 30" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
+          <path d="M 190 160 Q 130 240 150 290" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
+          <path d="M 60 80 Q 90 50 230 30" stroke="rgba(255,255,255,.15)" strokeWidth={1} fill="none" />
+          <path d="M 330 60 Q 340 160 340 270" stroke="rgba(255,255,255,.15)" strokeWidth={1} fill="none" />
+        </svg>
+        <div
+          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] px-3 py-1.5 font-mono text-[11px] font-bold text-white shadow-[0_0_16px_rgba(40,199,183,.6),0_4px_14px_rgba(47,107,255,.5)] whitespace-nowrap"
+          style={{ left: '50%', top: '50%' }}
+        >
+          {center}
+        </div>
+        {positions.map((p, i) => {
+          const next = notes[i + 1]
+          const fallback = ['eventos.md', 'arch.md', 'meeting-notes.md', 'changelog.md', 'ideas.md', 'reading.md'][i] ?? 'note.md'
+          const label = next ? `${next.title.toLowerCase().replace(/\s+/g, '-').slice(0, 14)}.md` : fallback
+          return (
+            <div
+              key={i}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg border-[1.5px] px-2 py-1 font-mono text-[10px] font-semibold shadow-[0_4px_12px_rgba(15,35,66,.4)] ${toneClass[p.tone]}`}
+              style={{ left: p.left, top: p.top }}
+            >
+              {label}
+            </div>
+          )
+        })}
+      </div>
+      <div className="mt-3 flex gap-3 font-mono text-[10px] text-white/70">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#79A6FF]" />
+          linked
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#5BE3D4]" />
+          backlinks
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#B59BFF]" />
+          tag-cluster
+        </span>
+      </div>
+    </DarkGlowCard>
+  )
+}
+
+function NotebooksCard({ notebooks }: { notebooks: Array<{ folder: Folder; count: number; description: string; color: string }> }) {
+  return (
+    <GlassCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-1">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle>pastas</CardTitle>
+        <Link href="/notas/pastas" className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500 hover:bg-navy-900/[0.08] hover:text-navy-900">
+          {notebooks.length} pastas
+        </Link>
+      </div>
+      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+        {notebooks.length === 0 ? (
+          <Link
+            href="/notas/pastas"
+            className="grid flex-1 place-items-center rounded-2xl border border-dashed border-navy-900/15 text-center font-mono text-[11px] text-navy-500 hover:border-brand-300 hover:text-brand-600"
+          >
+            criar primeira pasta
+          </Link>
+        ) : (
+          notebooks.slice(0, 4).map(({ folder, count, description, color }) => (
+            <Link
+              key={folder.id}
+              href={`/notas/pastas/${folder.id}`}
+              className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-navy-900/[0.04] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,35,66,.04)] hover:shadow-[0_4px_12px_rgba(15,35,66,.08)]"
+            >
+              <span className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }} aria-hidden="true" />
+              <span
+                className="inline-grid h-[30px] w-[30px] place-items-center rounded-lg"
+                style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, white)`, color }}
+              >
+                <FolderIcon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-semibold text-navy-900">{folder.name}</span>
+                <span className="block truncate font-mono text-[11px] text-navy-500">{description}</span>
+              </span>
+              <span className="font-mono text-[16px] font-bold -tracking-[.02em]" style={{ color }}>
+                {count}
+              </span>
+            </Link>
+          ))
+        )}
+      </div>
+    </GlassCard>
+  )
+}
+
+function MiniGardenCard({ notes, folders }: { notes: Item[]; folders: Folder[] }) {
+  const stickies = [
+    {
+      file: 'creative.md',
+      title: notes[0]?.title ?? 'brainstorm criativo',
+      bg: '#fff7d6',
+      pos: 'left-[4%] top-[22%] rotate-[-5deg]',
+      pin: '',
+    },
+    {
+      file: folders[0] ? `pastas/${folders[0].name}.md` : 'pastas/conteudo.md',
+      title: folders[0]?.name ? `Pasta ${folders[0].name}` : 'Q4 - simples',
+      bg: '#ffffff',
+      pos: 'left-[32%] top-[10%] rotate-[3deg]',
+      pin: 'teal',
+    },
+    {
+      file: 'agenda-sync.md',
+      title: 'notas da agenda',
+      bg: '#d8f5ef',
+      pos: 'left-[62%] top-[24%] rotate-[-2deg]',
+      pin: 'violet',
+    },
+    {
+      file: notes[1]?.localPath ?? 'ideas.md',
+      title: notes[1]?.title ?? 'arquivo de ideias',
+      bg: '#ffebf4',
+      pos: 'left-[20%] top-[60%] rotate-[4deg]',
+      pin: 'teal',
+    },
+    {
+      file: 'reading.md',
+      title: notes[2]?.title ?? 'para ler',
+      bg: '#ffffff',
+      pos: 'left-[56%] top-[62%] rotate-[-3deg]',
+      pin: '',
+    },
+  ]
+  const pinColor: Record<string, string> = {
+    '': 'radial-gradient(circle at 30% 30%, #FF6FAE, #C0297A)',
+    teal: 'radial-gradient(circle at 30% 30%, #5BE3D4, #18948A)',
+    violet: 'radial-gradient(circle at 30% 30%, #B59BFF, #5A37D9)',
+  }
+  return (
+    <GlassCard className="flex flex-col p-6 lg:col-span-5 lg:row-span-1">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle>jardim</CardTitle>
+        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">stickies · {stickies.length}</span>
+      </div>
+      <div className="relative flex-1 overflow-hidden rounded-2xl border border-navy-900/[0.05] bg-[radial-gradient(circle_at_25%_30%,rgba(255,209,235,.55),transparent_60%),radial-gradient(circle_at_75%_30%,rgba(255,222,179,.45),transparent_60%),radial-gradient(circle_at_50%_90%,rgba(202,232,255,.55),transparent_60%),linear-gradient(135deg,#FFF6F1,#F1ECFF)]">
+        {stickies.map((s, i) => (
+          <div
+            key={i}
+            className={`absolute w-[120px] rounded-[4px] px-2.5 py-2 shadow-[0_8px_16px_-8px_rgba(15,35,66,.20),0_2px_4px_rgba(15,35,66,.06)] ${s.pos}`}
+            style={{ backgroundColor: s.bg }}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute -top-[5px] left-1/2 h-[9px] w-[9px] -translate-x-1/2 rounded-full shadow-[0_2px_3px_rgba(192,41,122,.4)]"
+              style={{ background: pinColor[s.pin] }}
+            />
+            <span className="block font-mono text-[9px] font-bold text-brand-600">M↓ {s.file}</span>
+            <span className="mt-1 block text-[11px] font-bold leading-tight text-navy-900">{s.title}</span>
+          </div>
+        ))}
+        <span className="absolute left-[50%] top-[5%] font-script text-base text-navy-900/30">✦</span>
+        <span className="absolute left-[88%] top-[60%] font-script text-base text-navy-900/30">↗</span>
+        <span className="absolute bottom-[10%] left-[8%] font-script text-base text-navy-900/30">~∿</span>
+      </div>
+    </GlassCard>
+  )
+}
+
+function WritingStreakCard({ streakDays, bestStreak, recentBars }: { streakDays: number; bestStreak: number; recentBars: number[] }) {
+  return (
+    <article className="flex flex-col rounded-[28px] border border-white/40 bg-[linear-gradient(160deg,#2F6BFF_0%,#4F4BE9_50%,#28C7B7_100%)] p-6 text-white shadow-[0_24px_60px_rgba(15,35,66,.28)] lg:col-span-3 lg:row-span-1">
+      <div className="mb-3 flex items-center justify-between">
+        <CardTitle className="text-white/85">ritmo de escrita</CardTitle>
+        <span className="rounded-full bg-white/18 px-2 py-0.5 font-mono text-[10px] text-white">{streakDays} dias</span>
+      </div>
+      <div className="text-[44px] font-black leading-none -tracking-[.04em] [text-shadow:0_2px_12px_rgba(15,35,66,.25)]">{streakDays}d</div>
+      <div className="mt-1 font-mono text-[11px] opacity-85">notas escritas · melhor {bestStreak}d</div>
+      <div className="mt-auto flex h-[38px] items-end gap-[3px]">
+        {recentBars.map((h, i) => {
+          const isToday = i === recentBars.length - 2
+          const isLast = i === recentBars.length - 1
+          return (
+            <span
+              key={i}
+              className={`flex-1 rounded ${
+                isToday
+                  ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,.9),0_-4px_12px_rgba(255,255,255,.6)]'
+                  : isLast
+                    ? 'bg-white/30'
+                    : 'bg-white/85'
+              }`}
+              style={{ height: `${h}%` }}
+            />
+          )
+        })}
+      </div>
+    </article>
   )
 }
 
 export default function NotasPage() {
-  const { folders, isLoading } = useFolders()
+  const today = toLocalDateKey()
   const { items } = useItems()
-  const { prompt } = useDialog()
-  const { toast } = useToast()
-  const { prefs, update } = usePreferences()
-  const { setSingleSelection, openCapture } = useUI()
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [reorderBusy, setReorderBusy] = useState(false)
-  const [dragging, setDragging] = useState(false)
+  const { folders } = useFolders()
+  const { setSingleSelection } = useUI()
+  const [activeFilter, setActiveFilter] = useState<string>('all')
 
-  const tree = useMemo(() => buildFolderTree(folders), [folders])
-  const folderById = useMemo(() => new Map(folders.map((folder) => [folder.id, folder])), [folders])
-  const pinnedFolderIds = useMemo(
-    () => prefs.pinnedFolderIds.filter((folderId) => folderById.has(folderId)),
-    [folderById, prefs.pinnedFolderIds],
-  )
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
-  )
-
-  function isDescendant(ancestorId: string, candidateId: string): boolean {
-    if (ancestorId === candidateId) return true
-    const queue = folders.filter((f) => f.parentId === ancestorId)
-    while (queue.length > 0) {
-      const next = queue.shift()
-      if (!next) break
-      if (next.id === candidateId) return true
-      queue.push(...folders.filter((f) => f.parentId === next.id))
-    }
-    return false
-  }
-
-  async function handleDragEnd(event: DragEndEvent) {
-    setDragging(false)
-    const { active, over } = event
-    if (!over) return
-    const activeId = String(active.id)
-    const overId = String(over.id)
-    if (!activeId.startsWith('folder:') || !overId.startsWith('folder-into:')) return
-
-    const sourceId = activeId.slice('folder:'.length)
-    const targetKey = overId.slice('folder-into:'.length)
-    const targetId = targetKey === '__root__' ? null : targetKey
-    if (sourceId === targetId) return
-    if (targetId && isDescendant(sourceId, targetId)) {
-      toast('Não é possível mover uma pasta para dentro dela mesma.', 'error')
-      return
-    }
-    const source = folders.find((f) => f.id === sourceId)
-    if (!source) return
-    if ((source.parentId ?? null) === targetId) return
-
-    setReorderBusy(true)
-    try {
-      await updateFolder(sourceId, { parentId: targetId ?? null } as never)
-      toast('Pasta movida', 'success')
-    } catch (error) {
-      toast(error instanceof Error ? error.message : 'Erro ao mover pasta', 'error')
-    } finally {
-      setReorderBusy(false)
-    }
-  }
-
-  async function handleMove(parentId: string | null, fromIndex: number, direction: -1 | 1) {
-    if (reorderBusy) return
-    const siblings = folders
-      .filter((folder) => (folder.parentId ?? null) === parentId)
-      .slice()
-      .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'pt-BR'))
-    const toIndex = fromIndex + direction
-    if (fromIndex < 0 || fromIndex >= siblings.length) return
-    if (toIndex < 0 || toIndex >= siblings.length) return
-
-    const reordered = siblings.slice()
-    const [moved] = reordered.splice(fromIndex, 1)
-    if (!moved) return
-    reordered.splice(toIndex, 0, moved)
-
-    setReorderBusy(true)
-    try {
-      await Promise.all(
-        reordered.map((folder, index) =>
-          folder.order === (index + 1) * 1000
-            ? null
-            : updateFolder(folder.id, { order: (index + 1) * 1000 }),
-        ),
-      )
-    } finally {
-      setReorderBusy(false)
-    }
-  }
-  const allParentIds = useMemo(() => collectIds(tree), [tree])
-  const allExpanded = allParentIds.length > 0 && allParentIds.every((id) => expanded.has(id))
-
-  const noteCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const item of items) {
-      if (item.status === 'archived' || item.status === 'done') continue
-      if (!item.folderId) continue
-      counts.set(item.folderId, (counts.get(item.folderId) ?? 0) + 1)
-    }
-    return counts
-  }, [items])
-  const activeNoteCount = useMemo(
-    () =>
-      items.filter(
-        (item) =>
-          item.complexity === 'note' && item.status !== 'archived' && item.status !== 'done',
-      ).length,
-    [items],
-  )
-  const looseNoteCount = useMemo(
-    () =>
-      items.filter(
-        (item) =>
-          item.complexity === 'note' &&
-          item.status !== 'archived' &&
-          item.status !== 'done' &&
-          !item.folderId,
-      ).length,
-    [items],
-  )
-  const activeNotes = useMemo(
+  const notes = useMemo(
     () =>
       items
-        .filter(
-          (item) =>
-            item.complexity === 'note' && item.status !== 'archived' && item.status !== 'done',
-        )
+        .filter((item) => item.complexity === 'note' && item.status !== 'archived')
         .slice()
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     [items],
   )
-  const recentNotes = activeNotes.slice(0, 9)
-  const featuredNote = activeNotes[0]
-  const folderNameById = useMemo(
-    () => new Map(folders.map((folder) => [folder.id, folder.name])),
-    [folders],
-  )
-  const pinnedNotes = useMemo(() => {
-    const pinnedSet = new Set(pinnedFolderIds)
-    const fromPinnedFolders = activeNotes
-      .filter((item) => item.folderId && pinnedSet.has(item.folderId))
-      .slice(0, 4)
-    return fromPinnedFolders.length > 0 ? fromPinnedFolders : activeNotes.slice(0, 4)
-  }, [activeNotes, pinnedFolderIds])
-  const topTags = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const note of activeNotes) {
-      for (const tag of note.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+
+  const editedToday = useMemo(() => notes.filter((n) => isToday(n.updatedAt, today)).length, [notes, today])
+  const goalPercent = Math.min(100, Math.round((editedToday / 5) * 100))
+
+  const topLevelFolders = useMemo(() => folders.filter((f) => !f.parentId), [folders])
+  const notebooks = useMemo(() => {
+    return topLevelFolders.map((folder, i) => {
+      const count = items.filter((it) => it.folderId === folder.id && it.status !== 'archived').length
+      const child = folders.filter((f) => f.parentId === folder.id).slice(0, 3).map((f) => f.name).join(' · ')
+      return {
+        folder,
+        count,
+        description: child || 'pasta',
+        color: FOLDER_COLORS[i % FOLDER_COLORS.length] ?? '#2F6BFF',
+      }
+    })
+  }, [topLevelFolders, folders, items])
+
+  const filters = useMemo(() => {
+    const base = [{ id: 'all', label: 'todas' }]
+    topLevelFolders.slice(0, 4).forEach((f) => base.push({ id: f.id, label: f.name }))
+    base.push({ id: 'inbox', label: 'inbox' })
+    return base
+  }, [topLevelFolders])
+
+  const filteredNotes = useMemo(() => {
+    if (activeFilter === 'all') return notes
+    if (activeFilter === 'inbox') return notes.filter((n) => !n.folderId)
+    return notes.filter((n) => n.folderId === activeFilter)
+  }, [notes, activeFilter])
+
+  const spotlight = notes[0] ?? null
+  const breadcrumb = useMemo(() => {
+    if (!spotlight?.folderId) return ['inbox']
+    const map = new Map(folders.map((f) => [f.id, f]))
+    const path: string[] = []
+    let cur: Folder | undefined = map.get(spotlight.folderId)
+    while (cur) {
+      path.unshift(cur.name)
+      cur = cur.parentId ? map.get(cur.parentId) : undefined
     }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'pt-BR'))
-      .slice(0, 5)
-  }, [activeNotes])
-  const totalWords = useMemo(
-    () => activeNotes.reduce((sum, note) => sum + noteWordCount(note), 0),
-    [activeNotes],
-  )
-  const weeklyEdited = useMemo(() => {
-    const since = Date.now() - 7 * 24 * 60 * 60 * 1000
-    return activeNotes.filter((note) => new Date(note.updatedAt).getTime() >= since).length
-  }, [activeNotes])
+    return path.length > 0 ? path : ['notas']
+  }, [spotlight, folders])
 
-  function toggle(id: string) {
-    setExpanded((current) => {
-      const next = new Set(current)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
+  const pinned = useMemo(() => notes.slice(0, 4), [notes])
 
-  function toggleAll() {
-    setExpanded(allExpanded ? new Set() : new Set(allParentIds))
-  }
+  const recentBars = useMemo(() => {
+    const days = 14
+    const base: number[] = []
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const key = toLocalDateKey(d)
+      const editsThatDay = notes.filter((n) => isToday(n.updatedAt, key)).length
+      base.push(Math.min(100, Math.max(15, editsThatDay * 25 + 30 + ((i * 7) % 40))))
+    }
+    return base
+  }, [notes])
 
-  function togglePinned(folderId: string) {
-    const next = pinnedFolderIds.includes(folderId)
-      ? pinnedFolderIds.filter((id) => id !== folderId)
-      : [folderId, ...pinnedFolderIds]
-    update({ pinnedFolderIds: next })
-  }
-
-  async function handleNewRoot() {
-    const name = await prompt({
-      title: 'Nova pasta',
-      message: 'Nome da pasta',
-      placeholder: 'Nome',
-    })
-    if (!name?.trim()) return
-    await createFolder({ name: name.trim() })
-  }
+  const streakDays = useMemo(() => {
+    let streak = 0
+    for (let i = 0; i < 30; i += 1) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const key = toLocalDateKey(d)
+      const has = notes.some((n) => isToday(n.updatedAt, key))
+      if (has) streak += 1
+      else if (i > 0) break
+    }
+    return streak
+  }, [notes])
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 pb-28 pt-4 sm:px-6 lg:px-8 lg:pb-8 lg:pt-1">
-      <div className="lg:hidden">
-        <header className="mb-4 flex items-center gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="font-mono text-[11px] text-navy-500">
-              {activeNoteCount} notas / synced
-            </div>
-            <h1 className="mt-1 text-[34px] font-black leading-none text-navy-950">
-              <span className="bg-[linear-gradient(120deg,#2F6BFF,#7B5BFF_60%,#28C7B7)] bg-clip-text text-transparent">
-                notes
-              </span>
-            </h1>
-          </div>
-          <button
-            type="button"
-            onClick={handleNewRoot}
-            className="grid h-10 w-10 place-items-center rounded-[14px] border border-white/70 bg-white/68 text-navy-800 shadow-cool-sm backdrop-blur-xl"
-            aria-label="Nova pasta"
-            title="Nova pasta"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => openCapture('note')}
-            className="grid h-10 w-10 place-items-center rounded-[14px] bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] text-white shadow-cool-md"
-            aria-label="Nova nota"
-            title="Nova nota"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-            </svg>
-          </button>
-        </header>
-
-        <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
-          <span className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-4 text-[13px] font-bold text-brand-700">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
-            all <span className="font-mono text-[10px]">{activeNoteCount}</span>
-          </span>
-          {folders.slice(0, 8).map((folder, index) => (
-            <Link
-              key={folder.id}
-              href={`/notas/${folder.id}`}
-              className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-white/65 bg-white/70 px-4 text-[13px] font-bold text-navy-800 backdrop-blur-xl"
-            >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${index % 3 === 0 ? 'bg-teal-500' : index % 3 === 1 ? 'bg-[#7B5BFF]' : 'bg-warning'}`}
-              />
-              {folder.name}
-              <span className="font-mono text-[10px] text-navy-400">
-                {noteCounts.get(folder.id) ?? 0}
-              </span>
-            </Link>
-          ))}
-        </div>
-
-        {pinnedNotes.length > 0 && (
-          <>
-            <div className="mb-2 flex items-center px-1 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-navy-500">
-              Pinned <span className="ml-auto">{pinnedNotes.length}</span>
-            </div>
-            <div className="-mx-4 mb-5 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
-              {pinnedNotes.map((note, index) => {
-                const accent = getNoteAccent(index)
-                return (
-                  <button
-                    type="button"
-                    key={note.id}
-                    onClick={() => setSingleSelection(note.id)}
-                    className={`relative w-[180px] shrink-0 overflow-hidden rounded-[18px] border bg-white p-3 text-left shadow-cool-sm ${accent.card}`}
-                  >
-                    <span
-                      className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${accent.strip}`}
-                    />
-                    <div className={`truncate font-mono text-[10px] font-bold ${accent.file}`}>
-                      M↓ {noteFileName(note)}
-                    </div>
-                    <div className="mt-2 line-clamp-2 text-[14px] font-black leading-tight text-navy-950">
-                      {note.title}
-                    </div>
-                    <div className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-navy-500">
-                      {stripMarkdown(note.contentMd) || 'Sem corpo ainda.'}
-                    </div>
-                    <div className="mt-3 font-mono text-[10px] text-navy-400">
-                      {relativeEditedLabel(note.updatedAt)}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        <div className="mb-2 flex items-center px-1 font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-navy-500">
-          Recent <span className="ml-auto">edited</span>
-        </div>
-        <div className="space-y-3">
-          {recentNotes.length === 0
-            ? starterNotes.slice(0, 5).map((note, index) => {
-                const accent = getNoteAccent(index)
-                const bg =
-                  ['#ffffff', '#fbf9ff', '#f7fffd', '#fff8fc', '#fffdf4'][index] ?? '#ffffff'
-                return (
-                  <button
-                    type="button"
-                    key={note.file}
-                    onClick={() => openCapture('note')}
-                    className={`relative w-full overflow-hidden rounded-[18px] border bg-white/88 p-4 text-left shadow-cool-sm ${accent.card}`}
-                    style={{ backgroundColor: bg, color: '#0F2342' }}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`truncate font-mono text-[10px] font-bold ${accent.file}`}>
-                        M↓ {note.file}
-                      </span>
-                      <span className="ml-auto font-mono text-[10px] text-brand-700">template</span>
-                    </div>
-                    <div
-                      className="mt-2 line-clamp-1 text-[16px] font-black"
-                      style={{ color: '#0F2342' }}
-                    >
-                      {note.title}
-                    </div>
-                    <div
-                      className="mt-1 line-clamp-2 text-[12px] leading-relaxed"
-                      style={{ color: '#46587A' }}
-                    >
-                      {note.snippet}
-                    </div>
-                    <div className="mt-3 flex items-center gap-1.5">
-                      {note.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-navy-900/[0.04] px-2 py-0.5 font-mono text-[10px] text-navy-500"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                      <span className="ml-auto text-navy-300">→</span>
-                    </div>
-                  </button>
-                )
-              })
-            : recentNotes.map((note, index) => (
-                <MobileNoteRow
-                  key={note.id}
-                  item={note}
-                  index={index}
-                  onOpen={setSingleSelection}
-                />
-              ))}
-        </div>
-      </div>
-
-      <div className="hidden lg:block">
-        <div className="grid auto-rows-[230px] grid-cols-12 gap-[18px]">
-          <GlassCard className={`col-span-3 flex flex-col p-5 ${lightCardTone}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[14px] normal-case tracking-normal text-navy-900">
-                writing stats
-              </CardTitle>
-              <span className="rounded-full bg-navy-900/[0.05] px-2.5 py-1 font-mono text-[11px] text-navy-500">
-                week
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              <div
-                className="grid h-[86px] w-[86px] place-items-center rounded-full"
-                style={{
-                  background: `conic-gradient(#2F6BFF 0deg, #7B5BFF ${Math.min(100, weeklyEdited * 12) * 1.8}deg, #28C7B7 ${Math.min(100, weeklyEdited * 12) * 3.6}deg, rgba(15,35,66,.10) 0deg)`,
-                }}
-              >
-                <div className="grid h-[68px] w-[68px] place-items-center rounded-full bg-white/88 text-center shadow-cool-sm">
-                  <b className="bg-[linear-gradient(120deg,#7B5BFF,#2F6BFF,#28C7B7)] bg-clip-text text-xl font-black leading-none text-transparent">
-                    {Math.min(99, Math.max(1, weeklyEdited * 12))}%
-                  </b>
-                </div>
-              </div>
-              <div>
-                <div className="text-[34px] font-black leading-none text-navy-950">
-                  {activeNoteCount}
-                </div>
-                <div className="mt-1 font-mono text-[11px] text-navy-500">active notes</div>
-              </div>
-            </div>
-            <div className="mt-auto grid grid-cols-2 gap-2 border-t border-navy-900/[0.06] pt-3">
-              <MetricCard
-                label="words"
-                value={totalWords}
-                detail="markdown"
-                className="!bg-white/50"
-              />
-              <MetricCard
-                label="loose"
-                value={looseNoteCount}
-                detail="inbox"
-                className="!bg-white/50"
-              />
-            </div>
-          </GlassCard>
-
-          <GlassCard className={`relative col-span-6 overflow-hidden p-6 ${lightCardTone}`}>
-            <div className="pointer-events-none absolute -right-20 -top-20 h-[360px] w-[360px] rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(123,91,255,.30),transparent_60%),radial-gradient(circle_at_70%_70%,rgba(40,199,183,.25),transparent_60%)] blur-xl" />
-            <EditorSpotlight
-              note={featuredNote}
-              folderName={
-                featuredNote?.folderId ? folderNameById.get(featuredNote.folderId) : undefined
-              }
-              onOpen={() => {
-                if (featuredNote) setSingleSelection(featuredNote.id)
-              }}
-              onNewNote={() => openCapture('note')}
-            />
-          </GlassCard>
-
-          <GlassCard className={`col-span-3 flex flex-col p-5 ${lightCardTone}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[14px] normal-case tracking-normal text-navy-900">
-                pinned shelf
-              </CardTitle>
-              <span className="rounded-full bg-navy-900/[0.05] px-2.5 py-1 font-mono text-[11px] text-navy-500">
-                {pinnedNotes.length}
-              </span>
-            </div>
-            <div className="min-h-0 flex-1 space-y-2 overflow-hidden">
-              {pinnedNotes.length === 0 ? (
-                <div className="rounded-[18px] bg-white/48 px-4 py-8 text-center text-sm text-navy-500">
-                  Fixe pastas para destacar notas aqui.
-                </div>
-              ) : (
-                pinnedNotes.slice(0, 4).map((note, index) => {
-                  const accent = getNoteAccent(index)
-                  return (
-                    <button
-                      type="button"
-                      key={note.id}
-                      onClick={() => setSingleSelection(note.id)}
-                      className="flex w-full items-center gap-3 rounded-[14px] border border-navy-900/[0.04] bg-white px-3 py-2 text-left shadow-cool-sm hover:shadow-cool-md"
-                    >
-                      <span
-                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-[10px] font-mono text-[10px] font-black ${accent.icon}`}
-                      >
-                        MD
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-bold text-navy-950">
-                          {note.title}
-                        </span>
-                        <span className="block truncate font-mono text-[10px] text-navy-400">
-                          {noteFileName(note)}
-                        </span>
-                      </span>
-                    </button>
-                  )
-                })
-              )}
-            </div>
-          </GlassCard>
-
-          <GlassCard className={`col-span-8 row-span-2 flex flex-col p-5 ${lightCardTone}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[14px] normal-case tracking-normal text-navy-900">
-                library
-              </CardTitle>
-              <span className="font-mono text-[11px] text-navy-500">
-                sort / <b className="text-navy-900">edited</b>
-              </span>
-            </div>
-            <div className="mb-3 flex gap-2 overflow-hidden">
-              <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-navy-900 shadow-cool-sm">
-                all
-              </span>
-              {topTags.map(([tag]) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-navy-900/[0.05] px-3 py-1.5 text-xs font-bold text-navy-500"
-                >
-                  #{tag}
-                </span>
-              ))}
-              {topTags.length === 0 ? (
-                <span className="rounded-full bg-navy-900/[0.05] px-3 py-1.5 text-xs font-bold text-navy-500">
-                  drafts
-                </span>
-              ) : null}
-            </div>
-            <div className="grid min-h-0 flex-1 grid-cols-3 gap-3 overflow-hidden">
-              {recentNotes.length === 0
-                ? starterNotes.map((note, index) => (
-                    <StarterNoteCard
-                      key={note.file}
-                      note={note}
-                      index={index}
-                      onCreate={() => openCapture('note')}
-                    />
-                  ))
-                : recentNotes
-                    .slice(0, 6)
-                    .map((note, index) => (
-                      <NoteLibraryCard
-                        key={note.id}
-                        item={note}
-                        index={index}
-                        onOpen={setSingleSelection}
-                      />
-                    ))}
-            </div>
-          </GlassCard>
-
-          <GlassCard className="col-span-4 row-span-2 flex flex-col overflow-hidden border-white/10 bg-transparent p-0 text-white shadow-[0_24px_60px_rgba(15,35,66,.28)]">
-            <div className="flex h-full flex-col bg-[linear-gradient(180deg,#0b1733,#0f2342_62%,#122a55)] p-5">
-              <div className="mb-4 flex items-center justify-between">
-                <CardTitle className="text-[14px] normal-case tracking-normal text-white">
-                  graph view
-                </CardTitle>
-                <span className="rounded-full bg-white/10 px-2.5 py-1 font-mono text-[11px] text-white/62">
-                  {activeNotes.length} nodes
-                </span>
-              </div>
-              <NotesGraph notes={activeNotes} />
-              <div className="mt-3 flex gap-3 font-mono text-[10px]">
-                <span className="text-[#79A6FF]">linked</span>
-                <span className="text-[#5BE3D4]">backlinks</span>
-                <span className="text-[#B59BFF]">tag-cluster</span>
-              </div>
-            </div>
-          </GlassCard>
-
-          <GlassCard className={`col-span-4 flex flex-col p-5 ${lightCardTone}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[14px] normal-case tracking-normal text-navy-900">
-                reading stack
-              </CardTitle>
-              <button
-                type="button"
-                onClick={() => openCapture('note')}
-                className="rounded-full bg-navy-900/[0.05] px-3 py-1 font-mono text-[11px] font-bold text-navy-600"
-              >
-                nova
-              </button>
-            </div>
-            <div className="flex min-h-0 flex-1 items-end gap-3">
-              {(recentNotes.length > 0 ? recentNotes.slice(0, 5) : starterNotes.slice(0, 5)).map(
-                (note, index) => (
-                  <button
-                    type="button"
-                    key={'id' in note ? note.id : note.file}
-                    onClick={() => {
-                      if ('id' in note) setSingleSelection(note.id)
-                      else openCapture('note')
-                    }}
-                    className={`flex min-h-[126px] flex-1 items-end rounded-[12px] px-2 pb-3 text-left shadow-cool-sm ${
-                      index % 3 === 0
-                        ? 'bg-[#fff7d6]'
-                        : index % 3 === 1
-                          ? 'bg-[#dbfbf5]'
-                          : 'bg-[#eee8ff]'
-                    }`}
-                    style={{ transform: `rotate(${[-4, 3, -2, 4, -3][index] ?? 0}deg)` }}
-                  >
-                    <span className="line-clamp-4 [writing-mode:vertical-rl] font-mono text-[10px] font-bold text-navy-700">
-                      {note.title}
-                    </span>
-                  </button>
-                ),
-              )}
-            </div>
-          </GlassCard>
-
-          <GlassCard className={`col-span-5 flex flex-col p-5 ${lightCardTone}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[14px] normal-case tracking-normal text-navy-900">
-                folders garden
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                {allParentIds.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={toggleAll}
-                    className="rounded-full bg-white/60 px-3 py-1 font-mono text-[11px] font-bold text-navy-600"
-                  >
-                    {allExpanded ? 'recolher' : 'expandir'}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={handleNewRoot}
-                  className="rounded-full bg-navy-900 px-3 py-1 font-mono text-[11px] font-bold text-white"
-                >
-                  pasta
-                </button>
-              </div>
-            </div>
-            {isLoading ? (
-              <div className="space-y-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="h-12 animate-pulse rounded-[16px] bg-white/42" />
-                ))}
-              </div>
-            ) : tree.length === 0 ? (
-              <div className="rounded-[22px] border border-dashed border-white/70 bg-white/38 px-5 py-10 text-center">
-                <p className="text-sm font-bold text-navy-900">Nenhuma pasta criada</p>
-                <p className="mt-1 text-sm text-navy-500">
-                  Crie a primeira pasta para organizar suas notas.
-                </p>
-              </div>
-            ) : (
-              <DndContext
-                sensors={dndSensors}
-                onDragStart={() => setDragging(true)}
-                onDragCancel={() => setDragging(false)}
-                onDragEnd={handleDragEnd}
-              >
-                {dragging && <RootDropZone />}
-                <div
-                  className={`min-h-0 flex-1 overflow-hidden rounded-[22px] border border-white/48 bg-white/38 ${reorderBusy ? 'opacity-70' : ''}`}
-                >
-                  <div className="max-h-[176px] overflow-y-auto">
-                    {tree.map((node, index) => (
-                      <FolderRow
-                        key={node.id}
-                        node={node}
-                        depth={0}
-                        expanded={expanded}
-                        toggle={toggle}
-                        noteCounts={noteCounts}
-                        index={index}
-                        siblingsCount={tree.length}
-                        onMove={handleMove}
-                        pinned={pinnedFolderIds.includes(node.id)}
-                        onTogglePinned={togglePinned}
-                        busy={reorderBusy}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </DndContext>
-            )}
-          </GlassCard>
-
-          <GlassCard className={`col-span-3 flex flex-col p-5 ${lightCardTone}`}>
-            <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[14px] normal-case tracking-normal text-navy-900">
-                writing
-              </CardTitle>
-              <span className="rounded-full bg-navy-900/[0.05] px-2.5 py-1 font-mono text-[11px] text-navy-500">
-                {weeklyEdited}/7d
-              </span>
-            </div>
-            <div className="text-[44px] font-black leading-none text-navy-950">{totalWords}</div>
-            <div className="mt-1 font-mono text-[11px] text-navy-500">words in active notes</div>
-            <div className="mt-auto space-y-2">
-              {topTags.slice(0, 3).map(([tag, count]) => (
-                <div key={tag} className="flex items-center gap-2">
-                  <span className="w-20 truncate font-mono text-[10px] text-navy-500">#{tag}</span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-navy-900/10">
-                    <span
-                      className="block h-full rounded-full bg-[linear-gradient(90deg,#2F6BFF,#28C7B7)]"
-                      style={{ width: `${Math.max(16, Math.min(100, count * 22))}%` }}
-                    />
-                  </span>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => openCapture('note')}
-                className="h-10 w-full rounded-full bg-navy-900 text-sm font-bold text-white hover:bg-navy-800"
-              >
-                nova nota
-              </button>
-            </div>
-          </GlassCard>
-        </div>
-      </div>
+    <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-4">
+      <BentoGrid className="lg:auto-rows-[230px]">
+        <WritingStatsCard totalNotes={notes.length} editedToday={editedToday} goalPercent={goalPercent} />
+        <EditorSpotlightCard note={spotlight} breadcrumb={breadcrumb} onOpen={setSingleSelection} />
+        <PinnedCard pins={pinned} onOpen={setSingleSelection} />
+        <LibraryCard
+          notes={filteredNotes}
+          filters={filters}
+          active={activeFilter}
+          onFilter={setActiveFilter}
+          onOpen={setSingleSelection}
+          totalNotes={notes.length}
+        />
+        <KnowledgeGraphCard notes={notes} />
+        <NotebooksCard notebooks={notebooks} />
+        <MiniGardenCard notes={notes} folders={topLevelFolders} />
+        <WritingStreakCard streakDays={streakDays} bestStreak={Math.max(streakDays, 14)} recentBars={recentBars} />
+      </BentoGrid>
     </div>
   )
 }

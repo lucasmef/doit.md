@@ -1,1180 +1,577 @@
 'use client'
 
-import { Fragment, use, useEffect, useMemo, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import useSWR from 'swr'
-import {
-  DndContext,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  useDraggable,
-  useDroppable,
-  type DragEndEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core'
-import {
-  useFolders,
-  buildFolderTree,
-  createFolder,
-  deleteFolder,
-  updateFolder,
-  type FolderTreeNode,
-} from '@/hooks/use-folders'
-import { bulkUpdateItems, useItems } from '@/hooks/use-items'
-import { ItemList } from '@/components/items/item-list'
-import { ItemRow as SharedItemRow } from '@/components/items/item-row'
-import { DONE_FEEDBACK_MS } from '@/components/items/completion-feedback'
-import { sortForcedItemOrder } from '@/lib/item-order'
-import { useUI } from '@/store/ui'
-import { useToast } from '@/components/ui/toast'
-import { useDialog } from '@/components/ui/dialog'
-import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
-import { usePreferences } from '@/hooks/use-preferences'
-import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
+import { useRouter } from 'next/navigation'
 import type { Folder, Item } from '@doit/types'
+import { buildFolderTree, useFolders, type FolderTreeNode } from '@/hooks/use-folders'
+import { updateItem, useItems } from '@/hooks/use-items'
+import { MarkdownEditor } from '@/components/items/markdown-editor'
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json())
-type ViewMode = 'list' | 'kanban'
-type MoveTarget = {
-  id: string | null
-  label: string
-}
-type KanbanColumnConfig = {
-  key: string
-  title: string
-  href?: string
-  items: Item[]
-  childFolders: FolderTreeNode[]
-  addFolderId: string
-  folderId?: string
-}
+const SIDEBAR_FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
 
-function formatMoveTargetLabel(folderId: string | null, targets: MoveTarget[]): string {
-  return targets.find((target) => target.id === folderId)?.label ?? 'Sem pasta'
+function formatRelative(iso: string): string {
+  const diff = Math.max(0, Date.now() - new Date(iso).getTime())
+  const sec = Math.round(diff / 1000)
+  if (sec < 60) return `${sec}s atras`
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}min atras`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h atras`
+  const days = Math.round(hr / 24)
+  return `${days}d atras`
 }
 
-function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node
-    const child = findNode(node.children, id)
-    if (child) return child
+type Heading = { id: string; text: string; level: 1 | 2 | 3 }
+
+function parseHeadings(markdown: string): Heading[] {
+  if (!markdown) return []
+  const lines = markdown.split('\n')
+  const result: Heading[] = []
+  for (const line of lines) {
+    const match = line.match(/^(#{1,3})\s+(.+)$/)
+    if (!match || !match[1] || !match[2]) continue
+    const level = match[1].length as 1 | 2 | 3
+    const text = match[2].trim()
+    if (!text) continue
+    const id = text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .slice(0, 60)
+    result.push({ id, text, level })
   }
-  return null
+  return result
 }
 
-function buildBreadcrumb(folders: Folder[], id: string): Folder[] {
+function buildFolderPath(folders: Folder[], folderId?: string): Folder[] {
+  if (!folderId) return []
   const map = new Map(folders.map((f) => [f.id, f]))
   const path: Folder[] = []
-  let current = map.get(id)
-  while (current) {
-    path.unshift(current)
-    current = current.parentId ? map.get(current.parentId) : undefined
+  let cur: Folder | undefined = map.get(folderId)
+  while (cur) {
+    path.unshift(cur)
+    cur = cur.parentId ? map.get(cur.parentId) : undefined
   }
   return path
 }
 
 function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg
-      className={className}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"
-      />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   )
 }
 
-function StarIcon({ filled = false, className = 'h-4 w-4' }: { filled?: boolean; className?: string }) {
+function ChevronIcon({ open, className = 'h-3 w-3' }: { open?: boolean; className?: string }) {
   return (
-    <svg
-      className={className}
-      fill={filled ? 'currentColor' : 'none'}
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      aria-hidden="true"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="m12 3.8 2.6 5.2 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.8Z"
-      />
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" className={`${className} ${open ? 'rotate-90' : ''} transition-transform`}>
+      <path d="m9 18 6-6-6-6" />
     </svg>
   )
 }
 
-const FOLDER_DRAG_MIME = 'application/x-folder-id'
-function KanbanCard({
-  item,
-  selected,
-  active,
-  orderedIds,
-  moveTargets,
-  onMoveItem,
+function SidebarTree({
+  tree,
+  itemCounts,
+  expanded,
+  toggle,
+  depth = 0,
 }: {
-  item: Item
-  selected: boolean
-  active: boolean
-  orderedIds: string[]
-  moveTargets: MoveTarget[]
-  onMoveItem: (itemId: string, folderId: string | null) => Promise<void>
+  tree: FolderTreeNode[]
+  itemCounts: Map<string, number>
+  expanded: Set<string>
+  toggle: (id: string) => void
+  depth?: number
 }) {
-  const [moving, setMoving] = useState(false)
-  const [savingMove, setSavingMove] = useState(false)
-  const [targetId, setTargetId] = useState<string | null>(item.folderId ?? null)
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `item:${item.id}`,
-    data: { itemId: item.id },
-  })
-  const wasDraggingRef = useRef(false)
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null)
-  useEffect(() => {
-    if (isDragging) wasDraggingRef.current = true
-  }, [isDragging])
-
-  const availableTargets = moveTargets.filter((target) => target.id !== (item.folderId ?? null))
-  const selectedTargetId = targetId === null ? '' : targetId
-
-  async function submitMove() {
-    if ((item.folderId ?? null) === targetId) {
-      setMoving(false)
-      return
-    }
-    setSavingMove(true)
-    try {
-      await onMoveItem(item.id, targetId)
-      setMoving(false)
-    } finally {
-      setSavingMove(false)
-    }
-  }
-
-  function handleCardClickCapture(e: React.MouseEvent) {
-    if (wasDraggingRef.current) {
-      e.stopPropagation()
-      e.preventDefault()
-      wasDraggingRef.current = false
-      pointerStartRef.current = null
-    }
-  }
-
   return (
-    <div
-      ref={setNodeRef}
-      onClickCapture={handleCardClickCapture}
-      onPointerDownCapture={(event) => {
-        pointerStartRef.current = { x: event.clientX, y: event.clientY }
-      }}
-      onPointerMoveCapture={(event) => {
-        const start = pointerStartRef.current
-        if (!start) return
-        if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 4) {
-          wasDraggingRef.current = true
-        }
-      }}
-      onPointerUpCapture={() => {
-        pointerStartRef.current = null
-      }}
-      onPointerCancelCapture={() => {
-        pointerStartRef.current = null
-      }}
-      className={`group/card relative flex items-stretch rounded-[20px] border border-white/48 bg-white/52 shadow-cool-sm backdrop-blur-xl ${
-        isDragging ? 'opacity-50' : ''
-      }`}
-    >
-      <div
-        {...attributes}
-        {...listeners}
-        title="Arrastar"
-        onClick={(e) => e.stopPropagation()}
-        className="hidden w-3 shrink-0 cursor-grab touch-none items-center justify-center rounded-l-md text-navy-300 opacity-100 transition-opacity active:cursor-grabbing lg:flex lg:opacity-0 lg:group-hover/card:opacity-100"
-      >
-        <svg className="h-3.5 w-3.5" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
-          <path d="M5 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2ZM5 11a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm6 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z" />
-        </svg>
-      </div>
-      <div className="min-w-0 flex-1">
-        <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} variant="glass" />
-        <div
-          className={
-            moving
-              ? 'border-t border-ui-border-soft px-2 py-1.5 lg:hidden'
-              : 'absolute bottom-2 right-2 lg:hidden'
-          }
-        >
-          {moving ? (
-            <div className="flex items-center gap-1.5">
-              <select
-                value={selectedTargetId}
-                onChange={(event) => setTargetId(event.target.value || null)}
-                disabled={savingMove}
-                className="h-10 min-w-0 flex-1 rounded-[9px] border border-ui-border-soft bg-white px-2 text-[13px] text-navy-700 outline-none disabled:opacity-60"
-              >
-                {moveTargets.map((target) => (
-                  <option key={target.id ?? 'root'} value={target.id ?? ''}>
-                    {target.label}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => void submitMove()}
-                disabled={savingMove || (item.folderId ?? null) === targetId}
-                className="h-10 rounded-[9px] bg-brand-600 px-3 text-[12px] font-medium text-white disabled:opacity-40"
-              >
-                {savingMove ? '...' : 'OK'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setTargetId(item.folderId ?? null)
-                  setMoving(false)
-                }}
-                disabled={savingMove}
-                className="h-10 rounded-[9px] border border-ui-border-soft bg-white px-2 text-[12px] text-navy-500 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                setTargetId(availableTargets[0]?.id ?? null)
-                setMoving(true)
-              }}
-              disabled={availableTargets.length === 0}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[9px] border border-ui-border-soft bg-white text-navy-500 disabled:opacity-40"
-              aria-label="Mover item"
-              title="Mover"
+    <div className="flex flex-col gap-px">
+      {tree.map((node, i) => {
+        const isOpen = expanded.has(node.id)
+        const hasChildren = node.children.length > 0
+        const color = SIDEBAR_FOLDER_COLORS[(depth + i) % SIDEBAR_FOLDER_COLORS.length] ?? '#2F6BFF'
+        return (
+          <div key={node.id}>
+            <div
+              className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 text-[13px] text-navy-900 hover:bg-navy-900/[0.05]"
+              style={{ paddingLeft: `${8 + depth * 14}px` }}
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.8}
-                aria-hidden="true"
+              <button
+                type="button"
+                onClick={() => toggle(node.id)}
+                className="inline-flex h-3 w-3 items-center justify-center text-navy-400 hover:text-navy-900"
+                aria-label={hasChildren ? 'Expandir/colapsar' : 'Pasta vazia'}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M7 7h10m0 0-3-3m3 3-3 3M17 17H7m0 0 3 3m-3-3 3-3"
-                />
-              </svg>
-            </button>
-          )}
-        </div>
-      </div>
+                {hasChildren ? <ChevronIcon open={isOpen} /> : <span className="block h-1 w-1 rounded-full bg-navy-300" />}
+              </button>
+              <Link
+                href={`/notas/pastas/${node.id}`}
+                className="flex min-w-0 flex-1 items-center gap-2 truncate"
+                style={{ color }}
+              >
+                <FolderIcon className="h-4 w-4 shrink-0" />
+                <span className="truncate text-navy-900">{node.name}</span>
+                <span className="ml-auto font-mono text-[10px] text-navy-500">{itemCounts.get(node.id) ?? 0}</span>
+              </Link>
+            </div>
+            {hasChildren && isOpen ? (
+              <SidebarTree tree={node.children} itemCounts={itemCounts} expanded={expanded} toggle={toggle} depth={depth + 1} />
+            ) : null}
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-function ColumnInserter({ onAdd, edge }: { onAdd: () => void; edge?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onAdd}
-      title="Adicionar coluna aqui"
-      aria-label="Adicionar coluna aqui"
-      className={`group/inserter relative hidden shrink-0 cursor-pointer items-center justify-center self-stretch lg:flex ${edge ? 'w-3' : 'w-4'}`}
-    >
-      <span className="absolute inset-y-3 left-1/2 w-px -translate-x-1/2 bg-transparent transition-colors group-hover/inserter:bg-brand-300" />
-      <span className="relative flex h-7 w-7 items-center justify-center rounded-full border border-brand-300 bg-white text-brand-600 opacity-0 shadow-sm transition-opacity group-hover/inserter:opacity-100">
-        <svg
-          className="h-3.5 w-3.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
-        </svg>
-      </span>
-    </button>
-  )
-}
-
-function KanbanDropZone({
-  folderId,
-  children,
+function Sidebar({
+  folders,
+  itemCounts,
+  parentFolderId,
 }: {
-  folderId: string | null
-  children: React.ReactNode
+  folders: Folder[]
+  itemCounts: Map<string, number>
+  parentFolderId?: string
 }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `col:${folderId ?? 'root'}`,
-    data: { folderId },
+  const tree = useMemo(() => buildFolderTree(folders), [folders])
+  const [expanded, setExpanded] = useState<Set<string>>(() => {
+    const initial = new Set<string>()
+    if (parentFolderId) initial.add(parentFolderId)
+    return initial
   })
-  return (
-    <div
-      ref={setNodeRef}
-      className={`flex flex-1 flex-col gap-2 overflow-y-auto px-2 py-2 transition-colors ${
-        isOver ? 'bg-brand-50/60' : ''
-      }`}
-    >
-      {children}
-    </div>
-  )
-}
-
-function KanbanColumn({
-  title,
-  href,
-  items,
-  childFolders,
-  addFolderId,
-  folderId,
-  selectedItemIds,
-  orderedIds,
-  dragging,
-  columnDragging,
-  columnDropTarget,
-  onDropItems,
-  onColumnDragStart,
-  onColumnDragOver,
-  onColumnDragLeave,
-  onColumnDragEnd,
-  onColumnDrop,
-  moveTargets,
-  onMoveItem,
-}: {
-  title: string
-  href?: string
-  items: Item[]
-  childFolders: FolderTreeNode[]
-  addFolderId: string | null
-  folderId?: string
-  selectedItemIds: string[]
-  orderedIds: string[]
-  dragging: boolean
-  columnDragging?: boolean
-  columnDropTarget?: boolean
-  onDropItems: (folderId: string | null, event: React.DragEvent) => void
-  onColumnDragStart?: (folderId: string, event: React.DragEvent) => void
-  onColumnDragOver?: (folderId: string, event: React.DragEvent) => void
-  onColumnDragLeave?: () => void
-  onColumnDragEnd?: () => void
-  onColumnDrop?: (folderId: string, event: React.DragEvent) => void
-  moveTargets: MoveTarget[]
-  onMoveItem: (itemId: string, folderId: string | null) => Promise<void>
-}) {
-  const { selectedItemId, setQuickCaptureOpen, setQuickCaptureFolderId } = useUI()
-
-  function handleAdd() {
-    setQuickCaptureFolderId(addFolderId)
-    setQuickCaptureOpen(true)
-  }
-
-  const reorderable = !!folderId && !!onColumnDragStart
-
-  function handleDragOver(event: React.DragEvent) {
-    event.preventDefault()
-    if (reorderable && folderId && event.dataTransfer.types.includes(FOLDER_DRAG_MIME)) {
-      onColumnDragOver?.(folderId, event)
-    }
-  }
-
-  function handleDrop(event: React.DragEvent) {
-    if (reorderable && folderId && event.dataTransfer.types.includes(FOLDER_DRAG_MIME)) {
-      event.preventDefault()
-      onColumnDrop?.(folderId, event)
-      return
-    }
-    onDropItems(addFolderId, event)
-  }
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={onColumnDragLeave}
-      onDrop={handleDrop}
-      className={`flex w-full shrink-0 flex-col rounded-[26px] border bg-white/42 shadow-cool-sm backdrop-blur-xl transition-colors lg:w-80 ${
-        columnDragging
-          ? 'border-brand-400 opacity-50'
-          : columnDropTarget
-            ? 'border-brand-500 ring-2 ring-brand-200'
-            : dragging
-              ? 'border-brand-300'
-              : 'border-white/55'
-      }`}
-    >
-      <div
-        draggable={reorderable}
-        onDragStart={(event) => {
-          if (!reorderable || !folderId) return
-          event.dataTransfer.effectAllowed = 'move'
-          event.dataTransfer.setData(FOLDER_DRAG_MIME, folderId)
-          onColumnDragStart?.(folderId, event)
-        }}
-        onDragEnd={onColumnDragEnd}
-        className={`flex items-center justify-between gap-2 border-b border-white/45 px-3 py-3 ${reorderable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+    <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/70 lg:bg-white/72 lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
+      <div className="flex items-center gap-2.5 border-b border-navy-900/[0.06] px-4 py-3.5">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
+          <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
+        </span>
+        <span className="text-[14px] font-black tracking-tight text-navy-900">
+          doit<span className="text-brand-600">.md</span>
+        </span>
+        <Link
+          href="/notas"
+          className="ml-auto inline-flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-navy-900/[0.05] text-navy-500 hover:bg-navy-900/[0.10] hover:text-navy-900"
+          title="Voltar para biblioteca"
+          aria-label="Voltar"
+        >
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        </Link>
+      </div>
+
+      <Link
+        href="/notas"
+        className="mx-3 my-3 flex items-center gap-2 rounded-[10px] bg-navy-900/[0.05] px-3 py-2 font-mono text-[12px] text-navy-500 hover:bg-navy-900/[0.08]"
       >
-        {href ? (
-          <Link
-            href={href}
-            className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-bold text-navy-900 hover:text-brand-600"
-          >
-            <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
-            <span className="truncate">{title}</span>
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-4-4" />
+        </svg>
+        Buscar notas...
+        <span className="ml-auto rounded border border-navy-900/[0.08] bg-white px-1.5 text-[10px]">⌘K</span>
+      </Link>
+
+      <div className="flex items-center gap-1.5 px-4 pb-1 pt-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+        Pastas
+        <Link href="/notas/pastas" className="ml-auto inline-flex h-[18px] w-[18px] items-center justify-center rounded text-navy-500 hover:bg-navy-900/[0.08] hover:text-navy-900" aria-label="Gerenciar pastas">
+          <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </Link>
+      </div>
+
+      <div className="flex-1 overflow-auto px-2 pb-2">
+        {tree.length === 0 ? (
+          <Link href="/notas/pastas" className="mt-2 block rounded-lg border border-dashed border-navy-900/15 px-3 py-2 text-center font-mono text-[11px] text-navy-500 hover:border-brand-300 hover:text-brand-600">
+            criar pastas
           </Link>
         ) : (
-          <span className="flex min-w-0 flex-1 items-center gap-2 text-[13px] font-bold text-navy-900">
-            <span className="truncate">{title}</span>
-          </span>
+          <SidebarTree tree={tree} itemCounts={itemCounts} expanded={expanded} toggle={toggle} />
         )}
-        <span className="font-mono text-[10px] text-navy-300">
-          {childFolders.length + items.length}
-        </span>
       </div>
 
-      <KanbanDropZone folderId={addFolderId}>
-        {childFolders.map((sub) => (
-          <Link
-            key={sub.id}
-            href={`/notas/${sub.id}`}
-            className="group flex items-center gap-2 rounded-[18px] border border-white/48 bg-white/58 px-3 py-2 text-[13px] text-navy-900 shadow-cool-sm hover:border-brand-300 hover:bg-white/78"
-          >
-            <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
-            <span className="flex-1 truncate font-medium">{sub.name}</span>
-            {sub.children.length > 0 && (
-              <span className="font-mono text-[10px] text-navy-300">{sub.children.length}</span>
-            )}
-          </Link>
-        ))}
-        {items.map((item) => (
-          <KanbanCard
-            key={item.id}
-            item={item}
-            active={item.id === selectedItemId}
-            selected={selectedItemIds.includes(item.id)}
-            orderedIds={orderedIds}
-            moveTargets={moveTargets}
-            onMoveItem={onMoveItem}
-          />
-        ))}
-        {childFolders.length === 0 && items.length === 0 && (
-          <p className="px-2 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
+      <div className="border-t border-navy-900/[0.06] px-4 py-2.5">
+        <Link href="/dashboard" className="font-mono text-[11px] text-navy-500 hover:text-navy-900">
+          ← dashboard
+        </Link>
+      </div>
+    </aside>
+  )
+}
+
+function OutlineRail({ headings, savedAt }: { headings: Heading[]; savedAt?: string }) {
+  return (
+    <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/70 lg:bg-white/72 lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
+      <div className="border-b border-navy-900/[0.06] px-4 py-3">
+        <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">Outline</div>
+        <div className="mt-1 font-mono text-[10px] text-navy-300">{headings.length} headings</div>
+      </div>
+      <div className="flex-1 overflow-auto px-3 py-3">
+        {headings.length === 0 ? (
+          <div className="text-center font-mono text-[11px] text-navy-300">use # ## ### para criar uma estrutura</div>
+        ) : (
+          <ul className="flex flex-col gap-1">
+            {headings.map((h, i) => (
+              <li key={`${h.id}-${i}`}>
+                <a
+                  href={`#${h.id}`}
+                  className="block truncate rounded-md px-2 py-1 text-[12px] text-navy-700 hover:bg-navy-900/[0.05] hover:text-navy-900"
+                  style={{ paddingLeft: `${8 + (h.level - 1) * 12}px` }}
+                >
+                  {h.text}
+                </a>
+              </li>
+            ))}
+          </ul>
         )}
-      </KanbanDropZone>
+      </div>
+      {savedAt ? (
+        <div className="border-t border-navy-900/[0.06] px-4 py-2.5 font-mono text-[10px] text-navy-500">
+          atualizada {formatRelative(savedAt)}
+        </div>
+      ) : null}
+    </aside>
+  )
+}
+
+function CoverGradient() {
+  return (
+    <div
+      className="relative h-[120px] w-full overflow-hidden"
+      style={{
+        background:
+          'radial-gradient(circle at 20% 30%, rgba(123,91,255,.55), transparent 60%), radial-gradient(circle at 80% 70%, rgba(40,199,183,.55), transparent 60%), linear-gradient(135deg, #2F6BFF 0%, #7B5BFF 50%, #28C7B7 100%)',
+      }}
+      aria-hidden="true"
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+        }}
+      />
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: Item['status'] }) {
+  const tone: Record<string, { bg: string; text: string; dot: string }> = {
+    open: { bg: 'bg-[rgba(47,107,255,.10)]', text: 'text-brand-600', dot: 'bg-brand-600' },
+    done: { bg: 'bg-[rgba(40,199,183,.14)]', text: 'text-teal-600', dot: 'bg-teal-500' },
+    archived: { bg: 'bg-navy-900/[0.06]', text: 'text-navy-500', dot: 'bg-navy-400' },
+    snoozed: { bg: 'bg-[rgba(245,165,36,.16)]', text: 'text-[#B56B00]', dot: 'bg-[#F5A524]' },
+  }
+  const t = tone[status] ?? tone.open ?? { bg: 'bg-navy-900/[0.06]', text: 'text-navy-500', dot: 'bg-navy-400' }
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${t.bg} ${t.text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />
+      {status}
+    </span>
+  )
+}
+
+function PropsGrid({
+  item,
+  folderPath,
+}: {
+  item: Item
+  folderPath: Folder[]
+}) {
+  return (
+    <dl className="mb-7 grid grid-cols-[110px_1fr] gap-x-4 gap-y-1 border-b border-navy-900/[0.04] pb-6 text-[13px]">
+      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
+        Status
+      </dt>
+      <dd className="flex items-center gap-2 py-1">
+        <StatusPill status={item.status} />
+      </dd>
+
+      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
+        Tags
+      </dt>
+      <dd className="flex flex-wrap items-center gap-1.5 py-1">
+        {item.tags.length === 0 ? (
+          <button type="button" className="rounded border border-dashed border-navy-900/15 px-2 py-0.5 text-[11px] text-navy-500">
+            adicionar tag
+          </button>
+        ) : (
+          item.tags.map((tag, i) => {
+            const tones = [
+              'bg-[rgba(47,107,255,.10)] text-brand-600',
+              'bg-[rgba(40,199,183,.14)] text-teal-600',
+              'bg-[rgba(123,91,255,.12)] text-violet-500',
+              'bg-[rgba(255,111,174,.12)] text-pink-600',
+            ]
+            return (
+              <span key={tag} className={`rounded font-mono text-[11px] px-2 py-0.5 ${tones[i % tones.length]}`}>
+                #{tag}
+              </span>
+            )
+          })
+        )}
+      </dd>
+
+      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
+        Pasta
+      </dt>
+      <dd className="flex items-center gap-2 py-1 font-mono text-[12px] text-navy-500">
+        {folderPath.length === 0 ? (
+          <span>inbox</span>
+        ) : (
+          folderPath.map((f, i) => (
+            <span key={f.id} className="inline-flex items-center gap-2">
+              <Link href={`/notas/pastas/${f.id}`} className="hover:text-navy-900">
+                {f.name}
+              </Link>
+              {i < folderPath.length - 1 ? <span className="text-navy-900/25">/</span> : null}
+            </span>
+          ))
+        )}
+      </dd>
+
+      {item.dueDate ? (
+        <>
+          <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
+            Vencimento
+          </dt>
+          <dd className="py-1 font-mono text-[12px] text-navy-700">
+            {item.dueDate}
+            {item.dueTime ? ` · ${item.dueTime}` : ''}
+          </dd>
+        </>
+      ) : null}
+
+      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
+        Atualizada
+      </dt>
+      <dd className="py-1 font-mono text-[12px] text-navy-500">{formatRelative(item.updatedAt)}</dd>
+    </dl>
+  )
+}
+
+function EditorTopBar({
+  crumbs,
+  saveStatus,
+  onArchive,
+}: {
+  crumbs: Array<{ label: string; href?: string; isFile?: boolean }>
+  saveStatus: 'idle' | 'saving' | 'saved'
+  onArchive: () => void
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.04] px-6 py-3">
+      <nav className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500">
+        {crumbs.map((crumb, i) => (
+          <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
+            {crumb.href ? (
+              <Link href={crumb.href} className={crumb.isFile ? 'font-semibold text-brand-600' : 'text-navy-500 hover:text-navy-900'}>
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className={crumb.isFile ? 'font-semibold text-brand-600' : ''}>{crumb.label}</span>
+            )}
+            {i < crumbs.length - 1 ? <span className="text-navy-900/20">/</span> : null}
+          </span>
+        ))}
+      </nav>
+
+      <span
+        className={`ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold ${
+          saveStatus === 'saving' ? 'text-navy-500' : 'text-teal-600'
+        }`}
+      >
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            saveStatus === 'saving'
+              ? 'animate-pulse bg-navy-400'
+              : 'bg-teal-500 shadow-[0_0_6px_#28C7B7]'
+          }`}
+        />
+        {saveStatus === 'saving' ? 'salvando...' : 'salvo'}
+      </span>
 
       <button
         type="button"
-        onClick={handleAdd}
-        className="flex items-center gap-1.5 border-t border-white/45 px-3 py-2.5 text-left text-[12px] font-semibold text-navy-500 hover:bg-white/60 hover:text-brand-600"
+        onClick={onArchive}
+        className="hidden h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium text-navy-500 hover:bg-navy-900/[0.05] hover:text-navy-900 sm:inline-flex"
       >
-        <svg
-          className="h-3.5 w-3.5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14M5 12h14" />
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="4" rx="1" />
+          <path d="M5 8v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+          <path d="M10 12h4" />
         </svg>
-        Adicionar
+        Arquivar
       </button>
     </div>
   )
 }
 
-export default function FolderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function NoteEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { data, mutate } = useSWR<{ folder: Folder }>(`/api/folders/${id}`, fetcher)
+  const router = useRouter()
+  const { items, isLoading } = useItems()
   const { folders } = useFolders()
-  const { items: directItems } = useItems({ folderId: id })
-  const { items: allItems } = useItems()
-  const { selectedItemIds, setSingleSelection } = useUI()
-  const { toast } = useToast()
-  const { confirm, prompt } = useDialog()
-  const { prefs, update } = usePreferences()
 
-  const folder = data?.folder
-  const pinned = prefs.pinnedFolderIds.includes(id)
-  const tree = useMemo(() => buildFolderTree(folders), [folders])
-  const node = useMemo(() => findNode(tree, id), [tree, id])
-  const breadcrumb = useMemo(() => buildBreadcrumb(folders, id), [folders, id])
-  const [editingName, setEditingName] = useState(false)
-  const [name, setName] = useState('')
-  const [draggingIds, setDraggingIds] = useState<string[]>([])
-  const [draggingFolderId, setDraggingFolderId] = useState<string | null>(null)
-  const [columnDropTargetId, setColumnDropTargetId] = useState<string | null>(null)
-  const [mobileColumnKey, setMobileColumnKey] = useState<string | null>(null)
-  const [agentsOpen, setAgentsOpen] = useState(false)
-  const [folderActionsOpen, setFolderActionsOpen] = useState(false)
-  const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
-  const previousStatuses = useRef<Record<string, Item['status']>>({})
+  const item = useMemo(() => items.find((it) => it.id === id), [items, id])
 
-  async function changeView(mode: ViewMode) {
-    await updateFolder(id, { viewMode: mode, viewModeManual: true })
-    await mutate()
-  }
-
-  const childFolders = node?.children ?? []
-  const statusTrackingItems = useMemo(() => {
-    const byId = new Map<string, Item>()
-    for (const item of allItems) byId.set(item.id, item)
-    for (const item of directItems) byId.set(item.id, item)
-    return Array.from(byId.values())
-  }, [allItems, directItems])
-  const isVisibleFolderItem = (item: Item) => {
-    if (item.status === 'archived') return false
-    if (item.status !== 'done') return true
-
-    const previous = previousStatuses.current[item.id]
-    return Boolean(recentlyDoneIds[item.id] || (previous && previous !== 'done'))
-  }
-  const directOpenItems = sortForcedItemOrder(
-    directItems.filter((item) => item.status !== 'archived'),
-  )
-  const directVisibleItems = sortForcedItemOrder(
-    directItems.filter((item) => isVisibleFolderItem(item)),
-  )
-  const directOpenCount = directOpenItems.filter((item) => item.status !== 'done').length
-  const directNoteCount = directVisibleItems.filter((item) => item.complexity === 'note').length
-  const viewMode: ViewMode = folder?.viewMode === 'kanban' ? 'kanban' : 'list'
-  const moveTargets = useMemo<MoveTarget[]>(() => {
-    const targets = childFolders.map((child) => ({ id: child.id, label: child.name }))
-    targets.push({ id, label: 'Sem pasta' })
-    return targets
-  }, [childFolders, id])
-
-  const itemsByFolder = useMemo(() => {
-    const map = new Map<string, Item[]>()
-    for (const item of allItems) {
-      if (!isVisibleFolderItem(item)) continue
-      if (!item.folderId) continue
-      const list = map.get(item.folderId) ?? []
-      list.push(item)
-      map.set(item.folderId, list)
+  const itemCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const it of items) {
+      if (it.folderId) counts.set(it.folderId, (counts.get(it.folderId) ?? 0) + 1)
     }
-    for (const [folderId, folderItems] of map) {
-      map.set(folderId, sortForcedItemOrder(folderItems))
-    }
-    return map
-  }, [allItems, recentlyDoneIds])
+    return counts
+  }, [items])
 
-  const activeItemsById = useMemo(() => {
-    const map = new Map<string, Item>()
-    for (const item of allItems) {
-      if (item.status !== 'archived' && item.status !== 'done') map.set(item.id, item)
-    }
-    return map
-  }, [allItems])
-
-  const kanbanColumns = useMemo<KanbanColumnConfig[]>(() => {
-    if (childFolders.length === 0) {
-      return [
-        {
-          key: `folder:${id}`,
-          title: folder?.name ?? 'Itens',
-          items: directVisibleItems,
-          childFolders: [],
-          addFolderId: id,
-        },
-      ]
-    }
-
-    const columns: KanbanColumnConfig[] = childFolders.map((sub) => ({
-      key: `folder:${sub.id}`,
-      title: sub.name,
-      href: `/notas/${sub.id}`,
-      items: itemsByFolder.get(sub.id) ?? [],
-      childFolders: sub.children,
-      addFolderId: sub.id,
-      folderId: sub.id,
-    }))
-
-    if (directVisibleItems.length > 0) {
-      columns.push({
-        key: `folder:${id}`,
-        title: 'Sem pasta',
-        items: directVisibleItems,
-        childFolders: [],
-        addFolderId: id,
-      })
-    }
-
-    return columns
-  }, [childFolders, directVisibleItems, folder?.name, id, itemsByFolder])
+  const [localTitle, setLocalTitle] = useState('')
+  const [localContent, setLocalContent] = useState('')
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+  const [hydrated, setHydrated] = useState(false)
+  const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    const now = Date.now()
-    const transitions = statusTrackingItems.filter((item) => {
-      const previous = previousStatuses.current[item.id]
-      return previous && previous !== 'done' && item.status === 'done'
-    })
+    if (!item || hydrated) return
+    setLocalTitle(item.title)
+    setLocalContent(item.contentMd ?? '')
+    setHydrated(true)
+  }, [item, hydrated])
 
-    previousStatuses.current = Object.fromEntries(
-      statusTrackingItems.map((item) => [item.id, item.status]),
-    )
-    if (transitions.length === 0) return
-
-    setRecentlyDoneIds((current) => {
-      const next = { ...current }
-      for (const item of transitions) next[item.id] = now
-      return next
-    })
-  }, [statusTrackingItems])
-
-  useEffect(() => {
-    const timers = Object.entries(recentlyDoneIds).map(([itemId, startedAt]) => {
-      const delay = Math.max(0, DONE_FEEDBACK_MS - (Date.now() - startedAt))
-      return setTimeout(() => {
-        setRecentlyDoneIds((current) => {
-          const next = { ...current }
-          delete next[itemId]
-          return next
-        })
-      }, delay)
-    })
-    return () => timers.forEach(clearTimeout)
-  }, [recentlyDoneIds])
-
-  useEffect(() => {
-    if (kanbanColumns.length === 0) {
-      setMobileColumnKey(null)
-      return
-    }
-    if (!mobileColumnKey || !kanbanColumns.some((column) => column.key === mobileColumnKey)) {
-      setMobileColumnKey(kanbanColumns[0]?.key ?? null)
-    }
-  }, [kanbanColumns, mobileColumnKey])
-
-  function handleDndDragStart(event: DragStartEvent) {
-    const activeId = String(event.active.id)
-    if (!activeId.startsWith('item:')) return
-    const itemId = activeId.slice('item:'.length)
-    const ids =
-      selectedItemIds.includes(itemId) && selectedItemIds.length > 1 ? selectedItemIds : [itemId]
-    if (!selectedItemIds.includes(itemId)) setSingleSelection(itemId)
-    setDraggingIds(ids)
-  }
-
-  async function handleDropItems(folderId: string | null, event: React.DragEvent) {
-    event.preventDefault()
-    const ids = (event.dataTransfer.getData('text/plain') || draggingIds.join(','))
-      .split(',')
-      .map((itemId) => itemId.trim())
-      .filter(Boolean)
-    setDraggingIds([])
-    const targets = ids.map((itemId) => activeItemsById.get(itemId)).filter(Boolean) as Item[]
-    if (targets.length === 0) return
-    await bulkUpdateItems(
-      { ids: targets.map((item) => item.id), patch: { folderId: (folderId ?? '') as never } },
-      targets,
-    )
-    const destination = formatMoveTargetLabel(folderId, moveTargets)
-    toast(
-      targets.length === 1
-        ? `Item movido para ${destination}`
-        : `${targets.length} itens movidos para ${destination}`,
-      'success',
-    )
-  }
-
-  async function handleMoveItemMobile(itemId: string, folderId: string | null) {
-    const ids =
-      selectedItemIds.includes(itemId) && selectedItemIds.length > 1 ? selectedItemIds : [itemId]
-    const targets = ids.map((targetId) => activeItemsById.get(targetId)).filter(Boolean) as Item[]
-    if (targets.length === 0) return
-    try {
-      await bulkUpdateItems(
-        { ids: targets.map((item) => item.id), patch: { folderId: (folderId ?? '') as never } },
-        targets,
-      )
-      const destination = formatMoveTargetLabel(folderId, moveTargets)
-      toast(
-        targets.length === 1
-          ? `Item movido para ${destination}`
-          : `${targets.length} itens movidos para ${destination}`,
-        'success',
-      )
-    } catch (error) {
-      toast(error instanceof Error ? error.message : 'Erro ao mover item', 'error')
-      throw error
-    }
-  }
-
-  const dndSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 8 } }),
+  const persist = useCallback(
+    async (patch: { title?: string; contentMd?: string }) => {
+      if (!item) return
+      setSaveStatus('saving')
+      try {
+        await updateItem(item.id, patch)
+        setSaveStatus('saved')
+      } catch {
+        setSaveStatus('idle')
+      }
+    },
+    [item],
   )
 
-  async function handleDndDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    setDraggingIds([])
-    if (!over) return
-    const activeId = String(active.id)
-    const overId = String(over.id)
-    if (!activeId.startsWith('item:') || !overId.startsWith('col:')) return
-    const itemId = activeId.slice('item:'.length)
-    const folderKey = overId.slice('col:'.length)
-    const targetFolderId = folderKey === 'root' ? null : folderKey
-    const item = activeItemsById.get(itemId)
+  const onTitleChange = (value: string) => {
+    setLocalTitle(value)
+    if (titleTimer.current) clearTimeout(titleTimer.current)
+    titleTimer.current = setTimeout(() => {
+      if (value.trim().length > 0) void persist({ title: value })
+    }, 600)
+  }
+
+  const onContentChange = useCallback(
+    (value: string) => {
+      setLocalContent(value)
+      if (contentTimer.current) clearTimeout(contentTimer.current)
+      contentTimer.current = setTimeout(() => {
+        void persist({ contentMd: value })
+      }, 600)
+    },
+    [persist],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (titleTimer.current) clearTimeout(titleTimer.current)
+      if (contentTimer.current) clearTimeout(contentTimer.current)
+    }
+  }, [])
+
+  const folderPath = useMemo(() => buildFolderPath(folders, item?.folderId), [folders, item])
+  const headings = useMemo(() => parseHeadings(localContent), [localContent])
+  const fileName = useMemo(() => {
+    if (!item) return 'nota.md'
+    if (item.localPath) return item.localPath
+    return `${(item.title || 'nota').toLowerCase().replace(/\s+/g, '-')}.md`
+  }, [item])
+
+  const crumbs = useMemo(() => {
+    const list: Array<{ label: string; href?: string; isFile?: boolean }> = [
+      { label: 'notas', href: '/notas' },
+    ]
+    folderPath.forEach((folder) => list.push({ label: folder.name, href: `/notas/pastas/${folder.id}` }))
+    list.push({ label: `M↓ ${fileName}`, isFile: true })
+    return list
+  }, [folderPath, fileName])
+
+  const handleArchive = async () => {
     if (!item) return
-    if ((item.folderId ?? null) === targetFolderId) return
-
-    const ids =
-      selectedItemIds.includes(itemId) && selectedItemIds.length > 1 ? selectedItemIds : [itemId]
-    const targets = ids.map((id) => activeItemsById.get(id)).filter(Boolean) as Item[]
-    if (targets.length === 0) return
-    await bulkUpdateItems(
-      { ids: targets.map((t) => t.id), patch: { folderId: (targetFolderId ?? '') as never } },
-      targets,
-    )
-    const destination = formatMoveTargetLabel(targetFolderId, moveTargets)
-    toast(
-      targets.length === 1
-        ? `Item movido para ${destination}`
-        : `${targets.length} itens movidos para ${destination}`,
-      'success',
-    )
+    await updateItem(item.id, { status: 'archived' })
+    router.push('/notas')
   }
 
-  function handleColumnDragStart(fid: string) {
-    setDraggingFolderId(fid)
-  }
-
-  function handleColumnDragOver(fid: string) {
-    if (draggingFolderId && draggingFolderId !== fid) setColumnDropTargetId(fid)
-  }
-
-  function handleColumnDragEnd() {
-    setDraggingFolderId(null)
-    setColumnDropTargetId(null)
-  }
-
-  async function handleColumnDrop(targetFolderId: string, event: React.DragEvent) {
-    const sourceId = event.dataTransfer.getData(FOLDER_DRAG_MIME) || draggingFolderId
-    setDraggingFolderId(null)
-    setColumnDropTargetId(null)
-    if (!sourceId || sourceId === targetFolderId) return
-
-    const siblings = childFolders
-    const sourceIdx = siblings.findIndex((f) => f.id === sourceId)
-    const targetIdx = siblings.findIndex((f) => f.id === targetFolderId)
-    if (sourceIdx < 0 || targetIdx < 0) return
-
-    const reordered = [...siblings]
-    const moved = reordered[sourceIdx]
-    if (!moved) return
-    reordered.splice(sourceIdx, 1)
-    const insertAt = sourceIdx < targetIdx ? targetIdx : targetIdx
-    reordered.splice(insertAt, 0, moved)
-
-    const updates: Promise<void>[] = []
-    reordered.forEach((f, idx) => {
-      const newOrder = (idx + 1) * 1000
-      if (f.order !== newOrder) updates.push(updateFolder(f.id, { order: newOrder }))
-    })
-    await Promise.all(updates)
-    toast('Ordem atualizada', 'success')
-  }
-
-  if (!folder) {
+  if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl px-5 pt-3">
-        <div className="h-8 w-48 animate-pulse rounded bg-slate-100" />
+      <div className="grid h-full place-items-center font-mono text-sm text-navy-500">
+        carregando nota...
       </div>
     )
   }
 
-  async function saveName() {
-    if (!name.trim() || name === folder?.name) {
-      setEditingName(false)
-      return
-    }
-    await updateFolder(id, { name: name.trim() })
-    await mutate()
-    setEditingName(false)
-  }
-
-  async function handleNewSub() {
-    const subName = await prompt({
-      title: 'Nova subpasta',
-      message: 'Nome da subpasta',
-      placeholder: 'Nome',
-    })
-    if (!subName?.trim()) return
-    await createFolder({ name: subName.trim(), parentId: id })
-  }
-
-  async function addColumnAt(insertionIdx: number) {
-    const colName = await prompt({
-      title: 'Nova coluna',
-      message: 'Nome da coluna',
-      placeholder: 'Nome',
-    })
-    if (!colName?.trim()) return
-    const created = await createFolder({ name: colName.trim(), parentId: id, order: 0 })
-    const siblings = [...childFolders]
-    const newNode = { ...created, children: [] } as FolderTreeNode
-    siblings.splice(insertionIdx, 0, newNode)
-    await Promise.all(
-      siblings.map((f, idx) => {
-        const newOrder = (idx + 1) * 1000
-        if (f.order === newOrder) return Promise.resolve()
-        return updateFolder(f.id, { order: newOrder })
-      }),
+  if (!item) {
+    return (
+      <div className="grid h-full place-items-center gap-4 px-6 text-center">
+        <div className="font-mono text-sm text-navy-500">nota nao encontrada</div>
+        <Link href="/notas" className="rounded-full bg-navy-900 px-4 py-2 text-[13px] font-bold text-white shadow-cool-sm hover:bg-navy-800">
+          Voltar para biblioteca
+        </Link>
+      </div>
     )
-  }
-
-  async function handleDelete() {
-    const ok = await confirm({
-      title: 'Apagar pasta',
-      message: `Apagar pasta "${folder?.name}" e todas as subpastas? As notas voltam para a raiz.`,
-      confirmLabel: 'Apagar',
-      variant: 'danger',
-    })
-    if (!ok) return
-    await deleteFolder(id)
-    if (typeof window !== 'undefined') window.location.href = '/notas'
-  }
-
-  function togglePinned() {
-    update({
-      pinnedFolderIds: pinned
-        ? prefs.pinnedFolderIds.filter((folderId) => folderId !== id)
-        : [id, ...prefs.pinnedFolderIds],
-    })
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 sm:px-6 lg:pb-8">
-      <nav className="mb-4 flex flex-wrap items-center gap-1 font-mono text-[11px] text-navy-400">
-        <Link href="/notas" className="rounded-full bg-white/42 px-2 py-1 hover:text-navy-700">
-          Notas
-        </Link>
-        {breadcrumb.map((f, idx) => (
-          <span key={f.id} className="flex items-center gap-1">
-            <span>/</span>
-            {idx === breadcrumb.length - 1 ? (
-              <span className="rounded-full bg-white/55 px-2 py-1 font-bold text-navy-700">{f.name}</span>
-            ) : (
-              <Link href={`/notas/${f.id}`} className="rounded-full bg-white/42 px-2 py-1 hover:text-navy-700">
-                {f.name}
-              </Link>
-            )}
-          </span>
-        ))}
-      </nav>
-
-      <GlassCard className="mb-4 p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="min-w-0">
-            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-700">
-              Pasta
-            </p>
-            <div className="mt-2 flex min-w-0 items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-white/58 text-navy-500 shadow-cool-sm">
-                <FolderIcon className="h-6 w-6" />
-              </span>
-              {editingName ? (
-                <input
-                  autoFocus
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  onBlur={saveName}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveName()
-                    if (e.key === 'Escape') setEditingName(false)
-                  }}
-                  className="min-w-0 flex-1 border-none bg-transparent text-4xl font-black leading-none text-navy-950 outline-none"
-                />
-              ) : (
-                <h1
-                  className="min-w-0 flex-1 cursor-pointer break-words text-4xl font-black leading-none tracking-normal text-navy-950 hover:text-brand-700"
-                  onClick={() => {
-                    setName(folder.name)
-                    setEditingName(true)
-                  }}
-                >
-                  {folder.name}
-                </h1>
-              )}
-            </div>
-          </div>
-
-          <div className="relative flex flex-wrap items-center gap-2 lg:justify-end">
-            <div className="flex rounded-full border border-white/65 bg-white/42 p-1 shadow-cool-sm">
-              <button
-                type="button"
-                onClick={() => void changeView('list')}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${viewMode === 'list' ? 'bg-white text-brand-700 shadow-cool-sm' : 'text-navy-600 hover:bg-white/70'}`}
-              >
-                Lista
-              </button>
-              <button
-                type="button"
-                onClick={() => void changeView('kanban')}
-                className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${viewMode === 'kanban' ? 'bg-white text-brand-700 shadow-cool-sm' : 'text-navy-600 hover:bg-white/70'}`}
-              >
-                Kanban
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={togglePinned}
-              className={`hidden h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-bold shadow-cool-sm hover:bg-white sm:inline-flex ${
-                pinned ? 'border-brand-200 bg-white/70 text-brand-700' : 'border-white/65 bg-white/45 text-navy-600'
-              }`}
-            >
-              <StarIcon filled={pinned} className="h-3.5 w-3.5" />
-              {pinned ? 'Fixada' : 'Fixar'}
-            </button>
-            <button
-              onClick={handleNewSub}
-              className="hidden h-10 rounded-full border border-white/65 bg-white/45 px-3 text-xs font-bold text-navy-700 shadow-cool-sm hover:bg-white sm:inline-flex sm:items-center"
-            >
-              + Subpasta
-            </button>
-            <button
-              onClick={() => setAgentsOpen(true)}
-              className="hidden h-10 rounded-full border border-white/65 bg-white/45 px-3 text-xs font-bold text-navy-700 shadow-cool-sm hover:bg-white sm:inline-flex sm:items-center"
-            >
-              AGENTS.md
-            </button>
-            <button
-              onClick={handleDelete}
-              className="hidden h-10 rounded-full border border-red-200 bg-white/45 px-3 text-xs font-bold text-red-600 shadow-cool-sm hover:bg-red-50 sm:inline-flex sm:items-center"
-            >
-              Apagar
-            </button>
-            <button
-              type="button"
-              onClick={() => setFolderActionsOpen((value) => !value)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/65 bg-white/58 text-navy-500 shadow-cool-sm sm:hidden"
-              aria-label="Acoes da pasta"
-              title="Acoes"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.5v.01M12 12v.01M12 17.5v.01" />
-              </svg>
-            </button>
-            {folderActionsOpen ? (
-              <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-[18px] border border-white/65 bg-white/90 p-1.5 shadow-cool-md backdrop-blur-xl sm:hidden">
-                {[
-                  { label: pinned ? 'Desafixar' : 'Fixar', action: togglePinned, danger: false },
-                  { label: '+ Subpasta', action: () => void handleNewSub(), danger: false },
-                  { label: 'AGENTS.md', action: () => setAgentsOpen(true), danger: false },
-                  { label: 'Apagar', action: () => void handleDelete(), danger: true },
-                ].map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => {
-                      setFolderActionsOpen(false)
-                      item.action()
-                    }}
-                    className={`flex h-10 w-full items-center rounded-[14px] px-3 text-left text-[13px] font-bold hover:bg-surface-soft ${
-                      item.danger ? 'text-red-600 hover:bg-red-50' : 'text-navy-700'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </GlassCard>
-
-      <div className="mb-4 grid gap-3 sm:grid-cols-4">
-        <MetricCard label="Itens" value={directOpenCount} detail="ativos nesta pasta" />
-        <MetricCard label="Notas" value={directNoteCount} detail="itens markdown" />
-        <MetricCard label="Subpastas" value={childFolders.length} detail="nivel atual" />
-        <MetricCard label="Modo" value={viewMode === 'kanban' ? 'Kanban' : 'Lista'} detail="visual atual" />
-      </div>
-
-      <AgentsEditorModal
-        folderId={id}
-        title={`AGENTS.md / ${folder.name}`}
-        open={agentsOpen}
-        onClose={() => setAgentsOpen(false)}
+    <div className="grid h-full grid-cols-1 gap-3 px-3 pb-3 lg:grid-cols-[260px_1fr_280px] lg:gap-3.5 lg:px-3.5 lg:pb-3.5">
+      <Sidebar
+        folders={folders}
+        itemCounts={itemCounts}
+        parentFolderId={item.folderId}
       />
 
-      {viewMode === 'list' ? (
-        <>
-          {childFolders.length > 0 && (
-            <GlassCard className="mb-4 p-4">
-              <div className="mb-3">
-                <CardTitle>Subpastas / {childFolders.length}</CardTitle>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {childFolders.map((child) => (
-                  <Link
-                    key={child.id}
-                    href={`/notas/${child.id}`}
-                    className="flex min-h-14 items-center gap-3 rounded-[20px] border border-white/48 bg-white/52 px-3 py-2.5 text-[14px] text-navy-900 shadow-cool-sm hover:bg-white/72"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-white/62 text-navy-500">
-                      <FolderIcon className="h-4 w-4" />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate font-medium">{child.name}</span>
-                    {child.children.length > 0 && (
-                      <span className="rounded-full bg-white/70 px-2 py-1 font-mono text-[10px] text-navy-400">
-                        {child.children.length}
-                      </span>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            </GlassCard>
-          )}
+      <main className="flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-white/55 bg-white shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]">
+        <EditorTopBar crumbs={crumbs} saveStatus={saveStatus} onArchive={handleArchive} />
 
-          <GlassCard className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <CardTitle>Itens / {directOpenCount}</CardTitle>
-            </div>
-            {directVisibleItems.length === 0 ? (
-              <div className="rounded-[22px] border border-dashed border-white/70 bg-white/38 px-5 py-10 text-center">
-                <p className="text-[15px] font-bold text-navy-900">Nenhum item nesta pasta</p>
-                <p className="mx-auto mt-1 max-w-sm text-sm text-navy-600">
-                  Itens criados ou movidos para esta pasta aparecerao aqui.
-                </p>
-              </div>
-            ) : (
-              <ItemList items={directVisibleItems} variant="glass" />
-            )}
-          </GlassCard>
-        </>
-      ) : (
-        <DndContext
-          sensors={dndSensors}
-          onDragStart={handleDndDragStart}
-          onDragCancel={() => setDraggingIds([])}
-          onDragEnd={handleDndDragEnd}
-        >
-          <div className="space-y-3 lg:hidden">
-            <div className="-mx-4 overflow-x-auto px-4 pb-2">
-              <div className="flex w-max gap-2">
-                {kanbanColumns.map((column) => {
-                  const active = column.key === mobileColumnKey
-                  return (
-                    <button
-                      key={column.key}
-                      type="button"
-                      onClick={() => setMobileColumnKey(column.key)}
-                      className={`flex h-10 items-center gap-2 rounded-full border px-3 text-[13px] font-bold shadow-cool-sm transition-colors ${
-                        active
-                          ? 'border-white/70 bg-white text-brand-700'
-                          : 'border-white/55 bg-white/48 text-navy-600'
-                      }`}
-                    >
-                      <span className="max-w-36 truncate">{column.title}</span>
-                      <span className="font-mono text-[10px] text-navy-300">
-                        {column.childFolders.length + column.items.length}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-            {kanbanColumns
-              .filter((column) => column.key === mobileColumnKey)
-              .map((column) => (
-                <KanbanColumn
-                  key={column.key}
-                  title={column.title}
-                  href={column.href}
-                  items={column.items}
-                  childFolders={column.childFolders}
-                  addFolderId={column.addFolderId}
-                  folderId={column.folderId}
-                  selectedItemIds={selectedItemIds}
-                  orderedIds={column.items.map((item) => item.id)}
-                  dragging={false}
-                  onDropItems={handleDropItems}
-                  moveTargets={moveTargets}
-                  onMoveItem={handleMoveItemMobile}
-                />
-              ))}
-          </div>
+        <div className="flex-1 overflow-auto" data-note-scroll-container="true">
+          <CoverGradient />
+          <div className="mx-auto w-full max-w-[760px] px-6 pb-20 lg:px-16">
+            <span className="-mt-10 mb-4 inline-flex h-[72px] w-[72px] items-center justify-center rounded-[18px] border border-navy-900/[0.04] bg-white font-mono text-[26px] font-bold text-brand-600 shadow-[0_8px_20px_rgba(15,35,66,.15)]">
+              M↓
+            </span>
 
-          <GlassCard className="hidden overflow-x-auto p-4 lg:block">
-          <div className="flex items-stretch gap-0 pb-1">
-            {childFolders.length === 0 ? (
-              <>
-                <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
-                <KanbanColumn
-                  title={folder.name}
-                  items={directVisibleItems}
-                  childFolders={[]}
-                  addFolderId={id}
-                  selectedItemIds={selectedItemIds}
-                  orderedIds={directVisibleItems.map((item) => item.id)}
-                  dragging={draggingIds.length > 0}
-                  onDropItems={handleDropItems}
-                  moveTargets={moveTargets}
-                  onMoveItem={handleMoveItemMobile}
-                />
-                <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
-              </>
-            ) : (
-              <>
-                <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
-                {childFolders.map((sub, idx) => (
-                  <Fragment key={sub.id}>
-                    <KanbanColumn
-                      title={sub.name}
-                      href={`/notas/${sub.id}`}
-                      items={itemsByFolder.get(sub.id) ?? []}
-                      childFolders={sub.children}
-                      addFolderId={sub.id}
-                      folderId={sub.id}
-                      selectedItemIds={selectedItemIds}
-                      orderedIds={(itemsByFolder.get(sub.id) ?? []).map((item) => item.id)}
-                      dragging={draggingIds.length > 0}
-                      columnDragging={draggingFolderId === sub.id}
-                      columnDropTarget={columnDropTargetId === sub.id}
-                      onDropItems={handleDropItems}
-                      onColumnDragStart={handleColumnDragStart}
-                      onColumnDragOver={handleColumnDragOver}
-                      onColumnDragLeave={() => setColumnDropTargetId(null)}
-                      onColumnDragEnd={handleColumnDragEnd}
-                      onColumnDrop={handleColumnDrop}
-                      moveTargets={moveTargets}
-                      onMoveItem={handleMoveItemMobile}
-                    />
-                    <ColumnInserter
-                      edge={idx === childFolders.length - 1 && directVisibleItems.length === 0}
-                      onAdd={() => void addColumnAt(idx + 1)}
-                    />
-                  </Fragment>
-                ))}
-                {directVisibleItems.length > 0 && (
-                  <>
-                    <KanbanColumn
-                      title="Sem pasta"
-                      items={directVisibleItems}
-                      childFolders={[]}
-                      addFolderId={id}
-                      selectedItemIds={selectedItemIds}
-                      orderedIds={directVisibleItems.map((item) => item.id)}
-                      dragging={draggingIds.length > 0}
-                      onDropItems={handleDropItems}
-                      moveTargets={moveTargets}
-                      onMoveItem={handleMoveItemMobile}
-                    />
-                    <ColumnInserter edge onAdd={() => void addColumnAt(childFolders.length)} />
-                  </>
-                )}
-              </>
-            )}
+            <input
+              type="text"
+              value={localTitle}
+              onChange={(e) => onTitleChange(e.target.value)}
+              placeholder="Sem titulo"
+              className="mb-3 w-full bg-transparent text-[42px] font-black leading-[1.05] -tracking-[.03em] text-navy-900 outline-none placeholder:text-navy-200"
+              aria-label="Titulo"
+            />
+
+            <PropsGrid item={item} folderPath={folderPath} />
+
+            <div className="-mx-1 rounded-2xl border border-navy-900/[0.04]">
+              <MarkdownEditor
+                value={localContent}
+                onChange={onContentChange}
+                itemId={item.id}
+                minHeight="min-h-[420px]"
+              />
+            </div>
           </div>
-          </GlassCard>
-        </DndContext>
-      )}
+        </div>
+      </main>
+
+      <OutlineRail headings={headings} savedAt={item.updatedAt} />
     </div>
   )
 }
