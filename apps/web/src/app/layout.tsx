@@ -1,29 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono, Caveat } from 'next/font/google'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { ThemeManager } from '@/components/theme/theme-manager'
 import './globals.css'
-
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-inter',
-})
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-jetbrains-mono',
-})
-
-const caveat = Caveat({
-  subsets: ['latin'],
-  display: 'swap',
-  weight: ['400', '600'],
-  variable: '--font-caveat',
-})
 
 export const metadata: Metadata = {
   title: { default: 'doit.md', template: '%s — doit.md' },
@@ -62,12 +40,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="pt-BR"
-      suppressHydrationWarning
-      className={`${inter.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
-    >
+    <html lang="pt-BR" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600&display=swap"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(() => { try { const raw = localStorage.getItem('doit:preferences'); const pref = raw ? JSON.parse(raw).theme : 'system'; const theme = pref === 'dark' || (pref !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; document.documentElement.dataset.theme = theme; document.documentElement.style.colorScheme = theme; document.documentElement.classList.toggle('dark', theme === 'dark'); } catch { } })();`,
