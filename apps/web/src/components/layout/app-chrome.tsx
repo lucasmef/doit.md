@@ -13,7 +13,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className="relative flex h-screen overflow-hidden bg-[#dbe7ff] text-navy-900 before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(900px_700px_at_8%_15%,rgba(123,91,255,.24),transparent_62%),radial-gradient(780px_560px_at_92%_10%,rgba(255,111,174,.18),transparent_60%),radial-gradient(850px_720px_at_78%_82%,rgba(40,199,183,.22),transparent_62%),linear-gradient(135deg,#f3f7ff_0%,#e8e2ff_42%,#f9d8ef_66%,#ddf5f1_100%)] after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(rgba(255,255,255,.20)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] after:bg-[size:38px_38px] after:opacity-35">
+      <div className="doit-wallpaper relative flex h-screen overflow-hidden text-navy-900">
         <div className="relative z-10 flex h-full w-full overflow-hidden">
           <div className="mx-auto flex min-w-0 flex-1 flex-col p-0 lg:max-w-[1440px] lg:p-7">
             {calendarFullscreen ? (

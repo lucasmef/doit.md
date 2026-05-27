@@ -9,8 +9,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
+        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jetbrains-mono)', '"JetBrains Mono"', 'ui-monospace', '"SF Mono"', 'Menlo', 'Consolas', 'monospace'],
+        script: ['var(--font-caveat)', 'Caveat', 'cursive'],
       },
       keyframes: {
         'slide-up': {
@@ -92,6 +93,19 @@ const config: Config = {
             selected: 'rgb(var(--ui-border-selected) / <alpha-value>)',
             strong: 'rgb(var(--ui-border-strong) / <alpha-value>)',
           }
+        },
+        violet: {
+          400: '#B59BFF',
+          500: '#7B5BFF',
+          600: '#5A37D9',
+        },
+        cyan: {
+          500: '#1AAED7',
+        },
+        pink: {
+          400: '#FFB1D5',
+          500: '#FF6FAE',
+          600: '#C0297A',
         },
         danger: '#f04438',
         warning: '#f5a524',

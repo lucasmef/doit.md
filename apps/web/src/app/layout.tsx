@@ -1,7 +1,29 @@
 import type { Metadata, Viewport } from 'next'
+import { Inter, JetBrains_Mono, Caveat } from 'next/font/google'
 import { ServiceWorkerRegister } from '@/components/pwa/service-worker-register'
 import { ThemeManager } from '@/components/theme/theme-manager'
 import './globals.css'
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700', '800', '900'],
+  variable: '--font-inter',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-jetbrains-mono',
+})
+
+const caveat = Caveat({
+  subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '600'],
+  variable: '--font-caveat',
+})
 
 export const metadata: Metadata = {
   title: { default: 'doit.md', template: '%s — doit.md' },
@@ -40,7 +62,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${inter.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
+    >
       <head>
         <script
           dangerouslySetInnerHTML={{

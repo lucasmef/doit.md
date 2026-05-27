@@ -30,6 +30,20 @@
     --ui-border-soft: 236 240 245;
     --ui-border-selected: 184 207 253;
     --ui-border-strong: 182 194 210;
+
+    /* Mockup palette (docs/doitmd-layout-codex-package/desktop/) */
+    --c-navy: #0F2342;
+    --c-blue: #2F6BFF;
+    --c-teal: #28C7B7;
+    --c-violet: #7B5BFF;
+    --c-cyan: #1AAED7;
+    --c-pink: #FF6FAE;
+    --c-amber: #F5A524;
+    --c-danger: #F04438;
+
+    --r-card: 28px;
+    --r-inner: 18px;
+    --r-pill: 999px;
   }
 
   :root[data-theme='dark'] {
@@ -122,6 +136,50 @@
 @layer utilities {
   .brand-gradient {
     background-image: var(--brand-gradient);
+  }
+
+  /* Wallpaper mesh — matches docs/doitmd-layout-codex-package/desktop/ mockups.
+     Applied to the outer chrome container; ::before is the vivid mesh,
+     ::after adds a subtle grid texture with a radial mask. */
+  .doit-wallpaper {
+    background-color: #f4f1ff;
+  }
+  .doit-wallpaper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(900px 700px at 12% 20%, rgba(123, 91, 255, 0.55), transparent 60%),
+      radial-gradient(800px 600px at 88% 14%, rgba(255, 137, 235, 0.42), transparent 62%),
+      radial-gradient(900px 800px at 78% 78%, rgba(40, 199, 183, 0.5), transparent 60%),
+      radial-gradient(1000px 900px at 18% 95%, rgba(47, 107, 255, 0.55), transparent 62%),
+      linear-gradient(135deg, #b7c9ff 0%, #ddd6fe 35%, #fbc9f0 60%, #cff3ee 100%);
+  }
+  .doit-wallpaper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 64px 64px;
+    -webkit-mask-image: radial-gradient(circle at center, black, transparent 75%);
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+  :root[data-theme='dark'] .doit-wallpaper {
+    background-color: rgb(var(--surface-window));
+  }
+  :root[data-theme='dark'] .doit-wallpaper::before {
+    background:
+      radial-gradient(900px 700px at 12% 20%, rgba(123, 91, 255, 0.22), transparent 62%),
+      radial-gradient(900px 800px at 78% 78%, rgba(40, 199, 183, 0.18), transparent 62%),
+      radial-gradient(1000px 900px at 18% 95%, rgba(47, 107, 255, 0.22), transparent 62%),
+      linear-gradient(135deg, #0b1733 0%, #0f2342 60%, #122a55 100%);
+  }
+  :root[data-theme='dark'] .doit-wallpaper::after {
+    opacity: 0.4;
   }
 
   .scrollbar-none {
