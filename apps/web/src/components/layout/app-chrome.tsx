@@ -9,6 +9,7 @@ import { NotificationFailureBanner } from '@/components/notifications/failure-ba
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const calendarFullscreen = pathname === '/calendar'
+  const todayMobileImmersive = pathname === '/today'
 
   return (
     <>
@@ -17,6 +18,10 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex min-w-0 flex-1 flex-col p-0 lg:max-w-[1440px] lg:p-7">
             {calendarFullscreen ? (
               <div className="lg:hidden">
+                <Topbar />
+              </div>
+            ) : todayMobileImmersive ? (
+              <div className="hidden lg:block">
                 <Topbar />
               </div>
             ) : (
