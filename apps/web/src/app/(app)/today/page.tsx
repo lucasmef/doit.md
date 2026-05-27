@@ -60,6 +60,22 @@ function CalendarIcon() {
   )
 }
 
+function FilterIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+    </svg>
+  )
+}
+
+function SortIcon() {
+  return (
+    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18M6 12h12M10 18h4" />
+    </svg>
+  )
+}
+
 function formatShortDate(dateKey?: string) {
   if (!dateKey) return 'sem data'
   const today = toLocalDateKey()
@@ -116,6 +132,105 @@ function itemProgress(item: Item, today: string) {
 
 function primaryTag(item: Item) {
   return item.tags[0] ?? (item.complexity === 'note' ? 'nota' : 'item')
+}
+
+function mobileAccent(item: Item, today: string) {
+  if (item.status === 'done') return 'bg-slate-300'
+  if (item.status === 'doing') return 'bg-[#7B5BFF]'
+  if (item.dueDate && item.dueDate < today) return 'bg-[#F04438]'
+  return 'bg-[#2F6BFF]'
+}
+
+function mobileTagTone(index: number) {
+  return [
+    'bg-[#2F6BFF]/10 text-[#2F6BFF]',
+    'bg-[#28C7B7]/15 text-[#0f8d80]',
+    'bg-[#7B5BFF]/12 text-[#7B5BFF]',
+    'bg-[#F04438]/10 text-[#b3271d]',
+  ][index % 4]
+}
+
+function MobileSectionHeader({
+  title,
+  count,
+  tone,
+}: {
+  title: string
+  count: number
+  tone: 'violet' | 'blue' | 'teal'
+}) {
+  const dot =
+    tone === 'violet'
+      ? 'bg-[#7B5BFF] shadow-[0_0_6px_#7B5BFF]'
+      : tone === 'blue'
+      ? 'bg-[#2F6BFF] shadow-[0_0_6px_#2F6BFF]'
+      : 'bg-[#28C7B7]'
+  return (
+    <div className="flex items-center gap-2 px-1 pb-0.5 pt-1 font-mono text-[10px] font-bold uppercase tracking-[0.04em] text-navy-500">
+      <span className={`h-[7px] w-[7px] rounded-full ${dot}`} />
+      <span>{title}</span>
+      <span className="ml-auto">{count}</span>
+    </div>
+  )
+}
+
+function MobileTaskCard({
+  item,
+  today,
+  onOpen,
+  onMove,
+}: {
+  item: Item
+  today: string
+  onOpen: (id: string) => void
+  onMove: (item: Item, status: ItemStatus) => void
+}) {
+  const done = item.status === 'done'
+  const overdue = Boolean(item.dueDate && item.dueDate < today && item.status !== 'done')
+  const progress = itemProgress(item, today)
+  const tags = item.tags.length ? item.tags.slice(0, 2) : [primaryTag(item)]
+  return (
+    <div className="relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-white/70 bg-white/85 px-3.5 py-3 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_-1px_0_rgba(15,35,66,.04)_inset,0_14px_32px_-14px_rgba(15,35,66,.18),0_3px_10px_rgba(15,35,66,.06)] backdrop-blur-xl">
+      <span className={`absolute bottom-3 left-0 top-3 w-[3px] rounded-r ${mobileAccent(item, today)}`} />
+      <div className="flex items-start gap-2.5">
+        <button
+          type="button"
+          onClick={() => onMove(item, done ? 'todo' : 'done')}
+          className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md border-[1.5px] transition-colors ${done ? 'border-[#28C7B7] bg-[#28C7B7] text-white' : 'border-[#B6C2D2] bg-white text-white hover:border-[#28C7B7] hover:bg-[#28C7B7]'}`}
+          aria-label={done ? `Reabrir ${item.title}` : `Concluir ${item.title}`}
+        >
+          {done ? <CheckIcon className="h-3 w-3" /> : null}
+        </button>
+        <button
+          type="button"
+          onClick={() => onOpen(item.id)}
+          className={`min-w-0 flex-1 text-left text-[14px] font-semibold leading-snug ${done ? 'text-navy-500 line-through' : 'text-navy-900'}`}
+        >
+          {item.title}
+          {item.localPath ? (
+            <span className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded bg-[#2F6BFF]/[0.08] px-1.5 py-0.5 font-mono text-[10px] font-semibold text-[#2F6BFF]">
+              M {item.localPath.split(/[\\/]/).pop()}
+            </span>
+          ) : null}
+        </button>
+      </div>
+      {item.status === 'doing' ? (
+        <div className="h-1 overflow-hidden rounded-full bg-navy-900/[0.06]">
+          <div className="h-full rounded-full bg-[linear-gradient(90deg,#2F6BFF,#28C7B7)]" style={{ width: `${progress}%` }} />
+        </div>
+      ) : null}
+      <div className="flex min-w-0 items-center gap-1.5">
+        {tags.map((tag, index) => (
+          <span key={`${item.id}-${tag}`} className={`truncate rounded px-1.5 py-0.5 font-mono text-[10px] ${mobileTagTone(index)}`}>
+            #{tag}
+          </span>
+        ))}
+        <span className={`ml-auto shrink-0 font-mono text-[10px] ${overdue ? 'font-bold text-[#F04438]' : item.dueDate === today ? 'font-bold text-[#b56b00]' : 'text-navy-500'}`}>
+          {overdue ? 'overdue' : formatShortDate(item.dueDate ?? item.scheduledDate)}
+        </span>
+      </div>
+    </div>
+  )
 }
 
 function TaskCard({
@@ -196,6 +311,7 @@ export default function TodayPage() {
   const [quickTitle, setQuickTitle] = useState('')
   const [quickSaving, setQuickSaving] = useState(false)
   const [selectedTag, setSelectedTag] = useState<string | null>(null)
+  const [mobileTab, setMobileTab] = useState<'today' | 'upcoming' | 'done'>('today')
   const today = toLocalDateKey()
   const now = new Date()
   const tomorrowDate = new Date(now)
@@ -211,6 +327,13 @@ export default function TodayPage() {
     : activeItems.filter((item) => item.status !== 'done' && isLooseInboxItem(item))
   const todayItems = sortTodayWithInboxBelow(datedTodayItems, hiddenInboxItems)
   const overdueItems = datedTodayItems.filter((item) => item.dueDate && item.dueDate < today && item.status !== 'done')
+  const doingItems = activeItems.filter((item) => item.status === 'doing' && item.complexity !== 'note')
+  const upcomingItems = activeItems
+    .filter((item) => item.status !== 'done' && item.complexity !== 'note' && !isToday(item) && !isOverdue(item))
+    .sort((a, b) => (a.dueDate ?? a.scheduledDate ?? '9999').localeCompare(b.dueDate ?? b.scheduledDate ?? '9999'))
+  const doneItems = activeItems
+    .filter((item) => item.status === 'done' && item.complexity !== 'note')
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   const filteredItems = selectedTag ? activeItems.filter((item) => item.tags.includes(selectedTag)) : activeItems
   const completedThisWeek = activeItems.filter((item) => item.status === 'done').length
   const totalWorkItems = Math.max(1, activeItems.length)
@@ -285,6 +408,13 @@ export default function TodayPage() {
     }))
 
   const weekDays = localWeekDays(today)
+  const mobileDateLabel = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }).toLowerCase()
+  const mobileMainItems =
+    mobileTab === 'upcoming'
+      ? upcomingItems.slice(0, 8)
+      : mobileTab === 'done'
+      ? doneItems.slice(0, 8)
+      : todayItems.filter((item) => item.status !== 'doing' && item.status !== 'done' && item.complexity !== 'note').slice(0, 8)
 
   async function moveItem(item: Item, status: ItemStatus) {
     try {
@@ -326,7 +456,153 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1368px] px-4 pb-28 pt-4 sm:px-6 lg:pb-8 lg:pt-0">
+    <>
+      <div className="mx-auto w-full max-w-[430px] px-3 pb-28 pt-3 lg:hidden">
+        <header className="mb-3 flex items-center gap-3 px-1">
+          <div className="min-w-0 flex-1">
+            <div className="font-mono text-[11px] text-navy-500">{mobileDateLabel}</div>
+            <h1 className="bg-[linear-gradient(120deg,#2F6BFF,#7B5BFF_60%,#28C7B7)] bg-clip-text text-[28px] font-black leading-none tracking-normal text-transparent">
+              tasks
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSelectedTag(null)}
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/70 bg-white/70 text-navy-800 shadow-cool-sm backdrop-blur-xl"
+            aria-label="Limpar filtro"
+            title="Limpar filtro"
+          >
+            <FilterIcon />
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab((current) => (current === 'today' ? 'upcoming' : current === 'upcoming' ? 'done' : 'today'))}
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/70 bg-white/70 text-navy-800 shadow-cool-sm backdrop-blur-xl"
+            aria-label="Alternar lista"
+            title="Alternar lista"
+          >
+            <SortIcon />
+          </button>
+        </header>
+
+        <div className="flex flex-col gap-3">
+          <article className="overflow-hidden rounded-[22px] border border-white/40 bg-[linear-gradient(160deg,#2F6BFF_0%,#4F4BE9_50%,#28C7B7_100%)] px-4 py-3.5 text-white shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_14px_32px_-14px_rgba(15,35,66,.18),0_3px_10px_rgba(15,35,66,.06)]">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-xs font-bold lowercase">progress</h2>
+              <span className="rounded-full bg-white/18 px-2 py-0.5 font-mono text-[10px]">this week</span>
+            </div>
+            <div className="flex items-center gap-3.5">
+              <div className="relative h-[76px] w-[76px] shrink-0">
+                <svg width="76" height="76" viewBox="0 0 76 76" className="-rotate-90">
+                  <circle cx="38" cy="38" r="32" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="6" />
+                  <circle
+                    cx="38"
+                    cy="38"
+                    r="32"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray="201"
+                    strokeDashoffset={201 - (Math.max(0, Math.min(100, completion)) / 100) * 201}
+                  />
+                </svg>
+                <div className="absolute inset-0 grid place-items-center text-[20px] font-black leading-none text-white drop-shadow">
+                  {completion}%
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-[26px] font-black leading-none tracking-normal">{completedThisWeek} / {activeItems.length}</div>
+                <div className="mt-1 font-mono text-[11px] text-white/85">tasks completed</div>
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 border-t border-white/18 pt-3 font-mono text-[10px] text-white/90">
+              <div><b className="mb-0.5 block font-sans text-base">{todayItems.length}</b>today</div>
+              <div><b className="mb-0.5 block font-sans text-base text-[#FFD59E]">{overdueItems.length}</b>overdue</div>
+            </div>
+          </article>
+
+          <div className="flex gap-1.5 rounded-full border border-white/60 bg-white/55 p-1 backdrop-blur-xl">
+            {[
+              ['today', todayItems.length],
+              ['upcoming', upcomingItems.length],
+              ['done', doneItems.length],
+            ].map(([id, count]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setMobileTab(id as 'today' | 'upcoming' | 'done')}
+                className={`inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full text-[12px] font-semibold ${mobileTab === id ? 'bg-white text-navy-900 shadow-cool-sm' : 'text-navy-500'}`}
+              >
+                {id}
+                <span className={`rounded-full px-1.5 py-px font-mono text-[10px] ${mobileTab === id ? 'bg-brand-500/10 text-brand-600' : 'bg-navy-900/[0.06] text-navy-500'}`}>
+                  {count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {mobileTab === 'today' && doingItems.length > 0 ? (
+            <>
+              <MobileSectionHeader title="in progress" count={doingItems.length} tone="violet" />
+              {doingItems.slice(0, 3).map((item) => (
+                <MobileTaskCard key={item.id} item={item} today={today} onOpen={setSingleSelection} onMove={moveItem} />
+              ))}
+            </>
+          ) : null}
+
+          <MobileSectionHeader
+            title={mobileTab === 'today' ? 'today' : mobileTab === 'upcoming' ? 'upcoming' : 'done / today'}
+            count={mobileMainItems.length}
+            tone={mobileTab === 'done' ? 'teal' : 'blue'}
+          />
+          {isLoading ? (
+            <div className="rounded-2xl border border-white/70 bg-white/70 px-4 py-8 text-center text-sm text-navy-500 shadow-cool-sm">
+              Carregando...
+            </div>
+          ) : mobileMainItems.length === 0 ? (
+            <button
+              type="button"
+              onClick={() => openCapture('task')}
+              className="rounded-2xl border border-dashed border-white/70 bg-white/45 px-4 py-8 text-center font-mono text-[12px] text-navy-500 shadow-cool-sm backdrop-blur-xl"
+            >
+              add task
+            </button>
+          ) : (
+            mobileMainItems.map((item) => (
+              <MobileTaskCard key={item.id} item={item} today={today} onOpen={setSingleSelection} onMove={moveItem} />
+            ))
+          )}
+
+          <article className="relative overflow-hidden rounded-[22px] border border-transparent bg-[linear-gradient(180deg,#0B1733_0%,#0F2342_60%,#122A55_100%)] px-4 py-3.5 text-white shadow-[0_0_40px_2px_rgba(40,199,183,.20),0_0_40px_2px_rgba(47,107,255,.18)]">
+            <div className="mb-2.5 flex items-center justify-between">
+              <h2 className="text-xs font-bold lowercase">quick capture</h2>
+              <span className="rounded-full border border-white/14 bg-white/[0.08] px-2 py-0.5 font-mono text-[10px] text-white/85">swipe up</span>
+            </div>
+            <textarea
+              value={quickTitle}
+              onChange={(event) => setQuickTitle(event.target.value)}
+              placeholder="- [ ] Review PR #review&#10;due tomorrow 3pm"
+              className="min-h-[76px] w-full resize-none rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2.5 font-mono text-[12px] leading-5 text-white outline-none placeholder:text-white/42"
+            />
+            <div className="mt-2.5 flex items-center gap-1.5">
+              <span className="rounded-full border border-white/14 bg-white/[0.08] px-2.5 py-1 font-mono text-[10px] text-white/85">today</span>
+              <span className="rounded-full border border-white/14 bg-white/[0.08] px-2.5 py-1 font-mono text-[10px] text-white/85">#{selectedTag ?? 'review'}</span>
+              <button
+                type="button"
+                onClick={() => void saveQuickCapture()}
+                disabled={quickSaving}
+                className="ml-auto grid h-8 w-8 place-items-center rounded-full bg-white text-navy-900 shadow-[0_4px_12px_rgba(255,255,255,.35)] disabled:opacity-60"
+                aria-label="Criar item"
+              >
+                <PlusIcon />
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div className="mx-auto hidden w-full max-w-[1368px] px-4 pb-28 pt-4 sm:px-6 lg:block lg:pb-8 lg:pt-0">
       <section className="grid auto-rows-[230px] grid-cols-1 gap-4 md:grid-cols-6 lg:grid-cols-12 lg:gap-[18px]">
         <article className="flex flex-col overflow-hidden rounded-[28px] border border-white/45 bg-[linear-gradient(160deg,#2F6BFF_0%,#4F4BE9_50%,#28C7B7_100%)] p-5 text-white shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] md:col-span-3 lg:col-span-3">
           <div className="flex items-center justify-between">
@@ -526,6 +802,7 @@ export default function TodayPage() {
           onClose={() => setOpenEvent(null)}
         />
       ) : null}
-    </div>
+      </div>
+    </>
   )
 }
