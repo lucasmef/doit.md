@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>doit.md - dashboard</title>
+<meta name="viewport" content="width=1440, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/logo-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     doit.md bento dashboard - concept template
+     Inspired by Bento Spatial. Cards stay on-brand
+     (Inter + JetBrains Mono, brand-gradient accents),
+     wallpaper extends the brand cool gradient with a violet stop
+     so it still feels vivid but never warm.
+     ============================================================ */
+  :root {
+    --c-navy:    #0F2342;
+    --c-blue:    #2F6BFF;
+    --c-teal:    #28C7B7;
+    --c-violet:  #7B5BFF;       /* extension - used only in the wallpaper mesh */
+    --c-cyan:    #1AAED7;
+    --c-gray-50:  #ECF0F5;
+    --c-gray-100: #D9E1EA;
+    --c-gray-200: #B6C2D2;
+    --c-gray-500: #46587A;
+    --c-gray-700: #1F3559;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --r-card:  28px;
+    --r-inner: 18px;
+    --r-pill:  999px;
+
+    --shadow-card: 0 1px 0 rgba(255,255,255,.7) inset,
+                   0 -1px 0 rgba(15,35,66,.04) inset,
+                   0 18px 40px -16px rgba(15,35,66,.18),
+                   0 4px 12px rgba(15,35,66,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-navy);
+    background: #f4f1ff;
+    overflow-x: hidden;
+  }
+
+  /* -------- vivid wallpaper mesh ------------------------------ */
+  .wallpaper {
+    position: fixed; inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(900px 700px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(800px 600px at 88% 14%, rgba(255, 137, 235, .42), transparent 62%),
+      radial-gradient(900px 800px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(1000px 900px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+  .wallpaper::after {
+    /* faint grid for texture, very subtle */
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  /* -------- shell --------------------------------------------- */
+  .shell {
+    position: relative; z-index: 1;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 28px 36px 60px;
+  }
+
+  /* =================== top navigation ========================= */
+  .nav {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .brand {
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 8px 16px 8px 8px;
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(255,255,255,.6);
+    border-radius: var(--r-pill);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    width: max-content;
+  }
+  .brand-logo {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: #F8FAFC;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 2px rgba(15,35,66,.08);
+  }
+  .brand-name {
+    font-weight: 800; font-size: 16px; letter-spacing: -.02em;
+    color: var(--c-navy);
+  }
+  .brand-name .ext { color: var(--c-blue); }
+
+  .nav-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px;
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(255,255,255,.6);
+    border-radius: var(--r-pill);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    justify-self: center;
+  }
+  .nav-link {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 16px;
+    border-radius: var(--r-pill);
+    font-size: 13px; font-weight: 500;
+    color: var(--c-gray-500);
+    cursor: pointer;
+    transition: all .18s cubic-bezier(.2,.7,.2,1);
+  }
+  .nav-link:hover { color: var(--c-navy); }
+  .nav-link.active {
+    background: #fff;
+    color: var(--c-navy);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(15,35,66,.06), 0 4px 10px rgba(15,35,66,.06);
+  }
+  .nav-link svg { width: 15px; height: 15px; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; justify-self: end; }
+  .search-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(255,255,255,.6);
+    border-radius: var(--r-pill);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--c-gray-500);
+    min-width: 240px;
+  }
+  .search-pill .kbd {
+    margin-left: auto;
+    padding: 1px 6px;
+    background: rgba(255,255,255,.7);
+    border-radius: 5px;
+    border: 1px solid rgba(15,35,66,.08);
+    font-size: 11px;
+    color: var(--c-gray-500);
+  }
+  .avatar {
+    width: 42px; height: 42px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #FFB1D5, #B59BFF 60%, #28C7B7);
+    color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px;
+    border: 2px solid rgba(255,255,255,.7);
+    box-shadow: 0 2px 8px rgba(15,35,66,.18);
+  }
+
+  /* =================== bento grid ============================= */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: 250px;
+    gap: 18px;
+  }
+
+  .card {
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: var(--r-card);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    padding: 22px 24px;
+    display: flex; flex-direction: column;
+    overflow: hidden; position: relative;
+  }
+  .card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .card-title {
+    font-size: 15px; font-weight: 700; letter-spacing: -.01em;
+    color: var(--c-navy);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .card-title .ext {
+    font-family: var(--font-mono); font-weight: 600; font-size: 13px;
+    color: var(--c-blue);
+  }
+  .card-more {
+    width: 28px; height: 28px; border-radius: 999px;
+    background: rgba(15,35,66,.04);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--c-gray-500); cursor: pointer;
+  }
+  .card-more:hover { background: rgba(15,35,66,.08); }
+
+  /* ---------- grid placement ---------- */
+  .c-cal      { grid-column: span 3; grid-row: span 2; }
+  .c-today    { grid-column: span 5; grid-row: span 2; }
+  .c-live     { grid-column: span 4; grid-row: span 2; }
+  .c-recent   { grid-column: span 3; grid-row: span 2; }
+  .c-garden   { grid-column: span 5; grid-row: span 2; }
+  .c-streak   { grid-column: span 2; grid-row: span 2; }
+  .c-focus    { grid-column: span 2; grid-row: span 2; }
+
+  /* =================== calendar card ========================== */
+  .cal-dial {
+    margin: 4px auto 14px;
+    width: 168px; height: 168px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.6);
+    border: 1px solid rgba(15,35,66,.06);
+    position: relative;
+    display: grid; place-items: center;
+  }
+  .cal-dial-inner {
+    width: 88px; height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fff, #F8FAFC);
+    box-shadow: 0 4px 12px rgba(15,35,66,.10), inset 0 0 0 1px rgba(15,35,66,.05);
+    display: grid; place-items: center;
+    text-align: center;
+  }
+  .cal-dial-inner .d { font-weight: 800; font-size: 30px; line-height: 1; letter-spacing: -.02em; }
+  .cal-dial-inner .m { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); margin-top: 4px; }
+  .cal-num {
+    position: absolute;
+    font-family: var(--font-mono); font-size: 12px; color: var(--c-gray-500);
+    transform: translate(-50%, -50%);
+  }
+  .cal-num.now { color: #fff; background: var(--c-navy); width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; font-weight: 700; }
+
+  .cal-events { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+  .cal-event { display: flex; flex-direction: column; gap: 2px; }
+  .cal-event .label { font-weight: 600; font-size: 13px; }
+  .cal-event .time { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .cal-dots { display: flex; gap: 5px; justify-content: center; margin-top: 8px; }
+  .cal-dots span { width: 5px; height: 5px; border-radius: 999px; background: rgba(15,35,66,.16); }
+  .cal-dots span.active { background: var(--c-navy); width: 14px; border-radius: 999px; }
+
+  /* =================== today hero card ======================== */
+  .c-today .card-title { color: var(--c-navy); }
+  .today-date { font-family: var(--font-mono); font-size: 12px; color: var(--c-gray-500); margin-top: 2px; }
+  .today-headline {
+    font-weight: 900; font-size: 62px; line-height: 0.98; letter-spacing: -.04em;
+    color: var(--c-navy);
+    margin: 16px 0 8px;
+    text-wrap: balance;
+  }
+  .today-headline .grad {
+    background: linear-gradient(120deg, #2F6BFF 0%, #7B5BFF 45%, #28C7B7 100%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  .today-cta { display: flex; align-items: center; gap: 14px; margin-top: auto; }
+  .today-ring {
+    width: 68px; height: 68px;
+    position: relative;
+    display: grid; place-items: center;
+  }
+  .today-ring svg { width: 68px; height: 68px; transform: rotate(-90deg); }
+  .today-ring .pct {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-weight: 800; font-size: 14px; letter-spacing: -.02em; line-height: 1;
+    text-align: center;
+  }
+  .today-ring .pct small { display: block; font-weight: 500; font-size: 9px; color: var(--c-gray-500); margin-top: 1px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .04em; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 16px;
+    border-radius: var(--r-pill);
+    font-weight: 600; font-size: 13px;
+    border: none; cursor: pointer;
+    font-family: var(--font-sans);
+    transition: all .18s cubic-bezier(.2,.7,.2,1);
+  }
+  .btn-primary {
+    background: var(--c-navy); color: white;
+    box-shadow: 0 6px 14px rgba(15,35,66,.22);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(15,35,66,.28); }
+  .btn-ghost {
+    background: rgba(255,255,255,.6);
+    color: var(--c-navy);
+    border: 1px solid rgba(15,35,66,.08);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,.85); }
+  .today-cta .btn svg { width: 13px; height: 13px; }
+
+  /* sparkle in hero */
+  .today-spark {
+    position: absolute; right: -40px; top: -40px;
+    width: 280px; height: 280px;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(123,91,255,.35), transparent 60%),
+      radial-gradient(circle at 70% 70%, rgba(40,199,183,.35), transparent 60%);
+    filter: blur(20px);
+    border-radius: 999px;
+    pointer-events: none;
+  }
+
+  /* =================== live items card (dark glow) ============ */
+  .c-live {
+    background: linear-gradient(180deg, #0B1733 0%, #0F2342 60%, #122A55 100%);
+    border: 1.5px solid transparent;
+    background-clip: padding-box;
+    color: white;
+    position: relative;
+  }
+  .c-live::before {
+    content: "";
+    position: absolute; inset: -1.5px;
+    border-radius: var(--r-card);
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 45%, #28C7B7);
+    z-index: -1;
+    filter: blur(0.5px);
+  }
+  .c-live::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: var(--r-card);
+    box-shadow:
+      0 0 80px 4px rgba(40,199,183,.30),
+      0 0 80px 4px rgba(47,107,255,.22);
+    pointer-events: none;
+  }
+  .c-live .card-title { color: white; }
+  .c-live .card-more { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); }
+
+  .lt-list { display: flex; flex-direction: column; gap: 12px; }
+  .lt-row {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 16px;
+    padding: 14px 16px;
+    position: relative; overflow: hidden;
+  }
+  .lt-row::after {
+    /* glow trail along progress */
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0; height: 100%;
+    background: radial-gradient(120px 30px at var(--glow-x, 50%) 90%, rgba(40,199,183,.55), transparent 70%);
+    pointer-events: none;
+  }
+  .lt-row.brand-glow::after {
+    background:
+      radial-gradient(180px 40px at 50% 100%, rgba(123,91,255,.6), transparent 70%),
+      radial-gradient(120px 30px at var(--glow-x, 50%) 90%, rgba(40,199,183,.55), transparent 70%);
+  }
+  .lt-row-head { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+  .lt-cb {
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 1.5px solid rgba(255,255,255,.30);
+    background: transparent;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .lt-cb.feito {
+    background: var(--c-teal);
+    border-color: var(--c-teal);
+  }
+  .lt-cb.feito svg { color: var(--c-navy); }
+  .lt-cb svg { width: 11px; height: 11px; }
+  .lt-row .title { font-weight: 600; font-size: 14px; }
+  .lt-row .file { font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,.55); margin-left: auto; }
+  .lt-status {
+    padding: 2px 9px; border-radius: 999px;
+    background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.16);
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(255,255,255,.85);
+  }
+  .lt-progress {
+    margin-top: 10px;
+    height: 4px; border-radius: 999px;
+    background: rgba(255,255,255,.08);
+    overflow: hidden; position: relative; z-index: 1;
+  }
+  .lt-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2F6BFF, #28C7B7);
+    border-radius: 999px;
+    box-shadow: 0 0 12px rgba(40,199,183,.65);
+  }
+  .lt-foot {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px; position: relative; z-index: 1;
+    font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,.7);
+  }
+  .lt-foot .pct { margin-left: auto; }
+  .lt-avatars { display: flex; }
+  .lt-avatar {
+    width: 22px; height: 22px; border-radius: 999px;
+    background: linear-gradient(135deg, #2F6BFF, #28C7B7);
+    border: 2px solid #0F2342;
+    margin-left: -8px;
+    font-size: 9px; font-weight: 700; color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .lt-avatar:first-child { margin-left: 0; }
+  .lt-avatar.a2 { background: linear-gradient(135deg, #7B5BFF, #FFB1D5); }
+  .lt-avatar.a3 { background: linear-gradient(135deg, #28C7B7, #1AAED7); }
+
+  /* =================== recent / pastas activity ================= */
+  .ra-list { display: flex; flex-direction: column; gap: 14px; margin-top: 4px; }
+  .ra-item { display: flex; gap: 12px; align-items: flex-start; }
+  .ra-av {
+    width: 32px; height: 32px; border-radius: 999px;
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 11px; color: white;
+    border: 2px solid rgba(255,255,255,.8);
+    box-shadow: 0 2px 6px rgba(15,35,66,.10);
+  }
+  .ra-av.a1 { background: linear-gradient(135deg, #FFB1D5, #B59BFF); }
+  .ra-av.a2 { background: linear-gradient(135deg, #2F6BFF, #28C7B7); }
+  .ra-av.a3 { background: linear-gradient(135deg, #FFD27D, #FFB1D5); }
+  .ra-av.a4 { background: linear-gradient(135deg, #7B5BFF, #1AAED7); }
+  .ra-text { display: flex; flex-direction: column; gap: 2px; line-height: 1.35; }
+  .ra-text .who { font-size: 13px; color: var(--c-navy); }
+  .ra-text .who b { font-weight: 600; }
+  .ra-text .who .file {
+    font-family: var(--font-mono); font-size: 12px; color: var(--c-blue);
+    background: rgba(47,107,255,.08); padding: 1px 6px; border-radius: 4px;
+  }
+  .ra-text .when { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+
+  /* =================== markdown garden ======================== */
+  .mg-canvas {
+    position: relative;
+    flex: 1;
+    margin-top: 6px;
+    /* warm-leaning peach wash kept light + cool-tinted with blue & violet on top */
+    background:
+      radial-gradient(circle at 20% 20%, rgba(255,209,235,.55), transparent 60%),
+      radial-gradient(circle at 80% 30%, rgba(255,222,179,.45), transparent 60%),
+      radial-gradient(circle at 50% 90%, rgba(202,232,255,.55), transparent 60%),
+      linear-gradient(135deg, #FFF6F1, #F1ECFF);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(15,35,66,.05);
+  }
+  .sticky {
+    position: absolute;
+    padding: 12px 14px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow:
+      0 1px 0 rgba(15,35,66,.04) inset,
+      0 8px 18px -8px rgba(15,35,66,.20),
+      0 2px 4px rgba(15,35,66,.06);
+    transform-origin: top center;
+    font-size: 12px; line-height: 1.4;
+    color: var(--c-navy);
+  }
+  .sticky .ext {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--c-blue); display: block; margin-bottom: 4px;
+  }
+  .sticky .t {
+    font-weight: 700; font-size: 13px; line-height: 1.25; margin-bottom: 6px; letter-spacing: -.01em;
+  }
+  .sticky .scribble { font-family: 'Caveat', 'Comic Sans MS', cursive; font-size: 12px; color: var(--c-gray-500); }
+  .sticky.pin::before {
+    content: ""; position: absolute; top: -6px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px; border-radius: 999px;
+    background: radial-gradient(circle at 30% 30%, #FF6FAE, #C0297A);
+    box-shadow: 0 2px 4px rgba(192,41,122,.4);
+  }
+  .sticky.pin.teal::before { background: radial-gradient(circle at 30% 30%, #5BE3D4, #18948A); box-shadow: 0 2px 4px rgba(24,148,138,.4); }
+  .sticky.pin.violet::before { background: radial-gradient(circle at 30% 30%, #B59BFF, #5A37D9); box-shadow: 0 2px 4px rgba(90,55,217,.4); }
+
+  .sticky.s1 { left: 4%;  top: 18%; width: 154px; transform: rotate(-6deg); }
+  .sticky.s2 { left: 36%; top: 38%; width: 160px; transform: rotate(3deg); background: #FFF8C9; }
+  .sticky.s3 { left: 64%; top: 16%; width: 156px; transform: rotate(-2deg); }
+  .sticky.s4 { left: 7%;  top: 60%; width: 138px; transform: rotate(4deg); background: #D8F5EF; }
+  .sticky.s5 { left: 60%; top: 60%; width: 148px; transform: rotate(-3deg); background: #FFEBF4; }
+
+  .scrib {
+    position: absolute;
+    color: rgba(15,35,66,.35);
+    font-family: 'Caveat', cursive;
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  /* =================== streak card ============================ */
+  .c-streak {
+    background: linear-gradient(160deg, #2F6BFF 0%, #4F4BE9 50%, #28C7B7 100%);
+    color: white;
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  .c-streak .card-title { color: white; }
+  .c-streak .card-more { background: rgba(255,255,255,.14); color: rgba(255,255,255,.85); }
+  .streak-num {
+    font-weight: 900; font-size: 64px; letter-spacing: -.04em; line-height: 1;
+    margin: 8px 0 4px;
+    text-shadow: 0 2px 12px rgba(15,35,66,.25);
+  }
+  .streak-sub {
+    font-family: var(--font-mono); font-size: 11px;
+    opacity: .85;
+  }
+  .streak-bars {
+    margin-top: auto;
+    display: flex; gap: 4px; align-items: flex-end; height: 60px;
+  }
+  .streak-bars span {
+    flex: 1;
+    background: rgba(255,255,255,.35);
+    border-radius: 3px;
+  }
+  .streak-bars span.on { background: rgba(255,255,255,.95); }
+  .streak-bars span.today {
+    background: white;
+    box-shadow: 0 0 10px rgba(255,255,255,.9), 0 -4px 12px rgba(255,255,255,.6);
+  }
+
+  /* =================== focus timer card ======================= */
+  .c-focus { background: rgba(255,255,255,.85); }
+  .focus-num {
+    font-family: var(--font-mono); font-weight: 700;
+    font-size: 56px; letter-spacing: -.04em; line-height: 1;
+    margin: 12px 0 4px;
+    background: linear-gradient(120deg, #2F6BFF, #7B5BFF, #28C7B7);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  .focus-sub { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .focus-foot { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
+  .focus-bar {
+    height: 6px; border-radius: 999px;
+    background: rgba(15,35,66,.06);
+    overflow: hidden;
+  }
+  .focus-bar-fill {
+    height: 100%; width: 64%;
+    background: linear-gradient(90deg, #2F6BFF, #28C7B7);
+    border-radius: 999px;
+  }
+  .focus-btn {
+    background: linear-gradient(135deg, #B59BFF, #7B5BFF);
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    border-radius: var(--r-pill);
+    font-weight: 600; font-size: 13px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(123,91,255,.4);
+    display: inline-flex; align-items: center; gap: 7px; justify-content: center;
+  }
+  .focus-btn svg { width: 13px; height: 13px; }
+
+  /* =================== caveat handwriting font ================ */
+  @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600&display=swap');
+</style>
+</head>
+<body>
+
+<div class="wallpaper" aria-hidden="true"></div>
+
+<div class="shell">
+
+  <!-- ============== NAV ============== -->
+  <header class="nav">
+    <div class="brand">
+      <span class="brand-logo">
+        <!-- inline mini logo -->
+        <svg width="22" height="22" viewBox="160 96 532 532" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bnLogo" x1="190" y1="120" x2="660" y2="610" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#115AF5"/>
+              <stop offset="0.5" stop-color="#0984E6"/>
+              <stop offset="1" stop-color="#39D0B9"/>
+            </linearGradient>
+          </defs>
+          <path d="M 423 120 A 242 242 0 1 0 668 371" fill="none" stroke="url(#bnLogo)" stroke-width="58" stroke-linecap="round"/>
+          <circle cx="489" cy="127" r="20" fill="#1267F7"/>
+          <circle cx="547" cy="153" r="20" fill="#0984E6"/>
+          <circle cx="598" cy="190" r="20" fill="#08AAC7"/>
+          <circle cx="636" cy="243" r="20" fill="#0DB7C6"/>
+          <circle cx="660" cy="300" r="20" fill="#04A9D4"/>
+          <path d="M 357 374 L 407 421 L 526 307" fill="none" stroke="#0F2342" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">doit<span class="ext">.md</span></span>
+    </div>
+
+    <nav class="nav-pill">
+      <a class="nav-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+        Hoje
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+        Itens
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Notas
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M3 21v-1a6 6 0 0 1 12 0v1"/><path d="M21 21v-1a6 6 0 0 0-5-5.92"/></svg>
+        Pastas
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Ajustes
+      </a>
+    </nav>
+
+    <div class="nav-right">
+      <div class="search-pill">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <span>Buscar itens, notas…</span>
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="avatar">LF</div>
+    </div>
+  </header>
+
+  <!-- ============== BENTO GRID ============== -->
+  <section class="bento">
+
+    <!-- ====== Calendário ====== -->
+    <article class="card c-cal">
+      <div class="card-head">
+        <div class="card-title">Calendário</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="cal-dial">
+        <span class="cal-num" style="left:50%; top:8%;">32</span>
+        <span class="cal-num now" style="left:65%; top:12%;">31</span>
+        <span class="cal-num" style="left:80%; top:22%;">03</span>
+        <span class="cal-num" style="left:14%; top:22%;">30</span>
+        <span class="cal-num" style="left:92%; top:50%;">07</span>
+        <span class="cal-num" style="left:8%;  top:50%;">26</span>
+        <span class="cal-num" style="left:84%; top:78%;">08</span>
+        <span class="cal-num" style="left:18%; top:78%;">27</span>
+        <span class="cal-num" style="left:33%; top:92%;">18</span>
+        <span class="cal-num" style="left:50%; top:97%;">19</span>
+        <span class="cal-num" style="left:67%; top:92%;">10</span>
+        <div class="cal-dial-inner">
+          <div>
+            <div class="d">26</div>
+            <div class="m">MAY</div>
+          </div>
+        </div>
+      </div>
+      <div class="cal-events">
+        <div class="cal-event">
+          <div class="label">Revisar inbox</div>
+          <div class="time">14:00 - 15:00</div>
+        </div>
+        <div class="cal-event">
+          <div class="label" style="opacity:.75">amanhã - agenda conectada</div>
+          <div class="time">09:00 - 10:30</div>
+        </div>
+      </div>
+      <div class="cal-dots">
+        <span class="active"></span><span></span><span></span>
+      </div>
+    </article>
+
+    <!-- ====== Today hero ====== -->
+    <article class="card c-today">
+      <div class="today-spark"></div>
+      <div class="card-head">
+        <div class="card-title">Hoje</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="today-date">26 MAI, 2026 · TERÇA</div>
+      <h1 class="today-headline">seu dia,<br><span class="grad">em itens.</span></h1>
+      <div class="today-cta">
+        <div class="today-ring">
+          <svg viewBox="0 0 68 68">
+            <defs>
+              <linearGradient id="ringPct" x1="0" y1="0" x2="68" y2="68">
+                <stop offset="0" stop-color="#2F6BFF"/>
+                <stop offset=".5" stop-color="#7B5BFF"/>
+                <stop offset="1" stop-color="#28C7B7"/>
+              </linearGradient>
+            </defs>
+            <circle cx="34" cy="34" r="28" fill="none" stroke="rgba(15,35,66,.10)" stroke-width="6"/>
+            <circle cx="34" cy="34" r="28" fill="none" stroke="url(#ringPct)" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="175.93" stroke-dashoffset="38.7"/>
+          </svg>
+          <div class="pct">78%<small>feito</small></div>
+        </div>
+        <button class="btn btn-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          novo item
+        </button>
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          planejar amanhã
+        </button>
+      </div>
+    </article>
+
+    <!-- ====== Itens ativos (dark glow) ====== -->
+    <article class="card c-live">
+      <div class="card-head">
+        <div class="card-title">Itens ativos</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="lt-list">
+
+        <div class="lt-row brand-glow" style="--glow-x: 90%">
+          <div class="lt-row-head">
+            <span class="lt-cb feito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 9 17 20 6"/></svg></span>
+            <span class="title">Finalizar item do dia</span>
+            <span class="lt-status">feito</span>
+          </div>
+          <div class="lt-progress"><div class="lt-progress-fill" style="width: 100%"></div></div>
+          <div class="lt-foot">
+            <span class="file">hoje.md</span>
+            <div class="lt-avatars" style="margin-left:auto;">
+              <div class="lt-avatar">LF</div>
+              <div class="lt-avatar a2">JL</div>
+            </div>
+            <span class="pct">100%</span>
+          </div>
+        </div>
+
+        <div class="lt-row" style="--glow-x: 72%">
+          <div class="lt-row-head">
+            <span class="lt-cb"></span>
+            <span class="title">Revisar nota capturada</span>
+            <span class="lt-status">revisar</span>
+          </div>
+          <div class="lt-progress"><div class="lt-progress-fill" style="width: 78%"></div></div>
+          <div class="lt-foot">
+            <span class="file">inbox/revisar.md</span>
+            <div class="lt-avatars" style="margin-left:auto;">
+              <div class="lt-avatar a3">MP</div>
+              <div class="lt-avatar a2">JL</div>
+            </div>
+            <span class="pct">78%</span>
+          </div>
+        </div>
+
+        <div class="lt-row" style="--glow-x: 92%">
+          <div class="lt-row-head">
+            <span class="lt-cb feito"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 9 17 20 6"/></svg></span>
+            <span class="title">Organizar pasta pessoal</span>
+            <span class="lt-status">feito</span>
+          </div>
+          <div class="lt-progress"><div class="lt-progress-fill" style="width: 100%"></div></div>
+          <div class="lt-foot">
+            <span class="file">pastas/pessoal.md</span>
+            <div class="lt-avatars" style="margin-left:auto;">
+              <div class="lt-avatar">LF</div>
+            </div>
+            <span class="pct">100%</span>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- ====== Recent / pastas activity ====== -->
+    <article class="card c-recent">
+      <div class="card-head">
+        <div class="card-title">Auditoria</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="ra-list">
+        <div class="ra-item">
+          <div class="ra-av a1">AS</div>
+          <div class="ra-text">
+            <div class="who"><b>Sync local</b> alterou <span class="file">hoje.md</span></div>
+            <div class="when">há 1h</div>
+          </div>
+        </div>
+        <div class="ra-item">
+          <div class="ra-av a2">JL</div>
+          <div class="ra-text">
+            <div class="who"><b>Auditoria</b> aprovou <span class="file">#baixo-risco</span></div>
+            <div class="when">há 1 dia</div>
+          </div>
+        </div>
+        <div class="ra-item">
+          <div class="ra-av a3">JS</div>
+          <div class="ra-text">
+            <div class="who"><b>Google Calendário</b> importou <span class="file">eventos.md</span></div>
+            <div class="when">22 mai</div>
+          </div>
+        </div>
+        <div class="ra-item">
+          <div class="ra-av a4">MP</div>
+          <div class="ra-text">
+            <div class="who"><b>Drive</b> anexou <span class="file">inbox/revisar.md</span></div>
+            <div class="when">há 3 dias</div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ====== Jardim Markdown ====== -->
+    <article class="card c-garden">
+      <div class="card-head">
+        <div class="card-title">Jardim Markdown</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="mg-canvas">
+
+        <div class="sticky s1 pin">
+          <span class="ext">M↓ creative.md</span>
+          <div class="t">ideia solta capturada</div>
+          <div class="scribble">~ pronta para virar item ~</div>
+        </div>
+
+        <div class="sticky s2 pin teal">
+          <span class="ext">M↓ pastas/conteudo.md</span>
+          <div class="t">Pasta conteúdo - notas e tarefas</div>
+          <div class="scribble">↳ capturar → organizar → executar</div>
+        </div>
+
+        <div class="sticky s3 pin violet">
+          <span class="ext">M↓ agenda-sync.md</span>
+          <div class="t">eventos do calendário</div>
+          <div class="scribble">itens vinculados ✓</div>
+        </div>
+
+        <div class="sticky s4 pin teal">
+          <span class="ext">M↓ ideas.md</span>
+          <div class="t">arquivo de ideias</div>
+        </div>
+
+        <div class="sticky s5 pin">
+          <span class="ext">M↓ reading.md</span>
+          <div class="t">referências e anexos Drive</div>
+        </div>
+
+        <span class="scrib" style="left:24%; top:8%;">~ ✦ ~</span>
+        <span class="scrib" style="left:48%; top:24%;">∿∿</span>
+        <span class="scrib" style="left:88%; top:70%;">↗</span>
+        <span class="scrib" style="left:6%;  top:90%;">✦</span>
+      </div>
+    </article>
+
+    <!-- ====== Revisão ====== -->
+    <article class="card c-streak">
+      <div class="card-head">
+        <div class="card-title">Revisão</div>
+        <div class="card-more">···</div>
+      </div>
+      <div>
+        <div class="streak-num">12</div>
+        <div class="streak-sub">itens concluídos hoje</div>
+      </div>
+      <div class="streak-bars">
+        <span class="on" style="height: 30%"></span>
+        <span class="on" style="height: 50%"></span>
+        <span class="on" style="height: 65%"></span>
+        <span class="on" style="height: 40%"></span>
+        <span class="on" style="height: 70%"></span>
+        <span class="on" style="height: 55%"></span>
+        <span class="on" style="height: 80%"></span>
+        <span class="on" style="height: 60%"></span>
+        <span class="on" style="height: 85%"></span>
+        <span class="on" style="height: 75%"></span>
+        <span class="on" style="height: 90%"></span>
+        <span class="on" style="height: 95%"></span>
+        <span class="today" style="height: 100%"></span>
+        <span style="height: 35%"></span>
+      </div>
+    </article>
+
+    <!-- ====== Foco timer ====== -->
+    <article class="card c-focus">
+      <div class="card-head">
+        <div class="card-title">Foco</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="focus-num">07:48</div>
+      <div class="focus-sub">sessão de foco · item atual</div>
+      <div class="focus-foot">
+        <div class="focus-bar"><div class="focus-bar-fill"></div></div>
+        <button class="focus-btn">
+          <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7L8 5z"/></svg>
+          iniciar sessão
+        </button>
+      </div>
+    </article>
+
+  </section>
+</div>
+
+</body>
+</html>

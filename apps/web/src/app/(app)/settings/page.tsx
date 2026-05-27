@@ -159,10 +159,11 @@ function AppearanceSection() {
       !calendar.accessRole || calendar.accessRole === 'owner' || calendar.accessRole === 'writer',
   )
   const recommendedMobileNav: MobileNavItemId[] = [
+    'dashboard',
     'today',
+    'notas',
     'calendar',
     'inbox',
-    'notas',
     'upcoming',
     'settings',
   ]

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 export type MobileNavItemId =
+  | 'dashboard'
   | 'inbox'
   | 'today'
   | 'upcoming'
@@ -29,12 +30,13 @@ export type ThemePreference = 'light' | 'dark' | 'system'
 export type CalendarWeekStart = 'monday' | 'sunday'
 
 const MOBILE_NAV_DEFAULT: MobileNavItem[] = [
+  { id: 'dashboard', visible: true },
   { id: 'today', visible: true },
   { id: 'calendar', visible: true },
-  { id: 'inbox', visible: true },
+  { id: 'inbox', visible: false },
   { id: 'notas', visible: true },
-  { id: 'upcoming', visible: true },
-  { id: 'settings', visible: true },
+  { id: 'upcoming', visible: false },
+  { id: 'settings', visible: false },
 ]
 
 const DEFAULTS: Preferences = {

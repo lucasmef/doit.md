@@ -18,14 +18,14 @@ import type { ItemComplexity, ItemRecurrence } from '@doit/types'
 import { formatRecurrenceLabel } from '@doit/core'
 
 type ItemMode = Extract<ItemComplexity, 'task' | 'note'>
-type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
+type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'folder' | null
 type ActiveShortcut =
   | { kind: 'tag'; query: string; start: number; end: number }
-  | { kind: 'project'; query: string; start: number; end: number }
+  | { kind: 'folder'; query: string; start: number; end: number }
   | { kind: 'priority'; query: string; start: number; end: number }
 
 const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
-const PROJECT_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
+const FOLDER_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
 const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
 const INLINE_METADATA_PATTERN =
@@ -195,7 +195,7 @@ function isCategorizerToken(value: string) {
   )
 }
 
-function projectIdOf(project: { id?: string; _id?: string }) {
+function folderIdOf(project: { id?: string; _id?: string }) {
   return project.id ?? (project as unknown as { _id?: string })._id ?? ''
 }
 
@@ -283,7 +283,7 @@ function activeShortcut(value: string, cursor: number): ActiveShortcut | null {
   if (token.startsWith('@'))
     return { kind: 'tag', query: normalizeToken(token.slice(1)), start, end: cursor }
   if (token.startsWith('#'))
-    return { kind: 'project', query: normalizeToken(token.slice(1)), start, end: cursor }
+    return { kind: 'folder', query: normalizeToken(token.slice(1)), start, end: cursor }
   return { kind: 'priority', query: token.toUpperCase(), start, end: cursor }
 }
 
@@ -527,29 +527,29 @@ export function QuickCapture() {
   const { item: editItem } = useItem(editMode ? quickCaptureEditId : null)
   const { toast } = useToast()
   const { confirm } = useDialog()
-  const { projects } = useProjects()
+  const { projects: activeFoldersShim } = useProjects()
   const { items } = useItems()
   const [title, setTitle] = useState('')
   const [contentMd, setContentMd] = useState('')
   const [complexity, setComplexity] = useState<ItemMode>('task')
   const [dueDate, setDueDate] = useState('')
   const [dueTime, setDueTime] = useState('')
-  const [projectId, setProjectId] = useState('')
+  const [folderId, setFolderId] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [priority, setPriority] = useState<Priority>(4)
   const [recurrence, setRecurrence] = useState<ItemRecurrence | ''>('')
   const [tagQuery, setTagQuery] = useState('')
-  const [projectQuery, setProjectQuery] = useState('')
+  const [folderQuery, setProjectQuery] = useState('')
   const [titleCursor, setTitleCursor] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [creatingProject, setCreatingProject] = useState(false)
+  const [creatingFolder, setCreatingProject] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [popover, setPopover] = useState<Popover>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const activeProjects = projects.filter((p) => p.status !== 'archived')
-  const folderOptions = useMemo(() => flattenFolderOptions(activeProjects), [activeProjects])
-  const selectedProject = activeProjects.find((p) => projectIdOf(p) === projectId)
+  const activeFolders = activeFoldersShim.filter((p) => p.status !== 'archived')
+  const folderOptions = useMemo(() => flattenFolderOptions(activeFolders), [activeFolders])
+  const selectedFolder = activeFolders.find((p) => folderIdOf(p) === folderId)
   const isTodayContext = pathname === '/today'
   const isNote = complexity === 'note'
   const swipeHandlers = createCaptureSwipeHandlers({
@@ -574,8 +574,8 @@ export function QuickCapture() {
     return !tags.includes(tag) && (!query || tag.includes(query))
   })
 
-  const filteredProjects = folderOptions.filter(({ folder: project }) => {
-    const query = normalizeToken(projectQuery)
+  const filteredFolders = folderOptions.filter(({ folder: project }) => {
+    const query = normalizeToken(folderQuery)
     return !query || normalizeToken(project.name).includes(query)
   })
 
@@ -586,8 +586,8 @@ export function QuickCapture() {
           .filter((tag) => !tags.includes(tag) && (!shortcut.query || tag.includes(shortcut.query)))
           .slice(0, 8)
       : []
-  const shortcutProjects =
-    shortcut?.kind === 'project'
+  const shortcutFolders =
+    shortcut?.kind === 'folder'
       ? folderOptions
           .filter(({ folder: project }) => {
             const query = shortcut.query
@@ -630,7 +630,7 @@ export function QuickCapture() {
         setComplexity((editItem.complexity === 'note' ? 'note' : 'task') as ItemMode)
         setDueDate(editItem.dueDate ?? '')
         setDueTime(editItem.dueTime ?? '')
-        setProjectId(editItem.folderId ?? '')
+        setFolderId(editItem.folderId ?? '')
         setTags(editItem.tags ?? [])
         setPriority(((editItem.priority as Priority) ?? 4) as Priority)
         setRecurrence((editItem.recurrence ?? '') as ItemRecurrence | '')
@@ -643,7 +643,7 @@ export function QuickCapture() {
           setComplexity(nextComplexity)
           setDueDate(nextComplexity === 'task' ? draft.dueDate ?? (isTodayContext ? todayDate() : '') : '')
           setDueTime(nextComplexity === 'task' ? draft.dueTime ?? '' : '')
-          setProjectId(draft.projectId ?? quickCaptureFolderId ?? '')
+          setFolderId(draft.projectId ?? quickCaptureFolderId ?? '')
           setTags(draft.tags ?? [])
           setPriority((draft.priority as Priority) ?? 4)
           setRecurrence((draft.recurrence as ItemRecurrence | '') ?? '')
@@ -651,10 +651,10 @@ export function QuickCapture() {
           setComplexity(captureMode === 'note' ? 'note' : 'task')
           setDueDate(isTodayContext ? todayDate() : '')
           if (quickCaptureFolderId) {
-            setProjectId(quickCaptureFolderId)
+            setFolderId(quickCaptureFolderId)
           } else {
             const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
-            if (folderMatch?.[1]) setProjectId(folderMatch[1])
+            if (folderMatch?.[1]) setFolderId(folderMatch[1])
           }
         }
       }
@@ -677,7 +677,7 @@ export function QuickCapture() {
       setComplexity('task')
       setDueDate('')
       setDueTime('')
-      setProjectId('')
+      setFolderId('')
       setTags([])
       setPriority(4)
       setRecurrence('')
@@ -700,7 +700,7 @@ export function QuickCapture() {
         complexity,
         dueDate,
         dueTime,
-        projectId,
+        projectId: folderId,
         tags,
         priority,
         recurrence,
@@ -708,7 +708,7 @@ export function QuickCapture() {
     } else {
       clearDraft()
     }
-  }, [quickCaptureOpen, editMode, title, contentMd, complexity, dueDate, dueTime, projectId, tags, priority, recurrence])
+  }, [quickCaptureOpen, editMode, title, contentMd, complexity, dueDate, dueTime, folderId, tags, priority, recurrence])
 
   function applyTitleShortcuts(value: string) {
     setTitle(value)
@@ -718,16 +718,16 @@ export function QuickCapture() {
       setPriority(Number(priorityMatch[1]) as Priority)
     }
 
-    const projectMatch = value.match(PROJECT_SHORTCUT)
+    const projectMatch = value.match(FOLDER_SHORTCUT)
     const projectToken = projectMatch?.[1]
     if (projectToken) {
       const wanted = normalizeToken(projectToken.replace(/-/g, ' '))
-      const project = activeProjects.find(
+      const project = activeFolders.find(
         (p) =>
           normalizeToken(p.name) === wanted ||
           normalizeToken(p.name).replace(/\s+/g, '-') === normalizeToken(projectToken),
       )
-      if (project) setProjectId(projectIdOf(project))
+      if (project) setFolderId(folderIdOf(project))
     }
 
     const foundTags = Array.from(value.matchAll(TAG_SHORTCUT))
@@ -799,8 +799,8 @@ export function QuickCapture() {
     replaceShortcut(`@${tag}`)
   }
 
-  function selectShortcutProject(project: { id?: string; _id?: string; name: string }) {
-    setProjectId(projectIdOf(project))
+  function selectShortcutFolder(project: { id?: string; _id?: string; name: string }) {
+    setFolderId(folderIdOf(project))
     replaceShortcut(`#${slugToken(project.name)}`)
   }
 
@@ -809,15 +809,15 @@ export function QuickCapture() {
     replaceShortcut(`p${next}`)
   }
 
-  async function addProject(value: string) {
+  async function addFolder(value: string) {
     const name = value.trim()
     if (!name) return
 
-    const existing = activeProjects.find(
+    const existing = activeFolders.find(
       (project) => normalizeToken(project.name) === normalizeToken(name),
     )
     if (existing) {
-      setProjectId(projectIdOf(existing))
+      setFolderId(folderIdOf(existing))
       setProjectQuery('')
       setPopover(null)
       return
@@ -826,8 +826,8 @@ export function QuickCapture() {
     setCreatingProject(true)
     try {
       const project = await createProject({ name })
-      const id = projectIdOf(project)
-      if (id) setProjectId(id)
+      const id = folderIdOf(project)
+      if (id) setFolderId(id)
       setProjectQuery('')
       setPopover(null)
     } catch (error) {
@@ -846,9 +846,9 @@ export function QuickCapture() {
       const item = await createItem({
         title: parsedTitle,
         complexity: 'note',
-        status: !projectId ? 'inbox' : 'todo',
+        status: !folderId ? 'inbox' : 'todo',
         contentMd: trimmedContent || undefined,
-        folderId: projectId || undefined,
+        folderId: folderId || undefined,
         tags,
       })
       clearDraft()
@@ -875,7 +875,7 @@ export function QuickCapture() {
 
     setSaving(true)
     try {
-      const inboxContext = !projectId && !dueDate
+      const inboxContext = !folderId && !dueDate
       await createItem({
         title: parsedTitle,
         complexity,
@@ -883,7 +883,7 @@ export function QuickCapture() {
         contentMd: contentMd.trim() || undefined,
         dueDate: dueDate || undefined,
         dueTime: dueDate && dueTime ? dueTime : undefined,
-        folderId: projectId || undefined,
+        folderId: folderId || undefined,
         tags,
         priority: complexity === 'task' && priority < 4 ? priority : undefined,
         recurrence: complexity === 'task' && recurrence ? recurrence : undefined,
@@ -915,14 +915,14 @@ export function QuickCapture() {
           contentMd: contentMd.trim(),
           dueDate: complexity === 'task' ? dueDate || '' : '',
           dueTime: complexity === 'task' && dueDate ? dueTime || '' : '',
-          folderId: projectId || '',
+          folderId: folderId || '',
           tags,
           priority: complexity === 'task' && priority < 4 ? priority : null,
           recurrence: complexity === 'task' && recurrence ? recurrence : '',
         } as never)
         toast('Item atualizado', 'success')
       } else {
-        const inboxContext = !projectId && !dueDate
+        const inboxContext = !folderId && !dueDate
         await createItem({
           title: parsedTitle,
           complexity,
@@ -930,7 +930,7 @@ export function QuickCapture() {
           contentMd: contentMd.trim() || undefined,
           dueDate: dueDate || undefined,
           dueTime: dueDate && dueTime ? dueTime : undefined,
-          folderId: projectId || undefined,
+          folderId: folderId || undefined,
           tags,
           priority: complexity === 'task' && priority < 4 ? priority : undefined,
           recurrence: complexity === 'task' && recurrence ? recurrence : undefined,
@@ -951,7 +951,7 @@ export function QuickCapture() {
 
     setSaving(true)
     try {
-      const inboxContext = !projectId && !dueDate
+      const inboxContext = !folderId && !dueDate
       await Promise.all(
         lines.map((line) =>
           createItem({
@@ -961,7 +961,7 @@ export function QuickCapture() {
             contentMd: contentMd.trim() || undefined,
             dueDate: dueDate || undefined,
             dueTime: dueDate && dueTime ? dueTime : undefined,
-            folderId: projectId || undefined,
+            folderId: folderId || undefined,
             tags,
             priority: priority < 4 ? priority : undefined,
             recurrence: recurrence ? recurrence : undefined,
@@ -1022,7 +1022,7 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-navy-900/32 p-0 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
@@ -1031,10 +1031,10 @@ export function QuickCapture() {
       {...swipeHandlers}
     >
       <div
-        className={`w-full overflow-hidden border border-ui-border bg-white shadow-cool-lg sm:max-h-none sm:overflow-visible sm:rounded-xl ${
+        className={`w-full overflow-hidden border border-white/75 bg-white/92 shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] backdrop-blur-2xl sm:max-h-none sm:overflow-visible sm:rounded-[24px] ${
           isNote
-            ? `${mobileExpanded ? 'h-full max-h-none rounded-none border-0' : 'max-h-[calc(100dvh-1rem)] rounded-t-2xl'} sm:h-auto sm:max-w-[720px] sm:rounded-xl sm:border`
-            : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-2xl'
+            ? `${mobileExpanded ? 'h-full max-h-none rounded-none border-0' : 'max-h-[calc(100dvh-1rem)] rounded-t-[24px]'} sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
+            : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px]'
         }`}
       >
         <form
@@ -1042,12 +1042,12 @@ export function QuickCapture() {
           className={`flex flex-col sm:max-h-none ${isNote && mobileExpanded ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
         >
           {!editMode && (
-            <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-3">
+            <div className="shrink-0 border-b border-white/60 bg-surface-soft/70 px-4 pb-3 pt-3">
               {!mobileExpanded && (
                 <button
                   type="button"
                   onClick={() => setExpanded(true)}
-                  className="mx-auto mb-3 block h-1.5 w-11 rounded-full bg-slate-300 sm:hidden"
+                  className="mx-auto mb-3 block h-1.5 w-11 rounded-full bg-slate-300/80 sm:hidden"
                   aria-label="Expandir captura"
                   title="Expandir"
                 />
@@ -1073,7 +1073,7 @@ export function QuickCapture() {
                     aria-label="Abrir em tela cheia"
                     onClick={() => void handleOpenFullscreen()}
                     disabled={saving}
-                    className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-ui-border-soft bg-surface-soft text-slate-500 transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-50 sm:inline-flex"
+                    className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-white/70 bg-white/56 text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white hover:text-slate-800 disabled:opacity-50 sm:inline-flex"
                   >
                     <svg
                       className="h-4 w-4"
@@ -1095,7 +1095,7 @@ export function QuickCapture() {
           )}
           {!mobileExpanded && (
             <div className="px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
-              <div className="flex items-end gap-2 rounded-2xl border border-ui-border bg-white p-2 shadow-cool-sm">
+              <div className="flex items-end gap-2 rounded-[20px] border border-white/70 bg-white/76 p-2 shadow-cool-sm backdrop-blur">
                 {isNote ? (
                   <textarea
                     value={contentMd}
@@ -1134,7 +1134,7 @@ export function QuickCapture() {
                 <button
                   type="submit"
                   disabled={saveDisabled}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-[0_8px_20px_-10px_rgba(47,107,255,.8)] transition-colors hover:from-brand-700 hover:to-violet-700 disabled:opacity-40"
                   aria-label="Adicionar"
                   title="Adicionar"
                 >
@@ -1143,7 +1143,7 @@ export function QuickCapture() {
               </div>
             </div>
           )}
-          <div className={`${mobileExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto px-5 pb-4 pt-5`}>
+          <div className={`${mobileExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto bg-white/78 px-5 pb-4 pt-5`}>
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -1225,7 +1225,7 @@ export function QuickCapture() {
               )}
               {shortcut &&
                 (shortcutTags.length > 0 ||
-                  shortcutProjects.length > 0 ||
+                  shortcutFolders.length > 0 ||
                   shortcutPriorities.length > 0) && (
                   <div className="absolute left-0 right-0 top-12 z-20 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md sm:left-5 sm:right-16">
                     {shortcut.kind === 'tag' &&
@@ -1240,13 +1240,13 @@ export function QuickCapture() {
                           <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
                         </button>
                       ))}
-                    {shortcut.kind === 'project' &&
-                      shortcutProjects.map(({ folder: project, depth }) => (
+                    {shortcut.kind === 'folder' &&
+                      shortcutFolders.map(({ folder: project, depth }) => (
                         <button
-                          key={projectIdOf(project)}
+                          key={folderIdOf(project)}
                           type="button"
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => selectShortcutProject(project)}
+                          onClick={() => selectShortcutFolder(project)}
                           className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                         >
                           <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -1554,21 +1554,21 @@ export function QuickCapture() {
               <button
                 type="button"
                 title="Selecionar ou criar pasta"
-                onClick={() => setPopover(popover === 'project' ? null : 'project')}
+                onClick={() => setPopover(popover === 'folder' ? null : 'folder')}
                 className="inline-flex h-10 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-white px-3 text-[13px] font-medium text-slate-600 transition-colors hover:bg-surface-soft hover:text-slate-800 sm:h-7 sm:bg-surface-soft sm:px-2 sm:text-[12px]"
               >
                 <IconInbox className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
+                <span className="truncate">{selectedFolder?.name ?? 'Pasta'}</span>
               </button>
-              {popover === 'project' && (
+              {popover === 'folder' && (
                 <div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[110] max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:z-10 sm:w-72">
                   <input
-                    value={projectQuery}
+                    value={folderQuery}
                     onChange={(e) => setProjectQuery(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault()
-                        void addProject(projectQuery)
+                        void addFolder(folderQuery)
                       }
                     }}
                     placeholder="Buscar ou criar pasta"
@@ -1579,23 +1579,23 @@ export function QuickCapture() {
                     <button
                       type="button"
                       onClick={() => {
-                        setProjectId('')
+                        setFolderId('')
                         setPopover(null)
                       }}
                       className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
                     >
                       <IconInbox className="h-3.5 w-3.5 text-slate-400" />
                       Inbox
-                      {!projectId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
+                      {!folderId && <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />}
                     </button>
-                    {filteredProjects.map(({ folder: project, depth }) => {
-                      const id = projectIdOf(project)
+                    {filteredFolders.map(({ folder: project, depth }) => {
+                      const id = folderIdOf(project)
                       return (
                         <button
                           key={id}
                           type="button"
                           onClick={() => {
-                            setProjectId(id)
+                            setFolderId(id)
                             setProjectQuery('')
                             setPopover(null)
                           }}
@@ -1608,22 +1608,22 @@ export function QuickCapture() {
                           >
                             {project.name}
                           </span>
-                          {projectId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                          {folderId === id && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
                         </button>
                       )
                     })}
-                    {projectQuery.trim() &&
-                      !activeProjects.some(
-                        (project) => normalizeToken(project.name) === normalizeToken(projectQuery),
+                    {folderQuery.trim() &&
+                      !activeFolders.some(
+                        (project) => normalizeToken(project.name) === normalizeToken(folderQuery),
                       ) && (
                         <button
                           type="button"
-                          disabled={creatingProject}
-                          onClick={() => void addProject(projectQuery)}
+                          disabled={creatingFolder}
+                          onClick={() => void addFolder(folderQuery)}
                           className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
                         >
                           <span className="text-base leading-none">+</span>
-                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                          {creatingFolder ? 'Criando...' : `Criar "${folderQuery.trim()}"`}
                         </button>
                       )}
                   </div>

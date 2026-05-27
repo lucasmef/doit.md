@@ -25,6 +25,7 @@ import { useDialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 import { usePreferences } from '@/hooks/use-preferences'
+import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 
 function StarIcon({ filled = false, className = 'h-4 w-4' }: { filled?: boolean; className?: string }) {
   return (
@@ -436,10 +437,10 @@ function RootDropZone() {
   return (
     <div
       ref={setNodeRef}
-      className={`mb-2 flex h-12 items-center justify-center rounded-xl border border-dashed text-[12px] font-medium transition-colors ${
+      className={`mb-3 flex h-12 items-center justify-center rounded-[18px] border border-dashed text-[12px] font-bold transition-colors ${
         isOver
-          ? 'border-brand-400 bg-brand-50 text-brand-700'
-          : 'border-ui-border-strong bg-white text-navy-300'
+          ? 'border-brand-400 bg-brand-50/90 text-brand-700'
+          : 'border-white/65 bg-white/38 text-navy-400'
       }`}
     >
       Solte aqui para mover para a raiz
@@ -556,6 +557,25 @@ export default function NotasPage() {
     }
     return counts
   }, [items])
+  const activeNoteCount = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          item.complexity === 'note' && item.status !== 'archived' && item.status !== 'done',
+      ).length,
+    [items],
+  )
+  const looseNoteCount = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          item.complexity === 'note' &&
+          item.status !== 'archived' &&
+          item.status !== 'done' &&
+          !item.folderId,
+      ).length,
+    [items],
+  )
 
   function toggle(id: string) {
     setExpanded((current) => {
@@ -588,12 +608,17 @@ export default function NotasPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-24 pt-3 sm:px-5 lg:pb-4">
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 sm:px-6 lg:pb-8">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-navy-900">Notas</h1>
-          <p className="font-mono text-[10px] text-navy-300">
-            {tree.length} pasta{tree.length === 1 ? '' : 's'}
+          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-700">
+            Biblioteca
+          </p>
+          <h1 className="mt-1 text-4xl font-black leading-none tracking-normal text-navy-950">
+            Notas
+          </h1>
+          <p className="mt-2 max-w-2xl text-sm text-navy-600">
+            Pastas organizam visualmente as notas, mas cada registro continua sendo um Item.
           </p>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
@@ -601,7 +626,7 @@ export default function NotasPage() {
             <button
               type="button"
               onClick={toggleAll}
-              className="h-10 rounded-lg border border-ui-border bg-white px-3 text-xs font-medium text-navy-600 hover:bg-surface-soft"
+              className="h-11 rounded-full border border-white/65 bg-white/58 px-4 text-xs font-bold text-navy-700 shadow-cool-sm backdrop-blur-xl hover:bg-white"
             >
               {allExpanded ? 'Recolher tudo' : 'Expandir tudo'}
             </button>
@@ -609,52 +634,69 @@ export default function NotasPage() {
           <button
             type="button"
             onClick={handleNewRoot}
-            className={`${allParentIds.length === 0 ? 'col-span-2' : ''} h-10 rounded-lg bg-brand-600 px-3 text-xs font-medium text-white hover:bg-brand-700`}
+            className={`${allParentIds.length === 0 ? 'col-span-2' : ''} h-11 rounded-full bg-brand-600 px-4 text-xs font-bold text-white shadow-cool-sm hover:bg-brand-700`}
           >
             + Nova pasta
           </button>
         </div>
       </div>
 
+      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+        <MetricCard label="Pastas" value={isLoading ? '...' : folders.length} detail="agrupadores" />
+        <MetricCard label="Raiz" value={tree.length} detail="pastas principais" />
+        <MetricCard label="Notas" value={activeNoteCount} detail="itens ativos" />
+        <MetricCard label="Soltas" value={looseNoteCount} detail="sem pasta" />
+      </div>
+
       {isLoading && (
-        <div className="space-y-2">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-10 animate-pulse rounded bg-slate-100" />
-          ))}
-        </div>
+        <GlassCard className="p-4">
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-14 animate-pulse rounded-[18px] bg-white/42" />
+            ))}
+          </div>
+        </GlassCard>
       )}
 
       {!isLoading && tree.length === 0 && (
-        <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-12 text-center text-sm text-navy-300">
-          Nenhuma pasta criada. Crie a primeira para organizar suas notas.
-        </div>
+        <GlassCard className="p-4">
+          <div className="rounded-[22px] border border-dashed border-white/70 bg-white/38 px-5 py-12 text-center">
+            <p className="text-[15px] font-bold text-navy-900">Nenhuma pasta criada</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-navy-600">
+              Crie a primeira pasta para organizar suas notas.
+            </p>
+          </div>
+        </GlassCard>
       )}
 
       {!isLoading && pinnedFolders.length > 0 && (
-        <section className="mb-4">
-          <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Fixadas
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <GlassCard className="mb-4 p-4">
+          <div className="mb-3">
+            <CardTitle>Fixadas / {pinnedFolders.length}</CardTitle>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {pinnedFolders.map((folder) =>
               folder ? (
                 <Link
                   key={folder.id}
                   href={`/notas/${folder.id}`}
-                  className="flex min-h-12 items-center gap-3 rounded-lg border border-ui-border bg-white px-3 py-2 text-[14px] text-navy-900 shadow-cool-sm hover:bg-surface-soft"
+                  className="flex min-h-16 items-center gap-3 rounded-[20px] border border-white/48 bg-white/52 px-3 py-3 text-[14px] text-navy-900 shadow-cool-sm transition-colors hover:bg-white/76"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-brand-50 text-brand-600">
                     <StarIcon filled />
                   </span>
-                  <span className="min-w-0 flex-1 truncate font-medium">{folder.name}</span>
-                  <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-surface-soft px-2 font-mono text-[11px] text-navy-400">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-bold leading-5">{folder.name}</span>
+                    <span className="font-mono text-[10px] text-navy-400">Pasta fixada</span>
+                  </span>
+                  <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-white/68 px-2 font-mono text-[11px] font-bold text-navy-500">
                     {noteCounts.get(folder.id) ?? 0}
                   </span>
                 </Link>
               ) : null,
             )}
           </div>
-        </section>
+        </GlassCard>
       )}
 
       {tree.length > 0 && (
@@ -665,26 +707,32 @@ export default function NotasPage() {
           onDragEnd={handleDragEnd}
         >
           {dragging && <RootDropZone />}
-          <div
-            className={`overflow-hidden rounded-xl border border-ui-border bg-white ${reorderBusy ? 'opacity-70' : ''}`}
-          >
-            {tree.map((node, index) => (
-              <FolderRow
-                key={node.id}
-                node={node}
-                depth={0}
-                expanded={expanded}
-                toggle={toggle}
-                noteCounts={noteCounts}
-                index={index}
-                siblingsCount={tree.length}
-                onMove={handleMove}
-                pinned={pinnedFolderIds.includes(node.id)}
-                onTogglePinned={togglePinned}
-                busy={reorderBusy}
-              />
-            ))}
-          </div>
+          <GlassCard className={`overflow-hidden p-3 ${reorderBusy ? 'opacity-70' : ''}`}>
+            <div className="mb-2 flex items-center justify-between gap-3 px-2">
+              <CardTitle>Pastas / {tree.length}</CardTitle>
+              <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-navy-400">
+                Arraste para reorganizar
+              </span>
+            </div>
+            <div className="overflow-hidden rounded-[22px] border border-white/48 bg-white/38">
+              {tree.map((node, index) => (
+                <FolderRow
+                  key={node.id}
+                  node={node}
+                  depth={0}
+                  expanded={expanded}
+                  toggle={toggle}
+                  noteCounts={noteCounts}
+                  index={index}
+                  siblingsCount={tree.length}
+                  onMove={handleMove}
+                  pinned={pinnedFolderIds.includes(node.id)}
+                  onTogglePinned={togglePinned}
+                  busy={reorderBusy}
+                />
+              ))}
+            </div>
+          </GlassCard>
         </DndContext>
       )}
     </div>

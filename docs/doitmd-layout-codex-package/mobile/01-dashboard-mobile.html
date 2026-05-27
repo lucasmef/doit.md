@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>doit.md - dashboard mobile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/logo-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     doit.md - dashboard mobile
+     iPhone-sized bento dashboard, same visual language as desktop.
+     ============================================================ */
+  :root {
+    --c-navy:    #0F2342;
+    --c-blue:    #2F6BFF;
+    --c-teal:    #28C7B7;
+    --c-violet:  #7B5BFF;
+    --c-cyan:    #1AAED7;
+    --c-pink:    #FF6FAE;
+    --c-amber:   #F5A524;
+    --c-danger:  #F04438;
+
+    --c-gray-50:  #ECF0F5;
+    --c-gray-100: #D9E1EA;
+    --c-gray-200: #B6C2D2;
+    --c-gray-500: #46587A;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --r-card: 22px;
+    --shadow-card: 0 1px 0 rgba(255,255,255,.7) inset,
+                   0 -1px 0 rgba(15,35,66,.04) inset,
+                   0 14px 32px -14px rgba(15,35,66,.18),
+                   0 3px 10px rgba(15,35,66,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-navy);
+    background:
+      radial-gradient(800px 600px at 20% 20%, rgba(123,91,255,.18), transparent 60%),
+      radial-gradient(800px 600px at 80% 80%, rgba(40,199,183,.18), transparent 60%),
+      linear-gradient(135deg, #ECEAFF 0%, #F4F1FF 50%, #ECF5F2 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 16px;
+    min-height: 100vh;
+  }
+
+  /* ----------- caption above phone ----------- */
+  .label {
+    margin-bottom: 22px;
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--c-gray-500);
+  }
+  .label .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--c-teal); box-shadow: 0 0 6px var(--c-teal); }
+
+  /* ============================================================
+     iPhone device frame
+     ============================================================ */
+  .phone {
+    width: 412px; height: 858px;
+    background: #0a0a0a;
+    border-radius: 56px;
+    padding: 12px;
+    position: relative;
+    box-shadow:
+      0 0 0 2px rgba(255,255,255,.06) inset,
+      0 0 0 6px #1a1a1a,
+      0 50px 100px -30px rgba(15,35,66,.45),
+      0 20px 40px -10px rgba(15,35,66,.25);
+  }
+  .screen {
+    width: 100%; height: 100%;
+    border-radius: 44px;
+    overflow: hidden;
+    background: white;
+    position: relative;
+  }
+
+  /* dynamic island */
+  .island {
+    position: absolute; top: 11px; left: 50%; transform: translateX(-50%);
+    width: 120px; height: 36px;
+    background: #000;
+    border-radius: 999px;
+    z-index: 50;
+  }
+
+  /* -------- wallpaper inside phone -------- */
+  .wallpaper {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(600px 500px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(500px 400px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+      radial-gradient(600px 500px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(700px 600px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+  .wallpaper::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.10) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  /* -------- status bar -------- */
+  .statusbar {
+    position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 32px 0;
+    font-family: -apple-system, "SF Pro", system-ui;
+    font-weight: 600; font-size: 15px;
+    color: var(--c-navy);
+  }
+  .statusbar .right { display: flex; align-items: center; gap: 6px; }
+  .statusbar svg { color: var(--c-navy); }
+
+  /* -------- app shell scrollable area -------- */
+  .app {
+    position: absolute; inset: 0;
+    overflow: auto;
+    padding-top: 56px;
+    padding-bottom: 110px;
+    z-index: 5;
+  }
+
+  /* -------- header (greeting) -------- */
+  .header {
+    padding: 14px 18px 18px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header .h-text { flex: 1; }
+  .header .hi { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .header .name {
+    font-weight: 800; font-size: 22px; letter-spacing: -.02em; line-height: 1.1;
+    color: var(--c-navy);
+  }
+  .header .name .grad {
+    background: linear-gradient(120deg, #2F6BFF, #7B5BFF 60%, #28C7B7);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .header .btn-i {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: rgba(255,255,255,.70);
+    border: 1px solid rgba(255,255,255,.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--c-navy); cursor: pointer;
+  }
+  .header .btn-i svg { width: 17px; height: 17px; }
+  .header .avatar {
+    width: 38px; height: 38px; border-radius: 999px;
+    background: linear-gradient(135deg, #FFB1D5, #B59BFF 60%, #28C7B7);
+    color: white; font-weight: 700; font-size: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(255,255,255,.7);
+    box-shadow: 0 2px 8px rgba(15,35,66,.18);
+  }
+
+  /* ============================================================
+     stack of bento cards
+     ============================================================ */
+  .stack { display: flex; flex-direction: column; gap: 12px; padding: 0 14px; }
+
+  .card {
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: var(--r-card);
+    backdrop-filter: blur(18px) saturate(180%);
+    -webkit-backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    padding: 16px 16px;
+    position: relative; overflow: hidden;
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .card-title {
+    font-size: 12px; font-weight: 700; text-transform: lowercase;
+    color: var(--c-navy); letter-spacing: -.01em;
+  }
+  .card-pill {
+    font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-500);
+    background: rgba(15,35,66,.05); padding: 3px 8px; border-radius: 999px;
+  }
+
+  /* ====== Today hero (mobile) ====== */
+  .c-today { padding: 18px 18px 16px; }
+  .c-today::before {
+    content: "";
+    position: absolute; right: -50px; top: -50px; width: 240px; height: 240px;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(123,91,255,.35), transparent 60%),
+      radial-gradient(circle at 70% 70%, rgba(40,199,183,.30), transparent 60%);
+    filter: blur(20px); border-radius: 999px; pointer-events: none;
+  }
+  .today-date { font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-500); letter-spacing: .04em; text-transform: uppercase; }
+  .today-h {
+    font-weight: 900; font-size: 36px; letter-spacing: -.04em; line-height: 1;
+    color: var(--c-navy);
+    margin: 6px 0 4px;
+  }
+  .today-h .grad {
+    background: linear-gradient(120deg, #2F6BFF, #7B5BFF 50%, #28C7B7);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .today-sub { font-size: 13px; color: var(--c-gray-500); line-height: 1.4; margin-bottom: 14px; }
+  .today-cta { display: flex; align-items: center; gap: 12px; }
+  .today-ring { position: relative; width: 54px; height: 54px; flex-shrink: 0; }
+  .today-ring svg { transform: rotate(-90deg); }
+  .today-ring .pct {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+    font-weight: 800; font-size: 13px; letter-spacing: -.02em; line-height: 1;
+  }
+  .today-ring .pct small {
+    display: block; font-family: var(--font-mono); font-size: 7px;
+    font-weight: 500; color: var(--c-gray-500); margin-top: 1px;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 14px; border-radius: 999px;
+    font-weight: 600; font-size: 13px;
+    border: none; cursor: pointer; font-family: var(--font-sans);
+  }
+  .btn-primary { background: var(--c-navy); color: white; box-shadow: 0 4px 12px rgba(15,35,66,.22); flex: 1; justify-content: center; }
+  .btn-ghost { background: rgba(255,255,255,.6); color: var(--c-navy); border: 1px solid rgba(15,35,66,.08); }
+  .btn svg { width: 13px; height: 13px; }
+
+  /* ====== Quick row (3 mini cards) ====== */
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .mini {
+    padding: 12px;
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 18px;
+    backdrop-filter: blur(14px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    position: relative; overflow: hidden;
+  }
+  .mini .lbl {
+    font-family: var(--font-mono); font-size: 9px; color: var(--c-gray-500);
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .mini .big {
+    font-weight: 900; font-size: 22px; letter-spacing: -.03em; line-height: 1;
+    margin-top: 4px;
+  }
+  .mini .sub { font-size: 10px; color: var(--c-gray-500); margin-top: 4px; font-family: var(--font-mono); }
+  .mini.streak {
+    background: linear-gradient(160deg, #2F6BFF 0%, #4F4BE9 50%, #28C7B7 100%);
+    color: white; border-color: rgba(255,255,255,.4);
+  }
+  .mini.streak .lbl { color: rgba(255,255,255,.8); }
+  .mini.streak .sub { color: rgba(255,255,255,.7); }
+  .mini.calendar { background: rgba(255,255,255,.85); }
+  .mini.calendar .big { color: var(--c-navy); display: flex; align-items: baseline; gap: 4px; }
+  .mini.calendar .big small { font-size: 10px; font-weight: 600; color: var(--c-gray-500); font-family: var(--font-mono); }
+  .mini.focus .big {
+    font-family: var(--font-mono); font-size: 20px;
+    background: linear-gradient(120deg, #7B5BFF, #2F6BFF, #28C7B7);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+
+  /* ====== Live tasks (dark glow) ====== */
+  .c-live {
+    background: linear-gradient(180deg, #0B1733 0%, #0F2342 60%, #122A55 100%);
+    color: white; border: 1.5px solid transparent;
+  }
+  .c-live::before {
+    content: ""; position: absolute; inset: -1.5px; border-radius: var(--r-card);
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 45%, #28C7B7);
+    z-index: -1;
+  }
+  .c-live::after {
+    content: ""; position: absolute; inset: 0; border-radius: var(--r-card);
+    box-shadow: 0 0 60px 4px rgba(40,199,183,.30), 0 0 60px 4px rgba(47,107,255,.22);
+    pointer-events: none;
+  }
+  .c-live .card-title { color: white; }
+  .c-live .card-pill { background: rgba(255,255,255,.10); color: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,.14); }
+
+  .lt-row {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.10);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    position: relative; overflow: hidden;
+  }
+  .lt-row:last-child { margin-bottom: 0; }
+  .lt-row::after {
+    content: "";
+    position: absolute; left: 0; right: 0; bottom: 0; height: 100%;
+    background: radial-gradient(120px 30px at var(--glow-x, 80%) 100%, rgba(40,199,183,.55), transparent 70%);
+    pointer-events: none;
+  }
+  .lt-top { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+  .lt-cb {
+    width: 16px; height: 16px; border-radius: 4px;
+    border: 1.5px solid rgba(255,255,255,.30);
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .lt-cb.done { background: var(--c-teal); border-color: var(--c-teal); }
+  .lt-cb svg { width: 10px; height: 10px; color: white; opacity: 0; }
+  .lt-cb.done svg { opacity: 1; }
+  .lt-row .title { font-weight: 600; font-size: 13px; }
+  .lt-row .file { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.55); margin-left: auto; }
+  .lt-progress {
+    margin-top: 8px; height: 3px; border-radius: 999px;
+    background: rgba(255,255,255,.08); overflow: hidden;
+    position: relative; z-index: 1;
+  }
+  .lt-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2F6BFF, #28C7B7);
+    border-radius: 999px;
+    box-shadow: 0 0 8px rgba(40,199,183,.6);
+  }
+  .lt-foot {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 6px; position: relative; z-index: 1;
+    font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.7);
+  }
+  .lt-foot .pct { margin-left: auto; }
+  .lt-avs { display: flex; }
+  .lt-avs span {
+    width: 18px; height: 18px; border-radius: 999px;
+    background: linear-gradient(135deg, #2F6BFF, #28C7B7);
+    border: 1.5px solid #0F2342;
+    margin-left: -5px;
+    font-size: 8px; font-weight: 700; color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .lt-avs span:first-child { margin-left: 0; }
+  .lt-avs span.b { background: linear-gradient(135deg, #B59BFF, #7B5BFF); }
+
+  /* ====== Markdown garden mini ====== */
+  .c-garden { padding: 14px 14px 12px; }
+  .mg {
+    position: relative;
+    margin-top: 4px;
+    height: 130px;
+    border-radius: 14px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(255,209,235,.55), transparent 60%),
+      radial-gradient(circle at 75% 30%, rgba(255,222,179,.45), transparent 60%),
+      radial-gradient(circle at 50% 95%, rgba(202,232,255,.55), transparent 60%),
+      linear-gradient(135deg, #FFF6F1, #F1ECFF);
+    border: 1px solid rgba(15,35,66,.05);
+  }
+  .sticky {
+    position: absolute;
+    padding: 7px 9px;
+    background: #fff;
+    border-radius: 3px;
+    box-shadow: 0 5px 10px -4px rgba(15,35,66,.20), 0 1px 3px rgba(15,35,66,.06);
+    font-size: 10px; line-height: 1.3; color: var(--c-navy);
+    transform-origin: top center;
+  }
+  .sticky .ext { font-family: var(--font-mono); font-size: 8px; color: var(--c-blue); display: block; margin-bottom: 2px; }
+  .sticky .t { font-weight: 700; font-size: 11px; letter-spacing: -.01em; line-height: 1.15; }
+  .sticky.pin::before {
+    content: ""; position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+    width: 7px; height: 7px; border-radius: 999px;
+    background: radial-gradient(circle at 30% 30%, #FF6FAE, #C0297A);
+    box-shadow: 0 1.5px 2px rgba(192,41,122,.4);
+  }
+  .sticky.pin.teal::before { background: radial-gradient(circle at 30% 30%, #5BE3D4, #18948A); }
+  .sticky.pin.violet::before { background: radial-gradient(circle at 30% 30%, #B59BFF, #5A37D9); }
+  .sticky.s1 { left: 3%;  top: 14%; width: 90px; transform: rotate(-5deg); background: #FFF8C9; }
+  .sticky.s2 { left: 36%; top: 8%;  width: 95px; transform: rotate(3deg); }
+  .sticky.s3 { left: 70%; top: 18%; width: 86px; transform: rotate(-3deg); background: #D8F5EF; }
+  .sticky.s4 { left: 12%; top: 60%; width: 88px; transform: rotate(4deg); background: #FFEBF4; }
+  .sticky.s5 { left: 56%; top: 62%; width: 95px; transform: rotate(-2deg); }
+
+  /* ====== Recent activity ====== */
+  .ra-list { display: flex; flex-direction: column; gap: 10px; }
+  .ra-item { display: flex; gap: 10px; align-items: flex-start; }
+  .ra-av {
+    width: 26px; height: 26px; border-radius: 999px;
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 9px; color: white;
+    border: 1.5px solid rgba(255,255,255,.8);
+  }
+  .ra-av.a1 { background: linear-gradient(135deg, #FFB1D5, #B59BFF); }
+  .ra-av.a2 { background: linear-gradient(135deg, #2F6BFF, #28C7B7); }
+  .ra-av.a3 { background: linear-gradient(135deg, #FFD27D, #FFB1D5); }
+  .ra-text { font-size: 12px; color: var(--c-navy); line-height: 1.4; }
+  .ra-text b { font-weight: 600; }
+  .ra-text .file { font-family: var(--font-mono); font-size: 11px; color: var(--c-blue); background: rgba(47,107,255,.08); padding: 0 4px; border-radius: 3px; }
+  .ra-text .when { display: block; font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-500); margin-top: 1px; }
+
+  /* ============================================================
+     bottom tab bar
+     ============================================================ */
+  .tabbar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    z-index: 40;
+    display: flex; justify-content: space-around; align-items: center;
+    padding: 10px 14px 28px;
+    background: rgba(255,255,255,.78);
+    border-top: 1px solid rgba(255,255,255,.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  .tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 0;
+    color: var(--c-gray-500);
+    cursor: pointer;
+    position: relative;
+  }
+  .tab svg { width: 20px; height: 20px; }
+  .tab .lbl { font-size: 10px; font-weight: 500; }
+  .tab.active { color: var(--c-navy); }
+  .tab.active .lbl { font-weight: 700; }
+  .tab.active::before {
+    content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 3px; border-radius: 999px;
+    background: linear-gradient(90deg, #2F6BFF, #28C7B7);
+    box-shadow: 0 0 8px rgba(40,199,183,.5);
+  }
+  .tab.add {
+    flex: 0 0 auto;
+  }
+  .tab.add .add-btn {
+    width: 48px; height: 48px; border-radius: 16px;
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 60%, #28C7B7);
+    color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(47,107,255,.4), 0 0 14px rgba(40,199,183,.35);
+    transform: translateY(-12px);
+    border: 2px solid white;
+  }
+  .tab.add .add-btn svg { width: 22px; height: 22px; }
+  .tab.add .lbl { font-size: 9px; margin-top: -8px; color: var(--c-gray-500); }
+
+  /* home indicator */
+  .home-ind {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 134px; height: 5px; border-radius: 3px;
+    background: rgba(15,35,66,.40);
+    z-index: 45;
+  }
+</style>
+</head>
+<body>
+
+
+<div class="phone">
+  <div class="screen">
+    <div class="wallpaper" aria-hidden="true"></div>
+    <div class="island"></div>
+
+    <!-- status bar (over the wallpaper) -->
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="right">
+        <!-- signal -->
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+        <!-- wifi -->
+        <svg width="15" height="11" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z"/><path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z"/><circle cx="8.5" cy="10.5" r="1.5"/></svg>
+        <!-- battery -->
+        <svg width="25" height="12" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="currentColor" stroke-opacity=".4" fill="none"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill="currentColor" fill-opacity=".4"/></svg>
+      </div>
+    </div>
+
+    <!-- app -->
+    <div class="app">
+
+      <!-- header / greeting -->
+      <header class="header">
+        <div class="h-text">
+          <div class="hi">tue · may 26</div>
+          <div class="name">olá, <span class="grad">sam</span> ↘</div>
+        </div>
+        <button class="btn-i" title="Search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        </button>
+        <div class="avatar">SR</div>
+      </header>
+
+      <div class="stack">
+
+        <!-- Today hero -->
+        <article class="card c-today">
+          <div class="card-head">
+            <span class="card-title">today</span>
+            <span class="card-pill">78% done</span>
+          </div>
+          <div class="today-date">tue · may 26, 2026</div>
+          <h1 class="today-h">seu dia,<br><span class="grad">em markdown.</span></h1>
+          <div class="today-sub">7 de 12 itens concluídos · revisar hoje</div>
+          <div class="today-cta">
+            <div class="today-ring">
+              <svg viewBox="0 0 54 54" width="54" height="54">
+                <defs>
+                  <linearGradient id="rg" x1="0" y1="0" x2="54" y2="54">
+                    <stop offset="0" stop-color="#2F6BFF"/>
+                    <stop offset="0.5" stop-color="#7B5BFF"/>
+                    <stop offset="1" stop-color="#28C7B7"/>
+                  </linearGradient>
+                </defs>
+                <circle cx="27" cy="27" r="22" fill="none" stroke="rgba(15,35,66,.10)" stroke-width="5"/>
+                <circle cx="27" cy="27" r="22" fill="none" stroke="url(#rg)" stroke-width="5" stroke-linecap="round"
+                  stroke-dasharray="138.2" stroke-dashoffset="30"/>
+              </svg>
+              <div class="pct">78%<small>done</small></div>
+            </div>
+            <button class="btn btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              new task
+            </button>
+          </div>
+        </article>
+
+        <!-- Quick row -->
+        <div class="row3">
+          <div class="mini streak">
+            <div class="lbl">streak</div>
+            <div class="big">12d</div>
+            <div class="sub">keep it going</div>
+          </div>
+          <div class="mini focus">
+            <div class="lbl">focus</div>
+            <div class="big">07:48</div>
+            <div class="sub">session 3/4</div>
+          </div>
+          <div class="mini calendar">
+            <div class="lbl">next</div>
+            <div class="big">16<small>:00</small></div>
+            <div class="sub">v0.4 sync</div>
+          </div>
+        </div>
+
+        <!-- Live tasks (dark) -->
+        <article class="card c-live">
+          <div class="card-head">
+            <span class="card-title">itens ativos</span>
+            <span class="card-pill">3 active</span>
+          </div>
+
+          <div class="lt-row" style="--glow-x: 92%">
+            <div class="lt-top">
+              <span class="lt-cb done"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12 9 17 20 6"/></svg></span>
+              <span class="title">Ship v0.4 release</span>
+            </div>
+            <div class="lt-progress"><div class="lt-progress-fill" style="width: 100%"></div></div>
+            <div class="lt-foot">
+              <span>release-notes.md</span>
+              <div class="lt-avs"><span>SR</span><span class="b">JL</span></div>
+              <span class="pct">100%</span>
+            </div>
+          </div>
+
+          <div class="lt-row" style="--glow-x: 70%">
+            <div class="lt-top">
+              <span class="lt-cb"></span>
+              <span class="title">Client review · Alpha</span>
+            </div>
+            <div class="lt-progress"><div class="lt-progress-fill" style="width: 78%"></div></div>
+            <div class="lt-foot">
+              <span>alpha-review.md</span>
+              <div class="lt-avs"><span class="b">JL</span></div>
+              <span class="pct">78%</span>
+            </div>
+          </div>
+
+          <div class="lt-row" style="--glow-x: 50%">
+            <div class="lt-top">
+              <span class="lt-cb"></span>
+              <span class="title">Migration script · dry-run</span>
+            </div>
+            <div class="lt-progress"><div class="lt-progress-fill" style="width: 40%"></div></div>
+            <div class="lt-foot">
+              <span>arch.md</span>
+              <span class="pct">40%</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Markdown garden mini -->
+        <article class="card c-garden">
+          <div class="card-head">
+            <span class="card-title">markdown garden</span>
+            <span class="card-pill">5 stickies</span>
+          </div>
+          <div class="mg">
+            <div class="sticky s1 pin"><span class="ext">M↓ creative.md</span><div class="t">brainstorm oct 22</div></div>
+            <div class="sticky s2 pin teal"><span class="ext">M↓ q4.md</span><div class="t">Q4 — simple</div></div>
+            <div class="sticky s3 pin violet"><span class="ext">M↓ sync.md</span><div class="t">sync local</div></div>
+            <div class="sticky s4 pin"><span class="ext">M↓ ideas.md</span><div class="t">spark file</div></div>
+            <div class="sticky s5 pin teal"><span class="ext">M↓ reading.md</span><div class="t">to read</div></div>
+          </div>
+        </article>
+
+        <!-- Recent activity -->
+        <article class="card">
+          <div class="card-head">
+            <span class="card-title">recent activity</span>
+            <span class="card-pill">3 today</span>
+          </div>
+          <div class="ra-list">
+            <div class="ra-item">
+              <div class="ra-av a1">AS</div>
+              <div class="ra-text">
+                <b>Aspert</b> committed to <span class="file">release-notes.md</span>
+                <span class="when">1 hr ago</span>
+              </div>
+            </div>
+            <div class="ra-item">
+              <div class="ra-av a2">JL</div>
+              <div class="ra-text">
+                <b>Jules</b> closed <span class="file">#release</span>
+                <span class="when">3 hrs ago</span>
+              </div>
+            </div>
+            <div class="ra-item">
+              <div class="ra-av a3">MP</div>
+              <div class="ra-text">
+                <b>Mira</b> pinned <span class="file">alpha-review.md</span>
+                <span class="when">yesterday</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+    <!-- bottom tab bar -->
+    <nav class="tabbar">
+      <div class="tab active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+        <span class="lbl">Hoje</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+        <span class="lbl">Itens</span>
+      </div>
+      <div class="tab add">
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <span class="lbl">capture</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span class="lbl">Notas</span>
+      </div>
+      <div class="tab">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+        <span class="lbl">Profile</span>
+      </div>
+    </nav>
+
+    <div class="home-ind"></div>
+  </div>
+</div>
+
+</body>
+</html>

@@ -444,9 +444,9 @@ export function MarkdownEditor({
     <div
       className={`${
         plain
-          ? 'flex h-full flex-col rounded-lg'
-          : 'flex flex-col overflow-hidden rounded-xl border border-ui-border-soft'
-      } bg-white transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100`}
+          ? 'flex h-full flex-col rounded-[26px] border border-white/55'
+          : 'flex flex-col overflow-hidden rounded-[22px] border border-white/55'
+      } bg-white/62 shadow-cool-sm backdrop-blur-xl transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100`}
     >
       <input
         ref={fileInputRef}
@@ -465,7 +465,7 @@ export function MarkdownEditor({
         onUploadFiles={() => fileInputRef.current?.click()}
         hideDocumentActions={hideDocumentActions}
       />
-      <EditorContent editor={editor} className="flex-1 overflow-auto" />
+      <EditorContent editor={editor} className="flex-1 overflow-auto bg-white/25" />
       <AttachmentTray
         uploads={uploads}
         attachments={attachmentData?.links ?? []}
@@ -493,10 +493,10 @@ function ToolbarBtn({ onClick, active, disabled, title, className = '', children
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-sm transition-colors sm:h-8 sm:min-w-8 ${
+      className={`inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-sm transition-colors sm:h-8 sm:min-w-8 ${
         active
-          ? 'bg-brand-100 text-brand-700'
-          : 'text-navy-400 hover:bg-surface-soft hover:text-navy-900'
+          ? 'bg-brand-100/90 text-brand-700 shadow-sm'
+          : 'text-navy-400 hover:bg-white/70 hover:text-navy-900'
       } disabled:cursor-not-allowed disabled:opacity-40 ${className}`}
     >
       {children}
@@ -529,7 +529,7 @@ function IconUploadButton({
       onMouseDown={(e) => e.preventDefault()}
       onClick={onUploadFiles}
       disabled={!canUpload || uploadingFiles > 0}
-      className={`relative inline-flex h-9 min-w-9 items-center justify-center rounded-md px-2 text-navy-400 transition-colors hover:bg-surface-soft hover:text-navy-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 ${className}`}
+      className={`relative inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-navy-400 transition-colors hover:bg-white/70 hover:text-navy-900 disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:min-w-8 ${className}`}
     >
       <EditorIcon name="paperclip" />
       {uploadingFiles > 0 ? (
@@ -556,10 +556,10 @@ function MobileToolbarBtn({
       disabled={disabled}
       title={title}
       aria-label={title}
-      className={`flex h-9 min-w-0 items-center justify-center rounded-md text-sm transition-colors ${
+      className={`flex h-9 min-w-0 items-center justify-center rounded-full text-sm transition-colors ${
         active
-          ? 'bg-brand-100 text-brand-700'
-          : 'text-navy-400 hover:bg-surface-soft hover:text-navy-900'
+          ? 'bg-brand-100/90 text-brand-700 shadow-sm'
+          : 'text-navy-400 hover:bg-white/70 hover:text-navy-900'
       } disabled:cursor-not-allowed disabled:opacity-40`}
     >
       {children}
@@ -569,14 +569,14 @@ function MobileToolbarBtn({
 
 function ToolbarGroup({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-ui-border-soft bg-surface-panel p-0.5">
+    <div className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-white/55 bg-white/50 p-0.5 shadow-sm backdrop-blur">
       {children}
     </div>
   )
 }
 
 function ToolbarSep() {
-  return <span className="mx-0.5 h-5 w-px bg-ui-border-soft" />
+  return <span className="mx-0.5 h-5 w-px bg-white/55" />
 }
 
 type EditorIconName =
@@ -820,8 +820,8 @@ function fileExtension(name: string, mimeType?: string | null) {
 
 function AttachmentIcon({ label }: { label: string }) {
   return (
-    <span className="relative inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-md border border-ui-border-soft bg-white text-[9px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
-      <span className="absolute right-0 top-0 h-2 w-2 rounded-bl border-b border-l border-ui-border-soft bg-surface-soft" />
+    <span className="relative inline-flex h-10 w-9 shrink-0 items-center justify-center rounded-[10px] border border-white/60 bg-white/70 text-[9px] font-bold uppercase tracking-wide text-slate-500 shadow-sm">
+      <span className="absolute right-0 top-0 h-2 w-2 rounded-bl border-b border-l border-white/60 bg-white/45" />
       {label.slice(0, 4)}
     </span>
   )
@@ -844,7 +844,7 @@ function AttachmentTray({
   if (visibleUploads.length === 0 && attachments.length === 0) return null
 
   return (
-    <div className="border-t border-ui-border-soft bg-surface-soft/70 px-3 py-2">
+    <div className="border-t border-white/45 bg-white/42 px-3 py-2 backdrop-blur">
       <div className="mb-1 flex items-center justify-between gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
           Anexos
@@ -857,7 +857,7 @@ function AttachmentTray({
         {visibleUploads.map((upload) => (
           <div
             key={upload.id}
-            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-lg border border-ui-border-soft bg-white px-2.5 py-2"
+            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-[18px] border border-white/55 bg-white/65 px-2.5 py-2 shadow-sm"
           >
             <AttachmentIcon label={fileExtension(upload.name, upload.mimeType)} />
             <div className="min-w-0 flex-1">
@@ -901,7 +901,7 @@ function AttachmentTray({
         {attachments.map((attachment) => (
           <div
             key={attachment.id ?? attachment.fileId}
-            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-lg border border-ui-border-soft bg-white px-2.5 py-2 text-left transition-colors hover:border-brand-200"
+            className="flex min-w-[240px] max-w-[320px] items-center gap-2 rounded-[18px] border border-white/55 bg-white/65 px-2.5 py-2 text-left shadow-sm transition-colors hover:border-brand-200"
           >
             <AttachmentIcon label={fileExtension(attachment.name, attachment.mimeType)} />
             <span className="min-w-0 flex-1">
@@ -969,7 +969,7 @@ function EditorToolbarAccessible({
   const { prompt } = useDialog()
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
   if (!editor) {
-    return <div className="h-[48px] border-b border-ui-border-soft bg-surface-soft/40" />
+    return <div className="h-[48px] border-b border-white/45 bg-white/35" />
   }
 
   const insertLink = async () => {
@@ -1103,7 +1103,7 @@ function EditorToolbarAccessible({
   ) : null
 
   return (
-    <div className="border-b border-ui-border-soft bg-surface-panel/95 px-2 py-1.5 shadow-sm backdrop-blur sm:bg-surface-soft/60">
+    <div className="border-b border-white/45 bg-white/46 px-2 py-1.5 shadow-sm backdrop-blur-xl">
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-1 sm:flex">
         <ToolbarGroup>
           <ToolbarBtn
@@ -1306,7 +1306,7 @@ function EditorToolbarAccessible({
       </div>
 
       {mobileSheetOpen ? (
-        <div className="mt-2 rounded-xl border border-ui-border-soft bg-surface-panel p-2 shadow-cool-sm sm:hidden">
+        <div className="mt-2 rounded-[18px] border border-white/55 bg-white/58 p-2 shadow-cool-sm backdrop-blur-xl sm:hidden">
           <div className="mb-2 flex items-center justify-between px-1">
             <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
               Ferramentas
@@ -1314,7 +1314,7 @@ function EditorToolbarAccessible({
             <button
               type="button"
               onClick={() => setMobileSheetOpen(false)}
-              className="rounded-md px-2 py-1 text-[12px] font-semibold text-navy-400 hover:bg-surface-soft hover:text-navy-700"
+              className="rounded-full px-2 py-1 text-[12px] font-semibold text-navy-400 hover:bg-white/70 hover:text-navy-700"
             >
               Fechar
             </button>
@@ -1366,7 +1366,7 @@ export function EditorToolbar({
 }) {
   const { prompt } = useDialog()
   if (!editor) {
-    return <div className="h-10 border-b border-ui-border-soft bg-surface-soft/40" />
+    return <div className="h-10 border-b border-white/45 bg-white/35" />
   }
 
   const insertLink = async () => {
@@ -1394,7 +1394,7 @@ export function EditorToolbar({
   const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
 
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-ui-border-soft bg-white px-2 py-1">
+    <div className="flex flex-wrap items-center gap-0.5 border-b border-white/45 bg-white/46 px-2 py-1 backdrop-blur-xl">
       <ToolbarBtn
         title="Negrito (Ctrl+B)"
         active={editor.isActive('bold')}

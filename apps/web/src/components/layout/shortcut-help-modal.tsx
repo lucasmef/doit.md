@@ -38,7 +38,7 @@ const groups: ShortcutGroup[] = [
     title: 'Captura',
     items: [
       { keys: ['@tag'], label: 'Adicionar tag' },
-      { keys: ['#projeto'], label: 'Vincular projeto' },
+      { keys: ['#pasta'], label: 'Vincular pasta' },
       { keys: ['p1', 'p2', 'p3', 'p4'], label: 'Definir prioridade' },
       { keys: ['hoje', 'amanha', '12/05', '14:30'], label: 'Definir data ou horario' },
     ],

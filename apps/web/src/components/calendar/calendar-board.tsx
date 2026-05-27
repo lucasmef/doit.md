@@ -326,7 +326,7 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
 
   if (fullscreen) {
     return (
-      <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden bg-surface-window">
+      <div className="flex h-full min-w-0 min-h-0 w-full flex-1 flex-col overflow-hidden bg-transparent">
         <CalendarGrid
           items={[]}
           events={showEvents ? visibleEvents : []}

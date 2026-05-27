@@ -32,6 +32,7 @@ import { useToast } from '@/components/ui/toast'
 import { useDialog } from '@/components/ui/dialog'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 import { usePreferences } from '@/hooks/use-preferences'
+import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 import type { Folder, Item } from '@doit/types'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -186,7 +187,7 @@ function KanbanCard({
       onPointerCancelCapture={() => {
         pointerStartRef.current = null
       }}
-      className={`group/card relative flex items-stretch rounded-md border border-ui-border bg-white ${
+      className={`group/card relative flex items-stretch rounded-[20px] border border-white/48 bg-white/52 shadow-cool-sm backdrop-blur-xl ${
         isDragging ? 'opacity-50' : ''
       }`}
     >
@@ -202,7 +203,7 @@ function KanbanCard({
         </svg>
       </div>
       <div className="min-w-0 flex-1">
-        <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} />
+        <SharedItemRow item={item} active={active} selected={selected} orderedIds={orderedIds} variant="glass" />
         <div
           className={
             moving
@@ -317,8 +318,8 @@ function KanbanDropZone({
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-1 flex-col gap-1 px-2 py-2 overflow-y-auto transition-colors ${
-        isOver ? 'bg-brand-50' : ''
+      className={`flex flex-1 flex-col gap-2 overflow-y-auto px-2 py-2 transition-colors ${
+        isOver ? 'bg-brand-50/60' : ''
       }`}
     >
       {children}
@@ -397,14 +398,14 @@ function KanbanColumn({
       onDragOver={handleDragOver}
       onDragLeave={onColumnDragLeave}
       onDrop={handleDrop}
-      className={`flex w-full shrink-0 flex-col rounded-xl border bg-surface-soft transition-colors lg:w-80 ${
+      className={`flex w-full shrink-0 flex-col rounded-[26px] border bg-white/42 shadow-cool-sm backdrop-blur-xl transition-colors lg:w-80 ${
         columnDragging
-          ? 'opacity-50 border-brand-400'
+          ? 'border-brand-400 opacity-50'
           : columnDropTarget
             ? 'border-brand-500 ring-2 ring-brand-200'
             : dragging
               ? 'border-brand-300'
-              : 'border-ui-border'
+              : 'border-white/55'
       }`}
     >
       <div
@@ -416,7 +417,7 @@ function KanbanColumn({
           onColumnDragStart?.(folderId, event)
         }}
         onDragEnd={onColumnDragEnd}
-        className={`flex items-center justify-between gap-2 px-3 py-2 border-b border-ui-border-soft ${reorderable ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        className={`flex items-center justify-between gap-2 border-b border-white/45 px-3 py-3 ${reorderable ? 'cursor-grab active:cursor-grabbing' : ''}`}
       >
         {href ? (
           <Link
@@ -441,7 +442,7 @@ function KanbanColumn({
           <Link
             key={sub.id}
             href={`/notas/${sub.id}`}
-            className="group flex items-center gap-2 rounded-md border border-ui-border bg-white px-2 py-1.5 text-[13px] text-navy-900 hover:border-brand-300 hover:bg-brand-50"
+            className="group flex items-center gap-2 rounded-[18px] border border-white/48 bg-white/58 px-3 py-2 text-[13px] text-navy-900 shadow-cool-sm hover:border-brand-300 hover:bg-white/78"
           >
             <FolderIcon className="h-4 w-4 shrink-0 text-navy-400" />
             <span className="flex-1 truncate font-medium">{sub.name}</span>
@@ -469,7 +470,7 @@ function KanbanColumn({
       <button
         type="button"
         onClick={handleAdd}
-        className="flex items-center gap-1.5 border-t border-ui-border-soft px-3 py-2 text-left text-[12px] text-navy-400 hover:bg-white hover:text-brand-600"
+        className="flex items-center gap-1.5 border-t border-white/45 px-3 py-2.5 text-left text-[12px] font-semibold text-navy-500 hover:bg-white/60 hover:text-brand-600"
       >
         <svg
           className="h-3.5 w-3.5"
@@ -539,6 +540,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
     directItems.filter((item) => isVisibleFolderItem(item)),
   )
   const directOpenCount = directOpenItems.filter((item) => item.status !== 'done').length
+  const directNoteCount = directVisibleItems.filter((item) => item.complexity === 'note').length
   const viewMode: ViewMode = folder?.viewMode === 'kanban' ? 'kanban' : 'list'
   const moveTargets = useMemo<MoveTarget[]>(() => {
     const targets = childFolders.map((child) => ({ id: child.id, label: child.name }))
@@ -848,20 +850,18 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div
-      className={`${viewMode === 'kanban' ? 'w-full px-4' : 'mx-auto max-w-3xl px-5'} pb-24 pt-3 lg:pb-4`}
-    >
-      <nav className="mb-2 flex flex-wrap items-center gap-1 text-[12px] text-navy-400">
-        <Link href="/notas" className="hover:text-navy-700">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 sm:px-6 lg:pb-8">
+      <nav className="mb-4 flex flex-wrap items-center gap-1 font-mono text-[11px] text-navy-400">
+        <Link href="/notas" className="rounded-full bg-white/42 px-2 py-1 hover:text-navy-700">
           Notas
         </Link>
         {breadcrumb.map((f, idx) => (
           <span key={f.id} className="flex items-center gap-1">
             <span>/</span>
             {idx === breadcrumb.length - 1 ? (
-              <span className="text-navy-700">{f.name}</span>
+              <span className="rounded-full bg-white/55 px-2 py-1 font-bold text-navy-700">{f.name}</span>
             ) : (
-              <Link href={`/notas/${f.id}`} className="hover:text-navy-700">
+              <Link href={`/notas/${f.id}`} className="rounded-full bg-white/42 px-2 py-1 hover:text-navy-700">
                 {f.name}
               </Link>
             )}
@@ -869,143 +869,131 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
         ))}
       </nav>
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="flex min-w-0 items-center gap-3">
-          <FolderIcon className="h-6 w-6 shrink-0 text-navy-400" />
-          {editingName ? (
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={saveName}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveName()
-                if (e.key === 'Escape') setEditingName(false)
-              }}
-              className="min-w-0 flex-1 border-none bg-transparent text-2xl font-semibold text-navy-900 outline-none"
-            />
-          ) : (
-            <h1
-              className="min-w-0 flex-1 cursor-pointer break-words text-2xl font-semibold leading-tight text-navy-900 hover:text-brand-700"
-              onClick={() => {
-                setName(folder.name)
-                setEditingName(true)
-              }}
-            >
-              {folder.name}
-            </h1>
-          )}
-        </div>
-        <div className="relative flex flex-wrap items-center gap-2 sm:ml-auto sm:justify-end">
-          <div className="flex rounded-md border border-ui-border bg-white p-0.5">
-            <button
-              type="button"
-              onClick={() => void changeView('list')}
-              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'list' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
-            >
-              Lista
-            </button>
-            <button
-              type="button"
-              onClick={() => void changeView('kanban')}
-              className={`rounded px-2 py-1 text-xs font-medium transition-colors ${viewMode === 'kanban' ? 'bg-brand-100 text-brand-700' : 'text-navy-500 hover:text-navy-900'}`}
-            >
-              Kanban
-            </button>
+      <GlassCard className="mb-4 p-4 sm:p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-700">
+              Pasta
+            </p>
+            <div className="mt-2 flex min-w-0 items-center gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-white/58 text-navy-500 shadow-cool-sm">
+                <FolderIcon className="h-6 w-6" />
+              </span>
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={saveName}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveName()
+                    if (e.key === 'Escape') setEditingName(false)
+                  }}
+                  className="min-w-0 flex-1 border-none bg-transparent text-4xl font-black leading-none text-navy-950 outline-none"
+                />
+              ) : (
+                <h1
+                  className="min-w-0 flex-1 cursor-pointer break-words text-4xl font-black leading-none tracking-normal text-navy-950 hover:text-brand-700"
+                  onClick={() => {
+                    setName(folder.name)
+                    setEditingName(true)
+                  }}
+                >
+                  {folder.name}
+                </h1>
+              )}
+            </div>
           </div>
-          <button
-            type="button"
-            onClick={togglePinned}
-            className={`hidden h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs hover:bg-surface-soft sm:inline-flex ${
-              pinned ? 'border-brand-200 text-brand-700' : 'border-ui-border text-navy-600'
-            }`}
-          >
-            <StarIcon filled={pinned} className="h-3.5 w-3.5" />
-            {pinned ? 'Fixada' : 'Fixar'}
-          </button>
-          <button
-            onClick={handleNewSub}
-            className="hidden rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft sm:inline-flex"
-          >
-            + Subpasta
-          </button>
-          <button
-            onClick={() => setAgentsOpen(true)}
-            className="hidden rounded-md border border-ui-border px-2.5 py-1 text-xs text-navy-600 hover:bg-surface-soft sm:inline-flex"
-          >
-            AGENTS.md
-          </button>
-          <button
-            onClick={handleDelete}
-            className="hidden rounded-md border border-red-200 px-2.5 py-1 text-xs text-red-500 hover:bg-red-50 sm:inline-flex"
-          >
-            Apagar
-          </button>
-          <button
-            type="button"
-            onClick={() => setFolderActionsOpen((value) => !value)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-ui-border bg-white text-navy-500 sm:hidden"
-            aria-label="Acoes da pasta"
-            title="Acoes"
-          >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.8}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.5v.01M12 12v.01M12 17.5v.01" />
-            </svg>
-          </button>
-          {folderActionsOpen ? (
-            <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-lg border border-ui-border bg-white p-1.5 shadow-cool-md sm:hidden">
+
+          <div className="relative flex flex-wrap items-center gap-2 lg:justify-end">
+            <div className="flex rounded-full border border-white/65 bg-white/42 p-1 shadow-cool-sm">
               <button
                 type="button"
-                onClick={() => {
-                  setFolderActionsOpen(false)
-                  togglePinned()
-                }}
-                className={`flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium hover:bg-surface-soft ${
-                  pinned ? 'text-brand-700' : 'text-navy-700'
-                }`}
+                onClick={() => void changeView('list')}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${viewMode === 'list' ? 'bg-white text-brand-700 shadow-cool-sm' : 'text-navy-600 hover:bg-white/70'}`}
               >
-                {pinned ? 'Desafixar' : 'Fixar'}
+                Lista
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setFolderActionsOpen(false)
-                  void handleNewSub()
-                }}
-                className="flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium text-navy-700 hover:bg-surface-soft"
+                onClick={() => void changeView('kanban')}
+                className={`rounded-full px-4 py-2 text-xs font-bold transition-colors ${viewMode === 'kanban' ? 'bg-white text-brand-700 shadow-cool-sm' : 'text-navy-600 hover:bg-white/70'}`}
               >
-                + Subpasta
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFolderActionsOpen(false)
-                  setAgentsOpen(true)
-                }}
-                className="flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium text-navy-700 hover:bg-surface-soft"
-              >
-                AGENTS.md
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFolderActionsOpen(false)
-                  void handleDelete()
-                }}
-                className="flex h-10 w-full items-center rounded-md px-3 text-left text-[13px] font-medium text-red-600 hover:bg-red-50"
-              >
-                Apagar
+                Kanban
               </button>
             </div>
-          ) : null}
+            <button
+              type="button"
+              onClick={togglePinned}
+              className={`hidden h-10 items-center gap-1.5 rounded-full border px-3 text-xs font-bold shadow-cool-sm hover:bg-white sm:inline-flex ${
+                pinned ? 'border-brand-200 bg-white/70 text-brand-700' : 'border-white/65 bg-white/45 text-navy-600'
+              }`}
+            >
+              <StarIcon filled={pinned} className="h-3.5 w-3.5" />
+              {pinned ? 'Fixada' : 'Fixar'}
+            </button>
+            <button
+              onClick={handleNewSub}
+              className="hidden h-10 rounded-full border border-white/65 bg-white/45 px-3 text-xs font-bold text-navy-700 shadow-cool-sm hover:bg-white sm:inline-flex sm:items-center"
+            >
+              + Subpasta
+            </button>
+            <button
+              onClick={() => setAgentsOpen(true)}
+              className="hidden h-10 rounded-full border border-white/65 bg-white/45 px-3 text-xs font-bold text-navy-700 shadow-cool-sm hover:bg-white sm:inline-flex sm:items-center"
+            >
+              AGENTS.md
+            </button>
+            <button
+              onClick={handleDelete}
+              className="hidden h-10 rounded-full border border-red-200 bg-white/45 px-3 text-xs font-bold text-red-600 shadow-cool-sm hover:bg-red-50 sm:inline-flex sm:items-center"
+            >
+              Apagar
+            </button>
+            <button
+              type="button"
+              onClick={() => setFolderActionsOpen((value) => !value)}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/65 bg-white/58 text-navy-500 shadow-cool-sm sm:hidden"
+              aria-label="Acoes da pasta"
+              title="Acoes"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.5v.01M12 12v.01M12 17.5v.01" />
+              </svg>
+            </button>
+            {folderActionsOpen ? (
+              <div className="absolute right-0 top-full z-20 mt-2 w-52 rounded-[18px] border border-white/65 bg-white/90 p-1.5 shadow-cool-md backdrop-blur-xl sm:hidden">
+                {[
+                  { label: pinned ? 'Desafixar' : 'Fixar', action: togglePinned, danger: false },
+                  { label: '+ Subpasta', action: () => void handleNewSub(), danger: false },
+                  { label: 'AGENTS.md', action: () => setAgentsOpen(true), danger: false },
+                  { label: 'Apagar', action: () => void handleDelete(), danger: true },
+                ].map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => {
+                      setFolderActionsOpen(false)
+                      item.action()
+                    }}
+                    className={`flex h-10 w-full items-center rounded-[14px] px-3 text-left text-[13px] font-bold hover:bg-surface-soft ${
+                      item.danger ? 'text-red-600 hover:bg-red-50' : 'text-navy-700'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
+      </GlassCard>
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+        <MetricCard label="Itens" value={directOpenCount} detail="ativos nesta pasta" />
+        <MetricCard label="Notas" value={directNoteCount} detail="itens markdown" />
+        <MetricCard label="Subpastas" value={childFolders.length} detail="nivel atual" />
+        <MetricCard label="Modo" value={viewMode === 'kanban' ? 'Kanban' : 'Lista'} detail="visual atual" />
       </div>
 
       <AgentsEditorModal
@@ -1018,48 +1006,47 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
       {viewMode === 'list' ? (
         <>
           {childFolders.length > 0 && (
-            <section className="mb-6">
-              <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Subpastas / {childFolders.length}
-              </h2>
-              <div className="divide-y divide-ui-border-soft rounded-xl border border-ui-border bg-white">
+            <GlassCard className="mb-4 p-4">
+              <div className="mb-3">
+                <CardTitle>Subpastas / {childFolders.length}</CardTitle>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
                 {childFolders.map((child) => (
                   <Link
                     key={child.id}
                     href={`/notas/${child.id}`}
-                    className="flex min-h-12 items-center gap-3 px-3 py-2.5 text-[14px] text-navy-900 hover:bg-surface-soft"
+                    className="flex min-h-14 items-center gap-3 rounded-[20px] border border-white/48 bg-white/52 px-3 py-2.5 text-[14px] text-navy-900 shadow-cool-sm hover:bg-white/72"
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-navy-400">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-white/62 text-navy-500">
                       <FolderIcon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1 truncate font-medium">{child.name}</span>
                     {child.children.length > 0 && (
-                      <span className="font-mono text-[10px] text-navy-300">
+                      <span className="rounded-full bg-white/70 px-2 py-1 font-mono text-[10px] text-navy-400">
                         {child.children.length}
                       </span>
                     )}
                   </Link>
                 ))}
               </div>
-            </section>
+            </GlassCard>
           )}
 
-          <section>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Itens / {directOpenCount}
-              </h2>
+          <GlassCard className="p-4">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <CardTitle>Itens / {directOpenCount}</CardTitle>
             </div>
             {directVisibleItems.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-ui-border-strong px-4 py-8 text-center text-sm text-navy-300">
-                Nenhum item nesta pasta.
+              <div className="rounded-[22px] border border-dashed border-white/70 bg-white/38 px-5 py-10 text-center">
+                <p className="text-[15px] font-bold text-navy-900">Nenhum item nesta pasta</p>
+                <p className="mx-auto mt-1 max-w-sm text-sm text-navy-600">
+                  Itens criados ou movidos para esta pasta aparecerao aqui.
+                </p>
               </div>
             ) : (
-              <div className="rounded-xl border border-ui-border bg-white px-2 pb-2">
-                <ItemList items={directVisibleItems} />
-              </div>
+              <ItemList items={directVisibleItems} variant="glass" />
             )}
-          </section>
+          </GlassCard>
         </>
       ) : (
         <DndContext
@@ -1069,7 +1056,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
           onDragEnd={handleDndDragEnd}
         >
           <div className="space-y-3 lg:hidden">
-            <div className="-mx-4 overflow-x-auto border-b border-ui-border-soft px-4 pb-2">
+            <div className="-mx-4 overflow-x-auto px-4 pb-2">
               <div className="flex w-max gap-2">
                 {kanbanColumns.map((column) => {
                   const active = column.key === mobileColumnKey
@@ -1078,10 +1065,10 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
                       key={column.key}
                       type="button"
                       onClick={() => setMobileColumnKey(column.key)}
-                      className={`flex h-10 items-center gap-2 rounded-lg border px-3 text-[13px] font-semibold transition-colors ${
+                      className={`flex h-10 items-center gap-2 rounded-full border px-3 text-[13px] font-bold shadow-cool-sm transition-colors ${
                         active
-                          ? 'border-ui-border-selected bg-surface-selected text-brand-700'
-                          : 'border-ui-border bg-white text-navy-600'
+                          ? 'border-white/70 bg-white text-brand-700'
+                          : 'border-white/55 bg-white/48 text-navy-600'
                       }`}
                     >
                       <span className="max-w-36 truncate">{column.title}</span>
@@ -1114,7 +1101,8 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
               ))}
           </div>
 
-          <div className="hidden items-stretch gap-0 overflow-x-auto pb-4 lg:flex">
+          <GlassCard className="hidden overflow-x-auto p-4 lg:block">
+          <div className="flex items-stretch gap-0 pb-1">
             {childFolders.length === 0 ? (
               <>
                 <ColumnInserter edge onAdd={() => void addColumnAt(0)} />
@@ -1184,6 +1172,7 @@ export default function FolderDetailPage({ params }: { params: Promise<{ id: str
               </>
             )}
           </div>
+          </GlassCard>
         </DndContext>
       )}
     </div>

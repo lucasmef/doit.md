@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>doit.md — calendar</title>
+<meta name="viewport" content="width=1440, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/logo-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     doit.md — calendar page (bento variant)
+     Same visual language as dashboard + tasks:
+       cool-vivid wallpaper mesh, glass cards, Inter + JetBrains Mono.
+     ============================================================ */
+  :root {
+    --c-navy:    #0F2342;
+    --c-blue:    #2F6BFF;
+    --c-teal:    #28C7B7;
+    --c-violet:  #7B5BFF;
+    --c-cyan:    #1AAED7;
+    --c-pink:    #FF6FAE;
+    --c-amber:   #F5A524;
+
+    --c-gray-50:  #ECF0F5;
+    --c-gray-100: #D9E1EA;
+    --c-gray-200: #B6C2D2;
+    --c-gray-500: #46587A;
+    --c-gray-700: #1F3559;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --r-card:  28px;
+    --r-inner: 18px;
+    --r-pill:  999px;
+
+    --shadow-card: 0 1px 0 rgba(255,255,255,.7) inset,
+                   0 -1px 0 rgba(15,35,66,.04) inset,
+                   0 18px 40px -16px rgba(15,35,66,.18),
+                   0 4px 12px rgba(15,35,66,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-navy);
+    background: #f4f1ff;
+    overflow-x: hidden;
+  }
+
+  /* -------- wallpaper ---------------------------------------- */
+  .wallpaper {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(900px 700px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(800px 600px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+      radial-gradient(900px 800px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(1000px 900px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+  .wallpaper::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  .shell {
+    position: relative; z-index: 1;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 28px 36px 60px;
+  }
+
+  /* =================== NAV (shared) =========================== */
+  .nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; margin-bottom: 24px; }
+  .brand { display: inline-flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(180%); -webkit-backdrop-filter: blur(14px) saturate(180%); width: max-content; }
+  .brand-logo { width: 32px; height: 32px; border-radius: 9px; background: #F8FAFC; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(15,35,66,.08); }
+  .brand-name { font-weight: 800; font-size: 16px; letter-spacing: -.02em; color: var(--c-navy); }
+  .brand-name .ext { color: var(--c-blue); }
+
+  .nav-pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(180%); -webkit-backdrop-filter: blur(14px) saturate(180%); justify-self: center; }
+  .nav-link { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--r-pill); font-size: 13px; font-weight: 500; color: var(--c-gray-500); cursor: pointer; transition: all .18s cubic-bezier(.2,.7,.2,1); text-decoration: none; }
+  .nav-link:hover { color: var(--c-navy); }
+  .nav-link.active { background: #fff; color: var(--c-navy); font-weight: 600; box-shadow: 0 1px 2px rgba(15,35,66,.06), 0 4px 10px rgba(15,35,66,.06); }
+  .nav-link svg { width: 15px; height: 15px; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; justify-self: end; }
+  .search-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(180%); -webkit-backdrop-filter: blur(14px) saturate(180%); font-family: var(--font-mono); font-size: 12px; color: var(--c-gray-500); min-width: 240px; }
+  .search-pill .kbd { margin-left: auto; padding: 1px 6px; background: rgba(255,255,255,.7); border-radius: 5px; border: 1px solid rgba(15,35,66,.08); font-size: 11px; color: var(--c-gray-500); }
+  .avatar { width: 42px; height: 42px; border-radius: 999px; background: linear-gradient(135deg, #FFB1D5, #B59BFF 60%, #28C7B7); color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; border: 2px solid rgba(255,255,255,.7); box-shadow: 0 2px 8px rgba(15,35,66,.18); }
+
+  /* =================== BENTO GRID ============================ */
+  .bento {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-auto-rows: 240px;
+    gap: 18px;
+  }
+  .card {
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: var(--r-card);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    padding: 22px 24px;
+    display: flex; flex-direction: column;
+    overflow: hidden; position: relative;
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card-title { font-size: 15px; font-weight: 700; letter-spacing: -.01em; color: var(--c-navy); display: inline-flex; align-items: center; gap: 8px; }
+  .card-title .ext { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--c-blue); }
+  .card-more { width: 28px; height: 28px; border-radius: 999px; background: rgba(15,35,66,.04); display: inline-flex; align-items: center; justify-content: center; color: var(--c-gray-500); cursor: pointer; font-size: 13px; }
+  .card-more:hover { background: rgba(15,35,66,.08); }
+
+  /* ---- grid placement --------------------------------------- */
+  .c-month    { grid-column: span 8; grid-row: span 3; }
+  .c-now      { grid-column: span 4; grid-row: span 1; }
+  .c-agenda   { grid-column: span 4; grid-row: span 2; }
+  .c-upnext   { grid-column: span 4; grid-row: span 2; }
+  .c-weekload { grid-column: span 5; grid-row: span 2; }
+  .c-blocks   { grid-column: span 3; grid-row: span 2; }
+
+  /* =================== MONTH (hero) ========================== */
+  .month-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .month-title-row { display: flex; align-items: baseline; gap: 12px; }
+  .month-month { font-weight: 900; font-size: 38px; letter-spacing: -.03em; line-height: 1; color: var(--c-navy); }
+  .month-year { font-family: var(--font-mono); font-size: 14px; color: var(--c-gray-500); letter-spacing: .04em; }
+  .month-nav { display: inline-flex; align-items: center; gap: 6px; }
+  .month-nav button {
+    width: 32px; height: 32px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.65);
+    border: 1px solid rgba(15,35,66,.08);
+    color: var(--c-navy);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .month-nav button:hover { background: #fff; }
+  .month-nav button svg { width: 14px; height: 14px; }
+  .month-nav .today-btn {
+    width: auto; padding: 0 14px; font-family: var(--font-mono);
+    font-size: 12px; font-weight: 600; color: var(--c-navy);
+  }
+  .view-toggle {
+    display: inline-flex; gap: 2px;
+    background: rgba(15,35,66,.06);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .view-toggle .seg {
+    padding: 5px 14px;
+    font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+    color: var(--c-gray-500); border-radius: 999px; cursor: pointer;
+    letter-spacing: .04em;
+  }
+  .view-toggle .seg.active {
+    background: #fff; color: var(--c-navy);
+    box-shadow: 0 1px 2px rgba(15,35,66,.10);
+  }
+
+  /* day-name strip + grid */
+  .month-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: 22px repeat(5, 1fr);
+    gap: 6px;
+    min-height: 0;
+  }
+  .dow {
+    font-family: var(--font-mono); font-size: 10px;
+    font-weight: 700; color: var(--c-gray-500);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 0 4px;
+  }
+  .day {
+    background: rgba(255,255,255,.55);
+    border: 1px solid rgba(15,35,66,.05);
+    border-radius: 12px;
+    padding: 7px 8px 6px;
+    display: flex; flex-direction: column;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .day.dim {
+    background: rgba(255,255,255,.25);
+    color: var(--c-gray-200);
+    border-color: rgba(15,35,66,.03);
+  }
+  .day .n {
+    font-weight: 700; font-size: 13px; letter-spacing: -.01em;
+    color: var(--c-navy);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .day.dim .n { color: var(--c-gray-200); font-weight: 500; }
+  .day.today .n {
+    color: white;
+    background: var(--c-navy);
+    width: 22px; height: 22px;
+    border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .day.today {
+    background: rgba(255,255,255,.92);
+    border: 1.5px solid var(--c-navy);
+    box-shadow: 0 6px 16px -8px rgba(15,35,66,.30);
+  }
+  .day .ev {
+    font-size: 10.5px; font-weight: 600;
+    border-radius: 4px;
+    padding: 2px 5px;
+    margin-bottom: 2px;
+    line-height: 1.25;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .ev.blue   { background: rgba(47,107,255,.14);  color: var(--c-blue); }
+  .ev.teal   { background: rgba(40,199,183,.18);  color: #0E8A7E; }
+  .ev.violet { background: rgba(123,91,255,.16);  color: #533CD0; }
+  .ev.pink   { background: rgba(255,111,174,.18); color: #C0297A; }
+  .ev.amber  { background: rgba(245,165,36,.18);  color: #B47410; }
+  .ev.line {
+    /* an event-spanning bar */
+    background: linear-gradient(90deg, rgba(47,107,255,.18), rgba(40,199,183,.22));
+    color: var(--c-navy);
+  }
+  .ev.dot {
+    /* compact: just a colored dot */
+    width: 5px; height: 5px; padding: 0; border-radius: 999px;
+    background: var(--c-blue);
+    display: inline-block;
+  }
+  .day .ev-row {
+    display: flex; gap: 3px; margin-bottom: 2px;
+  }
+  .day .ev-row .ev.dot { margin: 0; }
+  .day .more {
+    font-family: var(--font-mono); font-size: 9.5px;
+    color: var(--c-gray-500);
+    margin-top: auto; padding-top: 2px;
+  }
+  .day.weekend { background: rgba(255,255,255,.35); }
+
+  /* =================== NOW (date + clock) ==================== */
+  .c-now { padding-top: 18px; padding-bottom: 18px; }
+  .now-row { display: flex; align-items: center; gap: 18px; height: 100%; }
+  .now-big {
+    font-weight: 900; font-size: 72px; letter-spacing: -.05em; line-height: .9;
+    color: var(--c-navy);
+  }
+  .now-meta { display: flex; flex-direction: column; gap: 4px; }
+  .now-day { font-weight: 700; font-size: 16px; letter-spacing: -.01em; }
+  .now-mo  { font-family: var(--font-mono); font-size: 12px; color: var(--c-gray-500); letter-spacing: .04em; }
+  .now-clock { margin-left: auto; text-align: right; }
+  .now-clock .t {
+    font-family: var(--font-mono); font-weight: 700;
+    font-size: 26px; letter-spacing: -.02em;
+    background: linear-gradient(120deg, #2F6BFF, #7B5BFF 50%, #28C7B7);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .now-clock .tz { font-family: var(--font-mono); font-size: 10.5px; color: var(--c-gray-500); margin-top: 2px; letter-spacing: .06em; }
+
+  /* =================== AGENDA timeline ======================= */
+  .agenda { flex: 1; position: relative; padding-left: 56px; overflow: hidden; }
+  .agenda::before {
+    content: "";
+    position: absolute;
+    left: 56px; top: 4px; bottom: 4px;
+    width: 1px;
+    background: rgba(15,35,66,.10);
+  }
+  .ag-row {
+    position: relative;
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 6px 0 6px 14px;
+    margin-bottom: 4px;
+  }
+  .ag-row .hour {
+    position: absolute;
+    left: -56px; top: 8px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--c-gray-500);
+    letter-spacing: .04em; width: 40px; text-align: right;
+  }
+  .ag-row::before {
+    content: "";
+    position: absolute; left: -4px; top: 12px;
+    width: 9px; height: 9px; border-radius: 999px;
+    background: #fff;
+    border: 2px solid var(--c-gray-200);
+  }
+  .ag-row.now-line::before {
+    background: var(--c-navy);
+    border-color: var(--c-navy);
+    box-shadow: 0 0 0 4px rgba(15,35,66,.10);
+  }
+  .ag-row.brand::before {
+    background: var(--c-blue); border-color: var(--c-blue);
+    box-shadow: 0 0 0 4px rgba(47,107,255,.18);
+  }
+  .ag-row.done::before {
+    background: var(--c-teal); border-color: var(--c-teal);
+    box-shadow: 0 0 0 4px rgba(40,199,183,.18);
+  }
+  .ag-block {
+    flex: 1;
+    background: rgba(255,255,255,.6);
+    border: 1px solid rgba(15,35,66,.06);
+    border-radius: 10px;
+    padding: 8px 12px;
+    border-left: 3px solid var(--c-blue);
+  }
+  .ag-block.teal { border-left-color: var(--c-teal); background: rgba(40,199,183,.07); }
+  .ag-block.violet { border-left-color: var(--c-violet); background: rgba(123,91,255,.07); }
+  .ag-block.pink { border-left-color: var(--c-pink); background: rgba(255,111,174,.07); }
+  .ag-block.amber { border-left-color: var(--c-amber); background: rgba(245,165,36,.08); }
+  .ag-block.done  { border-left-color: var(--c-teal); opacity: .65; }
+  .ag-block.done .ag-title { text-decoration: line-through; color: var(--c-gray-500); }
+  .ag-title { font-size: 13px; font-weight: 600; line-height: 1.25; letter-spacing: -.01em; }
+  .ag-meta {
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--c-gray-500); margin-top: 2px;
+    display: flex; gap: 8px;
+  }
+  .now-bar {
+    position: absolute; left: 56px; right: 0;
+    height: 1px; background: var(--c-navy);
+    z-index: 2;
+  }
+  .now-bar::after {
+    content: "now";
+    position: absolute; right: 0; top: -8px;
+    font-family: var(--font-mono); font-size: 9.5px;
+    background: var(--c-navy); color: white;
+    padding: 1px 6px; border-radius: 999px;
+    font-weight: 700; letter-spacing: .04em;
+  }
+
+  /* =================== UP NEXT (dark glow) =================== */
+  .c-upnext {
+    background: linear-gradient(180deg, #0B1733 0%, #0F2342 60%, #122A55 100%);
+    border: 1.5px solid transparent;
+    color: white;
+    position: relative;
+  }
+  .c-upnext::before {
+    content: "";
+    position: absolute; inset: -1.5px;
+    border-radius: var(--r-card);
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 45%, #28C7B7);
+    z-index: -1;
+    filter: blur(.5px);
+  }
+  .c-upnext::after {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: var(--r-card);
+    box-shadow: 0 0 80px 4px rgba(40,199,183,.30), 0 0 80px 4px rgba(47,107,255,.22);
+    pointer-events: none;
+  }
+  .c-upnext .card-title { color: white; }
+  .c-upnext .card-more { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); }
+  .up-eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: rgba(255,255,255,.7); letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .up-eyebrow .dot {
+    width: 7px; height: 7px; border-radius: 999px;
+    background: var(--c-teal);
+    box-shadow: 0 0 10px rgba(40,199,183,.9);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50%      { transform: scale(1.25); opacity: .6; }
+  }
+  .up-title {
+    font-weight: 800; font-size: 28px; letter-spacing: -.02em;
+    line-height: 1.1; margin: 10px 0 6px;
+    color: white;
+  }
+  .up-file {
+    font-family: var(--font-mono); font-size: 11.5px;
+    color: rgba(40,199,183,.95);
+    margin-bottom: 12px;
+  }
+  .up-countdown {
+    margin-top: auto;
+    display: flex; align-items: flex-end; gap: 12px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,.10);
+  }
+  .up-count-num {
+    font-family: var(--font-mono); font-weight: 700;
+    font-size: 38px; letter-spacing: -.03em; line-height: 1;
+    background: linear-gradient(120deg, #B7C9FF, #5BE3D4);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent;
+  }
+  .up-count-lbl {
+    font-family: var(--font-mono); font-size: 11px;
+    color: rgba(255,255,255,.65); padding-bottom: 4px;
+    letter-spacing: .04em;
+  }
+  .up-attendees { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-bottom: 4px; }
+  .up-avs { display: flex; }
+  .up-avs .av {
+    width: 24px; height: 24px; border-radius: 999px;
+    background: linear-gradient(135deg, #2F6BFF, #28C7B7);
+    border: 2px solid #0F2342;
+    margin-left: -8px;
+    font-size: 9.5px; font-weight: 700; color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .up-avs .av:first-child { margin-left: 0; }
+  .up-avs .av.a2 { background: linear-gradient(135deg, #7B5BFF, #FFB1D5); }
+  .up-avs .av.a3 { background: linear-gradient(135deg, #28C7B7, #1AAED7); }
+  .up-avs .av.a4 { background: linear-gradient(135deg, #FFB1D5, #B59BFF); }
+
+  /* =================== WEEK LOAD ============================= */
+  .wl-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+  .wl-head .total { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .wl-head .total b { color: var(--c-navy); font-weight: 700; font-size: 13px; }
+  .wl-chart { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; min-height: 0; }
+  .wl-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; min-height: 0; }
+  .wl-stack {
+    flex: 1; min-height: 0;
+    width: 100%;
+    border-radius: 6px;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    gap: 2px;
+    position: relative;
+    background: rgba(15,35,66,.03);
+    overflow: hidden;
+  }
+  .wl-stack .seg {
+    width: 100%;
+    border-radius: 3px;
+  }
+  .wl-stack .seg.meet   { background: var(--c-blue); }
+  .wl-stack .seg.focus  { background: var(--c-teal); }
+  .wl-stack .seg.review { background: var(--c-violet); }
+  .wl-col.today .wl-stack {
+    background: rgba(15,35,66,.06);
+    box-shadow: 0 0 0 1.5px var(--c-navy);
+  }
+  .wl-label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    color: var(--c-gray-500); letter-spacing: .04em;
+  }
+  .wl-col.today .wl-label { color: var(--c-navy); font-weight: 700; }
+  .wl-hrs {
+    font-family: var(--font-mono); font-size: 9.5px;
+    color: var(--c-gray-500);
+  }
+  .wl-legend {
+    display: flex; gap: 14px; margin-top: 12px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    color: var(--c-gray-500);
+  }
+  .wl-legend .key {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .wl-legend .sw {
+    width: 9px; height: 9px; border-radius: 3px;
+  }
+
+  /* =================== FOCUS BLOCKS (gradient card) ========== */
+  .c-blocks {
+    background: linear-gradient(160deg, #2F6BFF 0%, #4F4BE9 50%, #28C7B7 100%);
+    color: white;
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  .c-blocks .card-title { color: white; }
+  .c-blocks .card-more { background: rgba(255,255,255,.14); color: rgba(255,255,255,.85); }
+  .bl-num {
+    font-weight: 900; font-size: 56px; letter-spacing: -.04em; line-height: 1;
+    margin: 4px 0 2px;
+    text-shadow: 0 2px 12px rgba(15,35,66,.25);
+  }
+  .bl-sub { font-family: var(--font-mono); font-size: 11px; opacity: .88; }
+  .bl-grid {
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .bl-cell {
+    aspect-ratio: 1 / 1;
+    border-radius: 4px;
+    background: rgba(255,255,255,.20);
+  }
+  .bl-cell.l1 { background: rgba(255,255,255,.32); }
+  .bl-cell.l2 { background: rgba(255,255,255,.55); }
+  .bl-cell.l3 { background: rgba(255,255,255,.85); }
+  .bl-cell.l4 {
+    background: white;
+    box-shadow: 0 0 8px rgba(255,255,255,.6);
+  }
+  .bl-foot {
+    display: flex; justify-content: space-between;
+    margin-top: 8px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(255,255,255,.75);
+    letter-spacing: .04em;
+  }
+</style>
+</head>
+<body>
+
+<div class="wallpaper" aria-hidden="true"></div>
+
+<div class="shell">
+
+  <!-- ============== NAV ============== -->
+  <header class="nav">
+    <div class="brand">
+      <span class="brand-logo">
+        <svg width="22" height="22" viewBox="160 96 532 532" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="bnLogo" x1="190" y1="120" x2="660" y2="610" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#115AF5"/>
+              <stop offset="0.5" stop-color="#0984E6"/>
+              <stop offset="1" stop-color="#39D0B9"/>
+            </linearGradient>
+          </defs>
+          <path d="M 423 120 A 242 242 0 1 0 668 371" fill="none" stroke="url(#bnLogo)" stroke-width="58" stroke-linecap="round"/>
+          <circle cx="489" cy="127" r="20" fill="#1267F7"/>
+          <circle cx="547" cy="153" r="20" fill="#0984E6"/>
+          <circle cx="598" cy="190" r="20" fill="#08AAC7"/>
+          <circle cx="636" cy="243" r="20" fill="#0DB7C6"/>
+          <circle cx="660" cy="300" r="20" fill="#04A9D4"/>
+          <path d="M 357 374 L 407 421 L 526 307" fill="none" stroke="#0F2342" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">doit<span class="ext">.md</span></span>
+    </div>
+
+    <nav class="nav-pill">
+      <a class="nav-link" href="Bento Dashboard.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+        Home
+      </a>
+      <a class="nav-link" href="Bento Tasks.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+        Tasks
+      </a>
+      <a class="nav-link" href="Bento Notes.html">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Notes
+      </a>
+      <a class="nav-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Calendar
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M3 21v-1a6 6 0 0 1 12 0v1"/><path d="M21 21v-1a6 6 0 0 0-5-5.92"/></svg>
+        Team
+      </a>
+    </nav>
+
+    <div class="nav-right">
+      <div class="search-pill">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <span>Jump to date, event…</span>
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="avatar">SR</div>
+    </div>
+  </header>
+
+  <!-- ============== BENTO GRID ============== -->
+  <section class="bento">
+
+    <!-- ============ MONTH (hero) ============ -->
+    <article class="card c-month">
+      <div class="month-head">
+        <div class="month-title-row">
+          <div class="month-month">May</div>
+          <div class="month-year">2026 · WEEK 22</div>
+          <div class="month-nav" style="margin-left:14px;">
+            <button aria-label="previous month">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg>
+            </button>
+            <button class="today-btn">today</button>
+            <button aria-label="next month">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="view-toggle">
+          <span class="seg">DAY</span>
+          <span class="seg">WEEK</span>
+          <span class="seg active">MONTH</span>
+          <span class="seg">YEAR</span>
+        </div>
+      </div>
+
+      <div class="month-grid">
+        <div class="dow">Sun</div>
+        <div class="dow">Mon</div>
+        <div class="dow">Tue</div>
+        <div class="dow">Wed</div>
+        <div class="dow">Thu</div>
+        <div class="dow">Fri</div>
+        <div class="dow">Sat</div>
+
+        <!-- Week 1 — Apr 26-30, May 1-2 -->
+        <div class="day dim weekend"><div class="n">26</div></div>
+        <div class="day dim"><div class="n">27</div></div>
+        <div class="day dim"><div class="n">28</div></div>
+        <div class="day dim"><div class="n">29</div></div>
+        <div class="day dim"><div class="n">30</div></div>
+        <div class="day"><div class="n">1</div>
+          <div class="ev blue">Sprint kickoff</div>
+        </div>
+        <div class="day weekend"><div class="n">2</div></div>
+
+        <!-- Week 2 — 3-9 -->
+        <div class="day weekend"><div class="n">3</div></div>
+        <div class="day"><div class="n">4</div>
+          <div class="ev teal">Standup</div>
+          <div class="ev violet">1:1 Mira</div>
+        </div>
+        <div class="day"><div class="n">5</div>
+          <div class="ev blue">v0.3 review</div>
+        </div>
+        <div class="day"><div class="n">6</div>
+          <div class="ev line">Design week ─────</div>
+        </div>
+        <div class="day"><div class="n">7</div>
+          <div class="ev line">───────────</div>
+          <div class="ev pink">Demo</div>
+        </div>
+        <div class="day"><div class="n">8</div>
+          <div class="ev line">─── ends</div>
+        </div>
+        <div class="day weekend"><div class="n">9</div></div>
+
+        <!-- Week 3 — 10-16 -->
+        <div class="day weekend"><div class="n">10</div>
+          <div class="ev amber">Mother's day</div>
+        </div>
+        <div class="day"><div class="n">11</div>
+          <div class="ev teal">Standup</div>
+          <div class="ev blue">Retro</div>
+        </div>
+        <div class="day"><div class="n">12</div>
+          <div class="ev violet">Roadmap sync</div>
+        </div>
+        <div class="day"><div class="n">13</div>
+          <div class="ev blue">v0.4 plan</div>
+          <div class="more">+2 more</div>
+        </div>
+        <div class="day"><div class="n">14</div>
+          <div class="ev teal">Standup</div>
+        </div>
+        <div class="day"><div class="n">15</div>
+          <div class="ev pink">Off-site prep</div>
+        </div>
+        <div class="day weekend"><div class="n">16</div></div>
+
+        <!-- Week 4 — 17-23 -->
+        <div class="day weekend"><div class="n">17</div></div>
+        <div class="day"><div class="n">18</div>
+          <div class="ev teal">Standup</div>
+          <div class="ev violet">1:1 Aspert</div>
+        </div>
+        <div class="day"><div class="n">19</div>
+          <div class="ev blue">Eng review</div>
+        </div>
+        <div class="day"><div class="n">20</div>
+          <div class="ev line">v0.4 freeze ────</div>
+        </div>
+        <div class="day"><div class="n">21</div>
+          <div class="ev line">─────────</div>
+          <div class="ev amber">QA</div>
+        </div>
+        <div class="day"><div class="n">22</div>
+          <div class="ev line">─── ends</div>
+          <div class="ev pink">Demo day</div>
+        </div>
+        <div class="day weekend"><div class="n">23</div></div>
+
+        <!-- Week 5 — 24-30 -->
+        <div class="day weekend"><div class="n">24</div></div>
+        <div class="day"><div class="n">25</div>
+          <div class="ev teal">Standup</div>
+          <div class="ev blue">Release prep</div>
+        </div>
+        <div class="day today">
+          <div class="n">26</div>
+          <div class="ev blue">v0.4 launch sync</div>
+          <div class="ev violet">Design review</div>
+          <div class="more">+3 more</div>
+        </div>
+        <div class="day"><div class="n">27</div>
+          <div class="ev teal">Standup</div>
+          <div class="ev pink">Client demo</div>
+        </div>
+        <div class="day"><div class="n">28</div>
+          <div class="ev blue">Retro</div>
+        </div>
+        <div class="day"><div class="n">29</div>
+          <div class="ev violet">Off-site</div>
+        </div>
+        <div class="day weekend"><div class="n">30</div>
+          <div class="ev amber">Birthday — Jules</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ NOW (date + clock) ============ -->
+    <article class="card c-now">
+      <div class="now-row">
+        <div class="now-big">26</div>
+        <div class="now-meta">
+          <div class="now-day">Tuesday</div>
+          <div class="now-mo">MAY · 2026</div>
+        </div>
+        <div class="now-clock">
+          <div class="t">14:23</div>
+          <div class="tz">GMT−03 · SÃO PAULO</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ AGENDA (today timeline) ============ -->
+    <article class="card c-agenda">
+      <div class="card-head">
+        <div class="card-title">Today's agenda <span class="ext">— today.md</span></div>
+        <div class="card-more">···</div>
+      </div>
+
+      <div class="agenda">
+        <div class="ag-row done">
+          <span class="hour">09:00</span>
+          <div class="ag-block teal done">
+            <div class="ag-title">Standup</div>
+            <div class="ag-meta"><span>9:00–9:15</span><span>· 5 people</span></div>
+          </div>
+        </div>
+
+        <div class="ag-row done">
+          <span class="hour">11:30</span>
+          <div class="ag-block violet done">
+            <div class="ag-title">1:1 with Mira</div>
+            <div class="ag-meta"><span>11:30–12:00</span></div>
+          </div>
+        </div>
+
+        <div class="ag-row now-line">
+          <span class="hour">14:00</span>
+          <div class="ag-block">
+            <div class="ag-title">Deep work · v0.4 release notes</div>
+            <div class="ag-meta"><span>14:00–15:45</span><span>· focus block</span></div>
+          </div>
+        </div>
+
+        <div class="ag-row brand">
+          <span class="hour">16:00</span>
+          <div class="ag-block">
+            <div class="ag-title">v0.4 launch sync</div>
+            <div class="ag-meta"><span>16:00–17:00</span><span>· Meet</span></div>
+          </div>
+        </div>
+
+        <div class="ag-row">
+          <span class="hour">17:30</span>
+          <div class="ag-block amber">
+            <div class="ag-title">Design review prep</div>
+            <div class="ag-meta"><span>17:30–18:15</span></div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ UP NEXT (dark glow) ============ -->
+    <article class="card c-upnext">
+      <div class="card-head">
+        <div class="card-title">Up next</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="up-eyebrow"><span class="dot"></span>STARTS IN · 1H 37M</div>
+      <h2 class="up-title">v0.4 launch sync</h2>
+      <div class="up-file">↳ release-notes.md · 4:00 pm – 5:00 pm</div>
+
+      <div class="up-countdown">
+        <div>
+          <div class="up-count-num">01:37</div>
+          <div class="up-count-lbl">hours : minutes</div>
+        </div>
+        <div class="up-attendees">
+          <div class="up-avs">
+            <div class="av">SR</div>
+            <div class="av a2">JL</div>
+            <div class="av a3">MP</div>
+            <div class="av a4">AS</div>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: rgba(255,255,255,.7);">+2</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ============ WEEK LOAD ============ -->
+    <article class="card c-weekload">
+      <div class="card-head">
+        <div class="card-title">This week's load</div>
+        <div class="wl-head" style="margin: 0;">
+          <div class="total"><b>28.5h</b> scheduled · 11.5h focus</div>
+        </div>
+      </div>
+
+      <div class="wl-chart">
+        <div class="wl-col">
+          <div class="wl-stack">
+            <div class="seg meet"   style="height: 24%"></div>
+            <div class="seg review" style="height: 6%"></div>
+            <div class="seg focus"  style="height: 38%"></div>
+          </div>
+          <div class="wl-label">MON</div>
+          <div class="wl-hrs">5.5h</div>
+        </div>
+        <div class="wl-col today">
+          <div class="wl-stack">
+            <div class="seg meet"   style="height: 42%"></div>
+            <div class="seg review" style="height: 12%"></div>
+            <div class="seg focus"  style="height: 30%"></div>
+          </div>
+          <div class="wl-label">TUE</div>
+          <div class="wl-hrs">7.0h</div>
+        </div>
+        <div class="wl-col">
+          <div class="wl-stack">
+            <div class="seg meet"   style="height: 18%"></div>
+            <div class="seg review" style="height: 14%"></div>
+            <div class="seg focus"  style="height: 42%"></div>
+          </div>
+          <div class="wl-label">WED</div>
+          <div class="wl-hrs">6.0h</div>
+        </div>
+        <div class="wl-col">
+          <div class="wl-stack">
+            <div class="seg meet"   style="height: 30%"></div>
+            <div class="seg review" style="height: 8%"></div>
+            <div class="seg focus"  style="height: 22%"></div>
+          </div>
+          <div class="wl-label">THU</div>
+          <div class="wl-hrs">4.5h</div>
+        </div>
+        <div class="wl-col">
+          <div class="wl-stack">
+            <div class="seg meet"   style="height: 14%"></div>
+            <div class="seg focus"  style="height: 36%"></div>
+          </div>
+          <div class="wl-label">FRI</div>
+          <div class="wl-hrs">3.5h</div>
+        </div>
+        <div class="wl-col">
+          <div class="wl-stack" style="opacity:.45;">
+            <div class="seg focus" style="height: 8%"></div>
+          </div>
+          <div class="wl-label" style="opacity:.5;">SAT</div>
+          <div class="wl-hrs" style="opacity:.5;">0.5h</div>
+        </div>
+        <div class="wl-col">
+          <div class="wl-stack" style="opacity:.45;">
+            <div class="seg meet"  style="height: 10%"></div>
+            <div class="seg focus" style="height: 12%"></div>
+          </div>
+          <div class="wl-label" style="opacity:.5;">SUN</div>
+          <div class="wl-hrs" style="opacity:.5;">1.5h</div>
+        </div>
+      </div>
+
+      <div class="wl-legend">
+        <span class="key"><span class="sw" style="background: var(--c-blue);"></span>meetings</span>
+        <span class="key"><span class="sw" style="background: var(--c-teal);"></span>focus</span>
+        <span class="key"><span class="sw" style="background: var(--c-violet);"></span>review</span>
+      </div>
+    </article>
+
+    <!-- ============ FOCUS BLOCKS ============ -->
+    <article class="card c-blocks">
+      <div class="card-head">
+        <div class="card-title">Focus blocks</div>
+        <div class="card-more">···</div>
+      </div>
+      <div>
+        <div class="bl-num">11.5</div>
+        <div class="bl-sub">hours of deep work · this week</div>
+      </div>
+      <div class="bl-grid">
+        <!-- 7 cols × ~2 rows = 14 cells -->
+        <div class="bl-cell l2"></div>
+        <div class="bl-cell l3"></div>
+        <div class="bl-cell l1"></div>
+        <div class="bl-cell l4"></div>
+        <div class="bl-cell l2"></div>
+        <div class="bl-cell"></div>
+        <div class="bl-cell"></div>
+
+        <div class="bl-cell l3"></div>
+        <div class="bl-cell l4"></div>
+        <div class="bl-cell l2"></div>
+        <div class="bl-cell l1"></div>
+        <div class="bl-cell l3"></div>
+        <div class="bl-cell"></div>
+        <div class="bl-cell"></div>
+      </div>
+      <div class="bl-foot">
+        <span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span><span>SAT</span><span>SUN</span>
+      </div>
+    </article>
+
+  </section>
+</div>
+
+</body>
+</html>

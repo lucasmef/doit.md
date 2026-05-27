@@ -18,6 +18,19 @@ function IconInbox() {
   )
 }
 
+function IconDashboard() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.8}
+        d="M4 5a1 1 0 0 1 1-1h5v7H4V5ZM14 4h5a1 1 0 0 1 1 1v4h-6V4ZM4 15h6v5H5a1 1 0 0 1-1-1v-4ZM14 13h6v6a1 1 0 0 1-1 1h-5v-7Z"
+      />
+    </svg>
+  )
+}
+
 function IconToday() {
   return (
     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,6 +98,7 @@ function IconSettings() {
 }
 
 export const MOBILE_NAV_LABELS: Record<MobileNavItemId, string> = {
+  dashboard: 'Painel',
   inbox: 'Inbox',
   today: 'Hoje',
   upcoming: 'Próximos',
@@ -94,6 +108,7 @@ export const MOBILE_NAV_LABELS: Record<MobileNavItemId, string> = {
 }
 
 const MOBILE_NAV_DEF: Record<MobileNavItemId, { href: string; icon: React.ReactNode }> = {
+  dashboard: { href: '/dashboard', icon: <IconDashboard /> },
   inbox: { href: '/inbox', icon: <IconInbox /> },
   today: { href: '/today', icon: <IconToday /> },
   upcoming: { href: '/upcoming', icon: <IconUpcoming /> },
@@ -110,7 +125,7 @@ export function BottomNav() {
 
   if (overlayOpen) return null
 
-  const visible = prefs.mobileNav.filter((entry) => entry.visible)
+  const visible = prefs.mobileNav.filter((entry) => entry.visible).slice(0, 4)
   const splitIndex = Math.ceil(visible.length / 2)
   const leftItems = visible.slice(0, splitIndex)
   const rightItems = visible.slice(splitIndex)

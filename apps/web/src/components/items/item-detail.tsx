@@ -1,9 +1,8 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { usePathname } from 'next/navigation'
 import { useItem, updateItem, archiveItem, useItems } from '@/hooks/use-items'
-import { usePreferences } from '@/hooks/use-preferences'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
 import { ComplexitySelect } from './complexity-select'
@@ -111,6 +110,52 @@ function cleanTaskTitle(value: string) {
     .replace(TIME_SHORTCUT, ' ')
     .replace(/\s+/g, ' ')
     .trim()
+}
+
+type OutlineEntry = { level: 1 | 2 | 3; text: string }
+
+function extractMarkdownOutline(markdown: string): OutlineEntry[] {
+  return markdown
+    .split(/\r?\n/)
+    .map((line) => {
+      const match = /^(#{1,3})\s+(.+)$/.exec(line.trim())
+      if (!match) return null
+      const text = (match[2] ?? '').replace(/[#*_`[\]()]/g, '').trim()
+      if (!text) return null
+      return { level: match[1]?.length as 1 | 2 | 3, text }
+    })
+    .filter((entry): entry is OutlineEntry => Boolean(entry))
+    .slice(0, 8)
+}
+
+function getMarkdownTaskStats(markdown: string) {
+  const matches = markdown.match(/^\s*[-*]\s+\[[ xX]\]\s+/gm) ?? []
+  const done = matches.filter((line) => /\[[xX]\]/.test(line)).length
+  return { done, total: matches.length }
+}
+
+function getWordCount(markdown: string) {
+  const text = markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`[^`]*`/g, ' ')
+    .replace(/[#>*_\-[\]()`|]/g, ' ')
+  return text.trim() ? text.trim().split(/\s+/).length : 0
+}
+
+function getLinkCount(markdown: string) {
+  return (markdown.match(/\[[^\]]+\]\([^)]+\)|https?:\/\/\S+/g) ?? []).length
+}
+
+function statusLabel(status: ItemStatus) {
+  const labels: Record<ItemStatus, string> = {
+    inbox: 'Inbox',
+    todo: 'A fazer',
+    doing: 'Em andamento',
+    waiting: 'Aguardando',
+    done: 'Feito',
+    archived: 'Arquivado',
+  }
+  return labels[status]
 }
 
 function parseSlashDate(dayText: string, monthText: string, yearText?: string) {
@@ -357,10 +402,10 @@ function ToolButton({
       type="button"
       title={title}
       onClick={onClick}
-      className={`inline-flex h-7 items-center gap-1.5 rounded-[10px] border px-2 text-[12px] font-medium transition-colors ${
+      className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2 text-[12px] font-medium shadow-sm backdrop-blur transition-colors ${
         active
-          ? 'border-ui-border-selected bg-surface-selected text-brand-700'
-          : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+          ? 'border-brand-200/70 bg-white/70 text-brand-700'
+          : 'border-white/60 bg-white/46 text-slate-500 hover:bg-white/75 hover:text-slate-800'
       }`}
     >
       {children}
@@ -371,7 +416,6 @@ function ToolButton({
 export function ItemDetail() {
   const pathname = usePathname()
   const { selectedItemId, setSelectedItemId } = useUI()
-  const { prefs } = usePreferences()
   const { item, isLoading } = useItem(selectedItemId)
   const { projects } = useProjects()
   const { items } = useItems()
@@ -482,7 +526,7 @@ export function ItemDetail() {
 
   const activeProjects = projects.filter((p) => p.status !== 'archived')
   const noteBackdropStyle = {
-    '--item-detail-sidebar-offset': prefs.sidebarCollapsed ? '68px' : '260px',
+    '--item-detail-sidebar-offset': '0px',
   } as CSSProperties
   const noteFullscreenStyle = {
     ...noteBackdropStyle,
@@ -508,6 +552,22 @@ export function ItemDetail() {
     const query = normalizeToken(projectQuery)
     return !query || normalizeToken(project.name).includes(query)
   })
+  const noteOutline = extractMarkdownOutline(content)
+  const noteTaskStats = getMarkdownTaskStats(content)
+  const noteTaskProgress =
+    noteTaskStats.total > 0 ? Math.round((noteTaskStats.done / noteTaskStats.total) * 100) : 100
+  const noteWordCount = getWordCount(content)
+  const noteLinkCount = getLinkCount(content)
+  const currentTitleForRelations = normalizeToken(title || item?.title || '')
+  const relatedItems =
+    item && currentTitleForRelations
+      ? items
+          .filter((current) => current.id !== item.id)
+          .filter((current) =>
+            normalizeToken(current.contentMd ?? '').includes(currentTitleForRelations),
+          )
+          .slice(0, 3)
+      : []
 
   function applyTaskTitleCategorizerShortcuts(value: string) {
     const patch: Record<string, unknown> = {}
@@ -867,7 +927,7 @@ export function ItemDetail() {
           aria-hidden="true"
         />
         <div
-          className="fixed inset-0 z-[60] flex flex-col bg-white lg:left-[var(--item-detail-sidebar-offset)] lg:border-l lg:border-ui-border"
+          className="fixed inset-0 z-[60] flex flex-col bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.96),rgba(236,247,255,0.82)_36%,rgba(246,241,255,0.86)_72%)] lg:left-[var(--item-detail-sidebar-offset)]"
           role="dialog"
           aria-modal="true"
           style={noteFullscreenStyle}
@@ -884,12 +944,12 @@ export function ItemDetail() {
           }}
         >
           <div className="relative flex min-h-0 flex-1 flex-col">
-            <div className="relative z-[65] flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-ui-border bg-surface-soft px-3 py-2">
+            <div className="relative z-[65] flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 border-b border-white/45 bg-white/50 px-3 py-2 shadow-sm backdrop-blur-xl">
               <button
                 type="button"
                 title="Fechar nota (Esc)"
                 onClick={() => void flushAndClose()}
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-slate-500 hover:bg-white hover:text-slate-800"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-500 hover:bg-white/75 hover:text-slate-800"
               >
                 <svg
                   className="h-4 w-4"
@@ -920,7 +980,7 @@ export function ItemDetail() {
                   type="button"
                   title="Trocar para tarefa"
                   onClick={() => handleComplexityChange('task')}
-                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-selected bg-surface-selected px-2 text-[12px] font-medium text-brand-700 transition-colors hover:bg-white"
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-brand-200/70 bg-white/64 px-2 text-[12px] font-medium text-brand-700 shadow-sm backdrop-blur transition-colors hover:bg-white/80"
                 >
                   <IconNote className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Nota</span>
@@ -1153,7 +1213,7 @@ export function ItemDetail() {
                 onClick={handleArchive}
                 title="Arquivar"
                 aria-label="Arquivar"
-                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] text-slate-400 hover:bg-white hover:text-red-500"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-white/75 hover:text-red-500"
               >
                 <svg
                   className="h-4 w-4"
@@ -1170,19 +1230,133 @@ export function ItemDetail() {
               </button>
             </div>
 
-            <div
-              className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-4"
-              data-note-scroll-container="true"
-            >
-              <MarkdownEditor
-                value={content}
-                onChange={handleContentChange}
-                placeholder="Escreva em Markdown..."
-                minHeight="min-h-[calc(100vh-96px)] sm:min-h-[calc(100vh-128px)]"
-                plain
-                itemId={item.id}
-                focusAtStart
-              />
+            <div className="min-h-0 flex-1 gap-3 p-2 sm:p-4 xl:flex">
+              <div
+                className="min-h-0 flex-1 overflow-y-auto"
+                data-note-scroll-container="true"
+              >
+                <MarkdownEditor
+                  value={content}
+                  onChange={handleContentChange}
+                  placeholder="Escreva em Markdown..."
+                  minHeight="min-h-[calc(100vh-96px)] sm:min-h-[calc(100vh-128px)]"
+                  plain
+                  itemId={item.id}
+                  focusAtStart
+                />
+              </div>
+
+              <aside className="hidden w-[286px] shrink-0 flex-col overflow-y-auto rounded-[24px] border border-white/60 bg-white/58 p-4 shadow-cool-sm backdrop-blur-xl xl:flex">
+                <div className="rounded-[18px] border border-brand-200/45 bg-gradient-to-br from-brand-50/80 to-teal-50/70 p-3">
+                  <div className="flex items-center justify-between text-[12px] font-semibold text-navy-700">
+                    <span>Progresso</span>
+                    <span>{noteTaskStats.total > 0 ? `${noteTaskProgress}%` : 'Nota'}</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/70">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-brand-500 to-teal-400"
+                      style={{ width: `${noteTaskProgress}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                    <span>
+                      {noteTaskStats.total > 0
+                        ? `${noteTaskStats.done} / ${noteTaskStats.total} checklist`
+                        : `${noteWordCount} palavras`}
+                    </span>
+                    <span>{noteLinkCount} links</span>
+                  </div>
+                </div>
+
+                <section className="mt-5">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                    Outline
+                  </p>
+                  <div className="mt-2 space-y-1">
+                    {noteOutline.length > 0 ? (
+                      noteOutline.map((entry, index) => (
+                        <div
+                          key={`${entry.text}-${index}`}
+                          className="truncate rounded-[12px] px-2 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-white/65"
+                          style={{ paddingLeft: `${8 + (entry.level - 1) * 12}px` }}
+                        >
+                          {entry.text}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="rounded-[14px] border border-white/60 bg-white/46 px-3 py-2 text-[12px] text-slate-500">
+                        Use titulos Markdown para montar o sumario desta nota.
+                      </p>
+                    )}
+                  </div>
+                </section>
+
+                <section className="mt-5">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                    Propriedades
+                  </p>
+                  <div className="mt-2 space-y-2 text-[12px] text-slate-600">
+                    <div className="flex items-center justify-between rounded-[14px] border border-white/60 bg-white/46 px-3 py-2">
+                      <span>Pasta</span>
+                      <span className="min-w-0 max-w-[150px] truncate font-semibold text-navy-700">
+                        {selectedProject?.name ?? 'Inbox'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-[14px] border border-white/60 bg-white/46 px-3 py-2">
+                      <span>Data</span>
+                      <span className="font-semibold text-navy-700">
+                        {dueDate ? formatDueDate(dueDate) : 'Sem data'}
+                      </span>
+                    </div>
+                    <div className="rounded-[14px] border border-white/60 bg-white/46 px-3 py-2">
+                      <span className="block text-slate-500">Tags</span>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {tagList.length > 0 ? (
+                          tagList.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-brand-50 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-700"
+                            >
+                              @{tag}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-slate-400">Sem tags</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="mt-5">
+                  <p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                    Relacionados
+                  </p>
+                  <div className="mt-2 space-y-2">
+                    {relatedItems.length > 0 ? (
+                      relatedItems.map((related) => (
+                        <button
+                          key={related.id}
+                          type="button"
+                          onClick={() => setSelectedItemId(related.id)}
+                          className="block w-full rounded-[14px] border border-white/60 bg-white/46 px-3 py-2 text-left hover:bg-white/75"
+                        >
+                          <span className="block truncate text-[12px] font-semibold text-navy-700">
+                            {related.title}
+                          </span>
+                          <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-wide text-slate-400">
+                            {statusLabel(related.status)}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p className="rounded-[14px] border border-white/60 bg-white/46 px-3 py-2 text-[12px] text-slate-500">
+                        Nenhum Item referencia este titulo ainda.
+                      </p>
+                    )}
+                  </div>
+                </section>
+              </aside>
             </div>
           </div>
         </div>
@@ -1193,14 +1367,14 @@ export function ItemDetail() {
   if (!isNote && (item.complexity === 'task' || item.complexity === 'capture')) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/40 p-3 pt-[6vh] backdrop-blur-sm sm:p-4 sm:pt-[8vh]"
+        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/22 p-3 pt-[6vh] backdrop-blur-md sm:p-4 sm:pt-[8vh]"
         role="dialog"
         aria-modal="true"
         onPointerDown={handleBackdropPointerDown}
         onClick={handleBackdropClick}
         onKeyDown={handleModalKeyDown}
       >
-        <div className="w-full max-w-[560px] overflow-visible rounded-xl border border-ui-border bg-white shadow-cool-lg">
+        <div className="w-full max-w-[560px] overflow-visible rounded-[28px] border border-white/70 bg-white/90 shadow-cool-lg backdrop-blur-xl">
           <div className="flex flex-col">
             <div className="px-5 pb-4 pt-5">
               <div className="flex items-center gap-3">
@@ -1220,7 +1394,7 @@ export function ItemDetail() {
                   type="button"
                   title="Trocar para nota"
                   onClick={() => handleComplexityChange('note')}
-                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-white/60 bg-white/46 px-2 text-[12px] font-medium text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white/75 hover:text-slate-800"
                 >
                   <IconNote className="h-3.5 w-3.5" />
                   Nota
@@ -1497,13 +1671,13 @@ export function ItemDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3">
+            <div className="flex items-center gap-2 border-t border-white/55 bg-white/66 px-5 py-3 backdrop-blur">
               <div className="relative min-w-0 flex-1">
                 <button
                   type="button"
                   title="Selecionar ou criar pasta"
                   onClick={() => setPopover(popover === 'project' ? null : 'project')}
-                  className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] font-medium text-slate-500 transition-colors hover:bg-white hover:text-slate-800"
+                  className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-white/60 bg-white/46 px-2 text-[12px] font-medium text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white/75 hover:text-slate-800"
                 >
                   <IconInbox className="h-3.5 w-3.5 shrink-0" />
                   <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
@@ -1590,21 +1764,21 @@ export function ItemDetail() {
               <button
                 type="button"
                 onClick={handleArchive}
-                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-400 hover:bg-white hover:text-red-500"
+                className="h-8 rounded-full px-3 text-[12px] font-semibold text-slate-400 hover:bg-white/75 hover:text-red-500"
               >
                 Arquivar
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedItemId(null)}
-                className="h-8 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700"
+                className="h-8 rounded-full px-3 text-[12px] font-semibold text-slate-500 hover:bg-white/75 hover:text-slate-700"
               >
                 Cancelar
               </button>
               <button
                 type="button"
                 onClick={() => setSelectedItemId(null)}
-                className="h-8 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+                className="h-8 rounded-full bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
               >
                 Salvar
               </button>
@@ -1617,24 +1791,24 @@ export function ItemDetail() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/40 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/22 p-0 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
     >
       <div
-        className={`flex flex-col overflow-hidden bg-white shadow-cool-lg transition-all duration-300 ${
+        className={`flex flex-col overflow-hidden border border-white/70 bg-white/90 shadow-cool-lg backdrop-blur-xl transition-all duration-300 ${
           isNote
             ? 'h-full w-full max-w-5xl rounded-t-2xl sm:rounded-xl'
             : 'max-h-[85vh] w-full max-w-lg rounded-t-2xl sm:rounded-xl'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-ui-border-soft shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-white/45 bg-white/42 px-6 py-4 backdrop-blur">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedItemId(null)}
-              className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+              className="-ml-2 rounded-full p-2 text-slate-400 transition-colors hover:bg-white/75 hover:text-slate-600"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
@@ -1684,7 +1858,7 @@ export function ItemDetail() {
 
           {/* Sidebar Properties (only visible or layouted differently for notes) */}
           <div
-            className={`${isNote ? 'w-full lg:w-80 p-6 space-y-6 bg-slate-50/50' : 'px-6 pb-6 space-y-4'}`}
+            className={`${isNote ? 'w-full lg:w-80 p-6 space-y-6 bg-white/36 backdrop-blur' : 'px-6 pb-6 space-y-4'}`}
           >
             {/* Status */}
             <div className="flex flex-col gap-1.5">
@@ -1774,7 +1948,7 @@ export function ItemDetail() {
         </div>
 
         {/* Footer info */}
-        <div className="px-6 py-3 bg-slate-50 border-t border-ui-border-soft text-[10px] text-slate-400 flex justify-between">
+        <div className="flex justify-between border-t border-white/45 bg-white/42 px-6 py-3 text-[10px] text-slate-400 backdrop-blur">
           <span>Criado em {new Date(item.createdAt).toLocaleString('pt-BR')}</span>
           <span>Atualizado em {new Date(item.updatedAt).toLocaleString('pt-BR')}</span>
         </div>

@@ -153,13 +153,13 @@ export function CalendarGrid({
 
   const containerClass = fillHeight
     ? googleLike
-      ? 'flex h-full min-w-0 min-h-0 w-full select-none flex-col overflow-hidden bg-surface-panel'
+      ? 'flex h-full min-w-0 min-h-0 w-full select-none flex-col overflow-hidden bg-white/48 backdrop-blur-xl'
       : 'flex flex-1 min-w-0 min-h-0 w-full select-none flex-col overflow-hidden rounded-none border-y border-ui-border bg-white p-2 shadow-cool-sm lg:rounded-xl lg:border lg:p-3'
     : 'min-w-0 w-full select-none overflow-hidden rounded-xl border border-ui-border bg-white p-3 shadow-cool-sm'
 
   const gridClass = fillHeight
     ? googleLike
-      ? 'grid min-w-0 w-full flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden border-t border-ui-border bg-ui-border'
+      ? 'grid min-w-0 w-full flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden border-t border-white/45 bg-white/35'
       : 'grid min-w-0 w-full flex-1 min-h-0 grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
     : 'grid min-w-0 w-full grid-cols-7 gap-px overflow-hidden rounded-lg border border-ui-border bg-ui-border'
 
@@ -171,7 +171,7 @@ export function CalendarGrid({
     <div className={containerClass}>
       <div
         className={`flex shrink-0 items-center gap-2 ${
-          googleLike ? 'h-14 border-b border-ui-border bg-surface-window px-2 sm:px-4' : 'mb-3 flex-wrap items-start justify-between'
+          googleLike ? 'h-14 border-b border-white/45 bg-white/38 px-2 backdrop-blur-xl sm:px-4' : 'mb-3 flex-wrap items-start justify-between'
         }`}
       >
         <div
@@ -238,7 +238,7 @@ export function CalendarGrid({
         ) : null}
       </div>
 
-      <div className={`${googleLike ? 'grid border-b border-ui-border bg-surface-panel' : 'mb-2 grid'} shrink-0 grid-cols-7`}>
+      <div className={`${googleLike ? 'grid border-b border-white/45 bg-white/42' : 'mb-2 grid'} shrink-0 grid-cols-7`}>
         {weekdays.map((d) => (
           <div
             key={d}
@@ -313,7 +313,7 @@ export function CalendarGrid({
                 }
               }}
               className={`relative flex ${cellHeight} min-h-0 flex-col items-start overflow-hidden ${
-                googleLike ? 'bg-surface-panel px-0.5 py-0.5 sm:p-1' : 'bg-white p-1.5'
+                googleLike ? 'bg-white/52 px-0.5 py-0.5 backdrop-blur-sm sm:p-1' : 'bg-white p-1.5'
               } text-left transition-colors hover:bg-surface-soft ${
                 isSelected && !googleLike ? 'z-10 ring-2 ring-inset ring-brand-400' : ''
               } ${day.outside ? 'text-navy-300' : ''}`}

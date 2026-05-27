@@ -44,9 +44,17 @@ type Props = {
   selected?: boolean
   orderedIds?: string[]
   index?: number
+  variant?: 'plain' | 'glass'
 }
 
-export function ItemRow({ item, active = false, selected = false, orderedIds = [], index = 0 }: Props) {
+export function ItemRow({
+  item,
+  active = false,
+  selected = false,
+  orderedIds = [],
+  index = 0,
+  variant = 'plain',
+}: Props) {
   const {
     setSingleSelection,
     toggleSelection,
@@ -116,6 +124,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
     : 'border-navy-200'
 
   const staggerDelay = `${Math.min(index * 40, 300)}ms`
+  const isGlass = variant === 'glass'
 
   function handleClick(e: React.MouseEvent) {
     if (longPressTriggered.current) {
@@ -188,13 +197,21 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
       onKeyDown={handleRowKeyDown}
       data-item-id={item.id}
       style={{ animationDelay: staggerDelay }}
-      className={`group flex w-full cursor-pointer select-none items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
-        selected
-          ? 'border-ui-border-selected bg-surface-selected'
-          : active
-          ? 'border-ui-border-selected bg-surface-selected'
-          : 'border-ui-border-soft hover:bg-surface-soft'
-      }`}
+      className={
+        isGlass
+          ? `group flex w-full cursor-pointer select-none items-center gap-3 rounded-[20px] border px-2 py-2.5 text-left shadow-cool-sm backdrop-blur-xl transition-colors animate-stagger-item ${
+              selected || active
+                ? 'border-white/70 bg-white/82 text-navy-900 ring-2 ring-brand-300/35'
+                : 'border-white/48 bg-white/52 hover:bg-white/72'
+            }`
+          : `group flex w-full cursor-pointer select-none items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
+              selected
+                ? 'border-ui-border-selected bg-surface-selected'
+                : active
+                ? 'border-ui-border-selected bg-surface-selected'
+                : 'border-ui-border-soft hover:bg-surface-soft'
+            }`
+      }
     >
       {/* Checkbox — só task/capture */}
       {(item.complexity === 'task' || item.complexity === 'capture') ? (
@@ -205,7 +222,9 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
           onContextMenu={(e) => e.stopPropagation()}
           aria-label={displayDone ? `Marcar ${item.title} como pendente` : `Concluir ${item.title}`}
           aria-pressed={displayDone}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-surface-soft"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center transition-colors ${
+            isGlass ? 'rounded-[16px] hover:bg-white/50' : 'rounded-md hover:bg-surface-soft'
+          }`}
         >
           <span
             className={`flex h-[18px] w-[18px] items-center justify-center rounded-[5px] border-[1.5px] transition-all ${
@@ -235,7 +254,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
           </span>
         </button>
       ) : (
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center text-navy-500">
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center text-navy-500 ${isGlass ? 'rounded-[16px] bg-white/34' : ''}`}>
           {item.complexity === 'note'
             ? <IconNoteFilled className="h-4 w-4" />
             : p < 4
@@ -283,7 +302,7 @@ export function ItemRow({ item, active = false, selected = false, orderedIds = [
           onClick={toggleDone}
           onPointerDown={(e) => e.stopPropagation()}
           onContextMenu={(e) => e.stopPropagation()}
-          className="shrink-0 rounded-md border border-ui-border bg-white px-2 py-1 text-[12px] font-medium text-navy-500 hover:bg-surface-soft hover:text-brand-700"
+          className="shrink-0 rounded-full border border-white/60 bg-white/60 px-3 py-1 text-[12px] font-medium text-navy-600 hover:bg-white hover:text-brand-700"
         >
           Restaurar
         </button>
