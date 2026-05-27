@@ -12,9 +12,17 @@ type Props = {
   emptyMessage?: string
   emptySlot?: React.ReactNode
   hideDoneAfterDelay?: boolean
+  variant?: 'plain' | 'glass'
 }
 
-export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', emptySlot, hideDoneAfterDelay = true }: Props) {
+export function ItemList({
+  items,
+  isLoading,
+  emptyMessage = 'Nenhum item.',
+  emptySlot,
+  hideDoneAfterDelay = true,
+  variant = 'plain',
+}: Props) {
   const { selectedItemId, selectedItemIds } = useUI()
   const [recentlyDoneIds, setRecentlyDoneIds] = useState<Record<string, number>>({})
   const previousStatuses = useRef<Record<string, Item['status']>>({})
@@ -68,16 +76,23 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
 
   if (isLoading) {
     return (
-      <div className="space-y-px">
+      <div className={variant === 'glass' ? 'space-y-2' : 'space-y-px'}>
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center gap-3 border-b border-ui-border-soft px-1 py-3">
-            <div className="h-[18px] w-[18px] shrink-0 animate-pulse rounded-md bg-navy-100" />
+          <div
+            key={i}
+            className={
+              variant === 'glass'
+                ? 'flex items-center gap-3 rounded-[20px] border border-white/45 bg-white/42 px-3 py-3'
+                : 'flex items-center gap-3 border-b border-ui-border-soft px-1 py-3'
+            }
+          >
+            <div className="h-[18px] w-[18px] shrink-0 animate-pulse rounded-md bg-navy-100/80" />
             <div className="flex-1 space-y-1.5">
               <div
-                className="h-3.5 animate-pulse rounded bg-navy-100"
+                className="h-3.5 animate-pulse rounded bg-navy-100/80"
                 style={{ width: `${60 + (i * 17) % 35}%` }}
               />
-              <div className="h-2.5 w-16 animate-pulse rounded bg-navy-50" />
+              <div className="h-2.5 w-16 animate-pulse rounded bg-navy-50/80" />
             </div>
           </div>
         ))}
@@ -88,14 +103,14 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
   if (visibleItems.length === 0) {
     if (emptySlot) return <>{emptySlot}</>
     return (
-      <div className="rounded-lg border border-dashed border-ui-border-strong px-4 py-8 text-center font-mono text-sm text-navy-300">
+      <div className="rounded-[22px] border border-dashed border-white/60 bg-white/34 px-4 py-8 text-center font-mono text-sm text-navy-400">
         {emptyMessage}
       </div>
     )
   }
 
   return (
-    <div className="pt-1">
+    <div className={variant === 'glass' ? 'space-y-2' : 'pt-1'}>
       {visibleItems.map((item, index) => (
         <ItemRow
           key={item.id}
@@ -104,6 +119,7 @@ export function ItemList({ items, isLoading, emptyMessage = 'Nenhum item.', empt
           selected={selectedItemIds.includes(item.id)}
           orderedIds={visibleItemIds}
           index={index}
+          variant={variant}
         />
       ))}
     </div>

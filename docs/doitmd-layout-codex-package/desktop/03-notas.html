@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>doit.md - notas</title>
+<meta name="viewport" content="width=1440, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/logo-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Caveat:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     doit.md - notes page (bento variant)
+     Same shell as the dashboard/items bento.
+     ============================================================ */
+  :root {
+    --c-navy:    #0F2342;
+    --c-blue:    #2F6BFF;
+    --c-teal:    #28C7B7;
+    --c-violet:  #7B5BFF;
+    --c-cyan:    #1AAED7;
+    --c-pink:    #FF6FAE;
+    --c-amber:   #F5A524;
+    --c-danger:  #F04438;
+
+    --c-gray-50:  #ECF0F5;
+    --c-gray-100: #D9E1EA;
+    --c-gray-200: #B6C2D2;
+    --c-gray-500: #46587A;
+
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    --r-card: 28px;
+    --r-inner: 18px;
+    --r-pill: 999px;
+
+    --shadow-card: 0 1px 0 rgba(255,255,255,.7) inset,
+                   0 -1px 0 rgba(15,35,66,.04) inset,
+                   0 18px 40px -16px rgba(15,35,66,.18),
+                   0 4px 12px rgba(15,35,66,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-navy);
+    background: #f4f1ff;
+    overflow-x: hidden;
+  }
+
+  /* -------- wallpaper -------- */
+  .wallpaper {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(900px 700px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(800px 600px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+      radial-gradient(900px 800px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(1000px 900px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+  .wallpaper::after {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  .shell { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 28px 36px 60px; }
+
+  /* =================== nav (shared) =========================== */
+  .nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 18px; margin-bottom: 24px; }
+  .brand { display: inline-flex; align-items: center; gap: 12px; padding: 8px 16px 8px 8px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(180%); -webkit-backdrop-filter: blur(14px) saturate(180%); width: max-content; }
+  .brand-logo { width: 32px; height: 32px; border-radius: 9px; background: #F8FAFC; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(15,35,66,.08); }
+  .brand-name { font-weight: 800; font-size: 16px; letter-spacing: -.02em; }
+  .brand-name .ext { color: var(--c-blue); }
+
+  .nav-pill { display: inline-flex; align-items: center; gap: 4px; padding: 6px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(180%); -webkit-backdrop-filter: blur(14px) saturate(180%); justify-self: center; }
+  .nav-link { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; border-radius: var(--r-pill); font-size: 13px; font-weight: 500; color: var(--c-gray-500); cursor: pointer; }
+  .nav-link.active { background: #fff; color: var(--c-navy); font-weight: 600; box-shadow: 0 1px 2px rgba(15,35,66,.06), 0 4px 10px rgba(15,35,66,.06); }
+  .nav-link svg { width: 15px; height: 15px; }
+
+  .nav-right { display: flex; align-items: center; gap: 10px; justify-self: end; }
+  .search-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.6); border-radius: var(--r-pill); backdrop-filter: blur(14px) saturate(180%); -webkit-backdrop-filter: blur(14px) saturate(180%); font-family: var(--font-mono); font-size: 12px; color: var(--c-gray-500); min-width: 240px; }
+  .search-pill .kbd { margin-left: auto; padding: 1px 6px; background: rgba(255,255,255,.7); border-radius: 5px; border: 1px solid rgba(15,35,66,.08); font-size: 11px; }
+  .avatar { width: 42px; height: 42px; border-radius: 999px; background: linear-gradient(135deg, #FFB1D5, #B59BFF 60%, #28C7B7); color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; border: 2px solid rgba(255,255,255,.7); box-shadow: 0 2px 8px rgba(15,35,66,.18); }
+
+  /* =================== bento grid ============================= */
+  .bento { display: grid; grid-template-columns: repeat(12, 1fr); grid-auto-rows: 230px; gap: 18px; }
+  .card {
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: var(--r-card);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    padding: 22px 24px;
+    display: flex; flex-direction: column;
+    overflow: hidden; position: relative;
+  }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card-title { font-size: 14px; font-weight: 700; letter-spacing: -.01em; color: var(--c-navy); display: inline-flex; align-items: center; gap: 8px; text-transform: lowercase; }
+  .card-title .ext { font-family: var(--font-mono); font-weight: 600; font-size: 12px; color: var(--c-blue); }
+  .card-pill { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); background: rgba(15,35,66,.05); padding: 3px 9px; border-radius: 999px; }
+  .card-more { width: 28px; height: 28px; border-radius: 999px; background: rgba(15,35,66,.04); display: inline-flex; align-items: center; justify-content: center; color: var(--c-gray-500); cursor: pointer; }
+
+  /* ----- placement ----- */
+  .c-stats    { grid-column: span 3; grid-row: span 1; }
+  .c-editor   { grid-column: span 6; grid-row: span 1; }
+  .c-anexou   { grid-column: span 3; grid-row: span 1; }
+  .c-library  { grid-column: span 8; grid-row: span 2; }
+  .c-graph    { grid-column: span 4; grid-row: span 2; }
+  .c-books    { grid-column: span 4; grid-row: span 1; }
+  .c-garden   { grid-column: span 5; grid-row: span 1; }
+  .c-writing  { grid-column: span 3; grid-row: span 1; }
+
+  /* =================== stats (writing) ======================== */
+  .c-stats {
+    background: linear-gradient(160deg, #FFE9F4 0%, #E4DDFF 50%, #D4F4EF 100%);
+    border: 1px solid rgba(255,255,255,.7);
+  }
+  .stat-row { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+  .stat-ring { position: relative; width: 86px; height: 86px; flex-shrink: 0; }
+  .stat-ring svg { transform: rotate(-90deg); }
+  .stat-ring .pct { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; }
+  .stat-ring .pct b { font-weight: 900; font-size: 20px; letter-spacing: -.03em; line-height: 1; display: block;
+    background: linear-gradient(120deg, #7B5BFF, #2F6BFF, #28C7B7);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .stat-ring .pct small { font-family: var(--font-mono); font-size: 9px; color: var(--c-gray-500); display: block; margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat-meta { display: flex; flex-direction: column; gap: 4px; }
+  .stat-meta .big { font-weight: 900; font-size: 30px; letter-spacing: -.04em; line-height: 1; color: var(--c-navy); }
+  .stat-meta .lbl { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(15,35,66,.06); font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .stat-grid div b { font-family: var(--font-sans); font-weight: 700; font-size: 15px; display: block; margin-bottom: 2px; color: var(--c-navy); }
+
+  /* =================== editor spotlight ======================= */
+  .c-editor { position: relative; }
+  .c-editor::before {
+    content: ""; position: absolute; right: -80px; top: -80px; width: 360px; height: 360px;
+    background:
+      radial-gradient(circle at 30% 30%, rgba(123,91,255,.30), transparent 60%),
+      radial-gradient(circle at 70% 70%, rgba(40,199,183,.25), transparent 60%);
+    filter: blur(20px); border-radius: 999px; pointer-events: none;
+  }
+  .ed-path { display: flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); margin-bottom: 6px; flex-wrap: wrap; }
+  .ed-path .crumb { color: var(--c-gray-500); }
+  .ed-path .file { color: var(--c-blue); font-weight: 600; }
+  .ed-path .sep { color: rgba(15,35,66,.25); }
+  .ed-path .saved { display: inline-flex; align-items: center; gap: 5px; color: var(--c-teal); font-weight: 600; margin-left: auto; }
+  .ed-path .saved::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: var(--c-teal); box-shadow: 0 0 6px var(--c-teal); }
+
+  .ed-title { font-weight: 900; font-size: 34px; line-height: 1.05; letter-spacing: -.03em; margin: 4px 0 6px; }
+  .ed-title .grad { background: linear-gradient(120deg, #2F6BFF 0%, #7B5BFF 45%, #28C7B7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  .ed-tags { display: flex; gap: 6px; margin-bottom: 8px; }
+  .ed-tag { font-family: var(--font-mono); font-size: 11px; padding: 2px 8px; border-radius: 4px; background: rgba(47,107,255,.10); color: var(--c-blue); }
+  .ed-tag.t { background: rgba(40,199,183,.14); color: #0f8d80; }
+  .ed-tag.v { background: rgba(123,91,255,.12); color: var(--c-violet); }
+
+  .ed-body { font-size: 13px; line-height: 1.55; color: var(--c-navy); flex: 1; overflow: hidden; }
+  .ed-body p { margin: 0 0 6px; }
+  .ed-body .h2 { font-weight: 700; font-size: 14px; margin: 8px 0 4px; letter-spacing: -.01em; color: var(--c-navy); }
+  .ed-body code { font-family: var(--font-mono); font-size: 12px; background: rgba(15,35,66,.05); padding: 1px 5px; border-radius: 4px; color: var(--c-navy); }
+  .ed-body .task { display: flex; gap: 6px; align-items: center; font-family: var(--font-mono); font-size: 12px; }
+  .ed-body .task .acc { color: var(--c-teal); }
+  .ed-body .task .b { color: var(--c-blue); }
+  .ed-body .strike { color: var(--c-gray-500); text-decoration: line-through; }
+
+  .ed-foot { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .ed-foot .word { display: inline-flex; align-items: center; gap: 5px; }
+
+  /* =================== anexou shelf =========================== */
+  .pin-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .pin {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 12px;
+    background: white;
+    border: 1px solid rgba(15,35,66,.04);
+    box-shadow: 0 1px 2px rgba(15,35,66,.04);
+    cursor: pointer;
+  }
+  .pin:hover { box-shadow: 0 4px 10px rgba(15,35,66,.08); }
+  .pin-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, rgba(47,107,255,.10), rgba(40,199,183,.10));
+    border: 1px solid rgba(47,107,255,.18);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 700; font-size: 11px; color: var(--c-blue);
+    flex-shrink: 0;
+  }
+  .pin-icon.v { background: linear-gradient(135deg, rgba(123,91,255,.10), rgba(255,111,174,.10)); border-color: rgba(123,91,255,.22); color: var(--c-violet); }
+  .pin-icon.t { background: linear-gradient(135deg, rgba(40,199,183,.12), rgba(26,174,215,.12)); border-color: rgba(40,199,183,.25); color: #0f8d80; }
+  .pin-icon.p { background: linear-gradient(135deg, rgba(255,111,174,.12), rgba(245,165,36,.12)); border-color: rgba(255,111,174,.25); color: #c0297a; }
+  .pin-text { display: flex; flex-direction: column; gap: 1px; line-height: 1.3; min-width: 0; flex: 1; }
+  .pin-text .t { font-weight: 600; font-size: 13px; color: var(--c-navy); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pin-text .m { font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-500); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* =================== library grid =========================== */
+  .lib-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .lib-chip {
+    padding: 5px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    background: rgba(15,35,66,.05); color: var(--c-gray-500);
+    cursor: pointer; border: 1px solid transparent;
+  }
+  .lib-chip.active {
+    background: white; color: var(--c-navy);
+    box-shadow: 0 1px 2px rgba(15,35,66,.06), 0 4px 10px rgba(15,35,66,.06);
+    border-color: rgba(15,35,66,.04);
+  }
+  .lib-sort { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .lib-sort b { color: var(--c-navy); font-weight: 600; }
+
+  .lib-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    flex: 1; overflow: hidden;
+  }
+  .note {
+    background: white;
+    border-radius: 16px;
+    padding: 12px 14px 10px;
+    display: flex; flex-direction: column; gap: 6px;
+    border: 1px solid rgba(15,35,66,.04);
+    box-shadow: 0 1px 2px rgba(15,35,66,.04), 0 8px 18px -10px rgba(15,35,66,.15);
+    position: relative; overflow: hidden;
+    cursor: pointer;
+  }
+  .note::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: var(--accent, var(--c-blue));
+  }
+  .note.violet { --accent: var(--c-violet); }
+  .note.teal   { --accent: var(--c-teal); }
+  .note.pink   { --accent: var(--c-pink); }
+  .note.amber  { --accent: var(--c-amber); }
+  .note.cyan   { --accent: var(--c-cyan); }
+  .note-meta { display: flex; align-items: center; gap: 6px; }
+  .note-file { font-family: var(--font-mono); font-size: 10px; color: var(--c-blue); font-weight: 600; }
+  .note-meta .star { margin-left: auto; color: var(--c-amber); font-size: 12px; }
+  .note-title { font-weight: 700; font-size: 14px; letter-spacing: -.01em; color: var(--c-navy); line-height: 1.2; }
+  .note-snip { font-size: 11.5px; line-height: 1.45; color: var(--c-gray-500); flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+  .note-foot { display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+  .note-foot .tag { font-family: var(--font-mono); font-size: 9px; padding: 1px 4px; border-radius: 3px; background: rgba(15,35,66,.05); color: var(--c-gray-500); }
+  .note-foot .when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-200); }
+
+  /* =================== knowledge graph ======================== */
+  .c-graph { background: linear-gradient(180deg, #0B1733 0%, #0F2342 60%, #122A55 100%); color: white; border: 1.5px solid transparent; }
+  .c-graph::before { content: ""; position: absolute; inset: -1.5px; border-radius: var(--r-card); background: linear-gradient(135deg, #2F6BFF, #7B5BFF 45%, #28C7B7); z-index: -1; }
+  .c-graph::after { content: ""; position: absolute; inset: 0; border-radius: var(--r-card); box-shadow: 0 0 80px 4px rgba(123,91,255,.30), 0 0 80px 4px rgba(47,107,255,.20); pointer-events: none; }
+  .c-graph .card-title { color: white; }
+  .c-graph .card-more, .c-graph .card-pill { background: rgba(255,255,255,.10); color: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,.14); }
+
+  .graph {
+    flex: 1; position: relative;
+    margin: 4px -8px 8px;
+  }
+  .graph svg { width: 100%; height: 100%; display: block; }
+  .graph-node {
+    position: absolute;
+    background: white;
+    color: var(--c-navy);
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-family: var(--font-mono); font-size: 10px;
+    font-weight: 600;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 4px 12px rgba(15,35,66,.4);
+    border: 1.5px solid white;
+    white-space: nowrap;
+  }
+  .graph-node.center {
+    background: linear-gradient(135deg, #2F6BFF, #28C7B7);
+    color: white;
+    font-size: 11px;
+    padding: 7px 12px;
+    box-shadow: 0 0 16px rgba(40,199,183,.6), 0 4px 14px rgba(47,107,255,.5);
+    border-color: white;
+  }
+  .graph-node.violet { background: linear-gradient(135deg, #B59BFF, #7B5BFF); color: white; border-color: rgba(255,255,255,.4); }
+  .graph-node.teal { background: linear-gradient(135deg, #5BE3D4, #28C7B7); color: var(--c-navy); }
+  .graph-node.pink { background: linear-gradient(135deg, #FFB1D5, #FF6FAE); color: white; }
+
+  .graph-legend { display: flex; gap: 10px; font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,.7); }
+  .graph-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .graph-legend span::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+  /* =================== notebooks ============================== */
+  .nb-list { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .nb {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px;
+    background: white;
+    border-radius: 12px;
+    border: 1px solid rgba(15,35,66,.04);
+    box-shadow: 0 1px 2px rgba(15,35,66,.04);
+    cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .nb::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--c, var(--c-blue));
+  }
+  .nb-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: color-mix(in srgb, var(--c) 12%, white);
+    color: var(--c);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .nb-icon svg { width: 16px; height: 16px; }
+  .nb-text { flex: 1; min-width: 0; }
+  .nb-text .name { font-weight: 600; font-size: 13px; color: var(--c-navy); }
+  .nb-text .desc { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .nb-count { font-family: var(--font-mono); font-weight: 700; font-size: 16px; color: var(--c); letter-spacing: -.02em; }
+
+  /* =================== mini markdown garden =================== */
+  .mg-canvas {
+    position: relative; flex: 1; margin-top: 4px;
+    background:
+      radial-gradient(circle at 25% 30%, rgba(255,209,235,.55), transparent 60%),
+      radial-gradient(circle at 75% 30%, rgba(255,222,179,.45), transparent 60%),
+      radial-gradient(circle at 50% 90%, rgba(202,232,255,.55), transparent 60%),
+      linear-gradient(135deg, #FFF6F1, #F1ECFF);
+    border-radius: 18px; overflow: hidden; border: 1px solid rgba(15,35,66,.05);
+  }
+  .sticky {
+    position: absolute; padding: 9px 11px; background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 8px 16px -8px rgba(15,35,66,.20), 0 2px 4px rgba(15,35,66,.06);
+    font-size: 11px; line-height: 1.35; color: var(--c-navy);
+    transform-origin: top center;
+  }
+  .sticky .ext { font-family: var(--font-mono); font-size: 9px; color: var(--c-blue); display: block; margin-bottom: 2px; }
+  .sticky .t { font-weight: 700; font-size: 12px; letter-spacing: -.01em; line-height: 1.2; }
+  .sticky.pin::before { content: ""; position: absolute; top: -5px; left: 50%; transform: translateX(-50%); width: 9px; height: 9px; border-radius: 999px; background: radial-gradient(circle at 30% 30%, #FF6FAE, #C0297A); box-shadow: 0 2px 3px rgba(192,41,122,.4); }
+  .sticky.pin.teal::before { background: radial-gradient(circle at 30% 30%, #5BE3D4, #18948A); }
+  .sticky.pin.violet::before { background: radial-gradient(circle at 30% 30%, #B59BFF, #5A37D9); }
+
+  .sticky.s1 { left: 4%;  top: 22%; width: 130px; transform: rotate(-5deg); background: #FFF8C9; }
+  .sticky.s2 { left: 32%; top: 12%; width: 138px; transform: rotate(3deg); }
+  .sticky.s3 { left: 62%; top: 26%; width: 130px; transform: rotate(-2deg); background: #D8F5EF; }
+  .sticky.s4 { left: 20%; top: 60%; width: 124px; transform: rotate(4deg); background: #FFEBF4; }
+  .sticky.s5 { left: 56%; top: 64%; width: 132px; transform: rotate(-3deg); }
+  .scrib { position: absolute; color: rgba(15,35,66,.30); font-family: 'Caveat', cursive; font-size: 16px; pointer-events: none; }
+
+  /* =================== writing streak ========================= */
+  .c-writing {
+    background: linear-gradient(160deg, #2F6BFF 0%, #4F4BE9 50%, #28C7B7 100%);
+    color: white;
+    border: 1px solid rgba(255,255,255,.4);
+  }
+  .c-writing .card-title { color: white; }
+  .c-writing .card-pill { background: rgba(255,255,255,.18); color: white; }
+  .write-big { font-weight: 900; font-size: 48px; letter-spacing: -.04em; line-height: 1; margin: 4px 0 2px; text-shadow: 0 2px 12px rgba(15,35,66,.25); }
+  .write-cap { font-family: var(--font-mono); font-size: 11px; opacity: .85; }
+  .write-bars { margin-top: auto; display: flex; gap: 3px; align-items: flex-end; height: 38px; }
+  .write-bars span { flex: 1; background: rgba(255,255,255,.30); border-radius: 2px; }
+  .write-bars span.on { background: rgba(255,255,255,.85); }
+  .write-bars span.today { background: white; box-shadow: 0 0 10px rgba(255,255,255,.9), 0 -4px 12px rgba(255,255,255,.6); }
+</style>
+</head>
+<body>
+
+<div class="wallpaper" aria-hidden="true"></div>
+
+<div class="shell">
+
+  <!-- ============== NAV ============== -->
+  <header class="nav">
+    <div class="brand">
+      <span class="brand-logo">
+        <svg width="22" height="22" viewBox="160 96 532 532" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="bnLogo" x1="190" y1="120" x2="660" y2="610" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#115AF5"/><stop offset=".5" stop-color="#0984E6"/><stop offset="1" stop-color="#39D0B9"/></linearGradient></defs>
+          <path d="M 423 120 A 242 242 0 1 0 668 371" fill="none" stroke="url(#bnLogo)" stroke-width="58" stroke-linecap="round"/>
+          <circle cx="489" cy="127" r="20" fill="#1267F7"/><circle cx="547" cy="153" r="20" fill="#0984E6"/><circle cx="598" cy="190" r="20" fill="#08AAC7"/><circle cx="636" cy="243" r="20" fill="#0DB7C6"/><circle cx="660" cy="300" r="20" fill="#04A9D4"/>
+          <path d="M 357 374 L 407 421 L 526 307" fill="none" stroke="#0F2342" stroke-width="52" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">doit<span class="ext">.md</span></span>
+    </div>
+
+    <nav class="nav-pill">
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+        Hoje
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+        Itens
+      </a>
+      <a class="nav-link active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        Notas
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="4"/><path d="M17 11a3 3 0 1 0 0-6"/><path d="M3 21v-1a6 6 0 0 1 12 0v1"/><path d="M21 21v-1a6 6 0 0 0-5-5.92"/></svg>
+        Pastas
+      </a>
+      <a class="nav-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Ajustes
+      </a>
+    </nav>
+
+    <div class="nav-right">
+      <div class="search-pill">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <span>Search notes, links, tags…</span>
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="avatar">LF</div>
+    </div>
+  </header>
+
+  <!-- ============== BENTO GRID ============== -->
+  <section class="bento">
+
+    <!-- ====== WRITING STATS ====== -->
+    <article class="card c-stats">
+      <div class="card-head">
+        <div class="card-title">escrita</div>
+        <span class="card-pill">esta semana</span>
+      </div>
+      <div class="stat-row">
+        <div class="stat-ring">
+          <svg width="86" height="86" viewBox="0 0 86 86">
+            <defs>
+              <linearGradient id="wg" x1="0" y1="0" x2="86" y2="86">
+                <stop offset="0" stop-color="#7B5BFF"/>
+                <stop offset=".5" stop-color="#2F6BFF"/>
+                <stop offset="1" stop-color="#28C7B7"/>
+              </linearGradient>
+            </defs>
+            <circle cx="43" cy="43" r="36" fill="none" stroke="rgba(15,35,66,.12)" stroke-width="7"/>
+            <circle cx="43" cy="43" r="36" fill="none" stroke="url(#wg)" stroke-width="7" stroke-linecap="round"
+              stroke-dasharray="226.2" stroke-dashoffset="79" />
+          </svg>
+          <div class="pct"><b>65%</b><small>goal</small></div>
+        </div>
+        <div class="stat-meta">
+          <div class="big">3.2k</div>
+          <div class="lbl">words written</div>
+        </div>
+      </div>
+      <div class="stat-grid">
+        <div><b>24</b>notes</div>
+        <div><b>6</b>edited today</div>
+      </div>
+    </article>
+
+    <!-- ====== EDITOR SPOTLIGHT ====== -->
+    <article class="card c-editor">
+      <div class="card-head">
+        <div class="card-title">editando agora</div>
+        <div class="card-more">···</div>
+      </div>
+      <div class="ed-path">
+        <span class="crumb">sam</span>
+        <span class="sep">/</span>
+        <span class="crumb">work</span>
+        <span class="sep">/</span>
+        <span class="file">M↓ hoje.md</span>
+        <span class="saved">saved · 12s ago</span>
+      </div>
+      <h2 class="ed-title">ship <span class="grad">v0.4</span> · the markdown release</h2>
+      <div class="ed-tags">
+        <span class="ed-tag">#baixo-risco</span>
+        <span class="ed-tag t">#docs</span>
+        <span class="ed-tag v">#changelog</span>
+      </div>
+      <div class="ed-body">
+        <p>The v0.4 release adds <code>inline checkboxes</code>, a command palette, and a faster sync layer. This note tracks the remaining work and links back to <code>eventos.md</code>.</p>
+        <div class="h2">## goals</div>
+        <div class="task"><span class="acc">- [x]</span><span class="strike">Stabilize sync round-trip &lt; 200ms</span></div>
+        <div class="task"><span class="acc">- [x]</span><span class="strike">Inline checkbox shortcuts</span></div>
+        <div class="task"><span class="b">- [ ]</span> Command palette covers 90% of actions</div>
+      </div>
+      <div class="ed-foot">
+        <span class="word">412 words</span>
+        <span>·</span>
+        <span>3 min read</span>
+        <span>·</span>
+        <span>edited 12s ago</span>
+      </div>
+    </article>
+
+    <!-- ====== PINNED ====== -->
+    <article class="card c-anexou">
+      <div class="card-head">
+        <div class="card-title">anexou</div>
+        <span class="card-pill">4</span>
+      </div>
+      <div class="pin-list">
+        <div class="pin">
+          <div class="pin-icon">M↓</div>
+          <div class="pin-text">
+            <div class="t">Ship v0.4</div>
+            <div class="m">hoje.md · 12s</div>
+          </div>
+        </div>
+        <div class="pin">
+          <div class="pin-icon v">M↓</div>
+          <div class="pin-text">
+            <div class="t">Q3 plan</div>
+            <div class="m">eventos.md · 1h</div>
+          </div>
+        </div>
+        <div class="pin">
+          <div class="pin-icon t">M↓</div>
+          <div class="pin-text">
+            <div class="t">Spark file · ideas</div>
+            <div class="m">ideas.md · 3d</div>
+          </div>
+        </div>
+        <div class="pin">
+          <div class="pin-icon p">M↓</div>
+          <div class="pin-text">
+            <div class="t">Reading list</div>
+            <div class="m">reading.md · 2d</div>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ====== LIBRARY GRID ====== -->
+    <article class="card c-library">
+      <div class="card-head">
+        <div class="card-title">biblioteca</div>
+        <span class="card-pill">24 notes</span>
+      </div>
+      <div class="lib-toolbar">
+        <span class="lib-chip active">all</span>
+        <span class="lib-chip">work</span>
+        <span class="lib-chip">personal</span>
+        <span class="lib-chip">reading-list</span>
+        <span class="lib-chip">drafts</span>
+        <span class="lib-sort">sort · <b>edited</b></span>
+      </div>
+      <div class="lib-grid">
+
+        <div class="note">
+          <div class="note-meta">
+            <span class="note-file">M↓ hoje.md</span>
+            <span class="star">★</span>
+          </div>
+          <div class="note-title">Ship v0.4</div>
+          <div class="note-snip">The v0.4 release adds inline checkboxes, a command palette, and a faster sync layer. Tracks the remaining work…</div>
+          <div class="note-foot">
+            <span class="tag">#baixo-risco</span>
+            <span class="tag">#docs</span>
+            <span class="when">12s</span>
+          </div>
+        </div>
+
+        <div class="note violet">
+          <div class="note-meta"><span class="note-file" style="color:#7B5BFF">M↓ eventos.md</span></div>
+          <div class="note-title">Q3 plan</div>
+          <div class="note-snip">Targets, owners, and the one risk we're willing to accept this quarter. Three bets, ranked.</div>
+          <div class="note-foot">
+            <span class="tag">#planning</span>
+            <span class="when">1h</span>
+          </div>
+        </div>
+
+        <div class="note teal">
+          <div class="note-meta"><span class="note-file" style="color:#0f8d80">M↓ agenda-notes.md</span></div>
+          <div class="note-title">Pastas sync · may 26</div>
+          <div class="note-snip">Itens capturados. Revisão movida para quintarsday.</div>
+          <div class="note-foot">
+            <span class="tag">#meeting</span>
+            <span class="when">2h</span>
+          </div>
+        </div>
+
+        <div class="note pink">
+          <div class="note-meta"><span class="note-file" style="color:#c0297a">M↓ ideas.md</span><span class="star">★</span></div>
+          <div class="note-title">Spark file</div>
+          <div class="note-snip">A running log of small ideas. Some grow into folders, most are deleted, all are welcomed.</div>
+          <div class="note-foot">
+            <span class="tag">#idea</span>
+            <span class="when">yesterday</span>
+          </div>
+        </div>
+
+        <div class="note amber">
+          <div class="note-meta"><span class="note-file" style="color:#b56b00">M↓ reading.md</span></div>
+          <div class="note-title">Reading list - design systems</div>
+          <div class="note-snip">Books, posts, and talks on building & maintaining design systems. Filter by status.</div>
+          <div class="note-foot">
+            <span class="tag">#reading</span>
+            <span class="when">2d</span>
+          </div>
+        </div>
+
+        <div class="note cyan">
+          <div class="note-meta"><span class="note-file" style="color:#0a7da0">M↓ arch.md</span></div>
+          <div class="note-title">Architecture · sync engine</div>
+          <div class="note-snip">CRDT layer, conflict resolution rules, and the offline-first edit queue. Diagrams below.</div>
+          <div class="note-foot">
+            <span class="tag">#arch</span>
+            <span class="when">4d</span>
+          </div>
+        </div>
+
+      </div>
+    </article>
+
+    <!-- ====== KNOWLEDGE GRAPH ====== -->
+    <article class="card c-graph">
+      <div class="card-head">
+        <div class="card-title">links</div>
+        <span class="card-pill">8 backlinks</span>
+      </div>
+      <div class="graph">
+        <svg viewBox="0 0 380 320" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <linearGradient id="edge" x1="0" y1="0" x2="380" y2="320">
+              <stop offset="0" stop-color="#2F6BFF" stop-opacity=".5"/>
+              <stop offset="1" stop-color="#28C7B7" stop-opacity=".5"/>
+            </linearGradient>
+          </defs>
+          <!-- edges from center node out -->
+          <path d="M 190 160 Q 110 100 60 80"  stroke="url(#edge)" stroke-width="1.5" fill="none" />
+          <path d="M 190 160 Q 290 80 330 60"  stroke="url(#edge)" stroke-width="1.5" fill="none" />
+          <path d="M 190 160 Q 110 220 50 250" stroke="url(#edge)" stroke-width="1.5" fill="none" />
+          <path d="M 190 160 Q 290 240 340 270" stroke="url(#edge)" stroke-width="1.5" fill="none" />
+          <path d="M 190 160 Q 250 80 230 30"   stroke="url(#edge)" stroke-width="1.5" fill="none" />
+          <path d="M 190 160 Q 130 240 150 290" stroke="url(#edge)" stroke-width="1.5" fill="none" />
+          <!-- secondary edges -->
+          <path d="M 60 80  Q 90 50 230 30"    stroke="rgba(255,255,255,.15)" stroke-width="1" fill="none" />
+          <path d="M 330 60 Q 340 160 340 270" stroke="rgba(255,255,255,.15)" stroke-width="1" fill="none" />
+        </svg>
+        <div class="graph-node center"   style="left:50%; top:50%;">hoje.md</div>
+        <div class="graph-node violet"   style="left:16%; top:25%;">eventos.md</div>
+        <div class="graph-node teal"     style="left:87%; top:19%;">arch.md</div>
+        <div class="graph-node"          style="left:13%; top:78%;">meeting-notes.md</div>
+        <div class="graph-node pink"     style="left:89%; top:84%;">changelog.md</div>
+        <div class="graph-node"          style="left:60%; top:10%;">ideas.md</div>
+        <div class="graph-node teal"     style="left:40%; top:91%;">reading.md</div>
+      </div>
+      <div class="graph-legend">
+        <span style="color:#79A6FF">linked</span>
+        <span style="color:#5BE3D4">backlinks</span>
+        <span style="color:#B59BFF">tag-cluster</span>
+      </div>
+    </article>
+
+    <!-- ====== NOTEBOOKS ====== -->
+    <article class="card c-books">
+      <div class="card-head">
+        <div class="card-title">pastas</div>
+        <span class="card-pill">5 folders</span>
+      </div>
+      <div class="nb-list">
+        <div class="nb" style="--c: #2F6BFF">
+          <div class="nb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="nb-text"><div class="name">work</div><div class="desc">release · planning · arch</div></div>
+          <div class="nb-count">12</div>
+        </div>
+        <div class="nb" style="--c: #7B5BFF">
+          <div class="nb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="nb-text"><div class="name">personal</div><div class="desc">journal · ideas · sparks</div></div>
+          <div class="nb-count">8</div>
+        </div>
+        <div class="nb" style="--c: #28C7B7">
+          <div class="nb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="nb-text"><div class="name">reading-list</div><div class="desc">books · talks · posts</div></div>
+          <div class="nb-count">3</div>
+        </div>
+        <div class="nb" style="--c: #F5A524">
+          <div class="nb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+          <div class="nb-text"><div class="name">drafts</div><div class="desc">unfiled · half-written</div></div>
+          <div class="nb-count">1</div>
+        </div>
+      </div>
+    </article>
+
+    <!-- ====== MARKDOWN GARDEN MINI ====== -->
+    <article class="card c-garden">
+      <div class="card-head">
+        <div class="card-title">jardim</div>
+        <span class="card-pill">stickies · 5</span>
+      </div>
+      <div class="mg-canvas">
+        <div class="sticky s1 pin">
+          <span class="ext">M↓ creative.md</span>
+          <div class="t">creative brainstorm</div>
+        </div>
+        <div class="sticky s2 pin teal">
+          <span class="ext">M↓ pastas/conteudo.md</span>
+          <div class="t">Q4 - keep it simple</div>
+        </div>
+        <div class="sticky s3 pin violet">
+          <span class="ext">M↓ agenda-sync.md</span>
+          <div class="t">pastas sync notes</div>
+        </div>
+        <div class="sticky s4 pin teal">
+          <span class="ext">M↓ ideas.md</span>
+          <div class="t">arquivo de ideias</div>
+        </div>
+        <div class="sticky s5 pin">
+          <span class="ext">M↓ reading.md</span>
+          <div class="t">to read</div>
+        </div>
+        <span class="scrib" style="left:50%; top:5%;">✦</span>
+        <span class="scrib" style="left:88%; top:60%;">↗</span>
+        <span class="scrib" style="left:8%;  top:88%;">~∿</span>
+      </div>
+    </article>
+
+    <!-- ====== WRITING STREAK ====== -->
+    <article class="card c-writing">
+      <div class="card-head">
+        <div class="card-title">ritmo de escrita</div>
+        <span class="card-pill">12 days</span>
+      </div>
+      <div class="write-big">12d</div>
+      <div class="write-cap">words written every day · best 28d</div>
+      <div class="write-bars">
+        <span class="on" style="height: 30%"></span>
+        <span class="on" style="height: 50%"></span>
+        <span class="on" style="height: 65%"></span>
+        <span class="on" style="height: 40%"></span>
+        <span class="on" style="height: 70%"></span>
+        <span class="on" style="height: 55%"></span>
+        <span class="on" style="height: 80%"></span>
+        <span class="on" style="height: 60%"></span>
+        <span class="on" style="height: 85%"></span>
+        <span class="on" style="height: 75%"></span>
+        <span class="on" style="height: 90%"></span>
+        <span class="on" style="height: 95%"></span>
+        <span class="today" style="height: 100%"></span>
+        <span style="height: 35%"></span>
+      </div>
+    </article>
+
+  </section>
+</div>
+
+</body>
+</html>

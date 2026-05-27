@@ -7,6 +7,7 @@ import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
 import { ItemList } from '@/components/items/item-list'
 import { EventSheet } from '@/components/calendar/calendar-board'
+import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 import { isLooseInboxItem, sortTodayWithInboxBelow } from '@/lib/item-order'
 import { isToday, isOverdue, toLocalDateKey } from '@doit/core'
 import { useToast } from '@/components/ui/toast'
@@ -32,26 +33,24 @@ function EventCard({
     <button
       type="button"
       onClick={onClick}
-      className={`group flex min-h-8 w-full items-center gap-2 border-b border-ui-border-soft py-1 text-left transition-colors hover:bg-surface-soft/70 ${
-        isPast ? 'opacity-45 grayscale' : ''
+      className={`group flex min-h-14 w-full items-center gap-3 rounded-[18px] border border-white/45 bg-white/45 px-3 py-2 text-left shadow-cool-sm transition-colors hover:bg-white/72 ${
+        isPast ? 'opacity-50 grayscale' : ''
       }`}
     >
-      <div className={`h-5 w-1 shrink-0 rounded-full ${isPast ? 'bg-navy-200' : 'bg-brand-500'}`} />
-      <div className="w-12 shrink-0">
+      <div className={`h-8 w-1 shrink-0 rounded-full ${isPast ? 'bg-navy-200' : 'bg-brand-500'}`} />
+      <div className="w-14 shrink-0">
         <span className="font-mono text-[10px] font-semibold text-navy-500">
           {event.allDay ? 'Dia todo' : fmt(event.start)}
         </span>
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium text-navy-900">{event.title}</p>
+        <p className="truncate text-[13px] font-semibold text-navy-900">{event.title}</p>
         {dayLabel ? (
-          <span className="block truncate font-mono text-[10px] font-semibold uppercase tracking-wide text-navy-300">
+          <span className="block truncate font-mono text-[10px] font-semibold uppercase tracking-wide text-navy-400">
             {dayLabel}
           </span>
         ) : null}
-        {!event.allDay && (
-          <span className="sr-only">Termina as {fmt(event.end)}</span>
-        )}
+        {!event.allDay && <span className="sr-only">Termina as {fmt(event.end)}</span>}
       </div>
     </button>
   )
@@ -139,13 +138,43 @@ export default function TodayPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[760px] px-5 pb-24 pt-3 lg:pb-4">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-28 pt-4 sm:px-6 lg:pb-8">
+      <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-700">
+            Foco do dia
+          </p>
+          <h1 className="mt-1 text-4xl font-black leading-none tracking-normal text-navy-950">
+            Hoje
+          </h1>
+          <p className="mt-2 max-w-xl text-sm text-navy-600">
+            Tarefas vencidas, itens de hoje e eventos aparecem no mesmo painel de trabalho.
+          </p>
+        </div>
+        {overdueItems.length > 0 ? (
+          <button
+            type="button"
+            onClick={handleRescheduleOverdue}
+            disabled={rescheduling}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-amber-200 bg-amber-50/86 px-4 text-[13px] font-bold text-amber-800 shadow-cool-sm transition-colors hover:bg-amber-100 disabled:opacity-50"
+          >
+            {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
+          </button>
+        ) : null}
+      </div>
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <MetricCard label="Itens" value={isLoading ? '...' : todayItems.length} detail="na lista de hoje" />
+        <MetricCard label="Atrasados" value={overdueItems.length} detail="pendentes" />
+        <MetricCard label="Eventos" value={todayEvents.length} detail="agenda visivel" />
+      </div>
+
       {todayEvents.length > 0 && (
-        <section className="mb-3 rounded-lg border border-ui-border bg-white px-3 py-2 shadow-cool-sm">
-          <h2 className="mb-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Eventos / {todayEvents.length}
-          </h2>
-          <div>
+        <GlassCard className="mb-4 p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <CardTitle>Eventos / {todayEvents.length}</CardTitle>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
             {todayEvents.map((e) => (
               <EventCard
                 key={e.id}
@@ -156,7 +185,7 @@ export default function TodayPage() {
               />
             ))}
           </div>
-        </section>
+        </GlassCard>
       )}
       {openEvent ? (
         <EventSheet
@@ -167,44 +196,31 @@ export default function TodayPage() {
         />
       ) : null}
 
-      <section className="mb-4">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <h2 className="font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-            Itens{isLoading ? '' : ` / ${todayItems.length}`}
-          </h2>
-          <div className="flex items-center gap-2">
-            {overdueItems.length > 0 && (
-              <button
-                type="button"
-                onClick={handleRescheduleOverdue}
-                disabled={rescheduling}
-                className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition-colors hover:bg-amber-100 disabled:opacity-50"
-              >
-                {rescheduling ? 'Reagendando...' : `Reagendar atrasadas (${overdueItems.length})`}
-              </button>
-            )}
-          </div>
+      <GlassCard className="p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <CardTitle>Itens{isLoading ? '' : ` / ${todayItems.length}`}</CardTitle>
         </div>
         <ItemList
           items={todayItems}
           isLoading={isLoading}
+          variant="glass"
           emptySlot={
-            <div className="rounded-xl border border-dashed border-ui-border-strong bg-white px-5 py-10 text-center">
-              <p className="text-[15px] font-semibold text-navy-900">Nada para hoje</p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-navy-500">
-                Tarefas com vencimento para hoje e atrasadas aparecerão aqui.
+            <div className="rounded-[22px] border border-dashed border-white/70 bg-white/38 px-5 py-10 text-center">
+              <p className="text-[15px] font-bold text-navy-900">Nada para hoje</p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-navy-600">
+                Tarefas com vencimento para hoje e atrasadas aparecerao aqui.
               </p>
               <button
                 type="button"
                 onClick={() => window.dispatchEvent(new Event('doit:focus-search'))}
-                className="mt-4 rounded-lg border border-ui-border bg-surface-soft px-3 py-2 text-[13px] font-semibold text-navy-700 hover:bg-white"
+                className="mt-4 rounded-full border border-white/65 bg-white/58 px-4 py-2 text-[13px] font-bold text-navy-700 shadow-cool-sm hover:bg-white"
               >
                 Buscar itens
               </button>
             </div>
           }
         />
-      </section>
+      </GlassCard>
     </div>
   )
 }

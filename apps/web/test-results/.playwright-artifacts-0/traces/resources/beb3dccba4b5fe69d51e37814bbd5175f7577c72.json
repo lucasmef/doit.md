@@ -1,0 +1,1 @@
+{"credentials":{"id":"credentials","name":"Email e senha","type":"credentials","signinUrl":"http://127.0.0.1:3100/api/auth/signin/credentials","callbackUrl":"http://127.0.0.1:3100/api/auth/callback/credentials"}}

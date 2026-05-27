@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>doit.md - notas mobile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/logo-icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     doit.md - notas mobile
+     ============================================================ */
+  :root {
+    --c-navy: #0F2342; --c-blue: #2F6BFF; --c-teal: #28C7B7;
+    --c-violet: #7B5BFF; --c-cyan: #1AAED7; --c-pink: #FF6FAE;
+    --c-amber: #F5A524; --c-danger: #F04438;
+    --c-gray-50: #ECF0F5; --c-gray-100: #D9E1EA; --c-gray-200: #B6C2D2; --c-gray-500: #46587A;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --r-card: 22px;
+    --shadow-card: 0 1px 0 rgba(255,255,255,.7) inset, 0 -1px 0 rgba(15,35,66,.04) inset,
+                   0 14px 32px -14px rgba(15,35,66,.18), 0 3px 10px rgba(15,35,66,.06);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100vh; }
+  body {
+    font-family: var(--font-sans); color: var(--c-navy);
+    background:
+      radial-gradient(800px 600px at 20% 20%, rgba(123,91,255,.18), transparent 60%),
+      radial-gradient(800px 600px at 80% 80%, rgba(40,199,183,.18), transparent 60%),
+      linear-gradient(135deg, #ECEAFF 0%, #F4F1FF 50%, #ECF5F2 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 40px 16px; min-height: 100vh;
+  }
+
+  .label { margin-bottom: 22px; display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--c-gray-500); }
+  .label .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--c-teal); box-shadow: 0 0 6px var(--c-teal); }
+
+  .phone {
+    width: 412px; height: 858px; background: #0a0a0a; border-radius: 56px; padding: 12px;
+    position: relative;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.06) inset, 0 0 0 6px #1a1a1a,
+                0 50px 100px -30px rgba(15,35,66,.45), 0 20px 40px -10px rgba(15,35,66,.25);
+  }
+  .screen { width: 100%; height: 100%; border-radius: 44px; overflow: hidden; background: white; position: relative; }
+  .island { position: absolute; top: 11px; left: 50%; transform: translateX(-50%); width: 120px; height: 36px; background: #000; border-radius: 999px; z-index: 50; }
+
+  .wallpaper {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(600px 500px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(500px 400px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+      radial-gradient(600px 500px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(700px 600px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+  .wallpaper::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: linear-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(255,255,255,.10) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  .statusbar {
+    position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 32px 0;
+    font-family: -apple-system, "SF Pro", system-ui;
+    font-weight: 600; font-size: 15px; color: var(--c-navy);
+  }
+  .statusbar .right { display: flex; align-items: center; gap: 6px; }
+
+  .app { position: absolute; inset: 0; overflow: auto; padding-top: 56px; padding-bottom: 110px; z-index: 5; }
+
+  /* ---- header ---- */
+  .header {
+    padding: 14px 18px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header .h-text { flex: 1; }
+  .header .hi { font-family: var(--font-mono); font-size: 11px; color: var(--c-gray-500); }
+  .header .name {
+    font-weight: 800; font-size: 28px; letter-spacing: -.02em; line-height: 1.1; color: var(--c-navy);
+  }
+  .header .name .grad {
+    background: linear-gradient(120deg, #2F6BFF, #7B5BFF 60%, #28C7B7);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .header .btn-i {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: rgba(255,255,255,.70); border: 1px solid rgba(255,255,255,.7);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--c-navy); cursor: pointer;
+  }
+  .header .btn-i svg { width: 17px; height: 17px; }
+  .header .new {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, #2F6BFF, #28C7B7);
+    color: white;
+    display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(47,107,255,.35);
+    border: none; cursor: pointer;
+  }
+  .header .new svg { width: 17px; height: 17px; }
+
+  /* ---- search bar ---- */
+  .search {
+    margin: 0 14px 14px;
+    display: flex; align-items: center; gap: 9px;
+    padding: 11px 14px;
+    background: rgba(255,255,255,.65);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--c-gray-500);
+  }
+  .search svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .search .grow { flex: 1; }
+  .search .kbd { font-size: 10px; padding: 1px 5px; background: white; border: 1px solid rgba(15,35,66,.08); border-radius: 4px; }
+
+  /* ---- folders (horizontal scroll chips) ---- */
+  .folders-scroll {
+    margin: 0 0 16px;
+    padding: 4px 14px 8px;
+    display: flex; gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .folders-scroll::-webkit-scrollbar { display: none; }
+  .folder-chip {
+    flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px;
+    background: rgba(255,255,255,.70);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 999px;
+    backdrop-filter: blur(14px);
+    font-size: 13px; font-weight: 600;
+    color: var(--c-navy);
+    cursor: pointer;
+  }
+  .folder-chip .dot { width: 7px; height: 7px; border-radius: 999px; }
+  .folder-chip .ct {
+    font-family: var(--font-mono); font-size: 10px;
+    background: rgba(15,35,66,.06);
+    padding: 1px 6px; border-radius: 999px;
+    color: var(--c-gray-500); font-weight: 600;
+  }
+  .folder-chip.active {
+    background: linear-gradient(135deg, rgba(47,107,255,.10), rgba(40,199,183,.10));
+    border-color: rgba(47,107,255,.25);
+    color: var(--c-blue);
+    box-shadow: inset 0 0 0 1px rgba(47,107,255,.18), 0 4px 12px rgba(47,107,255,.10);
+  }
+  .folder-chip.active .ct {
+    background: linear-gradient(135deg, #2F6BFF, #28C7B7);
+    color: white;
+  }
+
+  /* ---- section header ---- */
+  .section-h {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 0 22px 8px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--c-gray-500); font-weight: 700;
+    text-transform: uppercase; letter-spacing: .04em;
+  }
+  .section-h .count { margin-left: auto; }
+  .section-h .ext { color: var(--c-blue); font-weight: 700; }
+
+  /* ---- pinned (horizontal scroll cards) ---- */
+  .pinned-scroll {
+    display: flex; gap: 10px;
+    padding: 4px 14px 8px;
+    margin-bottom: 18px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pinned-scroll::-webkit-scrollbar { display: none; }
+  .pin-card {
+    flex-shrink: 0;
+    width: 180px;
+    background: white;
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 1px 2px rgba(15,35,66,.04), 0 8px 20px -10px rgba(15,35,66,.15);
+    border: 1px solid rgba(15,35,66,.04);
+    position: relative; overflow: hidden;
+  }
+  .pin-card::before {
+    content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: var(--accent, var(--c-blue));
+  }
+  .pin-card.violet { --accent: var(--c-violet); }
+  .pin-card.teal { --accent: var(--c-teal); }
+  .pin-card.pink { --accent: var(--c-pink); }
+  .pin-file { font-family: var(--font-mono); font-size: 10px; color: var(--c-blue); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .pin-card.violet .pin-file { color: var(--c-violet); }
+  .pin-card.teal .pin-file { color: #0f8d80; }
+  .pin-card.pink .pin-file { color: #c0297a; }
+  .pin-file .star { margin-left: auto; color: var(--c-amber); font-size: 11px; }
+  .pin-t { font-weight: 700; font-size: 14px; letter-spacing: -.01em; color: var(--c-navy); line-height: 1.2; margin-top: 6px; }
+  .pin-snip {
+    font-size: 11.5px; line-height: 1.4; color: var(--c-gray-500);
+    margin-top: 6px; overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .pin-foot { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-500); }
+  .pin-foot .when { margin-left: auto; }
+
+  /* ---- list of notes (vertical) ---- */
+  .list { padding: 0 14px; display: flex; flex-direction: column; gap: 10px; }
+  .row {
+    background: rgba(255,255,255,.85);
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 16px;
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: relative;
+    cursor: pointer;
+  }
+  .row::before {
+    content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px;
+    background: var(--accent, var(--c-blue));
+    border-radius: 0 2px 2px 0;
+  }
+  .row.violet { --accent: var(--c-violet); }
+  .row.teal { --accent: var(--c-teal); }
+  .row.pink { --accent: var(--c-pink); }
+  .row.amber { --accent: var(--c-amber); }
+  .row.cyan { --accent: var(--c-cyan); }
+  .row-top { display: flex; align-items: center; gap: 6px; }
+  .row-file {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--c-blue); font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .row.violet .row-file { color: var(--c-violet); }
+  .row.teal .row-file { color: #0f8d80; }
+  .row.pink .row-file { color: #c0297a; }
+  .row.amber .row-file { color: #b56b00; }
+  .row.cyan .row-file { color: #0a7da0; }
+  .row .star { color: var(--c-amber); font-size: 11px; }
+  .row .when { margin-left: auto; font-family: var(--font-mono); font-size: 10px; color: var(--c-gray-500); }
+  .row-t { font-weight: 700; font-size: 14px; letter-spacing: -.01em; color: var(--c-navy); line-height: 1.25; }
+  .row-snip {
+    font-size: 12px; line-height: 1.4; color: var(--c-gray-500);
+    overflow: hidden;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .row-foot { display: flex; align-items: center; gap: 6px; }
+  .row-tag {
+    font-family: var(--font-mono); font-size: 10px;
+    padding: 1px 6px; border-radius: 3px;
+    background: rgba(15,35,66,.05); color: var(--c-gray-500);
+  }
+  .row-foot .arrow { margin-left: auto; color: var(--c-gray-200); font-family: var(--font-mono); font-size: 12px; }
+
+  /* ====== tab bar ====== */
+  .tabbar {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: 40;
+    display: flex; justify-content: space-around; align-items: center;
+    padding: 10px 14px 28px;
+    background: rgba(255,255,255,.78); border-top: 1px solid rgba(255,255,255,.6);
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  .tabbtn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 0; color: var(--c-gray-500); cursor: pointer; position: relative;
+  }
+  .tabbtn svg { width: 20px; height: 20px; }
+  .tabbtn .lbl { font-size: 10px; font-weight: 500; }
+  .tabbtn.active { color: var(--c-navy); }
+  .tabbtn.active .lbl { font-weight: 700; }
+  .tabbtn.active::before {
+    content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 24px; height: 3px; border-radius: 999px;
+    background: linear-gradient(90deg, #2F6BFF, #28C7B7);
+    box-shadow: 0 0 8px rgba(40,199,183,.5);
+  }
+  .tabbtn.add { flex: 0 0 auto; }
+  .tabbtn.add .add-btn {
+    width: 48px; height: 48px; border-radius: 16px;
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 60%, #28C7B7);
+    color: white; display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(47,107,255,.4), 0 0 14px rgba(40,199,183,.35);
+    transform: translateY(-12px); border: 2px solid white;
+  }
+  .tabbtn.add .add-btn svg { width: 22px; height: 22px; }
+  .tabbtn.add .lbl { font-size: 9px; margin-top: -8px; color: var(--c-gray-500); }
+
+  .home-ind { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    width: 134px; height: 5px; border-radius: 3px; background: rgba(15,35,66,.40); z-index: 45; }
+</style>
+</head>
+<body>
+
+
+<div class="phone">
+  <div class="screen">
+    <div class="wallpaper" aria-hidden="true"></div>
+    <div class="island"></div>
+
+    <div class="statusbar">
+      <span>9:41</span>
+      <div class="right">
+        <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+        <svg width="15" height="11" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z"/><path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z"/><circle cx="8.5" cy="10.5" r="1.5"/></svg>
+        <svg width="25" height="12" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="currentColor" stroke-opacity=".4" fill="none"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill="currentColor" fill-opacity=".4"/></svg>
+      </div>
+    </div>
+
+    <div class="app">
+
+      <header class="header">
+        <div class="h-text">
+          <div class="hi">24 notas · sincronizadas</div>
+          <div class="name"><span class="grad">notas</span></div>
+        </div>
+        <button class="btn-i" title="Filter">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>
+        </button>
+        <button class="new" title="New note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </header>
+
+      <!-- search -->
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <span class="grow">buscar notas, tags…</span>
+        <span class="kbd">⌘K</span>
+      </div>
+
+      <!-- folders chips -->
+      <div class="folders-scroll">
+        <div class="folder-chip active">
+          <span class="dot" style="background:#2F6BFF"></span>
+          all
+          <span class="ct">24</span>
+        </div>
+        <div class="folder-chip">
+          <span class="dot" style="background:#2F6BFF"></span>
+          work
+          <span class="ct">12</span>
+        </div>
+        <div class="folder-chip">
+          <span class="dot" style="background:#7B5BFF"></span>
+          personal
+          <span class="ct">8</span>
+        </div>
+        <div class="folder-chip">
+          <span class="dot" style="background:#28C7B7"></span>
+          reading
+          <span class="ct">3</span>
+        </div>
+        <div class="folder-chip">
+          <span class="dot" style="background:#F5A524"></span>
+          drafts
+          <span class="ct">1</span>
+        </div>
+      </div>
+
+      <!-- pinned -->
+      <div class="section-h">
+        <span>★ pinned</span>
+        <span class="count">4</span>
+      </div>
+      <div class="pinned-scroll">
+
+        <div class="pin-card">
+          <div class="pin-file">M↓ release-notes.md <span class="star">★</span></div>
+          <div class="pin-t">Ship v0.4</div>
+          <div class="pin-snip">Inline checkboxes, command palette, faster sync. Final polish before friday.</div>
+          <div class="pin-foot">
+            <span>#release</span>
+            <span class="when">12s</span>
+          </div>
+        </div>
+
+        <div class="pin-card violet">
+          <div class="pin-file">M↓ q3-plan.md</div>
+          <div class="pin-t">Q3 plan</div>
+          <div class="pin-snip">Targets, owners, and the one risk we'll accept this quarter.</div>
+          <div class="pin-foot">
+            <span>#planning</span>
+            <span class="when">1h</span>
+          </div>
+        </div>
+
+        <div class="pin-card teal">
+          <div class="pin-file">M↓ ideas.md <span class="star">★</span></div>
+          <div class="pin-t">Spark file</div>
+          <div class="pin-snip">Registro de ideias rápidas. Algumas viram tarefas, eventos ou anexos; outras ficam como referência.</div>
+          <div class="pin-foot">
+            <span>#idea</span>
+            <span class="when">yest</span>
+          </div>
+        </div>
+
+        <div class="pin-card pink">
+          <div class="pin-file">M↓ reading.md</div>
+          <div class="pin-t">Reading list</div>
+          <div class="pin-snip">Books, posts, and talks on building & maintaining design systems.</div>
+          <div class="pin-foot">
+            <span>#reading</span>
+            <span class="when">2d</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- todas as notas (recent) -->
+      <div class="section-h">
+        <span><span class="ext">M↓</span> todas as notas</span>
+        <span class="count">sort · edited</span>
+      </div>
+      <div class="list">
+
+        <div class="row">
+          <div class="row-top">
+            <span class="row-file">M↓ release-notes.md</span>
+            <span class="star">★</span>
+            <span class="when">12s</span>
+          </div>
+          <div class="row-t">Ship v0.4 — the markdown release</div>
+          <div class="row-snip">Inline checkboxes, command palette, and a faster sync layer. Migration script lands at noon.</div>
+          <div class="row-foot">
+            <span class="row-tag">#release</span>
+            <span class="row-tag">#docs</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+
+        <div class="row violet">
+          <div class="row-top">
+            <span class="row-file">M↓ q3-plan.md</span>
+            <span class="when">1h</span>
+          </div>
+          <div class="row-t">Q3 plan</div>
+          <div class="row-snip">Targets, owners, and the one risk we'll accept this quarter. Three bets, ranked.</div>
+          <div class="row-foot">
+            <span class="row-tag">#planning</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+
+        <div class="row teal">
+          <div class="row-top">
+            <span class="row-file">M↓ meeting.md</span>
+            <span class="when">2h</span>
+          </div>
+          <div class="row-t">Sync local · 26 mai</div>
+          <div class="row-snip">Action items captured · owners assigned · next sync moved to thursday.</div>
+          <div class="row-foot">
+            <span class="row-tag">#meeting</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+
+        <div class="row cyan">
+          <div class="row-top">
+            <span class="row-file">M↓ arch.md</span>
+            <span class="when">4d</span>
+          </div>
+          <div class="row-t">Architecture · sync engine</div>
+          <div class="row-snip">CRDT layer · conflict resolution · offline-first edit queue. Diagrams below.</div>
+          <div class="row-foot">
+            <span class="row-tag">#arch</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+
+        <div class="row amber">
+          <div class="row-top">
+            <span class="row-file">M↓ changelog.md</span>
+            <span class="when">3d</span>
+          </div>
+          <div class="row-t">Changelog · 0.4</div>
+          <div class="row-snip">Notas para a próxima versão. Rascunho em andamento.</div>
+          <div class="row-foot">
+            <span class="row-tag">#release</span>
+            <span class="arrow">→</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- tab bar -->
+    <nav class="tabbar">
+      <div class="tabbtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12 12 3l9 9"/><path d="M5 10v10h14V10"/></svg>
+        <span class="lbl">Hoje</span>
+      </div>
+      <div class="tabbtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+        <span class="lbl">Itens</span>
+      </div>
+      <div class="tabbtn add">
+        <button class="add-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+        <span class="lbl">capture</span>
+      </div>
+      <div class="tabbtn active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span class="lbl">Notas</span>
+      </div>
+      <div class="tabbtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+        <span class="lbl">Profile</span>
+      </div>
+    </nav>
+
+    <div class="home-ind"></div>
+  </div>
+</div>
+
+</body>
+</html>

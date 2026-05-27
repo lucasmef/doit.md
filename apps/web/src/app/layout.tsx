@@ -5,7 +5,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: { default: 'doit.md', template: '%s — doit.md' },
-  description: 'Notas, tarefas, projetos e calendário em um só lugar',
+  description: 'Notas, tarefas, pastas e calendário em um só lugar',
   manifest: '/manifest.json',
   icons: {
     icon: [

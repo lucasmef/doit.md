@@ -1,0 +1,33 @@
+{
+  "package": "doitmd-layout-codex-package",
+  "created_at": "2026-05-26T20:33:08.286115Z",
+  "purpose": "Static visual references and Codex handoff docs for doit.md bento/glassmorphism UI planning.",
+  "desktop_files": [
+    "desktop/01-dashboard.html",
+    "desktop/02-itens.html",
+    "desktop/03-notas.html",
+    "desktop/04-notas-alternativa.html",
+    "desktop/05-editor.html",
+    "desktop/06-editor-toolbar.html"
+  ],
+  "mobile_files": [
+    "mobile/01-dashboard-mobile.html",
+    "mobile/02-itens-mobile.html",
+    "mobile/03-notas-mobile.html"
+  ],
+  "docs": [
+    "docs/01-contexto-produto.md",
+    "docs/02-diretrizes-visuais.md",
+    "docs/03-mapeamento-rotas.md",
+    "docs/04-plano-implementacao.md",
+    "docs/05-mobile.md",
+    "docs/06-checklist-validacao.md",
+    "PROMPT-CODEX.md"
+  ],
+  "constraints": [
+    "No projects/areas as visual model",
+    "Use folders/pastas",
+    "Item is the central entity",
+    "Do not copy static HTML directly into production"
+  ]
+}

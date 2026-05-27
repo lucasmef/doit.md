@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
 import { CalendarBoard } from '@/components/calendar/calendar-board'
+import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 import type { Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 
@@ -63,15 +64,15 @@ export default function UpcomingPage() {
   }
 
   const ViewSwitch = (
-    <div className="fixed bottom-20 right-4 z-40 rounded-xl border border-ui-border bg-white p-1 shadow-cool-lg lg:bottom-5">
-      <div className="flex rounded-lg bg-surface-soft p-1">
+    <div className="fixed bottom-20 right-4 z-40 rounded-full border border-white/55 bg-white/58 p-1 shadow-cool-lg backdrop-blur-2xl lg:bottom-5">
+      <div className="flex rounded-full bg-white/32 p-1">
         <button
           type="button"
           onClick={() => setViewMode('list')}
-          className={`rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+          className={`rounded-full px-4 py-2 text-[12px] font-bold transition-colors ${
             view === 'list'
-              ? 'bg-white text-brand-600 shadow-cool-sm'
-              : 'text-navy-500 hover:bg-white'
+              ? 'bg-white text-brand-700 shadow-cool-sm'
+              : 'text-navy-600 hover:bg-white/70'
           }`}
         >
           Lista
@@ -79,13 +80,13 @@ export default function UpcomingPage() {
         <button
           type="button"
           onClick={() => setViewMode('calendar')}
-          className={`rounded-md px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+          className={`rounded-full px-4 py-2 text-[12px] font-bold transition-colors ${
             view === 'calendar'
-              ? 'bg-white text-brand-600 shadow-cool-sm'
-              : 'text-navy-500 hover:bg-white'
+              ? 'bg-white text-brand-700 shadow-cool-sm'
+              : 'text-navy-600 hover:bg-white/70'
           }`}
         >
-          Calendário
+          Calendario
         </button>
       </div>
     </div>
@@ -115,7 +116,7 @@ export default function UpcomingPage() {
 
   return (
     <div
-      className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-0 pb-24 pt-0 lg:px-5 lg:pb-4 lg:pt-3"
+      className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-4 pb-28 pt-4 sm:px-6 lg:pb-8"
       onTouchStart={(event) => {
         const touch = event.touches[0]
         if (touch) touchStartRef.current = { x: touch.clientX, y: touch.clientY }
@@ -124,35 +125,56 @@ export default function UpcomingPage() {
     >
       {ViewSwitch}
 
-      <div className="px-5 lg:px-0">
-        {isLoading && (
-          <div className="space-y-1">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-10 animate-pulse rounded-lg bg-navy-50" />
-            ))}
-          </div>
-        )}
-
-        {!isLoading &&
-          GROUP_ORDER.map((group) => {
-            const groupItems = grouped[group] ?? []
-            if (groupItems.length === 0) return null
-            return (
-              <section key={group} className="mb-4">
-                <h2 className="mb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                  {group} / {groupItems.length}
-                </h2>
-                <ItemList items={groupItems} />
-              </section>
-            )
-          })}
-
-        {!isLoading && future.length === 0 && (
-          <div className="rounded-lg border border-dashed border-ui-border-strong px-4 py-8 text-center font-mono text-sm text-navy-300">
-            Nenhum item futuro.
-          </div>
-        )}
+      <div className="mb-5">
+        <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-700">
+          Linha do tempo
+        </p>
+        <h1 className="mt-1 text-4xl font-black leading-none tracking-normal text-navy-950">
+          Proximos
+        </h1>
+        <p className="mt-2 max-w-xl text-sm text-navy-600">
+          Itens com data futura agrupados por janela, com calendario a um toque.
+        </p>
       </div>
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <MetricCard label="Futuros" value={isLoading ? '...' : future.length} detail="itens ativos" />
+        <MetricCard label="Amanha" value={grouped.Amanha?.length ?? 0} detail="proxima janela" />
+        <MetricCard label="Semana" value={grouped['Esta semana']?.length ?? 0} detail="ainda esta semana" />
+      </div>
+
+      {isLoading ? (
+        <GlassCard className="p-4">
+          <ItemList items={[]} isLoading variant="glass" />
+        </GlassCard>
+      ) : null}
+
+      {!isLoading &&
+        GROUP_ORDER.map((group) => {
+          const groupItems = grouped[group] ?? []
+          if (groupItems.length === 0) return null
+          return (
+            <GlassCard key={group} className="mb-4 p-4">
+              <div className="mb-3">
+                <CardTitle>
+                  {group} / {groupItems.length}
+                </CardTitle>
+              </div>
+              <ItemList items={groupItems} variant="glass" />
+            </GlassCard>
+          )
+        })}
+
+      {!isLoading && future.length === 0 && (
+        <GlassCard className="p-4">
+          <div className="rounded-[22px] border border-dashed border-white/70 bg-white/38 px-5 py-10 text-center">
+            <p className="text-[15px] font-bold text-navy-900">Nenhum item futuro</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-navy-600">
+              Itens com prazo ou agendamento depois de hoje aparecerao aqui.
+            </p>
+          </div>
+        </GlassCard>
+      )}
     </div>
   )
 }

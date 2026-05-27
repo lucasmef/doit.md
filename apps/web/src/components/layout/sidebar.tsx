@@ -11,12 +11,19 @@ import { useDialog } from '@/components/ui/dialog'
 import { usePreferences } from '@/hooks/use-preferences'
 import { toLocalDateKey } from '@doit/core'
 
-type IconKey = 'today' | 'inbox' | 'upcoming' | 'calendar' | 'settings' | 'folder' | 'tag'
+type IconKey = 'dashboard' | 'today' | 'inbox' | 'upcoming' | 'calendar' | 'settings' | 'folder' | 'tag'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 function NavIcon({ kind, className = 'h-[18px] w-[18px]' }: { kind: IconKey; className?: string }) {
   const common = { fill: 'none', viewBox: '0 0 24 24', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  if (kind === 'dashboard') {
+    return (
+      <svg className={className} {...common}>
+        <path d="M4 5a1 1 0 0 1 1-1h5v7H4V5ZM14 4h5a1 1 0 0 1 1 1v4h-6V4ZM4 15h6v5H5a1 1 0 0 1-1-1v-4ZM14 13h6v6a1 1 0 0 1-1 1h-5v-7Z" />
+      </svg>
+    )
+  }
   if (kind === 'today') {
     return (
       <svg className={className} {...common}>
@@ -96,6 +103,7 @@ function StarIcon({
 }
 
 const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/today', label: 'Hoje', icon: 'today' },
   { href: '/upcoming', label: 'Próximos', icon: 'upcoming' },
@@ -129,12 +137,12 @@ function NavLink({
       href={href}
       title={collapsed ? label : undefined}
       aria-label={collapsed ? label : undefined}
-      className={`group flex items-center rounded-md py-1.5 text-[13px] transition-colors ${
+      className={`group flex min-h-10 items-center rounded-[16px] py-1.5 text-[13px] font-semibold transition-colors ${
         collapsed ? 'justify-center px-2' : 'gap-2.5 px-2.5'
       } ${
         active
-          ? 'bg-surface-selected text-brand-600'
-          : 'text-navy-900 hover:bg-surface-soft'
+          ? 'bg-white/78 text-brand-700 shadow-cool-sm ring-1 ring-white/60'
+          : 'text-navy-700 hover:bg-white/52 hover:text-navy-900'
       }`}
     >
       <span
@@ -236,10 +244,10 @@ function FolderTreeRow({
     <>
       <div
         title={collapsed ? node.name : undefined}
-        className={`group flex items-center rounded-md py-1 text-[13px] transition-colors ${
+        className={`group flex min-h-9 items-center rounded-[14px] py-1 text-[13px] font-medium transition-colors ${
           collapsed ? 'justify-center px-2' : 'gap-1 pr-1'
         } ${
-          active ? 'bg-surface-selected text-brand-600' : 'text-navy-900 hover:bg-surface-soft'
+          active ? 'bg-white/78 text-brand-700 shadow-cool-sm' : 'text-navy-700 hover:bg-white/52'
         }`}
         style={collapsed ? undefined : { paddingLeft: `${8 + depth * 14}px` }}
       >
@@ -378,8 +386,8 @@ export function Sidebar() {
 
   return (
     <aside
-      className={`flex h-full shrink-0 flex-col border-r border-ui-border bg-white transition-[width] duration-200 ${
-        collapsed ? 'w-[68px]' : 'w-[260px]'
+      className={`flex h-full shrink-0 flex-col overflow-hidden rounded-[28px] border border-white/55 bg-white/62 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_22px_55px_rgba(15,35,66,.16)] backdrop-blur-2xl transition-[width] duration-200 ${
+        collapsed ? 'w-[72px]' : 'w-[280px]'
       }`}
     >
       <div
@@ -387,16 +395,21 @@ export function Sidebar() {
           collapsed ? 'justify-center px-2' : 'gap-2.5 px-3.5'
         }`}
       >
-        <img src="/brand/logo-icon.svg" alt="" className="h-7 w-7 rounded-lg" />
+        <img src="/brand/logo-icon.svg" alt="" className="h-9 w-9 rounded-[14px] shadow-cool-sm" />
         {!collapsed && (
-          <span className="min-w-0 flex-1 text-[15px] font-extrabold tracking-normal text-navy-900">
-            doit<span className="text-brand-600">.md</span>
-          </span>
+          <div className="min-w-0 flex-1">
+            <span className="block truncate text-[16px] font-black tracking-normal text-navy-900">
+              doit<span className="text-brand-600">.md</span>
+            </span>
+            <span className="block font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-navy-300">
+              workspace
+            </span>
+          </div>
         )}
         <button
           type="button"
           onClick={() => update({ sidebarCollapsed: !collapsed })}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-navy-400 transition-colors hover:bg-surface-soft hover:text-navy-700"
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/45 bg-white/42 text-navy-400 transition-colors hover:bg-white/75 hover:text-navy-700"
           title={collapsed ? 'Expandir menu' : 'Recolher menu'}
           aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
           aria-pressed={collapsed}
@@ -408,7 +421,7 @@ export function Sidebar() {
       <button
         type="button"
         onClick={() => setQuickCaptureOpen(true)}
-        className={`mx-3 mb-2 flex items-center rounded-lg border border-ui-border bg-surface-soft py-2 text-left font-mono text-[12px] text-navy-300 transition-colors hover:border-ui-border-strong ${
+        className={`mx-3 mb-2 flex items-center rounded-[18px] border border-white/55 bg-white/52 py-2 text-left font-mono text-[12px] text-navy-400 shadow-cool-sm transition-colors hover:bg-white/75 ${
           collapsed ? 'justify-center px-0' : 'gap-2 px-2.5'
         }`}
         title={collapsed ? 'Capturar novo item' : undefined}
@@ -418,14 +431,14 @@ export function Sidebar() {
         {!collapsed && (
           <>
             <span className="min-w-0 flex-1 truncate">Capturar ou ir para...</span>
-            <kbd className="rounded border border-ui-border-strong bg-white px-1.5 py-0.5 text-[10px] text-navy-500">
+            <kbd className="rounded-full border border-white/70 bg-white/72 px-1.5 py-0.5 text-[10px] text-navy-500">
               q
             </kbd>
           </>
         )}
       </button>
 
-      {!collapsed && <SectionTitle>Views</SectionTitle>}
+      {!collapsed && <SectionTitle>Menu</SectionTitle>}
       <div className="flex flex-col gap-px px-2">
         {TOP_NAV.filter((n) => n.href !== '/inbox' || prefs.showInbox).map((n) => (
           <NavLink key={n.href} {...n} count={counts[n.href]} collapsed={collapsed} />
@@ -534,7 +547,7 @@ export function Sidebar() {
           </div>
         </>
       )}
-      <div className="flex flex-col px-1">
+      <div className="min-h-0 flex-1 overflow-y-auto px-1 pb-3 scrollbar-none">
         {tree.length === 0 && !collapsed && (
           <span className="px-2.5 py-1 font-mono text-[11px] text-navy-300">Nenhuma pasta</span>
         )}
@@ -553,9 +566,7 @@ export function Sidebar() {
         ))}
       </div>
 
-      <div className="flex-1" />
-
-      <div className="border-t border-ui-border px-2 py-2">
+      <div className="border-t border-white/45 bg-white/24 px-2 py-2">
         <div className="mb-2 flex flex-col gap-px">
           {BOTTOM_NAV.map((n) => <NavLink key={n.href} {...n} collapsed={collapsed} />)}
         </div>
