@@ -2,11 +2,11 @@
 
 ## Metadata
 
-- Status: in_progress
+- Status: done
 - Mode: build
 - Complexity: high
 - Created: 2026-05-26
-- Updated: 2026-05-26
+- Updated: 2026-05-27
 
 ## Objective
 
@@ -54,6 +54,7 @@ O app real ja tem uma arquitetura util para migracao visual incremental, mas a m
 - [x] Implementar sexta fatia: `/calendar` fullscreen com painel e grid glass.
 - [x] Ajustar HTMLs extras do pacote: `Bento Calendar.html`, `Bento Calendar Mobile.html` e `Bento Capture Modal.html`.
 - [x] Validar funcionalidade ponta a ponta e layout final com screenshots.
+- [x] Reaproximar `/dashboard` do `desktop/01-dashboard.html` com os sete boxes bento esperados.
 
 ## Out of scope
 
@@ -174,6 +175,11 @@ Answers:
 - 2026-05-26 00:00 - Ajustados os layouts extras do pacote visual: `/calendar` passou a compor grid bento com metricas, agenda e carga da semana; captura rapida recebeu shell glass e abas de tres modos.
 - 2026-05-26 00:00 - Teste funcional final passou: cadastro QA, seed de Pasta/Itens, abertura do editor, autosave, conclusao de tarefa e quick capture.
 - 2026-05-26 00:00 - Teste visual/layout final passou: Dashboard horizontal, Calendario desktop/mobile, Capture Modal, editor desktop com rail e editor mobile sem rail.
+- 2026-05-27 00:00 - Reaberto ajuste do Dashboard apos feedback do usuario: a tela ainda estava distante do `desktop/01-dashboard.html`.
+- 2026-05-27 00:00 - `/dashboard` foi recomposto como grid bento de sete boxes: Calendario, Hoje, Itens ativos, Auditoria, Jardim Markdown, Revisao e Foco.
+- 2026-05-27 00:00 - Adicionadas interacoes diretamente nos boxes: concluir item ativo, abrir item em foco, abrir auditoria/notas/calendario, criar nota, planejar evento e timer local de foco.
+- 2026-05-27 00:00 - Validacao visual desktop/mobile concluida com conta QA local e dados de exemplo; screenshots novos salvos em `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/`.
+- 2026-05-27 00:00 - Ajustada a paleta do Dashboard apos feedback: removida sobreposicao dupla de wallpaper, cards clareados e acentos reduzidos para evitar dominancia lavanda/roxa.
 
 ## Validation
 
@@ -212,6 +218,13 @@ Commands run:
 - [x] Playwright functional validation via inline script: signup, API seed, editor autosave, task completion and quick capture.
 - [x] Playwright layout validation via inline script: horizontal nav, calendar bento, capture modal, editor rail desktop/mobile and screenshots.
 - [x] `pnpm --filter @doit/web build` attempted after final validation.
+- [x] `pnpm --filter @doit/web type-check -- --pretty false` after Dashboard rework.
+- [x] Temporary server: `pnpm --dir apps/web dev -H 127.0.0.1 -p 3000` for Dashboard recheck; listener PID 18908 was stopped.
+- [x] Browser validation of `/dashboard` with the in-app browser.
+- [x] Playwright screenshot validation of `/dashboard` desktop/mobile with local QA user and seeded example items.
+- [x] `pnpm --filter @doit/web type-check -- --pretty false` after Dashboard color correction.
+- [x] Temporary server: `pnpm --dir apps/web dev -H 127.0.0.1 -p 3000` for color validation; listener PID 17428 was stopped.
+- [x] Playwright screenshot validation of Dashboard color correction.
 
 Results:
 
@@ -243,6 +256,12 @@ Results:
 - Final layout test passed with no page errors or console errors: menu remained horizontal, visual label `Projetos` did not appear on Dashboard, calendar/capture/editor matched the bento/glass layout signals and mobile rail behavior was correct.
 - Final validation server stopped successfully; port 3000 no longer had a listener.
 - `pnpm --filter @doit/web build` compiled successfully, lint/type validation completed with pre-existing warnings, static pages were generated, then failed in the final standalone trace copy step because Windows/OneDrive returned `EPERM` while Next tried to create symlinks under `.next/standalone`.
+- Dashboard rework type-check passed.
+- Dashboard recheck rendered without page errors or console errors in desktop and mobile screenshot validation.
+- Dashboard temporary server was stopped successfully after validation.
+- Dashboard color correction type-check passed.
+- Dashboard color validation rendered without page errors or console errors in desktop and mobile screenshot validation.
+- Dashboard color validation server was stopped successfully after validation.
 
 Frontend evidence:
 
@@ -258,6 +277,10 @@ Frontend evidence:
 - `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/10-shell-horizontal-dashboard-desktop.png`
 - `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/11-shell-horizontal-notas-desktop.png`
 - `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/12-shell-horizontal-dashboard-mobile.png`
+- `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/26-dashboard-bento-desktop-recheck.png`
+- `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/27-dashboard-bento-mobile-recheck.png`
+- `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/28-dashboard-colors-desktop.png`
+- `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/29-dashboard-colors-mobile.png`
 - `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/13-folder-detail-list-desktop.png`
 - `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/14-folder-detail-kanban-desktop.png`
 - `specs/artifacts/2026-05-26-planejar-layout-bento-glassmorphism/15-folder-detail-mobile.png`
