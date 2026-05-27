@@ -566,7 +566,7 @@ export default function DashboardPage() {
               {activeFolders.slice(0, 3).map(({ folder, count }) => (
                 <Link
                   key={folder.id}
-                  href={`/notas/${folder.id}`}
+                  href={`/notas/pastas/${folder.id}`}
                   className="rounded-full bg-white/55 px-3 py-1 font-mono text-[10px] font-bold text-brand-700 hover:bg-white/80"
                 >
                   {folder.name} / {count}

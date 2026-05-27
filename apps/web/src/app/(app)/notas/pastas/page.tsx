@@ -179,7 +179,7 @@ function FolderRow({
           ) : null}
         </button>
         <Link
-          href={`/notas/${node.id}`}
+          href={`/notas/pastas/${node.id}`}
           className="flex min-w-0 flex-1 items-center gap-3 text-navy-900 hover:text-brand-600"
         >
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface-soft text-navy-400">
@@ -1131,7 +1131,7 @@ export default function NotasPage() {
           {folders.slice(0, 8).map((folder, index) => (
             <Link
               key={folder.id}
-              href={`/notas/${folder.id}`}
+              href={`/notas/pastas/${folder.id}`}
               className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-white/65 bg-white/70 px-4 text-[13px] font-bold text-navy-800 backdrop-blur-xl"
             >
               <span

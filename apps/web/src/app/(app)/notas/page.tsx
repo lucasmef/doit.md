@@ -476,7 +476,7 @@ function NotebooksCard({ notebooks }: { notebooks: Array<{ folder: Folder; count
           notebooks.slice(0, 4).map(({ folder, count, description, color }) => (
             <Link
               key={folder.id}
-              href={`/notas/${folder.id}`}
+              href={`/notas/pastas/${folder.id}`}
               className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-navy-900/[0.04] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,35,66,.04)] hover:shadow-[0_4px_12px_rgba(15,35,66,.08)]"
             >
               <span className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }} aria-hidden="true" />
