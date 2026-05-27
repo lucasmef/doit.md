@@ -66,13 +66,6 @@ function isOverdue(item: Item, today: string) {
   return Boolean(item.dueDate && item.dueDate < today && item.status !== 'done' && item.status !== 'archived')
 }
 
-function itemDateLabel(item: Item) {
-  const date = item.dueDate ?? item.scheduledDate
-  if (!date) return item.complexity === 'note' ? 'Nota' : 'Sem data'
-  const time = item.dueTime ? ` ${item.dueTime}` : ''
-  return `${formatShortDate(date)}${time}`
-}
-
 const lightCardTone =
   '!border-white/75 !bg-white/[0.78] shadow-[0_1px_0_rgba(255,255,255,.82)_inset,0_-1px_0_rgba(15,35,66,.035)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]'
 
@@ -394,7 +387,6 @@ export default function DashboardPage() {
   const completedToday = dueToday.filter((item) => item.status === 'done').length
   const todayTotal = dueToday.length
   const progress = todayTotal > 0 ? Math.round((completedToday / todayTotal) * 100) : 0
-  const overdue = items.filter((item) => isOverdue(item, today))
   const inboxItems = openItems.filter(isLooseInboxItem)
   const noteItems = openItems
     .filter((item) => item.complexity === 'note')
