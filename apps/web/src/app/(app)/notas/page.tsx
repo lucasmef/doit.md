@@ -894,11 +894,6 @@ export default function NotasPage() {
     () => prefs.pinnedFolderIds.filter((folderId) => folderById.has(folderId)),
     [folderById, prefs.pinnedFolderIds],
   )
-  const pinnedFolders = useMemo(
-    () => pinnedFolderIds.map((folderId) => folderById.get(folderId)).filter(Boolean),
-    [folderById, pinnedFolderIds],
-  )
-
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } }),
