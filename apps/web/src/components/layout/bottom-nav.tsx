@@ -130,31 +130,36 @@ export function BottomNav() {
   const leftItems = visible.slice(0, splitIndex)
   const rightItems = visible.slice(splitIndex)
 
-  function linkClass(href: string) {
-    const path = href.split('?')[0] ?? href
-    const active = pathname === path || pathname.startsWith(path + '/')
-    return `flex min-h-[68px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors ${
-      active ? 'text-brand-600' : 'text-slate-400'
-    }`
-  }
-
   function renderLink(id: MobileNavItemId) {
     const def = MOBILE_NAV_DEF[id]
+    const path = def.href.split('?')[0] ?? def.href
+    const active = pathname === path || pathname.startsWith(path + '/')
     return (
       <Link
         key={id}
         href={def.href}
-        className={linkClass(def.href)}
         onClick={(event) => event.stopPropagation()}
+        className="relative flex h-full min-w-0 flex-1 items-center justify-center"
       >
-        {def.icon}
-        <span className="text-[9px] font-semibold">{MOBILE_NAV_LABELS[id]}</span>
+        <span
+          className={`flex h-[52px] w-full max-w-[68px] flex-col items-center justify-center gap-0.5 rounded-2xl transition-all ${
+            active
+              ? 'bg-white text-navy-900 shadow-cool-sm'
+              : 'text-navy-400 hover:text-navy-700'
+          }`}
+        >
+          <span className={active ? 'text-brand-600' : ''}>{def.icon}</span>
+          <span className="font-mono text-[9px] font-bold uppercase tracking-wider">{MOBILE_NAV_LABELS[id]}</span>
+        </span>
       </Link>
     )
   }
 
   return (
-    <nav className="safe-area-bottom fixed inset-x-0 bottom-0 z-[80] flex min-h-[76px] items-center border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_24px_rgba(15,35,66,0.08)] lg:hidden">
+    <nav
+      className="fixed inset-x-3 z-[80] flex h-[64px] items-center gap-1 rounded-[24px] border border-white/55 bg-white/72 px-2 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-2xl lg:hidden"
+      style={{ bottom: 'max(env(safe-area-inset-bottom), 12px)' }}
+    >
       {leftItems.map((entry) => renderLink(entry.id))}
 
       <button
@@ -163,20 +168,21 @@ export function BottomNav() {
           event.stopPropagation()
           openCapture()
         }}
-        className="flex min-h-[68px] flex-1 flex-col items-center justify-center"
+        className="relative flex h-full min-w-0 flex-1 items-center justify-center"
         title="Novo item"
       >
-        <div className="-translate-y-3 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-brand-600 shadow-lg shadow-brand-500/30">
+        <div className="-translate-y-4 inline-flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-[linear-gradient(135deg,#2F6BFF_0%,#7B5BFF_55%,#28C7B7_100%)] text-white shadow-[0_8px_22px_rgba(47,107,255,.45),0_4px_12px_rgba(40,199,183,.32)] transition-transform hover:translate-y-[-1.25rem]">
           <svg
-            className="h-6 w-6 text-white"
+            className="h-5 w-5"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
+            aria-hidden="true"
           >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth={2.5}
+              strokeWidth={2.6}
               d="M12 4v16m8-8H4"
             />
           </svg>
