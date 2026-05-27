@@ -32,15 +32,82 @@ const DESKTOP_NAV_ITEMS = [
   { href: '/settings', label: 'Ajustes', icon: 'settings', match: ['/settings'] },
 ] as const
 
-const MOBILE_NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/today', label: 'Hoje' },
-  { href: '/inbox', label: 'Inbox' },
-  { href: '/upcoming', label: 'Proximos' },
-  { href: '/calendar', label: 'Calendario' },
-  { href: '/notas', label: 'Notas' },
-  { href: '/settings', label: 'Configuracoes' },
+type MobileIconKind = 'dashboard' | 'today' | 'inbox' | 'upcoming' | 'calendar' | 'notes' | 'settings'
+
+const MOBILE_NAV_ITEMS: Array<{ href: string; label: string; icon: MobileIconKind }> = [
+  { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { href: '/today', label: 'Hoje', icon: 'today' },
+  { href: '/inbox', label: 'Inbox', icon: 'inbox' },
+  { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
+  { href: '/calendar', label: 'Calendario', icon: 'calendar' },
+  { href: '/notas', label: 'Notas', icon: 'notes' },
+  { href: '/settings', label: 'Ajustes', icon: 'settings' },
 ]
+
+function MobileNavIcon({ kind }: { kind: MobileIconKind }) {
+  const common = {
+    className: 'h-[16px] w-[16px] shrink-0',
+    fill: 'none',
+    viewBox: '0 0 24 24',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+  }
+  if (kind === 'dashboard') {
+    return (
+      <svg {...common}>
+        <path d="M3 12 12 3l9 9" />
+        <path d="M5 10v10h14V10" />
+      </svg>
+    )
+  }
+  if (kind === 'today') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+    )
+  }
+  if (kind === 'inbox') {
+    return (
+      <svg {...common}>
+        <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z" />
+      </svg>
+    )
+  }
+  if (kind === 'upcoming') {
+    return (
+      <svg {...common}>
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M16 2v4M8 2v4M3 10h18" />
+      </svg>
+    )
+  }
+  if (kind === 'calendar') {
+    return (
+      <svg {...common}>
+        <path d="M7 3v3M17 3v3M4 8h16M5 5h14v16H5z" />
+      </svg>
+    )
+  }
+  if (kind === 'notes') {
+    return (
+      <svg {...common}>
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <path d="M14 2v6h6" />
+      </svg>
+    )
+  }
+  return (
+    <svg {...common}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1A2 2 0 1 1 4.3 17l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1A2 2 0 1 1 7 4.3l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+    </svg>
+  )
+}
 
 function SearchIcon() {
   return (
@@ -383,57 +450,81 @@ export function Topbar() {
 
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[220] isolate bg-navy-900/45 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-[220] isolate bg-navy-900/40 backdrop-blur-md lg:hidden"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
             if (event.target === event.currentTarget) setMobileMenuOpen(false)
           }}
         >
-          <div className="h-full w-[min(84vw,320px)] border-r border-ui-border bg-white px-3 py-3 opacity-100 shadow-cool-lg">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="font-mono text-[12px] font-bold text-navy-900">
+          <div className="absolute inset-y-3 left-3 flex w-[min(82vw,340px)] flex-col overflow-hidden rounded-[24px] border border-white/55 bg-white/72 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_24px_60px_rgba(15,35,66,.28),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-2xl">
+            <div className="flex items-center gap-3 border-b border-navy-900/[0.06] px-4 pb-3 pt-4">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
+                <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
+              </span>
+              <span className="text-[15px] font-black tracking-tight text-navy-900">
                 doit<span className="text-brand-600">.md</span>
               </span>
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-500 hover:bg-surface-soft"
+                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-full bg-navy-900/[0.05] text-navy-500 hover:bg-navy-900/[0.10] hover:text-navy-900"
                 aria-label="Fechar menu"
               >
                 <CloseIcon />
               </button>
             </div>
-            <nav className="space-y-1">
+
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false)
+                window.dispatchEvent(new Event('doit:focus-search'))
+              }}
+              className="mx-3 mt-3 flex items-center gap-2 rounded-full border border-white/60 bg-white/55 px-4 py-2.5 font-mono text-[12px] text-navy-500 shadow-cool-sm backdrop-blur-xl hover:bg-white/75"
+            >
+              <SearchIcon />
+              <span>Buscar itens, notas...</span>
+              <span className="ml-auto rounded-md border border-navy-900/[0.08] bg-white px-1.5 py-0.5 text-[10px]">
+                ⌘K
+              </span>
+            </button>
+
+            <div className="px-5 pb-1.5 pt-4 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+              Paginas
+            </div>
+            <nav className="flex flex-1 flex-col gap-1 overflow-auto px-2.5 pb-2">
               {MOBILE_NAV_ITEMS.map((item) => {
                 const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex h-11 items-center rounded-md px-3 text-[15px] font-medium ${
-                      active ? 'bg-surface-selected text-brand-700' : 'text-navy-700 hover:bg-surface-soft'
+                    className={`flex h-11 items-center gap-3 rounded-full px-3.5 text-[14px] transition-colors ${
+                      active
+                        ? 'bg-white font-bold text-navy-900 shadow-cool-sm'
+                        : 'font-medium text-navy-700 hover:bg-white/55'
                     }`}
                   >
+                    <MobileNavIcon kind={item.icon} />
                     {item.label}
                   </Link>
                 )
               })}
-            </nav>
-            {isCalendarPage ? (
-              <div className="mt-3 border-t border-ui-border-soft pt-3">
-                <p className="px-3 pb-2 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                  Calendario
-                </p>
-                <div className="space-y-1">
+              {isCalendarPage ? (
+                <>
+                  <div className="px-3 pb-1 pt-3 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+                    Calendario
+                  </div>
                   <button
                     type="button"
                     onClick={() => {
                       setMobileMenuOpen(false)
                       dispatchCalendarAction('doit:open-calendar-filters')
                     }}
-                    className="flex h-11 w-full items-center rounded-md px-3 text-left text-[15px] font-medium text-navy-700 hover:bg-surface-soft"
+                    className="flex h-11 w-full items-center gap-3 rounded-full px-3.5 text-left text-[14px] font-medium text-navy-700 hover:bg-white/55"
                   >
+                    <CalendarIcon />
                     Filtros do calendario
                   </button>
                   <button
@@ -442,8 +533,9 @@ export function Topbar() {
                       setMobileMenuOpen(false)
                       dispatchCalendarAction('doit:calendar-go-today')
                     }}
-                    className="flex h-11 w-full items-center rounded-md px-3 text-left text-[15px] font-medium text-navy-700 hover:bg-surface-soft"
+                    className="flex h-11 w-full items-center gap-3 rounded-full px-3.5 text-left text-[14px] font-medium text-navy-700 hover:bg-white/55"
                   >
+                    <CalendarIcon />
                     Ir para hoje
                   </button>
                   <button
@@ -452,27 +544,30 @@ export function Topbar() {
                       setMobileMenuOpen(false)
                       dispatchCalendarAction('doit:calendar-new-event')
                     }}
-                    className="flex h-11 w-full items-center rounded-md px-3 text-left text-[15px] font-medium text-navy-700 hover:bg-surface-soft"
+                    className="flex h-11 w-full items-center gap-3 rounded-full px-3.5 text-left text-[14px] font-medium text-navy-700 hover:bg-white/55"
                   >
+                    <CalendarIcon />
                     Novo evento
                   </button>
-                </div>
-              </div>
-            ) : null}
-            <div className="mt-3 border-t border-ui-border-soft pt-3">
+                </>
+              ) : null}
+            </nav>
+
+            <div className="space-y-2 border-t border-navy-900/[0.06] p-3">
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false)
                   setQuickCaptureOpen(true)
                 }}
-                className="flex h-11 w-full items-center rounded-md bg-brand-600 px-3 text-[15px] font-semibold text-white"
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-navy-900 text-[14px] font-bold text-white shadow-[0_6px_14px_rgba(15,35,66,.22)] transition-all hover:translate-y-[-1px] hover:bg-navy-800 hover:shadow-[0_10px_22px_rgba(15,35,66,.28)]"
               >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
                 Novo item
               </button>
-              <div className="mt-3">
-                <SignOutButton className="w-full justify-center" />
-              </div>
+              <SignOutButton className="w-full justify-center" />
             </div>
           </div>
         </div>
