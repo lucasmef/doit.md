@@ -18,7 +18,7 @@ export function CaptureModeTabs({
   onModeChange: (mode: CaptureMode) => void
 }) {
   return (
-    <div className="grid shrink-0 grid-cols-3 gap-1 rounded-[18px] border border-white/70 bg-white/45 p-1 shadow-[0_1px_0_rgba(255,255,255,.8)_inset] backdrop-blur-xl">
+    <div className="grid shrink-0 grid-cols-3 gap-1 rounded-[14px] bg-navy-900/[0.04] p-1">
       {MODES.map((item) => {
         const active = item.mode === mode
         return (
@@ -26,10 +26,10 @@ export function CaptureModeTabs({
             key={item.mode}
             type="button"
             onClick={() => onModeChange(item.mode)}
-            className={`relative inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-[14px] px-2 text-[12px] font-semibold transition-colors sm:min-w-24 ${
+            className={`inline-flex h-10 min-w-0 items-center justify-center gap-1.5 rounded-[10px] px-2 text-[13px] font-semibold transition-colors sm:min-w-24 ${
               active
-                ? 'bg-white text-brand-700 shadow-cool-sm after:absolute after:inset-x-4 after:-bottom-1 after:h-0.5 after:rounded-full after:bg-gradient-to-r after:from-brand-500 after:to-teal-400'
-                : 'text-navy-400 hover:bg-white/65 hover:text-navy-700'
+                ? 'bg-[#EAF1FF] text-brand-600 shadow-[inset_0_-2.5px_0_rgba(47,107,255,1)]'
+                : 'text-navy-500 hover:bg-white/55 hover:text-navy-900'
             }`}
             aria-pressed={active}
             aria-label={`Capturar ${item.label.toLowerCase()}`}

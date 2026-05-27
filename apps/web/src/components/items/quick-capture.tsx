@@ -1031,7 +1031,7 @@ export function QuickCapture() {
       {...swipeHandlers}
     >
       <div
-        className={`w-full overflow-hidden border border-white/75 bg-white/92 shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] backdrop-blur-2xl sm:max-h-none sm:overflow-visible sm:rounded-[24px] ${
+        className={`w-full overflow-hidden border border-white/65 bg-white shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] sm:max-h-none sm:overflow-visible sm:rounded-[24px] ${
           isNote
             ? `${mobileExpanded ? 'h-full max-h-none rounded-none border-0' : 'max-h-[calc(100dvh-1rem)] rounded-t-[24px]'} sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
             : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px]'
@@ -1042,7 +1042,7 @@ export function QuickCapture() {
           className={`flex flex-col sm:max-h-none ${isNote && mobileExpanded ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
         >
           {!editMode && (
-            <div className="shrink-0 border-b border-white/60 bg-surface-soft/70 px-4 pb-3 pt-3">
+            <div className="shrink-0 border-b border-navy-900/[0.04] bg-white px-4 pb-3 pt-3">
               {!mobileExpanded && (
                 <button
                   type="button"
@@ -1143,7 +1143,7 @@ export function QuickCapture() {
               </div>
             </div>
           )}
-          <div className={`${mobileExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto bg-white/78 px-5 pb-4 pt-5`}>
+          <div className={`${mobileExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto bg-white px-6 pb-5 pt-5`}>
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -1549,7 +1549,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className={`${mobileExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-ui-border bg-surface-soft px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]`}>
+          <div className={`${mobileExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-navy-900/[0.06] bg-[#F4F6FA] px-6 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]`}>
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"
