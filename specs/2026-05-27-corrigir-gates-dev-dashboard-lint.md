@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Status: in_progress
+- Status: done
 - Mode: bugfix
 - Complexity: low
 - Created: 2026-05-27
@@ -23,8 +23,8 @@ O repositório usa `dev` como branch de integração e `main` como branch de pro
 
 - [x] Identificar o run falho e o job exato.
 - [x] Corrigir os erros de lint no dashboard.
-- [ ] Enviar a correção para `dev`.
-- [ ] Confirmar novo run verde.
+- [x] Enviar a correção para `dev`.
+- [x] Confirmar novo run verde.
 
 ## Out of scope
 
@@ -48,15 +48,15 @@ Answers:
 - [x] `itemDateLabel` nao existe mais como funcao sem uso.
 - [x] `overdue` nao e mais calculado sem uso no dashboard.
 - [x] O lint focado nos arquivos do run falho passa localmente.
-- [ ] O workflow `Gates DEV` passa em novo run no GitHub.
+- [x] O workflow `Gates DEV` passa em novo run no GitHub.
 
 ## Implementation plan
 
 - [x] Inspecionar GitHub Actions e logs do run falho.
 - [x] Remover declaracoes sem uso em `dashboard/page.tsx`.
 - [x] Rodar validacao focada equivalente ao lint incremental.
-- [ ] Commitar e enviar apenas arquivos relacionados.
-- [ ] Monitorar o novo workflow.
+- [x] Commitar e enviar apenas arquivos relacionados.
+- [x] Monitorar o novo workflow.
 
 ## Progress
 
@@ -65,6 +65,8 @@ Answers:
 - 2026-05-27 08:24 - Log mostrou erros `@typescript-eslint/no-unused-vars` em `dashboard/page.tsx`.
 - 2026-05-27 08:26 - Removidos `itemDateLabel` e `overdue`.
 - 2026-05-27 08:29 - Lint focado passou via spawn Node para evitar parsing de parenteses no shell do Windows.
+- 2026-05-27 08:31 - Commit `c9a9c22` enviado para `origin/dev`.
+- 2026-05-27 08:33 - Run `26508537352` do `Gates DEV` concluiu com sucesso.
 
 ## Decisions
 
@@ -93,6 +95,7 @@ Results:
 - Lint focado passou: `No ESLint warnings or errors`.
 - Type-check local falhou por mudancas locais nao relacionadas em `apps/web/src/app/(app)/notas/page.tsx` (`accent` possivelmente `undefined`).
 - Lint completo local falhou por mudancas locais nao relacionadas em `apps/web/src/app/(app)/notas/page.tsx` com varios simbolos sem uso.
+- GitHub Actions `Gates DEV` run `26508537352` passou: Security Gate, Quality Gate, Secret Scan e DEV gates complete.
 
 Frontend evidence:
 
@@ -105,4 +108,4 @@ Frontend evidence:
 
 ## Next step
 
-Commitar e enviar a correcao para `dev`, depois monitorar o novo workflow `Gates DEV`.
+Nenhuma acao obrigatoria. O branch `dev` esta com os gates verdes para o commit `c9a9c22`.
