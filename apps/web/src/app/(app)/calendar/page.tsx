@@ -309,7 +309,7 @@ function AgendaCard({
 }) {
   const nowMs = now.getTime()
   const isToday = selectedDate === toLocalDateKey(now)
-  const [y, m, d] = selectedDate.split('-').map(Number)
+  const [, m, d] = selectedDate.split('-').map(Number)
   const displayDate = isToday ? 'hoje' : `${d?.toString().padStart(2, '0')}/${((m || 0) + 1).toString().padStart(2, '0')}`
   const rows = useMemo(() => {
     type Row = {
@@ -358,7 +358,7 @@ function AgendaCard({
       })
     })
     return list.sort((a, b) => a.starts - b.starts).slice(0, 6)
-  }, [events, items, nowMs, onItemClick])
+  }, [events, items, nowMs, onItemClick, onEventClick])
 
   return (
     <GlassCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
