@@ -64,11 +64,16 @@ Answers:
 - 2026-05-28 02:08 - Helper de relacoes por tags criado e aplicado em `/notas`, `/notas/pastas` e `/notas/[id]`.
 - 2026-05-28 02:09 - Type-check do web passou.
 - 2026-05-28 02:13 - Validacao visual concluida com Playwright local; servidor temporario PID 23064 encerrado e porta 3000 liberada.
+- 2026-05-28 02:18 - Posicoes dos nos a direita ajustadas para evitar corte; type-check e screenshots refeitos; servidor temporario PID 3336 encerrado.
+- 2026-05-28 02:20 - Criterio ajustado para exigir `folderId` real; notas soltas nao formam relacoes por tags.
 
 ## Decisions
 
 - Decision: manter relacoes como dado derivado no client.
   Reason: atende ao criterio de produto sem schema/API nova e sem risco para sync/audit.
+  ADR needed: no
+- Decision: exigir `folderId` real para criar relacao.
+  Reason: o usuario pediu manter o mapa dentro das pastas; tratar inbox solto como pasta criaria conexoes fora desse limite.
   ADR needed: no
 
 ## Files changed
@@ -88,9 +93,12 @@ Commands run:
 Results:
 
 - `pnpm --filter @doit/web type-check` passou.
+- `pnpm --filter @doit/web type-check` passou novamente apos ajuste visual.
+- `pnpm --filter @doit/web type-check` passou novamente apos exigir `folderId`.
 - Browser in-app `iab` indisponivel nesta sessao; validacao visual feita com Playwright local.
 - Servidor temporario: `pnpm --dir apps/web dev -H 127.0.0.1 -p 3000`, listener PID 23064.
-- Servidor encerrado com `Stop-Process -Id 23064 -Force`; porta 3000 sem listener ao final.
+- Recaptura usou o mesmo comando em novo listener PID 3336.
+- Servidores encerrados com `Stop-Process -Id 23064 -Force` e `Stop-Process -Id 3336 -Force`; porta 3000 sem listener ao final.
 
 Frontend evidence:
 

@@ -48,7 +48,8 @@ function tagEntries(item: Item): Array<{ key: string; label: string }> {
 }
 
 function sameFolder(a: Item, b: Item): boolean {
-  return (a.folderId ?? null) === (b.folderId ?? null)
+  if (!a.folderId) return false
+  return a.folderId === b.folderId
 }
 
 export function sharedTagsFor(a: Item, b: Item): string[] {
