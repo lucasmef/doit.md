@@ -69,6 +69,8 @@ Answers:
 - 2026-05-27 21:38 - Revalidado com Playwright: nenhum bloco gradient grande abaixo da toolbar (`coverLike: 0`) e rails com `rgba(255, 255, 255, 0.86)`.
 - 2026-05-27 21:52 - Movidos controles de status, pasta, data, tags e anexos para o painel direito; corpo da nota ficou reservado para titulo e conteudo.
 - 2026-05-27 21:56 - Revalidado com Playwright: painel direito contem propriedades/anexos; toolbar nao contem anexo; corpo nao contem labels de status/owner/tags.
+- 2026-05-28 00:00 - Identificado que o layout nao estava aparecendo para o usuario porque os cards na tela `/notas` ainda usavam `setSingleSelection` (abrindo o painel lateral) em vez de navegar para `/notas/[id]`.
+- 2026-05-28 00:00 - Substituido `setSingleSelection` por `router.push('/notas/[id]')` em `apps/web/src/app/(app)/notas/page.tsx`.
 
 ## Decisions
 
@@ -82,6 +84,7 @@ Answers:
 - `apps/web/src/app/(app)/notas/[id]/page.tsx` - estrutura visual do editor em tres colunas, topbar, propriedades, rail e remocao do cover roxo.
 - `apps/web/src/components/items/markdown-editor.tsx` - variante `sheet`, portal da toolbar, portal de anexos no painel direito e ordem/acoes visuais da toolbar.
 - `apps/web/src/app/globals.css` - estilos de prose para a folha do editor.
+- `apps/web/src/app/(app)/notas/page.tsx` - links dos cards atualizados para navegar para a pagina imersiva em vez de abrir o painel lateral.
 - `specs/2026-05-27-corrigir-layout-editor-notas.md` - spec viva da tarefa.
 
 ## Validation

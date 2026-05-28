@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Status: in_progress
+- Status: done
 - Mode: bugfix
 - Complexity: medium
 - Created: 2026-05-28
@@ -25,8 +25,8 @@ O service worker atual usa `cachedFirst` para `request.mode === 'navigate'`, o q
 - [x] Identificar o cache PWA como causa provavel da UI antiga.
 - [x] Alterar o service worker para navegação network-first com fallback offline.
 - [x] Invalidar caches antigos com nova versao.
-- [ ] Validar localmente e em GitHub Actions.
-- [ ] Promover para producao e confirmar deploy.
+- [x] Validar localmente e em GitHub Actions.
+- [x] Promover para producao e confirmar deploy.
 
 ## Out of scope
 
@@ -50,16 +50,16 @@ Answers:
 - [x] Navegacoes de paginas usam rede primeiro quando online.
 - [x] Cache offline de paginas continua funcionando como fallback.
 - [x] Caches `clarity-v8-*` sao descartados por uma nova versao.
-- [ ] `Gates DEV` passa.
-- [ ] `Deploy PROD` passa em `main`.
+- [x] `Gates DEV` passa.
+- [x] `Deploy PROD` passa em `main`.
 
 ## Implementation plan
 
 - [x] Revisar deploy e SW atual.
 - [x] Atualizar `apps/web/public/sw.js`.
 - [x] Rodar validacoes locais relevantes.
-- [ ] Enviar para `dev`, acompanhar gates, promover para `main`.
-- [ ] Registrar resultado.
+- [x] Enviar para `dev`, acompanhar gates, promover para `main`.
+- [x] Registrar resultado.
 
 ## Progress
 
@@ -69,6 +69,11 @@ Answers:
 - 2026-05-28 00:00 - Identificado `cachedFirst` para navegacoes no service worker `clarity-v8`.
 - 2026-05-28 00:00 - Atualizado service worker para `clarity-v9` e navegacoes network-first com fallback offline.
 - 2026-05-28 00:00 - Type-check web passou localmente.
+- 2026-05-28 00:00 - Commit `76d32db` enviado para `dev`.
+- 2026-05-28 00:00 - `Gates DEV` run `26551276714` passou com Quality Gate, Security Gate, Secret Scan e DEV gates complete.
+- 2026-05-28 00:00 - PR #19 criado, checks de PR passaram e mergeado em `main`.
+- 2026-05-28 00:00 - `Deploy PROD` run `26551425927` passou em `main@aedfd6e` e criou a tag `prod-2026.05.28-r105`.
+- 2026-05-28 00:00 - Quality e Security paralelos em `main` tambem passaram.
 
 ## Decisions
 
@@ -86,12 +91,18 @@ Answers:
 Commands run:
 
 - [x] `pnpm --filter @doit/web exec tsc --noEmit`
-- [ ] `gh run watch <dev-run-id> --exit-status`
-- [ ] `gh run watch <prod-run-id> --exit-status`
+- [x] `gh run watch 26551276714 --exit-status`
+- [x] `gh pr checks 19 --watch`
+- [x] `gh run watch 26551425927 --exit-status`
+- [x] `gh run watch 26551425930 --exit-status`
 
 Results:
 
 - Type-check web passou.
+- `Gates DEV` run `26551276714` passou.
+- Checks do PR #19 passaram.
+- `Deploy PROD` run `26551425927` passou e publicou `prod-2026.05.28-r105`.
+- Quality run `26551425930` e Security run `26551425912` em `main` passaram.
 
 Frontend evidence:
 
@@ -104,4 +115,4 @@ Frontend evidence:
 
 ## Next step
 
-Atualizar o service worker e validar.
+Nenhuma acao obrigatoria. Em navegadores que ja tinham a PWA aberta com o service worker antigo, pode ser necessario recarregar a aba para o navegador buscar `sw.js` novo; a partir dai navegacoes usam network-first.
