@@ -28,6 +28,7 @@ import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 import { usePreferences } from '@/hooks/use-preferences'
 import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 import { useUI } from '@/store/ui'
+import { buildTagGraph } from '@/lib/note-relations'
 
 function StarIcon({
   filled = false,
@@ -813,15 +814,15 @@ function EditorSpotlight({
 }
 
 function NotesGraph({ notes }: { notes: Item[] }) {
-  const graphNotes = notes.slice(0, 7)
+  const graph = buildTagGraph(notes, 7)
   const positions = [
-    'left-1/2 top-1/2',
-    'left-[16%] top-[25%]',
-    'left-[86%] top-[20%]',
-    'left-[14%] top-[78%]',
-    'left-[86%] top-[82%]',
-    'left-[60%] top-[12%]',
-    'left-[40%] top-[90%]',
+    { x: 190, y: 160, className: 'left-1/2 top-1/2' },
+    { x: 62, y: 80, className: 'left-[16%] top-[25%]' },
+    { x: 300, y: 64, className: 'left-[78%] top-[20%]' },
+    { x: 54, y: 250, className: 'left-[14%] top-[78%]' },
+    { x: 310, y: 260, className: 'left-[80%] top-[82%]' },
+    { x: 228, y: 34, className: 'left-[60%] top-[12%]' },
+    { x: 152, y: 292, className: 'left-[40%] top-[90%]' },
   ]
   return (
     <div className="relative min-h-0 flex-1 overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,#0b1733,#0f2342_62%,#122a55)]">
@@ -838,27 +839,37 @@ function NotesGraph({ notes }: { notes: Item[] }) {
             <stop offset="1" stopColor="#7B5BFF" stopOpacity=".5" />
           </linearGradient>
         </defs>
-        <path
-          d="M190 160 L62 80 M190 160 L326 64 M190 160 L54 250 M190 160 L330 260 M190 160 L228 34 M190 160 L152 292"
-          stroke="url(#notes-edge)"
-          strokeWidth="1.4"
-          fill="none"
-        />
-        <path
-          d="M62 80 L228 34 L326 64 M54 250 L152 292 L330 260"
-          stroke="rgba(255,255,255,.16)"
-          strokeWidth="1"
-          fill="none"
-        />
+        {graph.edges.map((edge, index) => {
+          const source = positions[edge.sourceIndex]
+          const target = positions[edge.targetIndex]
+          if (!source || !target) return null
+          return (
+            <line
+              key={`${edge.sourceIndex}-${edge.targetIndex}-${index}`}
+              x1={source.x}
+              y1={source.y}
+              x2={target.x}
+              y2={target.y}
+              stroke="url(#notes-edge)"
+              strokeWidth={1 + Math.min(2, edge.score * 3)}
+              strokeOpacity={0.42 + Math.min(0.36, edge.score)}
+            />
+          )
+        })}
       </svg>
-      {graphNotes.length === 0 ? (
+      {graph.nodes.length === 0 ? (
         <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-white/58">
-          Crie notas para formar o grafo de conexoes.
+          Crie notas com tags dentro de pastas para formar o mapa.
         </div>
       ) : (
-        graphNotes.map((note, index) => (
+        graph.nodes.map((node, index) => (
           <span
-            key={note.id}
+            key={node.item.id}
+            title={
+              node.primaryTag
+                ? `#${node.primaryTag} / ${node.relatedCount} relacoes na pasta`
+                : 'sem tags compartilhadas'
+            }
             className={`absolute max-w-[130px] -translate-x-1/2 -translate-y-1/2 truncate rounded-full border px-2.5 py-1.5 font-mono text-[10px] font-bold shadow-[0_10px_28px_rgba(0,0,0,.18)] ${
               index === 0
                 ? 'border-white/25 bg-white text-navy-900'
@@ -867,12 +878,17 @@ function NotesGraph({ notes }: { notes: Item[] }) {
                   : index % 3 === 2
                     ? 'border-teal-300/35 bg-teal-400/20 text-teal-50'
                     : 'border-white/15 bg-white/12 text-white'
-            } ${positions[index]}`}
+            } ${positions[index]?.className ?? ''}`}
           >
-            {noteFileName(note)}
+            {noteFileName(node.item)}
           </span>
         ))
       )}
+      {graph.nodes.length > 0 && graph.edges.length === 0 ? (
+        <div className="absolute bottom-3 left-3 right-3 rounded-full bg-white/10 px-3 py-1.5 text-center font-mono text-[10px] text-white/62">
+          sem tags compartilhadas nesta pasta
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -1409,9 +1425,9 @@ export default function NotasPage() {
               </div>
               <NotesGraph notes={activeNotes} />
               <div className="mt-3 flex gap-3 font-mono text-[10px]">
-                <span className="text-[#79A6FF]">linked</span>
-                <span className="text-[#5BE3D4]">backlinks</span>
-                <span className="text-[#B59BFF]">tag-cluster</span>
+                <span className="text-[#79A6FF]">mesma pasta</span>
+                <span className="text-[#5BE3D4]">tags em comum</span>
+                <span className="text-[#B59BFF]">cluster</span>
               </div>
             </div>
           </GlassCard>

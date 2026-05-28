@@ -3,10 +3,11 @@
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { Folder, Item, ItemStatus, UpdateItemInput } from '@doit/types'
+import type { Folder, Item, UpdateItemInput } from '@doit/types'
 import { buildFolderTree, useFolders, type FolderTreeNode } from '@/hooks/use-folders'
 import { updateItem, useItems } from '@/hooks/use-items'
 import { MarkdownEditor } from '@/components/items/markdown-editor'
+import { findRelatedNotesInFolder, type RelatedNote } from '@/lib/note-relations'
 
 const SIDEBAR_FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
 
@@ -76,19 +77,6 @@ function formatReadableDate(date?: string) {
 function normalizeFileName(item: Item) {
   if (item.localPath) return item.localPath.split(/[\\/]/).pop() ?? item.localPath
   return `${(item.title || 'nota').toLowerCase().replace(/\s+/g, '-')}.md`
-}
-
-function findBacklinkItems(item: Item, items: Item[]) {
-  const title = item.title.toLowerCase()
-  const fileName = normalizeFileName(item).toLowerCase()
-  return items
-    .filter((candidate) => {
-      if (candidate.id === item.id || candidate.complexity !== 'note') return false
-      if (item.backlinks.includes(candidate.id)) return true
-      const content = `${candidate.title}\n${candidate.contentMd ?? ''}`.toLowerCase()
-      return content.includes(title) || content.includes(fileName)
-    })
-    .slice(0, 3)
 }
 
 function buildFolderPath(folders: Folder[], folderId?: string): Folder[] {
@@ -322,7 +310,17 @@ function RailTitle({ children }: { children: React.ReactNode }) {
   )
 }
 
-const EDITABLE_STATUSES: ItemStatus[] = ['inbox', 'todo', 'doing', 'waiting', 'done']
+function flattenFolderOptions(folders: Folder[]): Array<{ id: string; name: string; depth: number }> {
+  const out: Array<{ id: string; name: string; depth: number }> = []
+  const walk = (nodes: FolderTreeNode[], depth: number) => {
+    for (const node of nodes) {
+      out.push({ id: node.id, name: node.name, depth })
+      if (node.children.length > 0) walk(node.children, depth + 1)
+    }
+  }
+  walk(buildFolderTree(folders), 0)
+  return out
+}
 
 function PanelField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -366,21 +364,6 @@ function NotePropertiesPanel({
 
   return (
     <div className="space-y-3 rounded-[12px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
-      <PanelField label="status">
-        <select
-          value={item.status}
-          onChange={(event) => onPatch({ status: event.target.value as ItemStatus })}
-          className={panelControlClass()}
-        >
-          {item.status === 'archived' ? <option value="archived">archived</option> : null}
-          {EDITABLE_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-      </PanelField>
-
       <PanelField label="pasta">
         <select
           value={item.folderId ?? ''}
@@ -390,9 +373,9 @@ function NotePropertiesPanel({
           className={panelControlClass()}
         >
           <option value="">inbox</option>
-          {folders.map((folder) => (
-            <option key={folder.id} value={folder.id}>
-              {folder.name}
+          {flattenFolderOptions(folders).map(({ id, name, depth }) => (
+            <option key={id} value={id}>
+              {`${'  '.repeat(depth)}${depth > 0 ? '↳ ' : ''}${name}`}
             </option>
           ))}
         </select>
@@ -435,7 +418,7 @@ function NotePropertiesPanel({
 function OutlineRail({
   headings,
   progress,
-  backlinks,
+  relatedNotes,
   item,
   folders,
   wordCount,
@@ -446,7 +429,7 @@ function OutlineRail({
 }: {
   headings: Heading[]
   progress: { done: number; total: number; percent: number }
-  backlinks: Item[]
+  relatedNotes: RelatedNote[]
   item: Item
   folders: Folder[]
   wordCount: number
@@ -516,25 +499,37 @@ function OutlineRail({
           </nav>
         )}
 
-        <RailTitle>backlinks · {backlinks.length}</RailTitle>
+        <RailTitle>relacionadas - {relatedNotes.length}</RailTitle>
         <div className="flex flex-col gap-2">
-          {backlinks.length === 0 ? (
+          {relatedNotes.length === 0 ? (
             <div className="rounded-[10px] bg-white/35 px-3 py-2 font-mono text-[11px] text-navy-300">
-              nenhum backlink
+              adicione tags em comum nesta pasta
             </div>
           ) : (
-            backlinks.map((link) => (
+            relatedNotes.map((relation) => (
               <Link
-                key={link.id}
-                href={`/notas/${link.id}`}
+                key={relation.item.id}
+                href={`/notas/${relation.item.id}`}
                 className="rounded-[10px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)] hover:bg-white/70"
               >
                 <div className="font-mono text-[10px] font-semibold text-brand-600">
-                  M↓ {normalizeFileName(link)}
+                  M↓ {normalizeFileName(relation.item)}
                 </div>
-                <div className="mt-1 truncate text-[12px] font-semibold text-navy-900">{link.title}</div>
+                <div className="mt-1 truncate text-[12px] font-semibold text-navy-900">
+                  {relation.item.title}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {relation.sharedTags.slice(0, 3).map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-brand-500/10 px-1.5 py-0.5 font-mono text-[10px] text-brand-700"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
                 <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-navy-500">
-                  {(link.contentMd ?? '').replace(/\s+/g, ' ').slice(0, 110) || 'Nota relacionada'}
+                  {(relation.item.contentMd ?? '').replace(/\s+/g, ' ').slice(0, 90) || 'Nota relacionada por tags'}
                 </div>
               </Link>
             ))
@@ -550,11 +545,14 @@ function EditorTopBar({
   crumbs,
   saveStatus,
   onArchive,
+  onDownload,
 }: {
   crumbs: Array<{ label: string; href?: string; isFile?: boolean }>
   saveStatus: 'idle' | 'saving' | 'saved'
   onArchive: () => void
+  onDownload: () => void
 }) {
+  const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div className="flex shrink-0 items-center gap-3 border-b border-[#ECF0F5] px-6 py-3.5">
       <nav className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500">
@@ -601,33 +599,73 @@ function EditorTopBar({
         className="hidden h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] font-medium text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900 sm:inline-flex"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+          <path d="M7 8V4h10v4" />
+          <path d="M7 17H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" />
+          <path d="M7 14h10v6H7z" />
         </svg>
-        export
+        Imprimir
       </button>
       <button
         type="button"
-        onClick={() => void navigator.clipboard?.writeText(window.location.href)}
+        onClick={onDownload}
         className="hidden h-8 items-center gap-1.5 rounded-lg bg-navy-900 px-3 text-[12px] font-semibold text-white hover:bg-navy-700 sm:inline-flex"
       >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" />
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 4v10" />
+          <path d="m8 10 4 4 4-4" />
+          <path d="M5 20h14" />
         </svg>
-        share
+        Baixar
       </button>
-      <button
-        type="button"
-        onClick={onArchive}
-        aria-label="More"
-        title="Arquivar"
-        className="hidden h-7 w-7 items-center justify-center rounded-[7px] text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900 sm:inline-flex"
-      >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
-          <circle cx="5" cy="12" r="1.2" />
-          <circle cx="12" cy="12" r="1.2" />
-          <circle cx="19" cy="12" r="1.2" />
-        </svg>
-      </button>
+      <div className="relative hidden sm:block">
+        <button
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label="Mais acoes"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title="Mais acoes"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-[7px] text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900"
+        >
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+            <circle cx="5" cy="12" r="1.2" />
+            <circle cx="12" cy="12" r="1.2" />
+            <circle cx="19" cy="12" r="1.2" />
+          </svg>
+        </button>
+        {menuOpen ? (
+          <>
+            <button
+              type="button"
+              aria-hidden="true"
+              tabIndex={-1}
+              onClick={() => setMenuOpen(false)}
+              className="fixed inset-0 z-40 cursor-default"
+            />
+            <div
+              role="menu"
+              className="absolute right-0 top-[calc(100%+6px)] z-50 w-44 overflow-hidden rounded-[12px] border border-navy-900/10 bg-white py-1 shadow-[0_12px_32px_rgba(15,35,66,.20),0_2px_8px_rgba(15,35,66,.08)]"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setMenuOpen(false)
+                  onArchive()
+                }}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium text-red-600 hover:bg-red-50"
+              >
+                <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="4" rx="1" />
+                  <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
+                  <path d="M10 12h4" />
+                </svg>
+                Arquivar nota
+              </button>
+            </div>
+          </>
+        ) : null}
+      </div>
     </div>
   )
 }
@@ -648,24 +686,15 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     return counts
   }, [items])
 
-  const [localTitle, setLocalTitle] = useState('')
   const [localContent, setLocalContent] = useState('')
   const [tagsDraft, setTagsDraft] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [hydrated, setHydrated] = useState(false)
-  const titleInputRef = useRef<HTMLTextAreaElement | null>(null)
-  const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [focusMode, setFocusMode] = useState(false)
   const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  function autosizeTitle(el: HTMLTextAreaElement | null) {
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }
 
   useEffect(() => {
     if (!item || hydrated) return
-    setLocalTitle(item.title)
     setLocalContent(item.contentMd ?? '')
     setTagsDraft(item.tags.join(', '))
     setHydrated(true)
@@ -677,7 +706,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   }, [item?.id, item?.tags])
 
   const persist = useCallback(
-    async (patch: { title?: string; contentMd?: string }) => {
+    async (patch: { contentMd?: string }) => {
       if (!item) return
       setSaveStatus('saving')
       try {
@@ -689,14 +718,6 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     },
     [item],
   )
-
-  const onTitleChange = (value: string) => {
-    setLocalTitle(value)
-    if (titleTimer.current) clearTimeout(titleTimer.current)
-    titleTimer.current = setTimeout(() => {
-      if (value.trim().length > 0) void persist({ title: value })
-    }, 600)
-  }
 
   const onContentChange = useCallback(
     (value: string) => {
@@ -711,21 +732,28 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
 
   useEffect(() => {
     return () => {
-      if (titleTimer.current) clearTimeout(titleTimer.current)
       if (contentTimer.current) clearTimeout(contentTimer.current)
     }
   }, [])
 
   useEffect(() => {
-    autosizeTitle(titleInputRef.current)
-  }, [localTitle])
+    if (!focusMode) return undefined
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFocusMode(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [focusMode])
 
   const folderPath = useMemo(() => buildFolderPath(folders, item?.folderId), [folders, item])
   const headings = useMemo(() => parseHeadings(localContent), [localContent])
   const noteItems = useMemo(() => items.filter((it) => it.complexity === 'note'), [items])
   const progress = useMemo(() => taskProgress(localContent), [localContent])
   const wordCount = useMemo(() => countWords(localContent), [localContent])
-  const backlinks = useMemo(() => (item ? findBacklinkItems(item, noteItems) : []), [item, noteItems])
+  const relatedNotes = useMemo(
+    () => (item ? findRelatedNotesInFolder(item, noteItems) : []),
+    [item, noteItems],
+  )
   const dueLabel = useMemo(() => formatReadableDate(item?.dueDate), [item?.dueDate])
   const fileName = useMemo(() => {
     if (!item) return 'nota.md'
@@ -756,6 +784,19 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
       .catch(() => setSaveStatus('idle'))
   }
 
+  const handleDownload = useCallback(() => {
+    const base = (fileName.split(/[\\/]/).pop() || 'nota').replace(/\.md$/i, '')
+    const blob = new Blob([localContent], { type: 'text/markdown;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `${base}.md`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }, [fileName, localContent])
+
   if (isLoading) {
     return (
       <div className="grid h-full place-items-center font-mono text-sm text-navy-500">
@@ -776,38 +817,32 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="grid h-full grid-cols-1 gap-3.5 p-3.5 lg:grid-cols-[260px_1fr_280px]">
-      <Sidebar
-        folders={folders}
-        notes={noteItems}
-        itemCounts={itemCounts}
-        parentFolderId={item.folderId}
-        currentItemId={item.id}
-      />
+    <div
+      className={`grid h-full grid-cols-1 gap-3.5 p-3.5 ${
+        focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-[260px_1fr_280px]'
+      }`}
+    >
+      {focusMode ? null : (
+        <Sidebar
+          folders={folders}
+          notes={noteItems}
+          itemCounts={itemCounts}
+          parentFolderId={item.folderId}
+          currentItemId={item.id}
+        />
+      )}
 
       <main className="flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]">
-        <EditorTopBar crumbs={crumbs} saveStatus={saveStatus} onArchive={handleArchive} />
+        <EditorTopBar
+          crumbs={crumbs}
+          saveStatus={saveStatus}
+          onArchive={handleArchive}
+          onDownload={handleDownload}
+        />
         <div id="note-editor-toolbar" />
 
         <div className="flex-1 overflow-auto" data-note-scroll-container="true">
-          <div className="mx-auto w-full max-w-[760px] px-6 pb-20 pt-10 lg:px-16">
-            <span className="mb-4 inline-flex h-[72px] w-[72px] items-center justify-center rounded-[18px] border border-navy-900/[0.04] bg-white font-mono text-[26px] font-bold text-brand-600 shadow-[0_8px_20px_rgba(15,35,66,.15)]">
-              M↓
-            </span>
-
-            <textarea
-              ref={titleInputRef}
-              value={localTitle}
-              rows={1}
-              onChange={(e) => {
-                onTitleChange(e.target.value)
-                autosizeTitle(e.currentTarget)
-              }}
-              placeholder="Sem titulo"
-              className="mb-3 block w-full resize-none overflow-hidden bg-transparent text-[46px] font-black leading-[1.05] -tracking-[.03em] text-navy-900 outline-none placeholder:text-navy-200"
-              aria-label="Titulo"
-            />
-
+          <div className="w-full max-w-[760px] px-6 pb-20 pt-8 lg:px-16">
             <MarkdownEditor
               value={localContent}
               onChange={onContentChange}
@@ -817,23 +852,27 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
               variant="sheet"
               toolbarPortalId="note-editor-toolbar"
               attachmentsPortalId="note-editor-attachments"
+              focusMode={focusMode}
+              onToggleFocus={() => setFocusMode((value) => !value)}
             />
           </div>
         </div>
       </main>
 
-      <OutlineRail
-        headings={headings}
-        progress={progress}
-        backlinks={backlinks}
-        item={item}
-        folders={folders}
-        wordCount={wordCount}
-        tagsDraft={tagsDraft}
-        dueLabel={dueLabel}
-        onTagsDraftChange={setTagsDraft}
-        onPatch={handleMetadataPatch}
-      />
+      {focusMode ? null : (
+        <OutlineRail
+          headings={headings}
+          progress={progress}
+          relatedNotes={relatedNotes}
+          item={item}
+          folders={folders}
+          wordCount={wordCount}
+          tagsDraft={tagsDraft}
+          dueLabel={dueLabel}
+          onTagsDraftChange={setTagsDraft}
+          onPatch={handleMetadataPatch}
+        />
+      )}
     </div>
   )
 }
