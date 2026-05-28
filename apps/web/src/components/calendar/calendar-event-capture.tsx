@@ -351,6 +351,13 @@ export function CalendarEventCapture() {
         >
           {!expanded ? (
             <div className="w-full">
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="mx-auto mb-3 block h-1.5 w-12 rounded-full bg-navy-900/15 transition-colors hover:bg-navy-900/25"
+                aria-label="Expandir"
+                title="Expandir"
+              />
               <div className="mb-3 flex items-center justify-between">
                 <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
               </div>
@@ -363,14 +370,6 @@ export function CalendarEventCapture() {
                   placeholder="Evento hoje as 14h"
                   className="min-w-0 flex-1 border-none bg-transparent px-2.5 py-1.5 text-[15px] font-medium leading-5 text-navy-900 outline-none placeholder:text-navy-300"
                 />
-                <button
-                  type="button"
-                  onClick={() => setExpanded(true)}
-                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-white/60 text-navy-500 shadow-sm transition-colors hover:bg-white hover:text-navy-900"
-                  aria-label="Expandir"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                </button>
                 <button
                   type="submit"
                   disabled={saving || !cleanTitle(title)}
@@ -450,7 +449,7 @@ export function CalendarEventCapture() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Inicio
+                Início
               </span>
               <input
                 type="date"
@@ -481,7 +480,7 @@ export function CalendarEventCapture() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                  Hora inicio
+                  Hora início
                 </span>
                 <input
                   type="time"
@@ -524,7 +523,7 @@ export function CalendarEventCapture() {
 
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-              Descricao
+              Descrição
             </span>
             <textarea
               value={description}
