@@ -249,6 +249,72 @@
     padding-left: 1.25rem;
   }
 
+  .doit-note-sheet-prose {
+    color: var(--c-navy);
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  .doit-note-sheet-prose p {
+    margin: 0 0 14px;
+  }
+  .doit-note-sheet-prose h1,
+  .doit-note-sheet-prose h2,
+  .doit-note-sheet-prose h3 {
+    color: var(--c-navy);
+    font-weight: 800;
+    letter-spacing: 0;
+  }
+  .doit-note-sheet-prose h1 {
+    font-size: 36px;
+    line-height: 1.1;
+    margin: 34px 0 14px;
+  }
+  .doit-note-sheet-prose h2 {
+    font-size: 28px;
+    line-height: 1.18;
+    margin: 32px 0 12px;
+  }
+  .doit-note-sheet-prose h3 {
+    font-size: 19px;
+    line-height: 1.25;
+    margin: 26px 0 10px;
+  }
+  .doit-note-sheet-prose ul,
+  .doit-note-sheet-prose ol {
+    margin: 0 0 18px;
+    padding-left: 1.35rem;
+  }
+  .doit-note-sheet-prose blockquote {
+    margin: 18px 0;
+    border-left: 3px solid var(--c-blue);
+    padding: 10px 0 10px 16px;
+    color: rgb(var(--navy-500));
+    font-style: italic;
+  }
+  .doit-note-sheet-prose pre {
+    margin: 18px 0;
+    border-radius: 12px;
+    background: #0F2342;
+    color: white;
+    padding: 16px 18px;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .doit-note-sheet-prose code {
+    border-radius: 4px;
+    background: rgba(15, 35, 66, 0.06);
+    color: var(--c-blue);
+    padding: 1px 5px;
+    font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+    font-size: 0.9em;
+  }
+  .doit-note-sheet-prose pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+  }
+
   .ProseMirror h1,
   .ProseMirror h2,
   .ProseMirror h3 {
