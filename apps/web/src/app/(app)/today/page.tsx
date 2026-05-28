@@ -1,12 +1,10 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo } from 'react'
 import { useItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useUI } from '@/store/ui'
-import { isOverdue, isToday, toLocalDateKey } from '@doit/core'
-import type { CalendarEvent, Item, ItemStatus } from '@doit/types'
+import { toLocalDateKey } from '@doit/core'
 
 function EventIcon({ className = 'h-3.5 w-3.5' }) {
   return (

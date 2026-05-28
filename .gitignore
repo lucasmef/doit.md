@@ -23,6 +23,8 @@ coverage
 .agents/skills/*
 !.agents/skills/builderflow/
 !.agents/skills/builderflow/SKILL.md
+!.agents/skills/devdeploy/
+!.agents/skills/devdeploy/SKILL.md
 .doitmd/
 apps/web/.mobile-qa/
 brain/

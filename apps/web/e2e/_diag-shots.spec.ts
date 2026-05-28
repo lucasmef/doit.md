@@ -1,4 +1,4 @@
-import { test } from '@playwright/test'
+﻿import { test } from '@playwright/test'
 
 const SHOT_DIR = '../../specs/artifacts/diag'
 
