@@ -13,9 +13,8 @@ const DATE_WORD_SHORTCUT =
   /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
-const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
-const INLINE_METADATA_PATTERN =
-  /((?:^|\s)(?:hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|\u00e0s\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?|\s+horas?)?\b/iu
+const DURATION_SHORTCUT = /(?:^|\s)por\s+(\d{1,2})(?:h|hora|horas)(?:\s*(\d{1,2})m?)?\b/iu
 
 const TIME_SUGGESTIONS = ['09:00', '12:00', '14:00', '18:00']
 
@@ -117,17 +116,18 @@ function cleanTitle(value: string) {
     .replace(SLASH_DATE_SHORTCUT, ' ')
     .replace(ISO_DATE_SHORTCUT, ' ')
     .replace(TIME_SHORTCUT, ' ')
+    .replace(DURATION_SHORTCUT, ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
 
-function isInlineMetadata(value: string) {
-  return (
-    DATE_WORD_SHORTCUT.test(value) ||
-    SLASH_DATE_SHORTCUT.test(value) ||
-    ISO_DATE_SHORTCUT.test(value) ||
-    TIME_SHORTCUT.test(value)
-  )
+function parseInlineDurationMinutes(value: string) {
+  const match = value.match(DURATION_SHORTCUT)
+  if (!match?.[1]) return null
+  const hours = Number(match[1])
+  const minutes = Number(match[2] ?? '0')
+  const total = hours * 60 + minutes
+  return total > 0 ? total : null
 }
 
 function buildDateTime(date: string, time: string) {
@@ -151,6 +151,46 @@ function formatTimeLabel(time: string) {
   const date = new Date()
   date.setHours(Number(hour), Number(minute), 0, 0)
   return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatDateLabel(dateStr: string) {
+  const today = toDateInputValue(new Date())
+  const tomorrow = dateAfter(1)
+  if (dateStr === today) return 'hoje'
+  if (dateStr === tomorrow) return 'amanhã'
+  const date = new Date(`${dateStr}T12:00:00`)
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+}
+
+function DetectedEventInlineHint({
+  date,
+  startTime,
+  endTime,
+  allDay,
+}: {
+  date: string
+  startTime: string
+  endTime: string
+  allDay: boolean
+}) {
+  if (!date) return null
+  return (
+    <div className="mx-[5px] mt-[7px] flex min-h-[18px] items-center gap-[6px] font-mono text-[10.5px] leading-[1.35] text-navy-500">
+      <span className="h-[5px] w-[5px] rounded-full bg-[#28C7B7] shadow-[0_0_7px_rgba(40,199,183,0.85)]" />
+      <span>
+        Detectado: <b className="font-[850] text-navy-900">{formatDateLabel(date)}</b>
+        {!allDay && startTime ? (
+          <>
+            {' · '}
+            <b className="font-[850] text-navy-900">
+              {formatTimeLabel(startTime)}
+              {endTime ? ` - ${formatTimeLabel(endTime)}` : ''}
+            </b>
+          </>
+        ) : null}
+      </span>
+    </div>
+  )
 }
 
 function canWriteCalendar(calendar: GoogleCalendar) {
@@ -234,13 +274,14 @@ export function CalendarEventCapture() {
     setTitle(value)
     const inlineDate = parseInlineDate(value)
     const inlineTime = parseInlineTime(value)
+    const inlineDuration = parseInlineDurationMinutes(value)
     const nextDate = inlineDate || date
     if (inlineDate) {
       setDate(inlineDate)
       if (endDate < inlineDate) setEndDate(inlineDate)
     }
     if (inlineTime) {
-      const nextEnd = addMinutesToDateTime(nextDate, inlineTime, duration)
+      const nextEnd = addMinutesToDateTime(nextDate, inlineTime, inlineDuration ?? duration)
       setStartTime(inlineTime)
       setEndDate(nextEnd.date)
       setEndTime(nextEnd.time)
@@ -254,6 +295,9 @@ export function CalendarEventCapture() {
     setEndDate(nextEnd.date)
     setEndTime(nextEnd.time)
   }
+
+  const hasDetectedEventMetadata =
+    title.trim().length > 0 && Boolean(parseInlineDate(title) || parseInlineTime(title))
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -281,7 +325,7 @@ export function CalendarEventCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-[220] flex items-end justify-center bg-navy-900/32 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 isolate z-[220] flex items-end justify-center overflow-hidden bg-navy-900/24 p-0 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(clickEvent) => {
@@ -291,10 +335,14 @@ export function CalendarEventCapture() {
       {...swipeHandlers}
     >
       <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_700px_at_12%_20%,rgba(123,91,255,.55),transparent_60%),radial-gradient(800px_600px_at_88%_14%,rgba(255,111,174,.34),transparent_62%),radial-gradient(900px_800px_at_78%_78%,rgba(40,199,183,.44),transparent_60%),radial-gradient(1000px_900px_at_18%_95%,rgba(47,107,255,.46),transparent_62%),linear-gradient(135deg,#B7C9FF_0%,#DDD6FE_35%,#FBC9F0_60%,#CFF3EE_100%)] opacity-95"
+      />
+      <div
         className={
           expanded
-            ? 'w-full overflow-hidden border border-white/65 bg-white shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px] sm:max-h-none sm:overflow-visible sm:rounded-[24px]'
-            : 'w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
+            ? 'relative w-full max-h-[calc(100dvh-1rem)] max-w-[560px] overflow-hidden rounded-t-[30px] border border-white/80 bg-white/[0.90] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px] sm:max-h-none sm:overflow-visible sm:rounded-[28px]'
+            : 'relative w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:pb-3 sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
         }
       >
         <form
@@ -303,6 +351,13 @@ export function CalendarEventCapture() {
         >
           {!expanded ? (
             <div className="w-full">
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="mx-auto mb-3 block h-1.5 w-12 rounded-full bg-navy-900/15 transition-colors hover:bg-navy-900/25"
+                aria-label="Expandir"
+                title="Expandir"
+              />
               <div className="mb-3 flex items-center justify-between">
                 <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
               </div>
@@ -316,14 +371,6 @@ export function CalendarEventCapture() {
                   className="min-w-0 flex-1 border-none bg-transparent px-2.5 py-1.5 text-[15px] font-medium leading-5 text-navy-900 outline-none placeholder:text-navy-300"
                 />
                 <button
-                  type="button"
-                  onClick={() => setExpanded(true)}
-                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-white/60 text-navy-500 shadow-sm transition-colors hover:bg-white hover:text-navy-900"
-                  aria-label="Expandir"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-                </button>
-                <button
                   type="submit"
                   disabled={saving || !cleanTitle(title)}
                   className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[14px] bg-brand-600 text-white shadow-[0_4px_12px_-4px_rgba(47,107,255,0.6)] transition-colors hover:bg-brand-700 disabled:opacity-40"
@@ -334,51 +381,59 @@ export function CalendarEventCapture() {
                 </button>
               </div>
 
-              {date && (
-                <div className="mt-[7px] mx-[5px] flex min-h-[18px] items-center gap-[6px] font-mono text-[10.5px] leading-[1.35] text-slate-500">
-                  <span className="h-[5px] w-[5px] rounded-full bg-[#28C7B7] shadow-[0_0_7px_rgba(40,199,183,0.85)]"></span>
-                  <span>
-                    Data do evento: <b className="font-[850] text-navy-900">{date}</b>
-                    {!allDay && startTime && <> · <b className="font-[850] text-navy-900">{startTime}</b></>}
-                  </span>
-                </div>
-              )}
+              {hasDetectedEventMetadata ? (
+                <DetectedEventInlineHint
+                  date={date}
+                  startTime={startTime}
+                  endTime={endTime}
+                  allDay={allDay}
+                />
+              ) : null}
             </div>
           ) : (
             <>
-              <div className="shrink-0 border-b border-navy-900/[0.04] bg-white px-4 pb-3 pt-3">
-                <div className="flex items-center gap-2">
-                  <div className="min-w-0 flex-1">
-                    <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
-                  </div>
+              <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.07] px-5 pb-3.5 pt-4">
+                <div className="h-[38px] w-[38px] rounded-[14px] bg-[linear-gradient(135deg,#28C7B7,#1AAED7)] shadow-[0_10px_22px_-14px_rgba(40,199,183,.85)]" />
+                <div className="min-w-0 flex-1">
+                  <b className="block truncate text-[15px] font-[850] text-navy-900">
+                    Adicionar evento
+                  </b>
+                  <span className="mt-1 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+                    Google Calendar
+                  </span>
                 </div>
+                <button
+                  type="button"
+                  onClick={close}
+                  className="grid h-8 w-8 place-items-center rounded-[11px] bg-navy-900/[0.055] text-navy-500 transition-colors hover:bg-navy-900/[0.08] hover:text-navy-900"
+                  aria-label="Fechar"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                    <path d="M6 6l12 12M18 6 6 18" />
+                  </svg>
+                </button>
               </div>
-        <div className={`${expanded ? 'block' : 'hidden sm:block'} min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3 text-[14px] text-navy-700`}>
+        <div className={`${expanded ? 'block' : 'hidden sm:block'} min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-[14px] text-navy-700`}>
           <label className="block">
-            <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-              Titulo
+            <span className="mb-2 block font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">
+              Evento
             </span>
             <input
               ref={titleRef}
               value={title}
               onChange={(inputEvent) => applyTitleShortcuts(inputEvent.target.value)}
-              placeholder="Evento hoje as 14h"
-              className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+              placeholder="Reunião amanhã 8 horas por 1h"
+              className="h-[52px] w-full rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 text-[16px] font-bold text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] placeholder:text-navy-300 focus:ring-2 focus:ring-brand-100"
               autoFocus
             />
-            <div className="mt-1 flex min-h-5 flex-wrap gap-1">
-              {title.split(INLINE_METADATA_PATTERN).map((part, index) => {
-                if (!part || !isInlineMetadata(part)) return null
-                return (
-                  <span
-                    key={`${part}-${index}`}
-                    className="rounded-md bg-surface-soft px-1.5 py-0.5 font-mono text-[10px] font-semibold text-brand-700"
-                  >
-                    {part.trim()}
-                  </span>
-                )
-              })}
-            </div>
+            {hasDetectedEventMetadata ? (
+              <DetectedEventInlineHint
+                date={date}
+                startTime={startTime}
+                endTime={endTime}
+                allDay={allDay}
+              />
+            ) : null}
           </label>
 
           <label className="flex items-center gap-2 font-mono text-[11px] font-semibold text-navy-500">
@@ -394,7 +449,7 @@ export function CalendarEventCapture() {
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                Inicio
+                Início
               </span>
               <input
                 type="date"
@@ -404,7 +459,7 @@ export function CalendarEventCapture() {
                   setDate(nextDate)
                   if (endDate < nextDate) setEndDate(nextDate)
                 }}
-                className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                className="h-11 w-full rounded-[15px] border border-navy-900/[0.08] bg-white/[0.72] px-3 text-sm font-semibold text-navy-800 outline-none focus:ring-2 focus:ring-brand-100"
               />
             </label>
             <label className="block">
@@ -416,7 +471,7 @@ export function CalendarEventCapture() {
                 value={endDate}
                 min={date}
                 onChange={(inputEvent) => setEndDate(inputEvent.target.value)}
-                className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                className="h-11 w-full rounded-[15px] border border-navy-900/[0.08] bg-white/[0.72] px-3 text-sm font-semibold text-navy-800 outline-none focus:ring-2 focus:ring-brand-100"
               />
             </label>
           </div>
@@ -425,13 +480,13 @@ export function CalendarEventCapture() {
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-                  Hora inicio
+                  Hora início
                 </span>
                 <input
                   type="time"
                   value={startTime}
                   onChange={(inputEvent) => handleStartTimeChange(inputEvent.target.value)}
-                  className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                  className="h-11 w-full rounded-[15px] border border-navy-900/[0.08] bg-white/[0.72] px-3 text-sm font-semibold text-navy-800 outline-none focus:ring-2 focus:ring-brand-100"
                 />
               </label>
               <label className="block">
@@ -442,7 +497,7 @@ export function CalendarEventCapture() {
                   type="time"
                   value={endTime}
                   onChange={(inputEvent) => setEndTime(inputEvent.target.value)}
-                  className="h-10 w-full rounded-lg border border-ui-border px-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                  className="h-11 w-full rounded-[15px] border border-navy-900/[0.08] bg-white/[0.72] px-3 text-sm font-semibold text-navy-800 outline-none focus:ring-2 focus:ring-brand-100"
                 />
               </label>
               <div className="sm:col-span-2">
@@ -468,18 +523,18 @@ export function CalendarEventCapture() {
 
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
-              Descricao
+              Descrição
             </span>
             <textarea
               value={description}
               onChange={(inputEvent) => setDescription(inputEvent.target.value)}
               rows={2}
-              className="w-full resize-y rounded-lg border border-ui-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+              className="min-h-[92px] w-full resize-y rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-brand-100"
             />
           </label>
         </div>
 
-        <div className={`${expanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center justify-between gap-2 border-t border-navy-900/[0.06] bg-[#F4F6FA] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]`}>
+        <div className={`${expanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center justify-between gap-2 border-t border-navy-900/[0.07] bg-white/[0.62] px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]`}>
           <div className="min-w-0 flex flex-1 items-center gap-2">
             {writableCalendars.length > 0 ? (
               <select
@@ -490,7 +545,7 @@ export function CalendarEventCapture() {
                   update({ defaultCalendarId: next })
                 }}
                 aria-label="Calendario"
-                className="h-10 min-w-0 max-w-[220px] rounded-lg border border-ui-border bg-white px-2 text-sm outline-none focus:ring-2 focus:ring-brand-100"
+                className="h-10 min-w-0 max-w-[220px] rounded-[15px] border border-navy-900/[0.08] bg-white/[0.78] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-100"
               >
                 {writableCalendars.map((calendar) => (
                   <option key={calendar.id} value={calendar.id}>
@@ -508,14 +563,14 @@ export function CalendarEventCapture() {
               type="button"
               onClick={close}
               disabled={saving}
-              className="h-10 rounded-lg border border-ui-border bg-white px-3 text-sm font-semibold text-navy-500 transition-colors hover:bg-surface-soft disabled:opacity-50"
+              className="h-10 rounded-full bg-navy-900/[0.055] px-4 text-sm font-bold text-navy-500 transition-colors hover:bg-white hover:text-navy-700 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving || !cleanTitle(title)}
-              className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+              className="h-10 rounded-full bg-[linear-gradient(135deg,#28C7B7,#1AAED7)] px-4 text-sm font-extrabold text-white transition-colors hover:brightness-95 disabled:opacity-50"
             >
               {saving ? 'Criando...' : 'Criar'}
             </button>
