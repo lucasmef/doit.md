@@ -2,12 +2,12 @@
 
 import { Fragment, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { Folder, Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 import { BentoGrid, CardTitle, DarkGlowCard, GlassCard } from '@/components/ui/bento'
 import { useFolders } from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
-import { useUI } from '@/store/ui'
 
 const FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
 const NOTE_ACCENTS: Array<{ accent: string; fileColor: string }> = [
@@ -610,7 +610,8 @@ export default function NotasPage() {
   const today = toLocalDateKey()
   const { items } = useItems()
   const { folders } = useFolders()
-  const { setSingleSelection } = useUI()
+  const router = useRouter()
+  const handleOpen = (id: string) => router.push(`/notas/${id}`)
   const [activeFilter, setActiveFilter] = useState<string>('all')
 
   const notes = useMemo(
@@ -697,14 +698,14 @@ export default function NotasPage() {
     <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-4">
       <BentoGrid className="lg:auto-rows-[230px]">
         <WritingStatsCard totalNotes={notes.length} editedToday={editedToday} goalPercent={goalPercent} />
-        <EditorSpotlightCard note={spotlight} breadcrumb={breadcrumb} onOpen={setSingleSelection} />
-        <PinnedCard pins={pinned} onOpen={setSingleSelection} />
+        <EditorSpotlightCard note={spotlight} breadcrumb={breadcrumb} onOpen={handleOpen} />
+        <PinnedCard pins={pinned} onOpen={handleOpen} />
         <LibraryCard
           notes={filteredNotes}
           filters={filters}
           active={activeFilter}
           onFilter={setActiveFilter}
-          onOpen={setSingleSelection}
+          onOpen={handleOpen}
           totalNotes={notes.length}
         />
         <KnowledgeGraphCard notes={notes} />
