@@ -362,13 +362,6 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
   )
 }
 
-function nextSaturday(): string {
-  const date = new Date()
-  const offset = (6 - date.getDay() + 7) % 7 || 7
-  date.setDate(date.getDate() + offset)
-  return toLocalDateKey(date)
-}
-
 function IconChevron() {
   return (
     <svg
@@ -516,7 +509,7 @@ function MenuSeparator() {
   return <div className="my-1 h-px bg-ui-border-soft" />
 }
 
-type Sub = 'folder' | null
+type Sub = 'folder' | 'priority' | null
 
 const PRIORITY_LABEL: Record<Priority, string> = {
   1: 'Prioridade alta',
@@ -600,7 +593,7 @@ function ItemContextMenuContent({
 
   if (sub === 'folder') {
     return (
-      <div className="min-w-[240px]">
+      <div className="min-w-[240px] max-md:w-full">
         <MenuRow icon={<IconChevron />} label="Voltar" onClick={() => setSub(null)} />
         <MenuSeparator />
         <MenuRow
@@ -629,120 +622,122 @@ function ItemContextMenuContent({
     )
   }
 
+  if (sub === 'priority') {
+    return (
+      <div className="min-w-[240px] max-md:w-full">
+        <MenuRow icon={<IconChevron />} label="Voltar" onClick={() => setSub(null)} />
+        <MenuSeparator />
+        {([1, 2, 3, 4] as Priority[]).map((p) => (
+          <MenuRow
+            key={p}
+            label={PRIORITY_LABEL[p]}
+            onClick={() => setPriority(p)}
+            trailing={currentPriority === p ? <IconCheck /> : null}
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="min-w-[240px]">
-      {!single && (
-        <div className="px-2 pb-1 pt-0.5 text-[11px] font-semibold uppercase tracking-wide text-navy-300">
-          {ids.length} itens
-        </div>
-      )}
-
-      {/* Prioridade inline */}
-      <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-navy-300">
-        Prioridade
-      </div>
-      <div className="mb-1 flex items-center gap-1 px-1.5">
-        {([1, 2, 3, 4] as Priority[]).map((p) => {
-          const cfg = PRIORITY_CONFIG[p]
-          const isActive = currentPriority === p
-          return (
-            <button
-              key={p}
-              type="button"
-              title={PRIORITY_LABEL[p]}
-              onClick={() => setPriority(p)}
-              className={`inline-flex h-8 w-8 items-center justify-center rounded-md border transition-colors ${
-                isActive
-                  ? 'border-brand-300 bg-surface-selected'
-                  : 'border-ui-border-soft bg-white hover:bg-surface-soft'
-              }`}
-            >
-              {p < 4 ? (
-                <svg width={14} height={14} viewBox="0 0 24 24" fill={cfg.flagFill} aria-hidden="true">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                  <line x1="4" y1="22" x2="4" y2="15" stroke={cfg.flagFill} strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              ) : (
-                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className="text-navy-400">
-                  <path d="M5 21V5m0 0h11l-2 4 2 4H5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </button>
-          )
-        })}
+    <div className="md:min-w-[240px] max-md:w-full">
+      {/* Header mobile (action sheet handle e title) */}
+      <div className="md:hidden mx-auto mb-3 h-1 w-12 rounded-full bg-navy-900/15" />
+      <div className="md:hidden px-1 pb-3">
+        <b className="block text-[15px] tracking-tight">{single ? targetItem.title : `${ids.length} itens`}</b>
+        <span className="mt-1 block font-mono text-[10px] text-navy-500">
+          {single ? (targetItem.tags?.length ? targetItem.tags.map(t => `#${t}`).join(', ') : 'Sem tags') : 'Múltiplos itens selecionados'}
+        </span>
       </div>
 
-      {/* Data inline */}
-      <div className="px-2 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-navy-300">
-        Data
+      <div className="mb-2 grid grid-cols-4 gap-[7px] rounded-[18px] bg-navy-900/5 p-1.5">
+        <button
+          className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] ${
+            targetItem.dueDate === toLocalDateKey()
+              ? 'bg-brand-50 text-brand-600 shadow-[0_0_0_1px_rgba(47,107,255,0.22)_inset]'
+              : 'bg-white/70 text-navy-900 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]'
+          }`}
+          onClick={() => setDate(toLocalDateKey())}
+        >
+          <span className="text-[17px] leading-none">☀️</span>
+          <b className="text-[11px] font-extrabold leading-none">Hoje</b>
+        </button>
+        <button
+          className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] ${
+            targetItem.dueDate === dateAfter(1)
+              ? 'bg-brand-50 text-brand-600 shadow-[0_0_0_1px_rgba(47,107,255,0.22)_inset]'
+              : 'bg-white/70 text-navy-900 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]'
+          }`}
+          onClick={() => setDate(dateAfter(1))}
+        >
+          <span className="text-[17px] leading-none">🌤️</span>
+          <b className="text-[11px] font-extrabold leading-none">Amanhã</b>
+        </button>
+        <button
+          className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] ${
+            targetItem.dueDate === dateAfter(7)
+              ? 'bg-brand-50 text-brand-600 shadow-[0_0_0_1px_rgba(47,107,255,0.22)_inset]'
+              : 'bg-white/70 text-navy-900 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]'
+          }`}
+          onClick={() => setDate(dateAfter(7))}
+        >
+          <span className="text-[17px] leading-none">📅</span>
+          <b className="text-[11px] font-extrabold leading-none">Próx.</b>
+        </button>
+        <button
+          className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] ${
+            showCustomDate
+              ? 'bg-brand-50 text-brand-600 shadow-[0_0_0_1px_rgba(47,107,255,0.22)_inset]'
+              : 'bg-white/70 text-navy-900 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]'
+          }`}
+          onClick={() => setShowCustomDate(!showCustomDate)}
+        >
+          <span className="text-[17px] leading-none">⌁</span>
+          <b className="text-[11px] font-extrabold leading-none">Data</b>
+        </button>
       </div>
-      <MenuRow icon={<IconCalendar />} label="Hoje" onClick={() => setDate(toLocalDateKey())} />
-      <MenuRow
-        icon={<IconCalendar />}
-        label="Amanhã"
-        onClick={() => {
-          const d = new Date()
-          d.setDate(d.getDate() + 1)
-          setDate(toLocalDateKey(d))
-        }}
-      />
-      <MenuRow
-        icon={<IconCalendar />}
-        label="Próxima semana"
-        onClick={() => {
-          const d = new Date()
-          d.setDate(d.getDate() + 7)
-          setDate(toLocalDateKey(d))
-        }}
-      />
-      <MenuRow
-        icon={<IconCalendar />}
-        label="Final de semana"
-        onClick={() => setDate(nextSaturday())}
-      />
-      {targetItem.dueDate && (
-        <MenuRow icon={<IconCalendar />} label="Sem data" onClick={() => setDate(null)} />
-      )}
-      {showCustomDate ? (
-        <div className="flex gap-1 px-1 py-1">
+
+      {showCustomDate && (
+        <div className="mb-2 flex gap-1 px-1">
           <input
             type="date"
             autoFocus
             value={customDate}
             onChange={(e) => setCustomDate(e.target.value)}
-            className="h-8 min-w-0 flex-1 rounded-md border border-ui-border-soft bg-white px-2 text-[12px] text-navy-700 outline-none focus:ring-2 focus:ring-brand-500"
+            className="h-9 min-w-0 flex-1 rounded-md border border-ui-border-soft bg-white px-2 text-[13px] text-navy-700 outline-none focus:ring-2 focus:ring-brand-500"
           />
           <button
             type="button"
             onClick={() => customDate && setDate(customDate)}
-            className="h-8 rounded-md bg-brand-600 px-2 text-[12px] font-semibold text-white"
+            className="h-9 rounded-md bg-brand-600 px-3 text-[13px] font-semibold text-white"
           >
             OK
           </button>
         </div>
-      ) : (
-        <MenuRow
-          icon={<IconCalendar />}
-          label="Escolher data..."
-          onClick={() => setShowCustomDate(true)}
-        />
       )}
 
-      <MenuSeparator />
-      <MenuRow icon={<IconEdit />} label="Editar" shortcut="E" onClick={openEdit} />
-      <MenuRow
-        icon={<IconFolder />}
-        label="Mover para pasta"
-        trailing={<IconChevron />}
-        onClick={() => setSub('folder')}
-      />
-      <MenuRow icon={<IconCopy />} label="Duplicar" onClick={duplicate} />
-      <MenuSeparator />
-      <MenuRow
-        icon={<IconTrash />}
-        label="Arquivar"
-        onClick={() => applyPatch({ status: 'archived' }, 'Item arquivado')}
-      />
+      <div className="py-1 border-t border-ui-border-soft">
+        <MenuRow icon={<IconFolder />} label="Mover para pasta" onClick={() => setSub('folder')} />
+        <MenuRow icon={<IconEdit />} label="Editar tags" onClick={openEdit} />
+        <MenuRow icon={<IconCheck />} label="Prioridade" onClick={() => setSub('priority')} />
+      </div>
+      
+      <div className="py-1 border-t border-ui-border-soft">
+        <MenuRow icon={<IconCopy />} label="Duplicar" onClick={duplicate} />
+        <MenuRow icon={<IconEdit />} label="Editar item" onClick={openEdit} />
+        {targetItem.dueDate && (
+           <MenuRow icon={<IconCalendar />} label="Remover data" onClick={() => setDate(null)} />
+        )}
+      </div>
+      
+      <div className="py-1 border-t border-ui-border-soft">
+        <MenuRow
+          icon={<IconTrash />}
+          label="Excluir"
+          danger
+          onClick={() => applyPatch({ status: 'archived' }, 'Item excluído')}
+        />
+      </div>
     </div>
   )
 }
@@ -790,11 +785,13 @@ export function ItemContextMenu() {
       : [contextMenu.itemId]
   const targets = ids.map((id) => allItems.get(id)).filter(Boolean) as Item[]
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
   return (
     <div className="fixed inset-0 z-[130]" onMouseDown={closeContextMenu}>
       <div
-        className="fixed max-h-[min(420px,calc(100vh-16px))] overflow-y-auto rounded-xl border border-ui-border bg-white p-1 shadow-2xl"
-        style={{ left: position.left, top: position.top }}
+        className="fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:rounded-t-[30px] max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:bg-white/96 max-md:p-4 max-md:pb-10 max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] max-md:backdrop-blur-2xl md:max-h-[min(420px,calc(100vh-16px))] md:overflow-y-auto md:rounded-[24px] md:border md:border-white/76 md:bg-white/86 md:p-2 md:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset] md:backdrop-blur-[24px]"
+        style={isMobile ? {} : { left: position.left, top: position.top }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <ItemContextMenuContent

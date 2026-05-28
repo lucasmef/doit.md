@@ -26,11 +26,7 @@ function TaskIcon({ done }: { done?: boolean }) {
       </svg>
     )
   }
-  return (
-    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M4 12l5 5L20 6" />
-    </svg>
-  )
+  return null
 }
 
 function formatTime(dateStr: string) {
@@ -89,11 +85,6 @@ export default function TodayFocusedPage() {
     setTimeout(() => {
       updateItem(item.id, { status: 'done' })
     }, 1500)
-  }
-
-  const handleRescheduleToday = (e: React.MouseEvent, item: Item) => {
-    e.stopPropagation()
-    updateItem(item.id, { dueDate: today })
   }
 
   return (
@@ -162,8 +153,16 @@ export default function TodayFocusedPage() {
                     <span className="h-1.5 w-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(123,91,255,.55)]" /> Prioridade
                   </div>
                   <div className="font-mono text-[11px] font-semibold text-navy-300">{priorityItems.length} itens</div>
-                  <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(15,35,66,.10),transparent_85%)]" />
-                </div>
+                <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(15,35,66,.10),transparent_85%)]" />
+                {priorityItems.some(i => i.dueDate && i.dueDate < today) && (
+                  <button onClick={(e) => {
+                    e.stopPropagation()
+                    priorityItems.filter(i => i.dueDate && i.dueDate < today).forEach(item => updateItem(item.id, { dueDate: today }))
+                  }} className="rounded-[8px] bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-brand-500/10 hover:text-brand-600">
+                    trazer atrasadas para hoje
+                  </button>
+                )}
+              </div>
                 
                 {priorityItems.map(item => {
                   const isOverdue = item.dueDate && item.dueDate < today
@@ -182,13 +181,6 @@ export default function TodayFocusedPage() {
                           {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
                         </div>
                       </div>
-                      {isOverdue && !isTempDone && (
-                        <div className="ml-auto">
-                          <button onClick={(e) => handleRescheduleToday(e, item)} className="rounded-[8px] bg-navy-900/[0.05] px-2.5 py-1.5 text-xs font-bold text-navy-600 hover:bg-brand-500/10 hover:text-brand-600">
-                            para hoje
-                          </button>
-                        </div>
-                      )}
                     </article>
                   )
                 })}

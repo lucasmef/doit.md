@@ -288,7 +288,7 @@ export function Topbar() {
 
   return (
     <>
-      <header className="z-[130] flex h-14 shrink-0 items-center gap-3 border-b border-white/45 bg-white/58 px-4 shadow-[0_1px_0_rgba(255,255,255,.65)_inset,0_10px_30px_rgba(15,35,66,.08)] backdrop-blur-2xl lg:mb-6 lg:grid lg:h-auto lg:grid-cols-[1fr_auto_1fr] lg:rounded-full lg:border lg:px-2 lg:py-2">
+      <header className="z-[130] flex h-14 shrink-0 items-center gap-3 border-b border-white/45 bg-white/58 px-4 shadow-[0_1px_0_rgba(255,255,255,.65)_inset,0_10px_30px_rgba(15,35,66,.08)] backdrop-blur-2xl lg:mb-6 lg:grid lg:h-auto lg:grid-cols-[1fr_auto_1fr] lg:gap-[18px] lg:border-none lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none lg:backdrop-blur-none">
         <Link
           href="/dashboard"
           className="hidden w-max items-center gap-3 rounded-full border border-white/60 bg-white/55 py-2 pl-2 pr-4 shadow-cool-sm backdrop-blur-xl lg:inline-flex"

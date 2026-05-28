@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>doit.md - Today Mobile Focused</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --c-navy: #0F2342;
+    --c-blue: #2F6BFF;
+    --c-teal: #28C7B7;
+    --c-violet: #7B5BFF;
+    --c-pink: #FF6FAE;
+    --c-amber: #F5A524;
+    --c-danger: #F04438;
+    --c-gray-50: #ECF0F5;
+    --c-gray-100: #D9E1EA;
+    --c-gray-200: #B6C2D2;
+    --c-gray-500: #46587A;
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --r-card: 22px;
+    --shadow-card:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 -1px 0 rgba(15,35,66,.04) inset,
+      0 14px 32px -14px rgba(15,35,66,.18),
+      0 3px 10px rgba(15,35,66,.06);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    color: var(--c-navy);
+    background: white;
+    display: block;
+    padding: 0;
+  }
+
+  .phone {
+    width: 100vw;
+    height: 100dvh;
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+    position: relative;
+    box-shadow: none;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+    overflow: hidden;
+    background: white;
+    position: relative;
+  }
+
+  .island {
+    display: none;
+  }
+
+  .wallpaper {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(600px 500px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(500px 400px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+      radial-gradient(600px 500px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(700px 600px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+
+  .wallpaper::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.10) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.10) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  .statusbar {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 32px 0;
+    font-family: -apple-system, "SF Pro", system-ui;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--c-navy);
+  }
+
+  .statusbar .right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .app {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    padding-top: 56px;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px 10px;
+    flex-shrink: 0;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px 7px 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.7);
+    background: rgba(255,255,255,.68);
+    backdrop-filter: blur(14px) saturate(180%);
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    box-shadow: var(--shadow-card);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: -.02em;
+  }
+
+  .brand-mark {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 48%, #28C7B7);
+    box-shadow: 0 4px 12px rgba(47,107,255,.26);
+  }
+
+  .brand span span {
+    color: var(--c-blue);
+  }
+
+  .top-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255,255,255,.7);
+    border-radius: 13px;
+    background: rgba(255,255,255,.68);
+    color: var(--c-navy);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-card);
+  }
+
+  .icon-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .today-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 14px 10px;
+    padding: 8px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,.65);
+    background: rgba(255,255,255,.58);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: var(--shadow-card);
+    flex-shrink: 0;
+  }
+
+  .today-chip {
+    flex: 1;
+    min-width: 0;
+    border-radius: 999px;
+    padding: 8px 10px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--c-gray-500);
+  }
+
+  .today-chip.active {
+    background: white;
+    color: var(--c-navy);
+    box-shadow: 0 1px 2px rgba(15,35,66,.06), 0 4px 10px rgba(15,35,66,.06);
+  }
+
+  .content {
+    flex: 1;
+    overflow: auto;
+    padding: 0 14px 112px;
+    scrollbar-width: none;
+  }
+
+  .content::-webkit-scrollbar {
+    display: none;
+  }
+
+  .list-card {
+    min-height: 100%;
+    padding: 16px 14px;
+    border-radius: 26px 26px 0 0;
+    border: 1px solid rgba(255,255,255,.72);
+    background: rgba(255,255,255,.76);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: var(--shadow-card);
+  }
+
+  .section {
+    margin-bottom: 18px;
+  }
+
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--c-gray-500);
+  }
+
+  .section-head::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--c-gray-200);
+  }
+
+  .section-head.agenda::before {
+    background: var(--c-blue);
+    box-shadow: 0 0 8px rgba(47,107,255,.6);
+  }
+
+  .section-head.priority::before {
+    background: var(--c-violet);
+    box-shadow: 0 0 8px rgba(123,91,255,.48);
+  }
+
+  .section-head.next::before {
+    background: var(--c-teal);
+    box-shadow: 0 0 8px rgba(40,199,183,.48);
+  }
+
+  .section-count {
+    margin-left: auto;
+    color: var(--c-gray-200);
+  }
+
+  .row {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 12px;
+    margin-bottom: 8px;
+    border-radius: 16px;
+    background: rgba(255,255,255,.78);
+    border: 1px solid rgba(255,255,255,.72);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 6px 16px -12px rgba(15,35,66,.24);
+  }
+
+  .row:last-child {
+    margin-bottom: 0;
+  }
+
+  .row.now {
+    background: rgba(47,107,255,.07);
+    border-color: rgba(47,107,255,.22);
+  }
+
+  .row.now::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: linear-gradient(180deg, var(--c-blue), var(--c-teal));
+  }
+
+  .time {
+    min-width: 48px;
+    padding-top: 1px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--c-navy);
+  }
+
+  .event-line {
+    width: 3px;
+    align-self: stretch;
+    border-radius: 999px;
+    background: var(--c-blue);
+    margin: 2px 0;
+  }
+
+  .event-line.teal {
+    background: var(--c-teal);
+  }
+
+  .event-line.pink {
+    background: var(--c-pink);
+  }
+
+  .check {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--c-gray-200);
+    border-radius: 7px;
+    background: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .check.done {
+    background: var(--c-teal);
+    border-color: var(--c-teal);
+  }
+
+  .check svg {
+    width: 13px;
+    height: 13px;
+    color: white;
+    opacity: 0;
+  }
+
+  .check.done svg {
+    opacity: 1;
+  }
+
+  .body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .title {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: -.012em;
+    line-height: 1.3;
+    color: var(--c-navy);
+  }
+
+  .row.done .title {
+    color: var(--c-gray-500);
+    text-decoration: line-through;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 5px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--c-gray-500);
+  }
+
+  .file {
+    color: var(--c-blue);
+    background: rgba(47,107,255,.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .tag {
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-weight: 700;
+    background: rgba(15,35,66,.05);
+  }
+
+  .tag.deep {
+    background: rgba(47,107,255,.12);
+    color: var(--c-blue);
+  }
+
+  .tag.review {
+    background: rgba(123,91,255,.12);
+    color: var(--c-violet);
+  }
+
+  .tag.admin {
+    background: rgba(245,165,36,.16);
+    color: #B47410;
+  }
+
+  .tag.quick {
+    background: rgba(40,199,183,.16);
+    color: #0E8A7E;
+  }
+
+  .side-time {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--c-gray-500);
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+
+  .row.now .side-time {
+    color: white;
+    background: var(--c-navy);
+    border-radius: 999px;
+    padding: 4px 8px;
+  }
+
+  .add-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border: 1.5px dashed rgba(15,35,66,.16);
+    border-radius: 16px;
+    color: var(--c-gray-500);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .add-row .plus {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: rgba(15,35,66,.06);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .add-row svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .tabbar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    padding: 10px 14px 28px;
+    background: rgba(255,255,255,.78);
+    border-top: 1px solid rgba(255,255,255,.6);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 0;
+    color: var(--c-gray-500);
+    position: relative;
+  }
+
+  .tab svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tab .lbl {
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .tab.active {
+    color: var(--c-navy);
+  }
+
+  .tab.active::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 3px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #2F6BFF, #28C7B7);
+    box-shadow: 0 0 8px rgba(40,199,183,.5);
+  }
+
+  .tab.add {
+    flex: 0 0 auto;
+  }
+
+  .tab.add .add-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 17px;
+    background: linear-gradient(135deg, #2F6BFF, #7B5BFF 60%, #28C7B7);
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(47,107,255,.4), 0 0 14px rgba(40,199,183,.35);
+    transform: translateY(-12px);
+    border: 2px solid white;
+  }
+
+  .tab.add .add-btn svg {
+    width: 23px;
+    height: 23px;
+  }
+
+  .tab.add .lbl {
+    font-size: 9px;
+    margin-top: -8px;
+    color: var(--c-gray-500);
+  }
+
+  .home-ind {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 134px;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(15,35,66,.40);
+    z-index: 45;
+  }
+
+  @media (max-width: 460px) {
+    body {
+      padding: 0;
+      display: block;
+      background: #fff;
+    }
+
+    .phone {
+      width: 100vw;
+      height: 100dvh;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+      background: transparent;
+    }
+
+    .screen {
+      border-radius: 0;
+    }
+
+    .island,
+    .home-ind {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="screen">
+      <div class="wallpaper" aria-hidden="true"></div>
+      <div class="island"></div>
+
+      <div class="statusbar">
+        <span>9:41</span>
+        <div class="right">
+          <svg width="17" height="11" viewBox="0 0 17 11" fill="currentColor"><rect x="0" y="7" width="3" height="4" rx="0.6"/><rect x="4.5" y="5" width="3" height="6" rx="0.6"/><rect x="9" y="2.5" width="3" height="8.5" rx="0.6"/><rect x="13.5" y="0" width="3" height="11" rx="0.6"/></svg>
+          <svg width="15" height="11" viewBox="0 0 17 12" fill="currentColor"><path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z"/><path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z"/><path d="M8.5 10.5L10.5 8.5C9.4 7.6 7.6 7.6 6.5 8.5L8.5 10.5Z"/></svg>
+          <svg width="24" height="12" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="currentColor" stroke-width="1.4"/><rect x="3" y="3" width="15" height="6" rx="2" fill="currentColor"/><path d="M22 4v4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </div>
+      </div>
+
+      <main class="app">
+        <header class="topbar">
+          <div class="brand">
+            <div class="brand-mark"></div>
+            <span>doit<span>.md</span></span>
+          </div>
+
+          <div class="top-actions">
+            <button class="icon-btn" aria-label="Buscar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+            </button>
+            <button class="icon-btn" aria-label="Mais opções">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5h.01M12 12h.01M12 19h.01"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <nav class="today-strip" aria-label="Seletor de visão">
+          <div class="today-chip active">Hoje</div>
+          <div class="today-chip">Próximos</div>
+          <div class="today-chip">Inbox</div>
+        </nav>
+
+        <section class="content">
+          <div class="list-card">
+            <section class="section">
+              <div class="section-head agenda">
+                Agenda
+                <span class="section-count">3</span>
+              </div>
+
+              <article class="row now">
+                <div class="time">09:00</div>
+                <div class="event-line"></div>
+                <div class="body">
+                  <div class="title">Planejamento rápido do dia</div>
+                  <div class="meta">
+                    <span>Google Calendar</span>
+                    <span class="tag quick">30min</span>
+                  </div>
+                </div>
+                <div class="side-time">agora</div>
+              </article>
+
+              <article class="row">
+                <div class="time">14:30</div>
+                <div class="event-line teal"></div>
+                <div class="body">
+                  <div class="title">Revisar layout mobile do Today</div>
+                  <div class="meta">
+                    <span>doit.md</span>
+                    <span class="tag review">review</span>
+                  </div>
+                </div>
+                <div class="side-time">1h</div>
+              </article>
+
+              <article class="row">
+                <div class="time">17:40</div>
+                <div class="event-line pink"></div>
+                <div class="body">
+                  <div class="title">Enviar resumo das alterações para o Codex</div>
+                  <div class="meta">
+                    <span>automação</span>
+                    <span class="tag admin">codex</span>
+                  </div>
+                </div>
+                <div class="side-time">hoje</div>
+              </article>
+            </section>
+
+            <section class="section">
+              <div class="section-head priority">
+                Prioridade
+                <span class="section-count">3</span>
+              </div>
+
+              <article class="row now">
+                <span class="check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                </span>
+                <div class="body">
+                  <div class="title">Finalizar página Today focada</div>
+                  <div class="meta">
+                    <span class="file">today.md</span>
+                    <span class="tag deep">deep</span>
+                    <span>layout</span>
+                  </div>
+                </div>
+                <div class="side-time">09:30</div>
+              </article>
+
+              <article class="row">
+                <span class="check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                </span>
+                <div class="body">
+                  <div class="title">Ajustar agenda como lista dentro dos itens</div>
+                  <div class="meta">
+                    <span class="file">calendar-sync.md</span>
+                    <span class="tag review">review</span>
+                    <span>Google Calendar</span>
+                  </div>
+                </div>
+                <div class="side-time">11:00</div>
+              </article>
+
+              <article class="row">
+                <span class="check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                </span>
+                <div class="body">
+                  <div class="title">Preparar spec para implementação no app</div>
+                  <div class="meta">
+                    <span class="file">specs/today-page.md</span>
+                    <span class="tag admin">codex</span>
+                  </div>
+                </div>
+                <div class="side-time">15:00</div>
+              </article>
+            </section>
+
+            <section class="section">
+              <div class="section-head next">
+                Depois
+                <span class="section-count">2</span>
+              </div>
+
+              <article class="row">
+                <span class="check">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                </span>
+                <div class="body">
+                  <div class="title">Revisar comportamento no mobile real</div>
+                  <div class="meta">
+                    <span class="file">mobile.md</span>
+                    <span class="tag quick">qa</span>
+                  </div>
+                </div>
+                <div class="side-time">18:00</div>
+              </article>
+
+              <article class="row done">
+                <span class="check done">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg>
+                </span>
+                <div class="body">
+                  <div class="title">Remover KPIs e título grande</div>
+                  <div class="meta">
+                    <span class="file">today-focused-v3.md</span>
+                    <span>concluído</span>
+                  </div>
+                </div>
+                <div class="side-time">feito</div>
+              </article>
+
+              <div class="add-row">
+                <span class="plus">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                </span>
+                Adicionar item para hoje
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tabbar" aria-label="Navegação inferior">
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"/><path d="m9 14 2 2 4-4"/></svg>
+          <span class="lbl">Hoje</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M4 13h3.5l1.4 2a1 1 0 0 0 .8.4h4.6a1 1 0 0 0 .8-.4l1.4-2H20v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2Z"/></svg>
+          <span class="lbl">Inbox</span>
+        </div>
+        <div class="tab add">
+          <span class="add-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          </span>
+          <span class="lbl">Novo</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg>
+          <span class="lbl">Notas</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+          <span class="lbl">Pastas</span>
+        </div>
+      </nav>
+
+      <div class="home-ind" style="display:none"></div>
+    </div>
+  </div>
+</body>
+</html>

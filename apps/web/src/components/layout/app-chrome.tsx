@@ -34,7 +34,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
             <Topbar />
           </div>
           <NotificationFailureBanner />
-          <div className="flex flex-1 lg:rounded-[28px] lg:border lg:border-white/45 lg:bg-white/34 lg:shadow-[0_24px_60px_rgba(15,35,66,.12)] lg:backdrop-blur-xl">
+          <div className="flex flex-1">
             <main className="flex-1 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-0">
               {children}
             </main>
