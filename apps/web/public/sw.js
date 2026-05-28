@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'clarity-v8'
+const CACHE_VERSION = 'clarity-v9'
 const STATIC_CACHE = `${CACHE_VERSION}-static`
 const PAGES_CACHE = `${CACHE_VERSION}-pages`
 const API_CACHE = `${CACHE_VERSION}-api`
@@ -247,12 +247,10 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      cachedFirst(request, PAGES_CACHE, isCacheablePageResponse, async (cache) => {
+      networkFirst(request, PAGES_CACHE, isCacheablePageResponse, async () => {
+        const cache = await caches.open(PAGES_CACHE)
         const root = await cache.match('/today')
         return root ?? cache.match('/') ?? Response.error()
-      }).then(({ response, refresh }) => {
-        if (refresh) event.waitUntil(refresh)
-        return response
       }),
     )
     return
