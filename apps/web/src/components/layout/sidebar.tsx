@@ -234,8 +234,8 @@ function FolderTreeRow({
   togglePinned: (id: string) => void
   collapsed?: boolean
 }) {
-  const href = `/notas/pastas/${node.id}`
-  const active = pathname === href || pathname.startsWith(href + '/')
+  const href = `/notas?folder=${node.id}`
+  const active = pathname === '/notas'
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
   const pinned = pinnedIds.has(node.id)
@@ -516,10 +516,9 @@ export function Sidebar() {
               folder ? (
                 <Link
                   key={folder.id}
-                  href={`/notas/pastas/${folder.id}`}
+                  href={`/notas?folder=${folder.id}`}
                   className={`group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
-                    pathname === `/notas/pastas/${folder.id}` ||
-                    pathname.startsWith(`/notas/pastas/${folder.id}/`)
+                    pathname === '/notas'
                       ? 'bg-surface-selected text-brand-600'
                       : 'text-navy-900 hover:bg-surface-soft'
                   }`}
