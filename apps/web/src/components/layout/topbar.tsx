@@ -26,17 +26,19 @@ const ROUTE_LABELS: Record<string, string> = {
 
 const DESKTOP_NAV_ITEMS = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard', match: ['/dashboard'] },
-  { href: '/today', label: 'Itens', icon: 'items', match: ['/today', '/inbox', '/upcoming'] },
+  { href: '/itens', label: 'Itens', icon: 'items', match: ['/itens', '/inbox', '/upcoming'] },
+  { href: '/today', label: 'Hoje', icon: 'today', match: ['/today'] },
   { href: '/notas', label: 'Notas', icon: 'notes', match: ['/notas'] },
   { href: '/calendar', label: 'Calendario', icon: 'calendar', match: ['/calendar'] },
   { href: '/settings', label: 'Ajustes', icon: 'settings', match: ['/settings'] },
 ] as const
 
-type MobileIconKind = 'dashboard' | 'today' | 'inbox' | 'upcoming' | 'calendar' | 'notes' | 'settings'
+type MobileIconKind = 'dashboard' | 'today' | 'items' | 'inbox' | 'upcoming' | 'calendar' | 'notes' | 'settings'
 
 const MOBILE_NAV_ITEMS: Array<{ href: string; label: string; icon: MobileIconKind }> = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/today', label: 'Hoje', icon: 'today' },
+  { href: '/itens', label: 'Itens', icon: 'items' },
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
   { href: '/calendar', label: 'Calendario', icon: 'calendar' },
@@ -156,6 +158,14 @@ function NavIcon({ kind }: { kind: (typeof DESKTOP_NAV_ITEMS)[number]['icon'] })
       <svg {...common}>
         <path d="M3 12 12 3l9 9" />
         <path d="M5 10v10h14V10" />
+      </svg>
+    )
+  }
+  if (kind === 'today') {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
       </svg>
     )
   }

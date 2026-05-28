@@ -1,0 +1,40 @@
+﻿import { expect, test } from "@playwright/test"
+import fs from "node:fs/promises"
+import path from "node:path"
+
+const artifactDir = path.resolve(
+  __dirname,
+  "../../../specs/artifacts/2026-05-28-corrigir-scroll-layout-bento"
+)
+
+async function artifactPath(projectName: string, name: string) {
+  await fs.mkdir(artifactDir, { recursive: true })
+  return path.join(artifactDir, `${projectName}-${name}.png`)
+}
+
+async function signUp(page: import("@playwright/test").Page, projectName: string) {
+  const unique = `${projectName}-${Date.now()}-${Math.round(Math.random() * 1000)}`
+  await page.goto("/sign-up")
+  await page.getByLabel("Nome").fill("Playwright Visual")
+  await page.getByLabel("Email").fill(`playwright-${unique}@example.invalid`)
+  await page.getByLabel("Senha").fill("Password123!")
+  await page.getByRole("button", { name: "Criar conta" }).click()
+  await expect(page).toHaveURL(/\/today$/, { timeout: 45_000 })
+}
+
+test("layout and style bug fixes", async ({ page }, testInfo) => {
+  const projectName = testInfo.project.name
+  await signUp(page, projectName)
+
+  await page.goto("/dashboard", { waitUntil: "domcontentloaded" })
+  await expect(page.locator("text=Itens ativos")).toBeVisible()
+  await page.screenshot({ path: await artifactPath(projectName, "01-dashboard"), fullPage: true })
+
+  await page.goto("/today", { waitUntil: "domcontentloaded" })
+  await expect(page.locator("text=captura rapida").first()).toBeVisible()
+  await page.screenshot({ path: await artifactPath(projectName, "02-today"), fullPage: true })
+
+  await page.goto("/notas", { waitUntil: "domcontentloaded" })
+  await expect(page.locator("text=mapa por tags")).toBeVisible()
+  await page.screenshot({ path: await artifactPath(projectName, "03-notas"), fullPage: true })
+})

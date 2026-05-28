@@ -499,7 +499,7 @@ export default function DashboardPage() {
             <div className="flex h-full flex-col p-5">
               <div className="mb-4 flex items-center justify-between">
                 <CardTitle className="text-[15px] normal-case tracking-normal text-white">Itens ativos</CardTitle>
-                <Link href="/today" className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-sm font-black leading-none text-white/70 hover:bg-white/15" aria-label="Abrir itens">
+                <Link href="/itens" className="grid h-7 w-7 place-items-center rounded-full bg-white/10 text-sm font-black leading-none text-white/70 hover:bg-white/15" aria-label="Abrir itens">
                   ...
                 </Link>
               </div>
