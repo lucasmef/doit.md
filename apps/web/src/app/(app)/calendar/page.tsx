@@ -7,12 +7,15 @@ import { BentoGrid, CardTitle, VividBlueCard, GlassCard } from '@/components/ui/
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useItems } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
-import { CalendarBoard, EventSheet } from '@/components/calendar/calendar-board'
+import { EventSheet } from '@/components/calendar/calendar-board'
 
 const WEEKDAY_PT = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado']
 const MONTH_PT = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
 const MONTH_LONG = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const DOW_SHORT = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB']
+
+const VIEW_MODES = ['DIA', 'SEM', 'MES', 'ANO'] as const
+type ViewMode = (typeof VIEW_MODES)[number]
 
 const EVENT_TONES = ['blue', 'teal', 'violet', 'pink', 'amber'] as const
 type EventTone = typeof EVENT_TONES[number]
@@ -46,6 +49,11 @@ function addDays(date: Date, days: number): Date {
   const d = new Date(date)
   d.setDate(d.getDate() + days)
   return d
+}
+
+function startOfWeek(date: Date): Date {
+  const d = startOfDay(date)
+  return addDays(d, -d.getDay())
 }
 
 function buildMonthCells(year: number, month: number): Date[] {
@@ -95,9 +103,75 @@ function durationMinutes(event: CalendarEvent): number {
   return Math.max(0, Math.round((end - start) / 60000))
 }
 
-function MonthCard({
-  cursorYear,
-  cursorMonth,
+function sortByStart(events: CalendarEvent[]): CalendarEvent[] {
+  return [...events].sort((a, b) => a.start.localeCompare(b.start))
+}
+
+function MiniMonth({
+  year,
+  month,
+  eventsMap,
+  itemsMap,
+  todayKey,
+  onClick,
+}: {
+  year: number
+  month: number
+  eventsMap: Map<string, CalendarEvent[]>
+  itemsMap: Map<string, Item[]>
+  todayKey: string
+  onClick: () => void
+}) {
+  const cells = useMemo(() => buildMonthCells(year, month), [year, month])
+  const isCurrentMonth = todayKey.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex flex-col rounded-[12px] border p-2.5 text-left transition-colors ${
+        isCurrentMonth
+          ? 'border-navy-900/15 bg-white/80 shadow-cool-sm'
+          : 'border-white/45 bg-white/45 hover:bg-white/70'
+      }`}
+    >
+      <span className="mb-1.5 font-mono text-[12px] font-bold tracking-wider text-navy-700">
+        {MONTH_LONG[month]}
+      </span>
+      <div className="grid grid-cols-7 gap-px">
+        {DOW_SHORT.map((d) => (
+          <span key={d} className="text-center font-mono text-[7px] font-bold text-navy-300">
+            {d.charAt(0)}
+          </span>
+        ))}
+        {cells.map((date, i) => {
+          const key = toLocalDateKey(date)
+          const inMonth = date.getMonth() === month
+          const isToday = key === todayKey
+          const has = (eventsMap.get(key)?.length ?? 0) + (itemsMap.get(key)?.length ?? 0) > 0
+          return (
+            <span
+              key={i}
+              className={`flex h-3.5 items-center justify-center rounded-[3px] text-[8px] font-semibold ${
+                isToday
+                  ? 'bg-navy-900 text-white'
+                  : has
+                    ? 'bg-brand-500/25 text-navy-900'
+                    : inMonth
+                      ? 'text-navy-500'
+                      : 'text-navy-300/60'
+              }`}
+            >
+              {date.getDate()}
+            </span>
+          )
+        })}
+      </div>
+    </button>
+  )
+}
+
+function CalendarCard({
+  anchor,
   todayKey,
   selectedKey,
   events,
@@ -107,12 +181,14 @@ function MonthCard({
   onToday,
   onDayClick,
   onEventClick,
-  onMaximize,
+  onItemClick,
+  onToggleExpand,
+  expanded,
+  onPickMonth,
   viewMode,
   setViewMode,
 }: {
-  cursorYear: number
-  cursorMonth: number
+  anchor: Date
   todayKey: string
   selectedKey: string
   events: CalendarEvent[]
@@ -122,13 +198,21 @@ function MonthCard({
   onToday: () => void
   onDayClick: (key: string) => void
   onEventClick: (event: CalendarEvent) => void
-  onMaximize: () => void
-  viewMode: 'DIA' | 'SEM' | 'MES' | 'ANO'
-  setViewMode: (mode: 'DIA' | 'SEM' | 'MES' | 'ANO') => void
+  onItemClick: (id: string) => void
+  onToggleExpand: () => void
+  expanded: boolean
+  onPickMonth: (year: number, month: number) => void
+  viewMode: ViewMode
+  setViewMode: (mode: ViewMode) => void
 }) {
-  const cells = useMemo(() => buildMonthCells(cursorYear, cursorMonth), [cursorYear, cursorMonth])
+  const cursorYear = anchor.getFullYear()
+  const cursorMonth = anchor.getMonth()
   const eventsMap = useMemo(() => eventsByDay(events), [events])
   const itemsMap = useMemo(() => itemsByDay(items), [items])
+  const monthCells = useMemo(() => buildMonthCells(cursorYear, cursorMonth), [cursorYear, cursorMonth])
+  const weekStart = useMemo(() => startOfWeek(anchor), [anchor])
+  const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
+
   const weekNumber = useMemo(() => {
     const firstThursday = new Date(cursorYear, 0, 4)
     const offset = (firstThursday.getDay() + 6) % 7
@@ -137,22 +221,50 @@ function MonthCard({
     return Math.max(1, Math.floor((today.getTime() - start.getTime()) / (7 * 86400 * 1000)) + 1)
   }, [cursorYear, todayKey])
 
+  const header = useMemo(() => {
+    if (viewMode === 'ANO') return { big: String(cursorYear), small: 'ano' }
+    if (viewMode === 'SEM') {
+      const weekEnd = addDays(weekStart, 6)
+      const range =
+        weekStart.getMonth() === weekEnd.getMonth()
+          ? `${weekStart.getDate()}–${weekEnd.getDate()}`
+          : `${weekStart.getDate()}/${weekStart.getMonth() + 1}–${weekEnd.getDate()}/${weekEnd.getMonth() + 1}`
+      return { big: range, small: `${MONTH_LONG[weekStart.getMonth()]} ${weekStart.getFullYear()} · semana` }
+    }
+    if (viewMode === 'DIA') {
+      const dow = WEEKDAY_PT[anchor.getDay()] ?? ''
+      return { big: String(anchor.getDate()), small: `${dow} · ${MONTH_LONG[cursorMonth]} ${cursorYear}` }
+    }
+    return { big: MONTH_LONG[cursorMonth] ?? '', small: `${cursorYear} · SEMANA ${weekNumber}` }
+  }, [viewMode, cursorYear, cursorMonth, anchor, weekStart, weekNumber])
+
+  const navLabels: Record<ViewMode, { prev: string; next: string }> = {
+    DIA: { prev: 'Dia anterior', next: 'Proximo dia' },
+    SEM: { prev: 'Semana anterior', next: 'Proxima semana' },
+    MES: { prev: 'Mes anterior', next: 'Proximo mes' },
+    ANO: { prev: 'Ano anterior', next: 'Proximo ano' },
+  }
+
+  const dayKey = toLocalDateKey(anchor)
+  const dayEvents = useMemo(() => sortByStart(eventsMap.get(dayKey) ?? []), [eventsMap, dayKey])
+  const dayItems = itemsMap.get(dayKey) ?? []
+
   return (
-    <GlassCard className="flex flex-col p-6 lg:col-span-8 lg:row-span-3">
-      <div className="mb-3 flex items-center justify-between gap-4">
+    <GlassCard className={`flex flex-col p-6 ${expanded ? 'h-full min-h-0 flex-1' : 'lg:col-span-8 lg:row-span-3'}`}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-baseline gap-3">
           <h2 className="text-[34px] font-black leading-none -tracking-[.04em] text-navy-900">
-            {MONTH_LONG[cursorMonth]}
+            {header.big}
           </h2>
           <span className="font-mono text-[11px] font-bold tracking-wider text-navy-500">
-            {cursorYear} · SEMANA {weekNumber}
+            {header.small}
           </span>
           <div className="ml-4 inline-flex items-center gap-1.5">
             <button
               type="button"
               onClick={onPrev}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-900/[0.04] text-navy-500 hover:bg-navy-900/[0.10] hover:text-navy-900"
-              aria-label="Mes anterior"
+              aria-label={navLabels[viewMode].prev}
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="m15 6-6 6 6 6" />
@@ -169,7 +281,7 @@ function MonthCard({
               type="button"
               onClick={onNext}
               className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-navy-900/[0.04] text-navy-500 hover:bg-navy-900/[0.10] hover:text-navy-900"
-              aria-label="Proximo mes"
+              aria-label={navLabels[viewMode].next}
             >
               <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="m9 6 6 6-6 6" />
@@ -179,94 +291,344 @@ function MonthCard({
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex items-center gap-px rounded-full border border-white/55 bg-white/55 p-1 font-mono text-[10px] font-bold tracking-wider text-navy-500 shadow-cool-sm">
-            {(['DIA', 'SEM', 'MES', 'ANO'] as const).map((label) => (
-              <span
+            {VIEW_MODES.map((label) => (
+              <button
                 key={label}
+                type="button"
                 onClick={() => setViewMode(label)}
-                className={`rounded-full px-2.5 py-1 ${label === viewMode ? 'bg-white text-navy-900 shadow-cool-sm cursor-default' : 'hover:text-navy-900 cursor-pointer'}`}
+                className={`rounded-full px-2.5 py-1 transition-colors ${label === viewMode ? 'bg-white text-navy-900 shadow-cool-sm' : 'hover:text-navy-900'}`}
               >
                 {label}
-              </span>
+              </button>
             ))}
           </div>
-          <button onClick={onMaximize} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/55 bg-white/55 text-navy-500 shadow-cool-sm transition-colors hover:bg-white hover:text-navy-900" title="Maximizar calendário">
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 3h6v6" />
-              <path d="M9 21H3v-6" />
-              <path d="M21 3l-7 7" />
-              <path d="M3 21l7-7" />
-            </svg>
+          <button onClick={onToggleExpand} className="hidden h-8 w-8 items-center justify-center rounded-full border border-white/55 bg-white/55 text-navy-500 shadow-cool-sm transition-colors hover:bg-white hover:text-navy-900 lg:inline-flex" title={expanded ? 'Minimizar calendário' : 'Maximizar calendário'}>
+            {expanded ? (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 14h6v6" />
+                <path d="M20 10h-6V4" />
+                <path d="M14 10l7-7" />
+                <path d="M3 21l7-7" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h6v6" />
+                <path d="M9 21H3v-6" />
+                <path d="M21 3l-7 7" />
+                <path d="M3 21l7-7" />
+              </svg>
+            )}
           </button>
         </div>
       </div>
 
-      <div className="grid flex-1 grid-cols-7 grid-rows-[22px_repeat(6,minmax(0,1fr))] gap-1.5 min-h-0">
-        {DOW_SHORT.map((dow) => (
-          <div key={dow} className="pb-1 text-center font-mono text-[10px] font-bold tracking-wider text-navy-500">
-            {dow}
-          </div>
-        ))}
-        {cells.map((date, i) => {
-          const key = toLocalDateKey(date)
-          const inMonth = date.getMonth() === cursorMonth
-          const isToday = key === todayKey
-          const isWeekend = date.getDay() === 0 || date.getDay() === 6
-          const dayEvents = eventsMap.get(key) ?? []
-          const dayItems = itemsMap.get(key) ?? []
-          const total = dayEvents.length + dayItems.length
-          const visible = dayEvents.slice(0, 2)
-          const visibleItems = dayItems.slice(0, Math.max(0, 2 - visible.length))
-          const more = total - visible.length - visibleItems.length
-          return (
-            <div
-              key={i}
-              onClick={() => onDayClick(key)}
-              className={`relative flex min-h-[58px] flex-col gap-0.5 overflow-hidden rounded-[10px] p-1.5 cursor-pointer ${
-                isToday
-                  ? 'border-[1.5px] border-navy-900 bg-white/92 shadow-[0_6px_16px_-8px_rgba(15,35,66,.30)]'
-                  : key === selectedKey
-                  ? 'border-[1.5px] border-brand-500 bg-white/80 shadow-[0_4px_12px_rgba(47,107,255,.2)]'
-                  : isWeekend
-                    ? 'bg-white/35 hover:bg-white/50'
-                    : 'hover:bg-white/70'
-              } ${!inMonth ? 'opacity-50' : ''}`}
-            >
-              {isToday ? (
-                <span className="mb-0.5 inline-flex h-[22px] w-[22px] items-center justify-center self-start rounded-full bg-navy-900 text-[12px] font-extrabold text-white">
-                  {date.getDate()}
-                </span>
-              ) : (
-                <span className={`mb-0.5 text-[13px] font-bold leading-none -tracking-[.01em] ${inMonth ? 'text-navy-900' : 'text-navy-300'}`}>
-                  {date.getDate()}
-                </span>
-              )}
-              {visible.map((event, idx) => (
-                <span
-                  key={event.id}
-                  onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                  className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx))}`}
-                  title={event.title}
-                >
-                  {event.title}
-                </span>
-              ))}
-              {visibleItems.map((item, idx) => (
-                <span
-                  key={item.id}
-                  className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight ${toneClass(eventTone(idx + visible.length))}`}
-                  title={item.title}
-                >
-                  {item.title}
-                </span>
-              ))}
-              {more > 0 ? (
-                <span className="mt-auto font-mono text-[9.5px] text-navy-500">+{more} mais</span>
-              ) : null}
+      {viewMode === 'MES' ? (
+        <div className="grid flex-1 grid-cols-7 grid-rows-[22px_repeat(6,minmax(0,1fr))] gap-1.5 min-h-0">
+          {DOW_SHORT.map((dow) => (
+            <div key={dow} className="pb-1 text-center font-mono text-[10px] font-bold tracking-wider text-navy-500">
+              {dow}
             </div>
-          )
-        })}
-      </div>
+          ))}
+          {monthCells.map((date, i) => {
+            const key = toLocalDateKey(date)
+            const inMonth = date.getMonth() === cursorMonth
+            const isToday = key === todayKey
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6
+            const cellEvents = eventsMap.get(key) ?? []
+            const cellItems = itemsMap.get(key) ?? []
+            const total = cellEvents.length + cellItems.length
+            const visible = cellEvents.slice(0, 2)
+            const visibleItems = cellItems.slice(0, Math.max(0, 2 - visible.length))
+            const more = total - visible.length - visibleItems.length
+            return (
+              <div
+                key={i}
+                onClick={() => onDayClick(key)}
+                className={`relative flex min-h-[58px] flex-col gap-0.5 overflow-hidden rounded-[10px] p-1.5 cursor-pointer ${
+                  isToday
+                    ? 'border-[1.5px] border-navy-900 bg-white/92 shadow-[0_6px_16px_-8px_rgba(15,35,66,.30)]'
+                    : key === selectedKey
+                    ? 'border-[1.5px] border-brand-500 bg-white/80 shadow-[0_4px_12px_rgba(47,107,255,.2)]'
+                    : isWeekend
+                      ? 'bg-white/35 hover:bg-white/50'
+                      : 'hover:bg-white/70'
+                } ${!inMonth ? 'opacity-50' : ''}`}
+              >
+                {isToday ? (
+                  <span className="mb-0.5 inline-flex h-[22px] w-[22px] items-center justify-center self-start rounded-full bg-navy-900 text-[12px] font-extrabold text-white">
+                    {date.getDate()}
+                  </span>
+                ) : (
+                  <span className={`mb-0.5 text-[13px] font-bold leading-none -tracking-[.01em] ${inMonth ? 'text-navy-900' : 'text-navy-300'}`}>
+                    {date.getDate()}
+                  </span>
+                )}
+                {visible.map((event, idx) => (
+                  <span
+                    key={event.id}
+                    onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                    className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx))}`}
+                    title={event.title}
+                  >
+                    {event.title}
+                  </span>
+                ))}
+                {visibleItems.map((item, idx) => (
+                  <span
+                    key={item.id}
+                    onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
+                    className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx + visible.length))}`}
+                    title={item.title}
+                  >
+                    {item.title}
+                  </span>
+                ))}
+                {more > 0 ? (
+                  <span className="mt-auto font-mono text-[9.5px] text-navy-500">+{more} mais</span>
+                ) : null}
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {viewMode === 'SEM' ? (
+        <div className="grid flex-1 grid-cols-7 gap-1.5 min-h-0">
+          {weekDays.map((date) => {
+            const key = toLocalDateKey(date)
+            const isToday = key === todayKey
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6
+            const colEvents = sortByStart(eventsMap.get(key) ?? [])
+            const colItems = itemsMap.get(key) ?? []
+            return (
+              <div
+                key={key}
+                onClick={() => onDayClick(key)}
+                className={`flex min-h-0 cursor-pointer flex-col rounded-[12px] border p-2 transition-colors ${
+                  isToday
+                    ? 'border-[1.5px] border-navy-900 bg-white/85'
+                    : key === selectedKey
+                      ? 'border-[1.5px] border-brand-500 bg-white/70'
+                      : isWeekend
+                        ? 'border-white/40 bg-white/30 hover:bg-white/50'
+                        : 'border-white/40 bg-white/45 hover:bg-white/70'
+                }`}
+              >
+                <div className="mb-1.5 flex shrink-0 items-center justify-between">
+                  <span className="font-mono text-[9px] font-bold tracking-wider text-navy-500">
+                    {DOW_SHORT[date.getDay()]}
+                  </span>
+                  <span
+                    className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-extrabold ${
+                      isToday ? 'bg-navy-900 text-white' : 'text-navy-900'
+                    }`}
+                  >
+                    {date.getDate()}
+                  </span>
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-auto pr-0.5">
+                  {colEvents.map((event, idx) => (
+                    <span
+                      key={event.id}
+                      onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                      className={`truncate rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx))}`}
+                      title={event.title}
+                    >
+                      {event.allDay ? '' : formatHM(event.start) + ' '}
+                      {event.title}
+                    </span>
+                  ))}
+                  {colItems.map((item, idx) => (
+                    <span
+                      key={item.id}
+                      onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
+                      className={`truncate rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx + colEvents.length))}`}
+                      title={item.title}
+                    >
+                      {item.title}
+                    </span>
+                  ))}
+                  {colEvents.length + colItems.length === 0 ? (
+                    <span className="mt-1 text-center font-mono text-[9px] text-navy-300">livre</span>
+                  ) : null}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      ) : null}
+
+      {viewMode === 'DIA' ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-auto pr-1">
+          {dayEvents.length === 0 && dayItems.length === 0 ? (
+            <div className="grid flex-1 place-items-center font-mono text-[12px] text-navy-500">
+              sem agenda neste dia
+            </div>
+          ) : (
+            <>
+              {dayEvents.map((event, idx) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onEventClick(event)}
+                  className="flex items-center gap-3 rounded-[12px] border border-navy-900/[0.06] bg-white/65 px-3 py-2.5 text-left transition-colors hover:bg-white/85"
+                >
+                  <span className={`h-9 w-1.5 shrink-0 rounded-full ${toneClass(eventTone(idx))}`} />
+                  <span className="w-24 shrink-0 font-mono text-[11.5px] font-semibold text-navy-500">
+                    {event.allDay ? 'dia todo' : `${formatHM(event.start)} - ${formatHM(event.end ?? event.start)}`}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-navy-900">{event.title}</span>
+                  </span>
+                </button>
+              ))}
+              {dayItems.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onItemClick(item.id)}
+                  className="flex items-center gap-3 rounded-[12px] border border-navy-900/[0.06] bg-white/55 px-3 py-2.5 text-left transition-colors hover:bg-white/80"
+                >
+                  <span className="h-9 w-1.5 shrink-0 rounded-full bg-teal-500/40" />
+                  <span className="w-24 shrink-0 font-mono text-[11.5px] font-semibold text-navy-500">
+                    {item.dueTime ?? 'item'}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
+                    <span className="mt-0.5 block font-mono text-[10.5px] text-navy-500">
+                      {item.complexity === 'note' ? 'nota' : 'tarefa'}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {viewMode === 'ANO' ? (
+        <div className="grid flex-1 grid-cols-2 gap-3 overflow-auto min-h-0 sm:grid-cols-3 lg:grid-cols-4">
+          {Array.from({ length: 12 }, (_, m) => (
+            <MiniMonth
+              key={m}
+              year={cursorYear}
+              month={m}
+              eventsMap={eventsMap}
+              itemsMap={itemsMap}
+              todayKey={todayKey}
+              onClick={() => onPickMonth(cursorYear, m)}
+            />
+          ))}
+        </div>
+      ) : null}
     </GlassCard>
+  )
+}
+
+function DayPopup({
+  date,
+  events,
+  items,
+  onEventClick,
+  onItemClick,
+  onClose,
+}: {
+  date: string
+  events: CalendarEvent[]
+  items: Item[]
+  onEventClick: (event: CalendarEvent) => void
+  onItemClick: (id: string) => void
+  onClose: () => void
+}) {
+  const heading = useMemo(() => {
+    const d = new Date(date + 'T12:00:00')
+    return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  }, [date])
+
+  return (
+    <div
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/45 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-3"
+      role="dialog"
+      aria-modal="true"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <section className="flex max-h-[min(680px,calc(100vh-2rem))] w-full flex-col rounded-2xl border border-white/55 bg-white/95 p-5 shadow-cool-lg backdrop-blur-xl sm:max-w-lg">
+        <div className="mb-3 flex shrink-0 items-start justify-between gap-3 border-b border-navy-900/10 pb-3">
+          <div className="min-w-0">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
+              Eventos do dia
+            </p>
+            <h2 className="mt-1 text-xl font-bold capitalize text-navy-900">{heading}</h2>
+            <p className="mt-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
+              {events.length} evento(s) · {items.length} item(ns)
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md text-navy-400 hover:bg-surface-soft hover:text-navy-700"
+            aria-label="Fechar eventos do dia"
+          >
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
+          {events.length === 0 && items.length === 0 ? (
+            <p className="rounded-lg border border-dashed border-navy-900/15 px-3 py-4 text-[13px] text-navy-300">
+              Nenhum evento ou item para este dia.
+            </p>
+          ) : (
+            <>
+              {events.map((event, idx) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  onClick={() => onEventClick(event)}
+                  className="flex w-full items-center gap-3 rounded-lg border border-navy-900/[0.06] bg-white px-3 py-2.5 text-left shadow-cool-sm transition-colors hover:bg-surface-soft"
+                >
+                  <span className={`h-10 w-1.5 shrink-0 rounded-full ${toneClass(eventTone(idx))}`} />
+                  <span className="w-20 shrink-0 font-mono text-[11px] font-semibold text-navy-500">
+                    {formatHM(event.start, event.allDay)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-navy-900">{event.title}</span>
+                    {!event.allDay ? (
+                      <span className="block truncate font-mono text-[11px] text-navy-300">
+                        Termina {formatHM(event.end ?? event.start)}
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+              ))}
+              {items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onItemClick(item.id)}
+                  className="flex w-full items-center gap-3 rounded-lg border border-navy-900/[0.06] bg-white px-3 py-2.5 text-left shadow-cool-sm transition-colors hover:bg-surface-soft"
+                >
+                  <span className="h-10 w-1.5 shrink-0 rounded-full bg-teal-500/50" />
+                  <span className="w-20 shrink-0 font-mono text-[11px] font-semibold text-navy-500">
+                    {item.dueTime ?? 'item'}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
+                    <span className="block truncate font-mono text-[11px] text-navy-300">
+                      {item.complexity === 'note' ? 'nota' : 'tarefa'}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      </section>
+    </div>
   )
 }
 
@@ -301,21 +663,16 @@ function AgendaCard({
   events,
   items,
   now,
-  selectedDate,
   onItemClick,
   onEventClick,
 }: {
   events: CalendarEvent[]
   items: Item[]
   now: Date
-  selectedDate: string
   onItemClick: (id: string) => void
   onEventClick: (event: CalendarEvent) => void
 }) {
   const nowMs = now.getTime()
-  const isToday = selectedDate === toLocalDateKey(now)
-  const [, m, d] = selectedDate.split('-').map(Number)
-  const displayDate = isToday ? 'hoje' : `${d?.toString().padStart(2, '0')}/${((m || 0) + 1).toString().padStart(2, '0')}`
   const rows = useMemo(() => {
     type Row = {
       key: string
@@ -368,12 +725,12 @@ function AgendaCard({
   return (
     <GlassCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
       <div className="mb-3 flex items-center justify-between">
-        <CardTitle>agenda</CardTitle>
-        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{displayDate} · {rows.length} itens</span>
+        <CardTitle>agenda de hoje</CardTitle>
+        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">hoje · {rows.length} itens</span>
       </div>
       {rows.length === 0 ? (
         <div className="grid flex-1 place-items-center font-mono text-[11px] text-navy-500">
-          sem agenda neste dia
+          sem agenda hoje
         </div>
       ) : (
         <div className="relative flex-1 overflow-hidden pl-14">
@@ -600,11 +957,8 @@ function FocusBlocksCard({ events, weekStart }: { events: CalendarEvent[]; weekS
 
 export default function CalendarPage() {
   const [now, setNow] = useState<Date>(() => new Date())
-  const [cursor, setCursor] = useState<{ year: number; month: number }>(() => {
-    const d = new Date()
-    return { year: d.getFullYear(), month: d.getMonth() }
-  })
-  const [viewMode, setViewMode] = useState<'DIA' | 'SEM' | 'MES' | 'ANO'>('MES')
+  const [anchor, setAnchor] = useState<Date>(() => new Date())
+  const [viewMode, setViewMode] = useState<ViewMode>('MES')
   const { items } = useItems()
   const { setSelectedItemId } = useUI()
 
@@ -613,117 +967,181 @@ export default function CalendarPage() {
     return () => window.clearInterval(id)
   }, [])
 
-  const monthRange = useMemo(() => {
-    const start = new Date(cursor.year, cursor.month, -7)
-    const end = new Date(cursor.year, cursor.month + 1, 7, 23, 59, 59)
-    return { from: start.toISOString(), to: end.toISOString() }
-  }, [cursor])
-
-  const { events } = useCalendarEvents(monthRange.from, monthRange.to)
-
   const todayKey = toLocalDateKey(now)
+
+  // Events for the area currently shown in the calendar card (month / week / day / year).
+  const eventsRange = useMemo(() => {
+    if (viewMode === 'ANO') {
+      return {
+        from: new Date(anchor.getFullYear(), 0, 1).toISOString(),
+        to: new Date(anchor.getFullYear(), 11, 31, 23, 59, 59).toISOString(),
+      }
+    }
+    const start = new Date(anchor.getFullYear(), anchor.getMonth(), -7)
+    const end = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 7, 23, 59, 59)
+    return { from: start.toISOString(), to: end.toISOString() }
+  }, [anchor, viewMode])
+
+  const { events } = useCalendarEvents(eventsRange.from, eventsRange.to)
+
+  // Stable window around today so the "today"/week cards stay populated regardless of navigation.
+  const homeRange = useMemo(() => {
+    const base = new Date(todayKey + 'T12:00:00')
+    const ws = startOfWeek(base)
+    return { from: startOfDay(addDays(ws, -1)).toISOString(), to: addDays(ws, 21).toISOString() }
+  }, [todayKey])
+  const { events: homeEvents } = useCalendarEvents(homeRange.from, homeRange.to)
+
   const [selectedDate, setSelectedDate] = useState<string>(todayKey)
-  const [fullscreen, setFullscreen] = useState(false)
+  const [openDayKey, setOpenDayKey] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
 
-  const selectedDayEvents = useMemo(
-    () => events.filter((event) => toLocalDateKey(new Date(event.start)) === selectedDate).sort((a, b) => a.start.localeCompare(b.start)),
-    [events, selectedDate],
+  // On phones the calendar opens directly maximized (like the Google Calendar app),
+  // keeping the doit chrome; the maximize/minimize toggle is desktop-only.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)')
+    const update = () => setIsMobile(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  const showExpanded = expanded || isMobile
+
+  const todayEvents = useMemo(
+    () => sortByStart(homeEvents.filter((event) => toLocalDateKey(new Date(event.start)) === todayKey)),
+    [homeEvents, todayKey],
   )
-  const selectedDayItems = useMemo(
+  const todayItems = useMemo(
     () =>
       items.filter((item) => {
         const key = item.dueDate ?? item.scheduledDate
-        return key === selectedDate && item.status !== 'archived'
+        return key === todayKey && item.status !== 'archived'
       }),
-    [items, selectedDate],
+    [items, todayKey],
+  )
+
+  const popupEvents = useMemo(
+    () =>
+      openDayKey
+        ? sortByStart(events.filter((event) => toLocalDateKey(new Date(event.start)) === openDayKey))
+        : [],
+    [events, openDayKey],
+  )
+  const popupItems = useMemo(
+    () =>
+      openDayKey
+        ? items.filter((item) => {
+            const key = item.dueDate ?? item.scheduledDate
+            return key === openDayKey && item.status !== 'archived'
+          })
+        : [],
+    [items, openDayKey],
   )
 
   const upcomingEvent = useMemo(() => {
     const nowMs = now.getTime()
-    return events
+    return homeEvents
       .filter((event) => new Date(event.start).getTime() > nowMs)
       .sort((a, b) => a.start.localeCompare(b.start))[0] ?? null
-  }, [events, now])
+  }, [homeEvents, now])
 
-  const weekStart = useMemo(() => {
-    const d = startOfDay(now)
-    return addDays(d, -d.getDay())
-  }, [now])
+  const weekStart = useMemo(() => startOfWeek(now), [now])
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart])
   const weekEvents = useMemo(
     () =>
-      events.filter((event) => {
+      homeEvents.filter((event) => {
         const t = new Date(event.start).getTime()
         return t >= weekStart.getTime() && t < weekEnd.getTime()
       }),
-    [events, weekStart, weekEnd],
+    [homeEvents, weekStart, weekEnd],
   )
 
   const prev = () =>
-    setCursor((current) => {
-      const m = current.month - 1
-      if (m < 0) return { year: current.year - 1, month: 11 }
-      return { year: current.year, month: m }
+    setAnchor((current) => {
+      if (viewMode === 'DIA') return addDays(current, -1)
+      if (viewMode === 'SEM') return addDays(current, -7)
+      if (viewMode === 'ANO') return new Date(current.getFullYear() - 1, current.getMonth(), 1)
+      return new Date(current.getFullYear(), current.getMonth() - 1, 1)
     })
   const next = () =>
-    setCursor((current) => {
-      const m = current.month + 1
-      if (m > 11) return { year: current.year + 1, month: 0 }
-      return { year: current.year, month: m }
+    setAnchor((current) => {
+      if (viewMode === 'DIA') return addDays(current, 1)
+      if (viewMode === 'SEM') return addDays(current, 7)
+      if (viewMode === 'ANO') return new Date(current.getFullYear() + 1, current.getMonth(), 1)
+      return new Date(current.getFullYear(), current.getMonth() + 1, 1)
     })
-  const goToday = () => {
-    const d = new Date()
-    setCursor({ year: d.getFullYear(), month: d.getMonth() })
+  const goToday = () => setAnchor(new Date())
+
+  const handleDayClick = (key: string) => {
+    setSelectedDate(key)
+    setOpenDayKey(key)
   }
 
-  if (fullscreen) {
-    return (
-      <div className="fixed inset-0 z-[200] bg-white">
-        <div className="absolute right-6 top-4 z-[210]">
-          <button
-            onClick={() => setFullscreen(false)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-navy-900/10 bg-white/80 text-navy-500 shadow-cool-sm backdrop-blur-md transition-colors hover:bg-white hover:text-navy-900"
-            title="Minimizar calendário"
-          >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 14h6v6" />
-              <path d="M20 10h-6V4" />
-              <path d="M14 10l7-7" />
-              <path d="M3 21l7-7" />
-            </svg>
-          </button>
-        </div>
-        <CalendarBoard items={items} fullscreen={true} />
-      </div>
-    )
+  const handlePickMonth = (year: number, month: number) => {
+    setAnchor(new Date(year, month, 1))
+    setViewMode('MES')
   }
+
+  const calendarCard = (
+    <CalendarCard
+      anchor={anchor}
+      todayKey={todayKey}
+      selectedKey={selectedDate}
+      events={events}
+      items={items}
+      onPrev={prev}
+      onNext={next}
+      onToday={goToday}
+      onDayClick={handleDayClick}
+      onEventClick={setOpenEvent}
+      onItemClick={setSelectedItemId}
+      onToggleExpand={() => setExpanded((value) => !value)}
+      expanded={showExpanded}
+      onPickMonth={handlePickMonth}
+      viewMode={viewMode}
+      setViewMode={setViewMode}
+    />
+  )
 
   return (
-    <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-0">
-      <BentoGrid className="lg:auto-rows-[240px]">
-        <MonthCard
-          cursorYear={cursor.year}
-          cursorMonth={cursor.month}
-          todayKey={todayKey}
-          selectedKey={selectedDate}
-          events={events}
-          items={items}
-          onPrev={prev}
-          onNext={next}
-          onToday={goToday}
-          onDayClick={setSelectedDate}
-          onEventClick={setOpenEvent}
-          onMaximize={() => setFullscreen(true)}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
+    <div
+      className={
+        showExpanded
+          ? 'flex h-[calc(100dvh-10.5rem)] flex-col px-4 pb-4 pt-3 lg:h-[calc(100vh-8rem)] lg:px-8 lg:pt-0'
+          : 'px-4 pb-12 pt-3 lg:px-8 lg:pt-0'
+      }
+    >
+      {showExpanded ? (
+        calendarCard
+      ) : (
+        <BentoGrid className="lg:auto-rows-[240px]">
+          {calendarCard}
+          <NowCard now={now} />
+          <AgendaCard events={todayEvents} items={todayItems} now={now} onItemClick={setSelectedItemId} onEventClick={setOpenEvent} />
+          <UpNextCard event={upcomingEvent} now={now} />
+          <WeekLoadCard events={weekEvents} weekStart={weekStart} />
+          <FocusBlocksCard events={weekEvents} weekStart={weekStart} />
+        </BentoGrid>
+      )}
+
+      {openDayKey && (
+        <DayPopup
+          date={openDayKey}
+          events={popupEvents}
+          items={popupItems}
+          onEventClick={(event) => {
+            setOpenDayKey(null)
+            setOpenEvent(event)
+          }}
+          onItemClick={(id) => {
+            setOpenDayKey(null)
+            setSelectedItemId(id)
+          }}
+          onClose={() => setOpenDayKey(null)}
         />
-        <NowCard now={now} />
-        <AgendaCard events={selectedDayEvents} items={selectedDayItems} now={now} selectedDate={selectedDate} onItemClick={setSelectedItemId} onEventClick={setOpenEvent} />
-        <UpNextCard event={upcomingEvent} now={now} />
-        <WeekLoadCard events={weekEvents} weekStart={weekStart} />
-        <FocusBlocksCard events={weekEvents} weekStart={weekStart} />
-      </BentoGrid>
+      )}
 
       {openEvent && (
         <EventSheet
