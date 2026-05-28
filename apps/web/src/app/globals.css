@@ -445,6 +445,11 @@
   .doit-block-handle:active {
     cursor: grabbing;
   }
+  /* Sheet editor has no left text padding; park the handle in the column gutter
+     so it sits to the left of the text instead of overlapping it. */
+  .doit-note-sheet-prose .doit-block-handle {
+    left: -1.5rem;
+  }
   .doit-heading-collapse-toggle {
     display: inline-flex;
     width: 1rem;

@@ -34,6 +34,8 @@ type Props = {
   variant?: 'default' | 'sheet'
   toolbarPortalId?: string
   attachmentsPortalId?: string
+  focusMode?: boolean
+  onToggleFocus?: () => void
 }
 
 type DriveUploadResult = {
@@ -235,6 +237,8 @@ export function MarkdownEditor({
   variant = 'default',
   toolbarPortalId,
   attachmentsPortalId,
+  focusMode = false,
+  onToggleFocus,
 }: Props) {
   const editorRef = useRef<Editor | null>(null)
   const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null)
@@ -321,7 +325,7 @@ export function MarkdownEditor({
       return
     }
     setAttachmentsHost(document.getElementById(attachmentsPortalId))
-  }, [attachmentsPortalId])
+  }, [attachmentsPortalId, focusMode])
 
   useEffect(() => {
     if (!editor) return
@@ -476,6 +480,8 @@ export function MarkdownEditor({
       onUploadFiles={() => fileInputRef.current?.click()}
       hideDocumentActions={hideDocumentActions}
       variant={variant}
+      focusMode={focusMode}
+      onToggleFocus={onToggleFocus}
     />
   )
   const attachmentsPanel = (
@@ -1125,6 +1131,8 @@ function EditorToolbarAccessible({
   onUploadFiles,
   hideDocumentActions = false,
   variant = 'default',
+  focusMode = false,
+  onToggleFocus,
 }: {
   editor: Editor | null
   canUpload: boolean
@@ -1132,6 +1140,8 @@ function EditorToolbarAccessible({
   onUploadFiles: () => void
   hideDocumentActions?: boolean
   variant?: 'default' | 'sheet'
+  focusMode?: boolean
+  onToggleFocus?: () => void
 }) {
   const { prompt } = useDialog()
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -1426,22 +1436,27 @@ function EditorToolbarAccessible({
           </ToolbarGroup>
         ) : null}
 
-        {variant === 'sheet' ? (
-          <div className="ml-auto inline-flex items-center rounded-lg bg-[#ECF0F5] p-0.5">
-            {['edit', 'preview', 'split'].map((view, index) => (
-              <button
-                key={view}
-                type="button"
-                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${
-                  index === 0
-                    ? 'bg-white text-navy-900 shadow-[0_1px_2px_rgba(15,35,66,.06)]'
-                    : 'text-navy-500 hover:text-navy-900'
-                }`}
-              >
-                {view}
-              </button>
-            ))}
-          </div>
+        {variant === 'sheet' && onToggleFocus ? (
+          <button
+            type="button"
+            onClick={onToggleFocus}
+            aria-pressed={focusMode}
+            title={focusMode ? 'Sair do modo foco' : 'Modo foco'}
+            className={`ml-auto inline-flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-semibold transition-colors ${
+              focusMode
+                ? 'bg-navy-900 text-white hover:bg-navy-700'
+                : 'bg-[#ECF0F5] text-navy-600 hover:text-navy-900'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              {focusMode ? (
+                <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M16 21v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              ) : (
+                <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" />
+              )}
+            </svg>
+            {focusMode ? 'Sair do foco' : 'Foco'}
+          </button>
         ) : null}
       </div>
 

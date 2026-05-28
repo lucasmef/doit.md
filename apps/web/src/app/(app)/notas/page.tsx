@@ -8,6 +8,7 @@ import { toLocalDateKey } from '@doit/core'
 import { BentoGrid, CardTitle, DarkGlowCard, GlassCard } from '@/components/ui/bento'
 import { useFolders } from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
+import { buildTagGraph } from '@/lib/note-relations'
 
 const FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
 const NOTE_ACCENTS: Array<{ accent: string; fileColor: string }> = [
@@ -376,27 +377,30 @@ function LibraryCard({
 }
 
 function KnowledgeGraphCard({ notes }: { notes: Item[] }) {
+  const graph = buildTagGraph(notes, 7)
   const positions = [
-    { left: '16%', top: '25%', tone: 'violet' },
-    { left: '87%', top: '19%', tone: 'teal' },
-    { left: '13%', top: '78%', tone: '' },
-    { left: '89%', top: '84%', tone: 'pink' },
-    { left: '60%', top: '10%', tone: '' },
-    { left: '40%', top: '91%', tone: 'teal' },
+    { x: 190, y: 160, left: '50%', top: '50%', tone: 'center' },
+    { x: 60, y: 80, left: '16%', top: '25%', tone: 'violet' },
+    { x: 300, y: 60, left: '78%', top: '19%', tone: 'teal' },
+    { x: 50, y: 250, left: '13%', top: '78%', tone: '' },
+    { x: 310, y: 270, left: '80%', top: '84%', tone: 'pink' },
+    { x: 230, y: 30, left: '60%', top: '10%', tone: '' },
+    { x: 150, y: 290, left: '40%', top: '91%', tone: 'teal' },
   ] as const
   const toneClass: Record<string, string> = {
     '': 'bg-white text-navy-900 border-white',
+    center:
+      'bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] text-white border-white shadow-[0_0_16px_rgba(40,199,183,.6),0_4px_14px_rgba(47,107,255,.5)]',
     violet: 'bg-[linear-gradient(135deg,#B59BFF,#7B5BFF)] text-white border-white/40',
     teal: 'bg-[linear-gradient(135deg,#5BE3D4,#28C7B7)] text-navy-900 border-white',
     pink: 'bg-[linear-gradient(135deg,#FFB1D5,#FF6FAE)] text-white border-white',
   }
-  const center = notes[0]?.title ? `${notes[0].title.toLowerCase().slice(0, 12)}.md` : 'hoje.md'
   return (
     <DarkGlowCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
       <div className="mb-3 flex items-center justify-between">
-        <CardTitle className="text-white/85">links</CardTitle>
+        <CardTitle className="text-white/85">mapa por tags</CardTitle>
         <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/80">
-          {notes.length} notas
+          {graph.edges.length} relacoes
         </span>
       </div>
       <div className="relative -mx-2 flex-1">
@@ -407,28 +411,37 @@ function KnowledgeGraphCard({ notes }: { notes: Item[] }) {
               <stop offset="1" stopColor="#28C7B7" stopOpacity="0.5" />
             </linearGradient>
           </defs>
-          <path d="M 190 160 Q 110 100 60 80" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
-          <path d="M 190 160 Q 290 80 330 60" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
-          <path d="M 190 160 Q 110 220 50 250" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
-          <path d="M 190 160 Q 290 240 340 270" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
-          <path d="M 190 160 Q 250 80 230 30" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
-          <path d="M 190 160 Q 130 240 150 290" stroke="url(#notas-edge)" strokeWidth={1.5} fill="none" />
-          <path d="M 60 80 Q 90 50 230 30" stroke="rgba(255,255,255,.15)" strokeWidth={1} fill="none" />
-          <path d="M 330 60 Q 340 160 340 270" stroke="rgba(255,255,255,.15)" strokeWidth={1} fill="none" />
+          {graph.edges.map((edge, index) => {
+            const source = positions[edge.sourceIndex]
+            const target = positions[edge.targetIndex]
+            if (!source || !target) return null
+            return (
+              <line
+                key={`${edge.sourceIndex}-${edge.targetIndex}-${index}`}
+                x1={source.x}
+                y1={source.y}
+                x2={target.x}
+                y2={target.y}
+                stroke="url(#notas-edge)"
+                strokeWidth={1 + Math.min(2, edge.score * 3)}
+                strokeOpacity={0.42 + Math.min(0.36, edge.score)}
+              />
+            )
+          })}
         </svg>
-        <div
-          className="absolute -translate-x-1/2 -translate-y-1/2 rounded-lg border border-white bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] px-3 py-1.5 font-mono text-[11px] font-bold text-white shadow-[0_0_16px_rgba(40,199,183,.6),0_4px_14px_rgba(47,107,255,.5)] whitespace-nowrap"
-          style={{ left: '50%', top: '50%' }}
-        >
-          {center}
-        </div>
-        {positions.map((p, i) => {
-          const next = notes[i + 1]
-          const fallback = ['eventos.md', 'arch.md', 'meeting-notes.md', 'changelog.md', 'ideas.md', 'reading.md'][i] ?? 'note.md'
-          const label = next ? `${next.title.toLowerCase().replace(/\s+/g, '-').slice(0, 14)}.md` : fallback
+        {graph.nodes.length === 0 ? (
+          <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-white/58">
+            crie notas com tags dentro de pastas
+          </div>
+        ) : null}
+        {graph.nodes.map((node, i) => {
+          const p = positions[i]
+          if (!p) return null
+          const label = `${node.item.title.toLowerCase().replace(/\s+/g, '-').slice(0, 14)}.md`
           return (
             <div
-              key={i}
+              key={node.item.id}
+              title={node.primaryTag ? `#${node.primaryTag}` : 'sem tags compartilhadas'}
               className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg border-[1.5px] px-2 py-1 font-mono text-[10px] font-semibold shadow-[0_4px_12px_rgba(15,35,66,.4)] ${toneClass[p.tone]}`}
               style={{ left: p.left, top: p.top }}
             >
@@ -440,11 +453,11 @@ function KnowledgeGraphCard({ notes }: { notes: Item[] }) {
       <div className="mt-3 flex gap-3 font-mono text-[10px] text-white/70">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-[#79A6FF]" />
-          linked
+          pasta
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-[#5BE3D4]" />
-          backlinks
+          tags
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-[#B59BFF]" />
