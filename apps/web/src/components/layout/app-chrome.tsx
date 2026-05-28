@@ -8,7 +8,6 @@ import { NotificationFailureBanner } from '@/components/notifications/failure-ba
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const todayMobileImmersive = pathname === '/today'
   const noteEditorImmersive = pathname.startsWith('/notas/') && !pathname.startsWith('/notas/pastas')
 
   if (noteEditorImmersive) {
@@ -32,13 +31,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <div className="relative z-10 flex min-h-screen flex-col text-navy-900">
         <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-1 flex-col p-0 lg:p-7">
           <div className="sticky top-0 z-50 lg:top-7 lg:mb-6">
-            {todayMobileImmersive ? (
-              <div className="hidden lg:block">
-                <Topbar />
-              </div>
-            ) : (
-              <Topbar />
-            )}
+            <Topbar />
           </div>
           <NotificationFailureBanner />
           <div className="flex flex-1 lg:rounded-[28px] lg:border lg:border-white/45 lg:bg-white/34 lg:shadow-[0_24px_60px_rgba(15,35,66,.12)] lg:backdrop-blur-xl">
