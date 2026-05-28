@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CalendarEvent, Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
-import { BentoGrid, CardTitle, DarkGlowCard, GlassCard } from '@/components/ui/bento'
+import { BentoGrid, CardTitle, VividBlueCard, GlassCard } from '@/components/ui/bento'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useItems } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
@@ -108,6 +108,8 @@ function MonthCard({
   onDayClick,
   onEventClick,
   onMaximize,
+  viewMode,
+  setViewMode,
 }: {
   cursorYear: number
   cursorMonth: number
@@ -121,6 +123,8 @@ function MonthCard({
   onDayClick: (key: string) => void
   onEventClick: (event: CalendarEvent) => void
   onMaximize: () => void
+  viewMode: 'DIA' | 'SEM' | 'MES' | 'ANO'
+  setViewMode: (mode: 'DIA' | 'SEM' | 'MES' | 'ANO') => void
 }) {
   const cells = useMemo(() => buildMonthCells(cursorYear, cursorMonth), [cursorYear, cursorMonth])
   const eventsMap = useMemo(() => eventsByDay(events), [events])
@@ -178,7 +182,8 @@ function MonthCard({
             {(['DIA', 'SEM', 'MES', 'ANO'] as const).map((label) => (
               <span
                 key={label}
-                className={`rounded-full px-2.5 py-1 ${label === 'MES' ? 'bg-white text-navy-900 shadow-cool-sm' : 'hover:text-navy-900 cursor-pointer'}`}
+                onClick={() => setViewMode(label)}
+                className={`rounded-full px-2.5 py-1 ${label === viewMode ? 'bg-white text-navy-900 shadow-cool-sm cursor-default' : 'hover:text-navy-900 cursor-pointer'}`}
               >
                 {label}
               </span>
@@ -195,7 +200,7 @@ function MonthCard({
         </div>
       </div>
 
-      <div className="grid flex-1 grid-cols-7 gap-1.5">
+      <div className="grid flex-1 grid-cols-7 grid-rows-[22px_repeat(6,minmax(0,1fr))] gap-1.5 min-h-0">
         {DOW_SHORT.map((dow) => (
           <div key={dow} className="pb-1 text-center font-mono text-[10px] font-bold tracking-wider text-navy-500">
             {dow}
@@ -424,7 +429,7 @@ function UpNextCard({ event, now }: { event: CalendarEvent | null; now: Date }) 
   }, [event, now])
 
   return (
-    <DarkGlowCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
+    <VividBlueCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
       <div className="mb-3 flex items-center justify-between">
         <CardTitle className="text-white/85">proximo</CardTitle>
         <span className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/80">
@@ -464,7 +469,7 @@ function UpNextCard({ event, now }: { event: CalendarEvent | null; now: Date }) 
           Aproveita esse tempo livre para um bloco de foco
         </div>
       )}
-    </DarkGlowCard>
+    </VividBlueCard>
   )
 }
 
@@ -599,6 +604,7 @@ export default function CalendarPage() {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() }
   })
+  const [viewMode, setViewMode] = useState<'DIA' | 'SEM' | 'MES' | 'ANO'>('MES')
   const { items } = useItems()
   const { setSelectedItemId } = useUI()
 
@@ -694,8 +700,8 @@ export default function CalendarPage() {
   }
 
   return (
-    <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-4">
-      <BentoGrid className="lg:auto-rows-[140px]">
+    <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-0">
+      <BentoGrid className="lg:auto-rows-[240px]">
         <MonthCard
           cursorYear={cursor.year}
           cursorMonth={cursor.month}
@@ -709,6 +715,8 @@ export default function CalendarPage() {
           onDayClick={setSelectedDate}
           onEventClick={setOpenEvent}
           onMaximize={() => setFullscreen(true)}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
         />
         <NowCard now={now} />
         <AgendaCard events={selectedDayEvents} items={selectedDayItems} now={now} selectedDate={selectedDate} onItemClick={setSelectedItemId} onEventClick={setOpenEvent} />

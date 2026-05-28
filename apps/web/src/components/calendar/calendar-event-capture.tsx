@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CalendarEvent, GoogleCalendar } from '@doit/types'
@@ -281,7 +281,7 @@ export function CalendarEventCapture() {
 
   return (
     <div
-      className="fixed inset-0 z-[220] flex items-end justify-center bg-navy-900/35 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className="fixed inset-0 z-[220] flex items-end justify-center bg-navy-900/32 p-0 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(clickEvent) => {
@@ -290,44 +290,69 @@ export function CalendarEventCapture() {
       onKeyDown={handleKeyDown}
       {...swipeHandlers}
     >
-      <form
-        onSubmit={handleSubmit}
-        className="flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-ui-border bg-white shadow-cool-lg sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:rounded-2xl"
+      <div
+        className={
+          expanded
+            ? 'w-full overflow-hidden border border-white/65 bg-white shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px] sm:max-h-none sm:overflow-visible sm:rounded-[24px]'
+            : 'w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
+        }
       >
-        <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-3">
-          {!expanded && (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="mx-auto mb-3 block h-1.5 w-11 rounded-full bg-slate-300 sm:hidden"
-              aria-label="Expandir captura"
-              title="Expandir"
-            />
-          )}
-          <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
-        </div>
-        {!expanded && (
-          <div className="px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
-            <div className="flex items-center gap-2 rounded-2xl border border-ui-border bg-white p-2 shadow-cool-sm">
-              <input
-                ref={titleRef}
-                value={title}
-                onChange={(inputEvent) => applyTitleShortcuts(inputEvent.target.value)}
-                placeholder="Evento hoje as 14h"
-                className="h-10 min-w-0 flex-1 border-none bg-transparent px-1 text-[16px] font-semibold outline-none placeholder:text-slate-300"
-              />
-              <button
-                type="submit"
-                disabled={saving || !cleanTitle(title)}
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white transition-colors hover:bg-brand-700 disabled:opacity-40"
-                aria-label="Criar"
-                title="Criar"
-              >
-                <IconPlus className="h-5 w-5" />
-              </button>
+        <form
+          onSubmit={handleSubmit}
+          className={`flex flex-col sm:max-h-none ${expanded ? 'max-h-[calc(100dvh-1rem)]' : ''}`}
+        >
+          {!expanded ? (
+            <div className="w-full">
+              <div className="mb-3 flex items-center justify-between">
+                <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
+              </div>
+
+              <div className="flex items-center gap-2 rounded-[20px] border border-white/70 bg-white/76 p-1.5 shadow-cool-sm backdrop-blur-md">
+                <input
+                  ref={titleRef}
+                  value={title}
+                  onChange={(inputEvent) => applyTitleShortcuts(inputEvent.target.value)}
+                  placeholder="Evento hoje as 14h"
+                  className="min-w-0 flex-1 border-none bg-transparent px-2.5 py-1.5 text-[15px] font-medium leading-5 text-navy-900 outline-none placeholder:text-navy-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-white/60 text-navy-500 shadow-sm transition-colors hover:bg-white hover:text-navy-900"
+                  aria-label="Expandir"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || !cleanTitle(title)}
+                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[14px] bg-brand-600 text-white shadow-[0_4px_12px_-4px_rgba(47,107,255,0.6)] transition-colors hover:bg-brand-700 disabled:opacity-40"
+                  aria-label="Criar"
+                  title="Criar"
+                >
+                  <IconPlus className="h-5 w-5" />
+                </button>
+              </div>
+
+              {date && (
+                <div className="mt-[7px] mx-[5px] flex min-h-[18px] items-center gap-[6px] font-mono text-[10.5px] leading-[1.35] text-slate-500">
+                  <span className="h-[5px] w-[5px] rounded-full bg-[#28C7B7] shadow-[0_0_7px_rgba(40,199,183,0.85)]"></span>
+                  <span>
+                    Data do evento: <b className="font-[850] text-navy-900">{date}</b>
+                    {!allDay && startTime && <> · <b className="font-[850] text-navy-900">{startTime}</b></>}
+                  </span>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          ) : (
+            <>
+              <div className="shrink-0 border-b border-navy-900/[0.04] bg-white px-4 pb-3 pt-3">
+                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <CaptureModeTabs mode="event" onModeChange={(nextMode) => openCapture(nextMode, date)} />
+                  </div>
+                </div>
+              </div>
         <div className={`${expanded ? 'block' : 'hidden sm:block'} min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3 text-[14px] text-navy-700`}>
           <label className="block">
             <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wide text-navy-300">
@@ -454,7 +479,7 @@ export function CalendarEventCapture() {
           </label>
         </div>
 
-        <div className={`${expanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center justify-between gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]`}>
+        <div className={`${expanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center justify-between gap-2 border-t border-navy-900/[0.06] bg-[#F4F6FA] px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]`}>
           <div className="min-w-0 flex flex-1 items-center gap-2">
             {writableCalendars.length > 0 ? (
               <select
@@ -496,7 +521,10 @@ export function CalendarEventCapture() {
             </button>
           </div>
         </div>
-      </form>
+            </>
+          )}
+        </form>
+      </div>
     </div>
   )
 }

@@ -46,7 +46,7 @@ export function GlassCard({ children, className, as = 'section' }: CardProps) {
   return (
     <Component
       className={cx(
-        'rounded-[28px] border border-white/55 bg-white/62 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_22px_55px_rgba(15,35,66,.16)] backdrop-blur-2xl',
+        'rounded-[28px] border border-white/55 bg-white/80 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_22px_55px_rgba(15,35,66,.16)] backdrop-blur-2xl',
         className,
       )}
     >
@@ -64,6 +64,20 @@ export function DarkGlowCard({ children, className, as = 'section' }: CardProps)
         'bg-[linear-gradient(180deg,#0b1733_0%,#0f2342_60%,#122a55_100%)] text-white shadow-[0_24px_60px_rgba(15,35,66,.28)]',
         'before:pointer-events-none before:absolute before:-inset-[1.5px] before:-z-10 before:rounded-[28px] before:bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF_45%,#28C7B7)]',
         'after:pointer-events-none after:absolute after:inset-0 after:rounded-[28px] after:shadow-[0_0_80px_4px_rgba(40,199,183,.30),0_0_80px_4px_rgba(47,107,255,.22)]',
+        className,
+      )}
+    >
+      <div className="relative z-10 flex h-full flex-col">{children}</div>
+    </Component>
+  )
+}
+
+export function VividBlueCard({ children, className, as = 'section' }: CardProps) {
+  const Component = as
+  return (
+    <Component
+      className={cx(
+        'relative rounded-[28px] border border-white/10 bg-[#2F6BFF] text-white shadow-[0_24px_60px_rgba(47,107,255,.28)]',
         className,
       )}
     >

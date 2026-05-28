@@ -616,10 +616,32 @@
     color: rgb(252 211 77);
   }
 
-  :root[data-theme='dark'] .text-green-600,
-  :root[data-theme='dark'] .text-green-700,
   :root[data-theme='dark'] .text-green-800,
   :root[data-theme='dark'] .text-emerald-700 {
     color: rgb(134 239 172);
+  }
+
+  .doit-wallpaper {
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(900px 700px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+      radial-gradient(800px 600px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+      radial-gradient(900px 800px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+      radial-gradient(1000px 900px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+      linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 35%, #FBC9F0 60%, #CFF3EE 100%);
+  }
+  .doit-wallpaper::after {
+    content: "";
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(circle at center, black, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at center, black, transparent 75%);
+  }
+
+  :root[data-theme='dark'] .doit-wallpaper {
+    display: none;
   }
 }

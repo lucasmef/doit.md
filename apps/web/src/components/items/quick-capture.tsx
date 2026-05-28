@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -1014,7 +1014,7 @@ export function QuickCapture() {
   if (editMode && !editItem) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
-  const mobileExpanded = editMode || expanded
+  const isExpanded = editMode || expanded
   const canSwitchMode =
     !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
@@ -1031,19 +1031,94 @@ export function QuickCapture() {
       {...swipeHandlers}
     >
       <div
-        className={`w-full overflow-hidden border border-white/65 bg-white shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] sm:max-h-none sm:overflow-visible sm:rounded-[24px] ${
-          isNote
-            ? `${mobileExpanded ? 'h-full max-h-none rounded-none border-0' : 'max-h-[calc(100dvh-1rem)] rounded-t-[24px]'} sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
-            : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px]'
-        }`}
+        className={
+          isExpanded
+            ? `w-full overflow-hidden border border-white/65 bg-white shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] sm:max-h-none sm:overflow-visible sm:rounded-[24px] ${
+                isNote
+                  ? `h-full max-h-none rounded-none border-0 sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
+                  : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px]'
+              }`
+            : 'w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
+        }
       >
         <form
           onSubmit={handleSubmit}
-          className={`flex flex-col sm:max-h-none ${isNote && mobileExpanded ? 'h-full' : 'max-h-[calc(100dvh-1rem)]'}`}
+          className={`flex flex-col sm:max-h-none ${isExpanded ? (isNote ? 'h-full' : 'max-h-[calc(100dvh-1rem)]') : ''}`}
         >
-          {!editMode && (
+          {!isExpanded ? (
+            <div className="w-full">
+              <div className="mb-3 flex items-center justify-between">
+                <CaptureModeTabs
+                  mode={isNote ? 'note' : 'task'}
+                  onModeChange={(nextMode) => {
+                    if (nextMode === 'event') {
+                      openCapture('event', dueDate || null)
+                      return
+                    }
+                    openCapture(nextMode)
+                    handleComplexityChange(nextMode)
+                  }}
+                />
+              </div>
+
+              <div className="flex items-center gap-2 rounded-[20px] border border-white/70 bg-white/76 p-1.5 shadow-cool-sm backdrop-blur-md">
+                <input
+                  ref={inputRef as any}
+                  value={title}
+                  onChange={(e) => {
+                    applyTitleShortcuts(e.target.value)
+                    setTitleCursor(e.target.selectionStart ?? e.target.value.length)
+                  }}
+                  onPaste={handleTitlePaste as any}
+                  onClick={(e) => setTitleCursor(e.currentTarget.selectionStart ?? title.length)}
+                  onKeyDown={(e) => {
+                    if (
+                      e.key === 'Enter' &&
+                      !e.shiftKey &&
+                      !e.metaKey &&
+                      !e.ctrlKey &&
+                      !e.altKey
+                    ) {
+                      e.preventDefault()
+                      void submitAndContinue()
+                    }
+                  }}
+                  placeholder={isNote ? 'Escreva uma nota...' : 'Nome da tarefa...'}
+                  className="min-w-0 flex-1 border-none bg-transparent px-2.5 py-1.5 text-[15px] font-medium leading-5 text-navy-900 outline-none placeholder:text-navy-300"
+                />
+                <button
+                  type="button"
+                  onClick={() => setExpanded(true)}
+                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-xl bg-white/60 text-navy-500 shadow-sm transition-colors hover:bg-white hover:text-navy-900"
+                  aria-label="Expandir"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+                </button>
+                <button
+                  type="submit"
+                  disabled={saveDisabled}
+                  className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[14px] bg-brand-600 text-white shadow-[0_4px_12px_-4px_rgba(47,107,255,0.6)] transition-colors hover:bg-brand-700 disabled:opacity-40"
+                  aria-label="Adicionar"
+                >
+                  <IconPlus className="h-5 w-5" />
+                </button>
+              </div>
+
+              {!isNote && dueDate && (
+                <div className="mt-[7px] mx-[5px] flex min-h-[18px] items-center gap-[6px] font-mono text-[10.5px] leading-[1.35] text-slate-500">
+                  <span className="h-[5px] w-[5px] rounded-full bg-[#28C7B7] shadow-[0_0_7px_rgba(40,199,183,0.85)]"></span>
+                  <span>
+                    Detectado: <b className="font-[850] text-navy-900">{formatDueDate(dueDate).toLowerCase()}</b>
+                    {dueTime && <> · <b className="font-[850] text-navy-900">{dueTime}</b></>}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {!editMode && (
             <div className="shrink-0 border-b border-navy-900/[0.04] bg-white px-4 pb-3 pt-3">
-              {!mobileExpanded && (
+              {!isExpanded && (
                 <button
                   type="button"
                   onClick={() => setExpanded(true)}
@@ -1093,7 +1168,7 @@ export function QuickCapture() {
               </div>
             </div>
           )}
-          {!mobileExpanded && (
+          {!isExpanded && (
             <div className="px-4 py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:hidden">
               <div className="flex items-end gap-2 rounded-[20px] border border-white/70 bg-white/76 p-2 shadow-cool-sm backdrop-blur">
                 {isNote ? (
@@ -1143,7 +1218,7 @@ export function QuickCapture() {
               </div>
             </div>
           )}
-          <div className={`${mobileExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto bg-white px-6 pb-5 pt-5`}>
+          <div className={`${isExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto bg-white px-6 pb-5 pt-5`}>
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
@@ -1549,7 +1624,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className={`${mobileExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-navy-900/[0.06] bg-[#F4F6FA] px-6 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]`}>
+          <div className={`${isExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-navy-900/[0.06] bg-[#F4F6FA] px-6 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]`}>
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"
@@ -1649,6 +1724,8 @@ export function QuickCapture() {
               {saving ? '...' : editMode ? 'Salvar' : 'Adicionar'}
             </button>
           </div>
+            </>
+          )}
         </form>
       </div>
     </div>
