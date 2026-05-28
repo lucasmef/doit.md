@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Status: review
+- Status: done
 - Mode: bugfix
 - Complexity: low
 - Created: 2026-05-28
@@ -24,7 +24,7 @@ O branch atual e `dev`, o repositorio e `lucasmef/doit.md`, e a arvore local est
 - [x] Inspecionar GitHub Actions e logs do run falho.
 - [x] Reproduzir/localizar o erro de lint no arquivo apontado.
 - [x] Remover o codigo morto que causa o erro.
-- [ ] Validar lint incremental, type-check e novo run do GitHub Actions.
+- [x] Validar lint incremental, type-check e novo run do GitHub Actions.
 
 ## Out of scope
 
@@ -48,15 +48,15 @@ Answers:
 - [x] O arquivo `apps/web/src/app/(app)/notas/[id]/page.tsx` nao possui helpers mortos relacionados a `PropsGrid`.
 - [x] O lint incremental equivalente ao CI passa localmente.
 - [x] O type-check web passa localmente.
-- [ ] O workflow `Gates DEV` passa em novo run no GitHub.
+- [x] O workflow `Gates DEV` passa em novo run no GitHub.
 
 ## Implementation plan
 
 - [x] Coletar evidencia do workflow falho.
 - [x] Remover `PropsGrid` e helpers usados somente por ele.
 - [x] Rodar validacoes locais.
-- [ ] Commitar e enviar a correcao para `dev`.
-- [ ] Monitorar novo run `Gates DEV` ate sucesso.
+- [x] Commitar e enviar a correcao para `dev`.
+- [x] Monitorar novo run `Gates DEV` ate sucesso.
 
 ## Progress
 
@@ -65,6 +65,8 @@ Answers:
 - 2026-05-28 00:00 - Log remoto mostra falha em `next lint`: `PropsGrid` definido mas nao usado em `apps/web/src/app/(app)/notas/[id]/page.tsx`.
 - 2026-05-28 00:00 - Removidos `PropsGrid`, `StatusPill` e `PropIcon`, todos sem uso no layout atual.
 - 2026-05-28 00:00 - Lint direto do arquivo falho, lint incremental via Git Bash e type-check web passaram localmente.
+- 2026-05-28 00:00 - Commit `13ab2fb` enviado para `dev`.
+- 2026-05-28 00:02 - `Gates DEV` run `26550007691` concluiu com sucesso: Quality Gate, Security Gate, Secret Scan e DEV gates complete.
 
 ## Decisions
 
@@ -84,13 +86,14 @@ Commands run:
 - [x] `pnpm --filter @doit/web exec next lint --file "src/app/(app)/notas/[id]/page.tsx" --file src/components/items/markdown-editor.tsx --file src/components/layout/app-chrome.tsx`
 - [x] `pnpm --filter @doit/web exec tsc --noEmit`
 - [x] `C:\Program Files\Git\bin\bash.exe scripts/lint-incremental.sh`
-- [ ] `gh run watch <run-id> --exit-status`
+- [x] `gh run watch 26550007691 --exit-status`
 
 Results:
 
 - Lint direto passou com warnings pre-existentes em `/notas/[id]`.
 - Type-check web passou.
 - Lint incremental via Git Bash passou com warnings pre-existentes em `/notas/[id]` e `quick-capture.tsx`.
+- GitHub Actions `Gates DEV` run `26550007691` passou. A Quality Gate executou type-check, lint incremental e build CI com sucesso; Security Gate e Secret Scan tambem passaram.
 
 Frontend evidence:
 
@@ -103,4 +106,4 @@ Frontend evidence:
 
 ## Next step
 
-Commitar, enviar para `dev` e monitorar o novo workflow.
+Nenhuma acao obrigatoria. O branch `dev` esta com gates verdes apos a correcao.
