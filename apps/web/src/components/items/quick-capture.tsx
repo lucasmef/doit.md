@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { createItem, updateItem, useItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
@@ -48,6 +48,8 @@ type QuickCaptureDraft = {
   priority: Priority
   recurrence: ItemRecurrence | ''
 }
+
+type TitleInputElement = HTMLInputElement | HTMLTextAreaElement
 
 function loadDraft(): Partial<QuickCaptureDraft> | null {
   if (typeof window === 'undefined') return null
@@ -449,18 +451,26 @@ function HighlightedTitleInput({
   onChange: (value: string) => void
   onCursorChange: (cursor: number) => void
   placeholder: string
-  inputRef?: React.RefObject<HTMLTextAreaElement | null>
-  onPaste?: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void
+  inputRef?: (node: HTMLTextAreaElement | null) => void
+  onPaste?: (event: React.ClipboardEvent<TitleInputElement>) => void
   onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const parts = value.split(INLINE_METADATA_PATTERN)
+  const setTextareaRef = useCallback(
+    (node: HTMLTextAreaElement | null) => {
+      textareaRef.current = node
+      inputRef?.(node)
+    },
+    [inputRef],
+  )
 
   useEffect(() => {
-    const el = inputRef?.current
+    const el = textareaRef.current
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${el.scrollHeight}px`
-  }, [value, inputRef])
+  }, [value])
 
   return (
     <div className="relative min-w-0 flex-1">
@@ -488,7 +498,7 @@ function HighlightedTitleInput({
         })}
       </div>
       <textarea
-        ref={inputRef}
+        ref={setTextareaRef}
         value={value}
         autoFocus
         rows={1}
@@ -545,7 +555,10 @@ export function QuickCapture() {
   const [creatingFolder, setCreatingProject] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const [popover, setPopover] = useState<Popover>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const inputRef = useRef<TitleInputElement | null>(null)
+  const setInputRef = useCallback((node: TitleInputElement | null) => {
+    inputRef.current = node
+  }, [])
 
   const activeFolders = activeFoldersShim.filter((p) => p.status !== 'archived')
   const folderOptions = useMemo(() => flattenFolderOptions(activeFolders), [activeFolders])
@@ -978,7 +991,7 @@ export function QuickCapture() {
     }
   }
 
-  function handleTitlePaste(event: React.ClipboardEvent<HTMLTextAreaElement>) {
+  function handleTitlePaste(event: React.ClipboardEvent<TitleInputElement>) {
     if (isNote || saving) return
 
     const pasted = event.clipboardData.getData('text')
@@ -1063,13 +1076,13 @@ export function QuickCapture() {
 
               <div className="flex items-center gap-2 rounded-[20px] border border-white/70 bg-white/76 p-1.5 shadow-cool-sm backdrop-blur-md">
                 <input
-                  ref={inputRef as any}
+                  ref={setInputRef}
                   value={title}
                   onChange={(e) => {
                     applyTitleShortcuts(e.target.value)
                     setTitleCursor(e.target.selectionStart ?? e.target.value.length)
                   }}
-                  onPaste={handleTitlePaste as any}
+                  onPaste={handleTitlePaste}
                   onClick={(e) => setTitleCursor(e.currentTarget.selectionStart ?? title.length)}
                   onKeyDown={(e) => {
                     if (
@@ -1181,7 +1194,7 @@ export function QuickCapture() {
                   />
                 ) : (
                   <textarea
-                    ref={inputRef}
+                    ref={setInputRef}
                     value={title}
                     onChange={(e) => {
                       applyTitleShortcuts(e.target.value)
@@ -1222,7 +1235,7 @@ export function QuickCapture() {
             <div className="flex items-center gap-3">
               {!isNote && (
                 <HighlightedTitleInput
-                  inputRef={inputRef}
+                  inputRef={setInputRef}
                   value={title}
                   onChange={applyTitleShortcuts}
                   onPaste={handleTitlePaste}

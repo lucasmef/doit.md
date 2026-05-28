@@ -362,13 +362,6 @@ function BulkActionsContent({ mode, onDone }: Props & { onDone?: () => void }) {
   )
 }
 
-function nextSaturday(): string {
-  const date = new Date()
-  const offset = (6 - date.getDay() + 7) % 7 || 7
-  date.setDate(date.getDate() + offset)
-  return toLocalDateKey(date)
-}
-
 function IconChevron() {
   return (
     <svg
