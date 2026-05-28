@@ -28,3 +28,8 @@ apps/web/.mobile-qa/
 brain/
 replace*.js
 get-docker.sh
+
+# Playwright run artifacts (were committed by mistake)
+test-results/
+# Stray duplicate created by a test run with the wrong working dir
+apps/specs/
