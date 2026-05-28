@@ -2,8 +2,8 @@
 
 ## Metadata
 
-- Status: completed
-- Mode: validate
+- Status: in_progress
+- Mode: bugfix
 - Complexity: medium
 - Created: 2026-05-28
 - Updated: 2026-05-28
@@ -63,6 +63,8 @@ Reason: Os requisitos e referências visuais estão perfeitamente claros nos HTM
 ## Progress
 
 - 2026-05-28 11:25 - Spec criada.
+- 2026-05-28 13:02 - Reaberta como bugfix após feedback de que os modais ficaram diferentes da referência e com fundo transparente demais.
+- 2026-05-28 13:02 - Diagnóstico: `quick-capture.tsx` ainda usa `HighlightedTitleInput` no modal expandido de tarefa, deixando o texto real transparente e colorindo metadados; `calendar-event-capture.tsx` ainda mostra chips de metadata e o texto "Data do evento"; ambos usam overlay sem mesh gradient.
 
 ## Decisions
 
@@ -92,4 +94,4 @@ Frontend evidence:
 
 ## Next step
 
-Começar atualizando o `bulk-actions.tsx` para o menu contextual de item (desktop/mobile).
+Corrigir os modais expandidos de tarefa/evento e o overlay visual para seguir os HTMLs standalone.

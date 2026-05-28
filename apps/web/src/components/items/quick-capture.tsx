@@ -27,9 +27,7 @@ type ActiveShortcut =
 const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const FOLDER_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
-const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
-const INLINE_METADATA_PATTERN =
-  /(\bp[1-4]\b|[@#][\p{L}\p{N}][\p{L}\p{N}_-]*|(?:^|\s)(?:hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])|\b\d{1,2}\/\d{1,2}(?:\/\d{2,4})?\b|\b\d{4}-\d{2}-\d{2}\b|\b(?:as\s+|\u00e0s\s+)?(?:[01]?\d|2[0-3])(?::[0-5]\d|h[0-5]\d?)\b)/giu
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?|\s+horas?)?\b/iu
 const DATE_WORD_SHORTCUT =
   /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
@@ -108,6 +106,30 @@ function formatTimeLabel(time: string) {
   return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
+function DetectedDateInlineHint({
+  date,
+  time,
+}: {
+  date: string
+  time?: string
+}) {
+  if (!date) return null
+  return (
+    <div className="mx-[5px] mt-[7px] flex min-h-[18px] items-center gap-[6px] font-mono text-[10.5px] leading-[1.35] text-navy-500">
+      <span className="h-[5px] w-[5px] rounded-full bg-[#28C7B7] shadow-[0_0_7px_rgba(40,199,183,0.85)]" />
+      <span>
+        Detectado: <b className="font-[850] text-navy-900">{formatDueDate(date).toLowerCase()}</b>
+        {time ? (
+          <>
+            {' · '}
+            <b className="font-[850] text-navy-900">{formatTimeLabel(time)}</b>
+          </>
+        ) : null}
+      </span>
+    </div>
+  )
+}
+
 function dateAfter(days: number) {
   const date = new Date()
   date.setDate(date.getDate() + days)
@@ -184,17 +206,6 @@ function insertPastedTitle(current: string, pasted: string, start: number, end: 
 
 function normalizeToken(value: string) {
   return value.trim().toLocaleLowerCase('pt-BR')
-}
-
-function isCategorizerToken(value: string) {
-  return (
-    /^p[1-4]?$/i.test(value) ||
-    /^[@#][\p{L}\p{N}][\p{L}\p{N}_-]*$/iu.test(value) ||
-    DATE_WORD_SHORTCUT.test(` ${value}`) ||
-    SLASH_DATE_SHORTCUT.test(` ${value}`) ||
-    ISO_DATE_SHORTCUT.test(` ${value}`) ||
-    TIME_SHORTCUT.test(` ${value}`)
-  )
 }
 
 function folderIdOf(project: { id?: string; _id?: string }) {
@@ -435,85 +446,6 @@ function ToolButton({
     >
       {children}
     </button>
-  )
-}
-
-function HighlightedTitleInput({
-  value,
-  onChange,
-  onCursorChange,
-  placeholder,
-  inputRef,
-  onPaste,
-  onKeyDown,
-}: {
-  value: string
-  onChange: (value: string) => void
-  onCursorChange: (cursor: number) => void
-  placeholder: string
-  inputRef?: (node: HTMLTextAreaElement | null) => void
-  onPaste?: (event: React.ClipboardEvent<TitleInputElement>) => void
-  onKeyDown?: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const parts = value.split(INLINE_METADATA_PATTERN)
-  const setTextareaRef = useCallback(
-    (node: HTMLTextAreaElement | null) => {
-      textareaRef.current = node
-      inputRef?.(node)
-    },
-    [inputRef],
-  )
-
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [value])
-
-  return (
-    <div className="relative min-w-0 flex-1">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words text-[16px] font-semibold leading-6"
-      >
-        {parts.map((part, index) => {
-          if (!part) return null
-          if (isCategorizerToken(part)) {
-            return (
-              <span
-                key={`${part}-${index}`}
-                className="rounded-[6px] bg-surface-soft px-1 text-slate-700"
-              >
-                {part}
-              </span>
-            )
-          }
-          return (
-            <span key={`${part}-${index}`} className="text-slate-900">
-              {part}
-            </span>
-          )
-        })}
-      </div>
-      <textarea
-        ref={setTextareaRef}
-        value={value}
-        autoFocus
-        rows={1}
-        onChange={(e) => {
-          onChange(e.target.value)
-          onCursorChange(e.target.selectionStart ?? e.target.value.length)
-        }}
-        onPaste={onPaste}
-        onClick={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
-        onKeyDown={onKeyDown}
-        onKeyUp={(e) => onCursorChange(e.currentTarget.selectionStart ?? value.length)}
-        placeholder={placeholder}
-        className="relative w-full resize-none overflow-hidden border-none bg-transparent text-[16px] font-semibold leading-6 text-transparent caret-slate-900 outline-none placeholder:text-slate-300 selection:bg-brand-100"
-      />
-    </div>
   )
 }
 
@@ -1032,10 +964,12 @@ export function QuickCapture() {
     !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
   const recurrenceLabel = formatRecurrenceLabel(recurrence, dueDate)
+  const hasDetectedDueMetadata =
+    !isNote && title.trim().length > 0 && Boolean(parseInlineDueDate(title) || parseInlineDueTime(title))
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-navy-900/32 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 isolate z-[100] flex items-end justify-center overflow-hidden bg-navy-900/24 p-0 backdrop-blur-md sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
@@ -1044,14 +978,18 @@ export function QuickCapture() {
       {...swipeHandlers}
     >
       <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_700px_at_12%_20%,rgba(123,91,255,.55),transparent_60%),radial-gradient(800px_600px_at_88%_14%,rgba(255,111,174,.34),transparent_62%),radial-gradient(900px_800px_at_78%_78%,rgba(40,199,183,.44),transparent_60%),radial-gradient(1000px_900px_at_18%_95%,rgba(47,107,255,.46),transparent_62%),linear-gradient(135deg,#B7C9FF_0%,#DDD6FE_35%,#FBC9F0_60%,#CFF3EE_100%)] opacity-95"
+      />
+      <div
         className={
           isExpanded
-            ? `w-full overflow-hidden border border-white/65 bg-white shadow-[0_30px_80px_-20px_rgba(15,35,66,.30),0_14px_30px_-10px_rgba(15,35,66,.18)] sm:max-h-none sm:overflow-visible sm:rounded-[24px] ${
+            ? `relative w-full overflow-hidden border border-white/80 bg-white/[0.90] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px] sm:max-h-none sm:overflow-visible sm:rounded-[28px] ${
                 isNote
-                  ? `h-full max-h-none rounded-none border-0 sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
-                  : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[24px]'
+                  ? `h-full max-h-none rounded-none border-0 bg-white sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
+                  : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[30px]'
               }`
-            : 'w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
+            : 'relative w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:pb-3 sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
         }
       >
         <form
@@ -1117,19 +1055,34 @@ export function QuickCapture() {
                 </button>
               </div>
 
-              {!isNote && dueDate && (
-                <div className="mt-[7px] mx-[5px] flex min-h-[18px] items-center gap-[6px] font-mono text-[10.5px] leading-[1.35] text-slate-500">
-                  <span className="h-[5px] w-[5px] rounded-full bg-[#28C7B7] shadow-[0_0_7px_rgba(40,199,183,0.85)]"></span>
-                  <span>
-                    Detectado: <b className="font-[850] text-navy-900">{formatDueDate(dueDate).toLowerCase()}</b>
-                    {dueTime && <> · <b className="font-[850] text-navy-900">{dueTime}</b></>}
-                  </span>
-                </div>
-              )}
+              {hasDetectedDueMetadata ? <DetectedDateInlineHint date={dueDate} time={dueTime} /> : null}
             </div>
           ) : (
             <>
-              {!editMode && (
+              {!isNote && (
+                <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.07] px-5 pb-3.5 pt-4">
+                  <div className="h-[38px] w-[38px] rounded-[14px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] shadow-[0_10px_22px_-14px_rgba(47,107,255,.85)]" />
+                  <div className="min-w-0 flex-1">
+                    <b className="block truncate text-[15px] font-[850] text-navy-900">
+                      {editMode ? 'Editar tarefa' : 'Adicionar tarefa'}
+                    </b>
+                    <span className="mt-1 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+                      modal completo
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeAll}
+                    className="grid h-8 w-8 place-items-center rounded-[11px] bg-navy-900/[0.055] text-navy-500 transition-colors hover:bg-navy-900/[0.08] hover:text-navy-900"
+                    aria-label="Fechar"
+                  >
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+                      <path d="M6 6l12 12M18 6 6 18" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              {isNote && !editMode && (
             <div className="shrink-0 border-b border-navy-900/[0.04] bg-white px-4 pb-3 pt-3">
               {!isExpanded && (
                 <button
@@ -1231,29 +1184,40 @@ export function QuickCapture() {
               </div>
             </div>
           )}
-          <div className={`${isExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto bg-white px-6 pb-5 pt-5`}>
-            <div className="flex items-center gap-3">
+          <div className={`${isExpanded ? '' : 'hidden sm:block'} min-h-0 flex-1 overflow-y-auto ${isNote ? 'bg-white px-6 pb-5 pt-5' : 'px-5 pb-5 pt-4'}`}>
+            <div className="relative flex items-start gap-3">
               {!isNote && (
-                <HighlightedTitleInput
-                  inputRef={setInputRef}
-                  value={title}
-                  onChange={applyTitleShortcuts}
-                  onPaste={handleTitlePaste}
-                  onCursorChange={setTitleCursor}
-                  onKeyDown={(e) => {
-                    if (
-                      e.key === 'Enter' &&
-                      !e.shiftKey &&
-                      !e.metaKey &&
-                      !e.ctrlKey &&
-                      !e.altKey
-                    ) {
-                      e.preventDefault()
-                      void submitAndContinue()
-                    }
-                  }}
-                  placeholder="Nome da tarefa"
-                />
+                <label className="block min-w-0 flex-1">
+                  <span className="mb-2 block font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">
+                    Tarefa
+                  </span>
+                  <input
+                    ref={setInputRef}
+                    value={title}
+                    onChange={(e) => {
+                      applyTitleShortcuts(e.target.value)
+                      setTitleCursor(e.target.selectionStart ?? e.target.value.length)
+                    }}
+                    onPaste={handleTitlePaste}
+                    onClick={(e) => setTitleCursor(e.currentTarget.selectionStart ?? title.length)}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === 'Enter' &&
+                        !e.shiftKey &&
+                        !e.metaKey &&
+                        !e.ctrlKey &&
+                        !e.altKey
+                      ) {
+                        e.preventDefault()
+                        void submitAndContinue()
+                      }
+                    }}
+                    placeholder="Revisar layout amanhã 8 horas"
+                    className="h-[52px] w-full rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 text-[16px] font-bold text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] placeholder:text-navy-300 focus:ring-2 focus:ring-brand-100"
+                    autoFocus
+                  />
+                  {hasDetectedDueMetadata ? <DetectedDateInlineHint date={dueDate} time={dueTime} /> : null}
+                </label>
               )}
               {isNote && <div className="min-w-0 flex-1" />}
               {canSwitchMode && editMode && (
@@ -1377,13 +1341,18 @@ export function QuickCapture() {
                 />
               </div>
             ) : (
-              <textarea
-                value={contentMd}
-                onChange={(e) => setContentMd(e.target.value)}
-                placeholder="DescriÃ§Ã£o"
-                rows={2}
-                className="mt-1 block max-h-[40vh] min-h-[48px] w-full resize-y border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
-              />
+              <label className="mt-3 block">
+                <span className="mb-2 block font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">
+                  Descrição
+                </span>
+                <textarea
+                  value={contentMd}
+                  onChange={(e) => setContentMd(e.target.value)}
+                  placeholder="Detalhes opcionais"
+                  rows={2}
+                  className="block max-h-[40vh] min-h-[92px] w-full resize-y rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 py-3 text-[15px] font-medium leading-5 text-navy-700 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] placeholder:text-navy-300 focus:ring-2 focus:ring-brand-100"
+                />
+              </label>
             )}
 
             <div className="relative mt-2 flex flex-wrap items-center gap-2">
@@ -1637,7 +1606,7 @@ export function QuickCapture() {
             </div>
           </div>
 
-          <div className={`${isExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-navy-900/[0.06] bg-[#F4F6FA] px-6 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]`}>
+          <div className={`${isExpanded ? 'flex' : 'hidden sm:flex'} shrink-0 items-center gap-2 border-t border-navy-900/[0.07] bg-white/[0.62] px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]`}>
             <div className="relative min-w-0 flex-1">
               <button
                 type="button"
@@ -1725,14 +1694,14 @@ export function QuickCapture() {
                 if (!editMode) clearDraft()
                 closeAll()
               }}
-              className="h-10 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700 sm:h-8"
+              className="h-10 rounded-full bg-navy-900/[0.055] px-4 text-[12px] font-bold text-navy-500 hover:bg-white hover:text-navy-700 sm:h-9"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saveDisabled}
-              className="h-10 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-40 sm:h-8"
+              className="h-10 rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-4 text-[12px] font-extrabold text-white shadow-sm transition-colors hover:brightness-95 disabled:opacity-40 sm:h-9"
             >
               {saving ? '...' : editMode ? 'Salvar' : 'Adicionar'}
             </button>
