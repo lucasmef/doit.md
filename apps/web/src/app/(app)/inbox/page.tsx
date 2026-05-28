@@ -15,7 +15,7 @@ export default function InboxPage() {
   const { items, isLoading } = useItems()
 
   useEffect(() => {
-    if (!prefs.showInbox) router.replace('/today')
+    if (!prefs.showInbox) router.replace('/itens')
   }, [prefs.showInbox, router])
 
   if (!prefs.showInbox) return null
