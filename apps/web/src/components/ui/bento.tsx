@@ -60,19 +60,22 @@ export function DarkGlowCard({ children, className, as = 'section' }: CardProps)
   return (
     <Component
       className={cx(
-        'relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#0b1733_0%,#0f2342_60%,#122a55_100%)] text-white shadow-[0_24px_60px_rgba(15,35,66,.28)]',
-        'before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(260px_80px_at_50%_100%,rgba(123,91,255,.55),transparent_70%),radial-gradient(180px_50px_at_20%_10%,rgba(40,199,183,.24),transparent_72%)]',
+        'relative rounded-[28px] border-[1.5px] border-transparent bg-clip-padding',
+        'bg-[linear-gradient(180deg,#0b1733_0%,#0f2342_60%,#122a55_100%)] text-white shadow-[0_24px_60px_rgba(15,35,66,.28)]',
+        'before:pointer-events-none before:absolute before:-inset-[1.5px] before:-z-10 before:rounded-[28px] before:bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF_45%,#28C7B7)]',
+        'after:pointer-events-none after:absolute after:inset-0 after:rounded-[28px] after:shadow-[0_0_80px_4px_rgba(40,199,183,.30),0_0_80px_4px_rgba(47,107,255,.22)]',
         className,
       )}
     >
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10 flex h-full flex-col">{children}</div>
     </Component>
   )
 }
 
 export function CardTitle({ children, className }: BaseProps) {
+  const hasColorOverride = className && /\btext-(white|navy|brand|teal|violet|red|amber|pink|cyan|blue|slate|gray|black)\b/.test(className)
   return (
-    <div className={cx('font-mono text-[10px] font-bold uppercase tracking-[0.13em] text-navy-500', className)}>
+    <div className={cx('font-mono text-[10px] font-bold uppercase tracking-[0.13em]', !hasColorOverride && 'text-navy-500', className)}>
       {children}
     </div>
   )

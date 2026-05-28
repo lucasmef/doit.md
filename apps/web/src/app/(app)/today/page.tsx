@@ -8,6 +8,7 @@ import { EventSheet } from '@/components/calendar/calendar-board'
 import { useToast } from '@/components/ui/toast'
 import { isLooseInboxItem, sortTodayWithInboxBelow } from '@/lib/item-order'
 import { useUI } from '@/store/ui'
+import { CardTitle, DarkGlowCard } from '@/components/ui/bento'
 import { isOverdue, isToday, toLocalDateKey } from '@doit/core'
 import type { CalendarEvent, Item, ItemStatus } from '@doit/types'
 
@@ -576,7 +577,7 @@ export default function TodayPage() {
 
           <article className="relative overflow-hidden rounded-[22px] border border-transparent bg-[linear-gradient(180deg,#0B1733_0%,#0F2342_60%,#122A55_100%)] px-4 py-3.5 text-white shadow-[0_0_40px_2px_rgba(40,199,183,.20),0_0_40px_2px_rgba(47,107,255,.18)]">
             <div className="mb-2.5 flex items-center justify-between">
-              <h2 className="text-xs font-bold lowercase">quick capture</h2>
+              <CardTitle className="text-white/85">captura rapida</CardTitle>
               <span className="rounded-full border border-white/14 bg-white/[0.08] px-2 py-0.5 font-mono text-[10px] text-white/85">swipe up</span>
             </div>
             <textarea
@@ -651,9 +652,9 @@ export default function TodayPage() {
           </div>
         </article>
 
-        <article className="relative flex flex-col overflow-hidden rounded-[28px] border border-transparent bg-[linear-gradient(180deg,#0B1733_0%,#0F2342_60%,#122A55_100%)] p-5 text-white shadow-[0_0_80px_4px_rgba(40,199,183,.18),0_18px_40px_-16px_rgba(15,35,66,.22)] md:col-span-3 lg:col-span-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold lowercase">captura rapida</h2>
+        <DarkGlowCard className="p-5 md:col-span-3 lg:col-span-3">
+          <div className="mb-2.5 flex items-center justify-between">
+            <CardTitle className="text-white/85">captura rapida</CardTitle>
             <span className="rounded-full border border-white/14 bg-white/[0.08] px-2.5 py-1 font-mono text-[11px] text-white/75">Ctrl N</span>
           </div>
           <textarea
@@ -675,7 +676,7 @@ export default function TodayPage() {
               <PlusIcon />
             </button>
           </div>
-        </article>
+        </DarkGlowCard>
 
         <article className="flex flex-col overflow-hidden rounded-[28px] border border-white/70 bg-white/78 p-5 shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-2xl md:col-span-6 md:row-span-2 lg:col-span-9">
           <div className="mb-3 flex items-center justify-between">
