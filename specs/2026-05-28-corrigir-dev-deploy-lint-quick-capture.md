@@ -27,11 +27,14 @@ O deploy/check de desenvolvimento falhava por erros de lint durante `next build`
 - `pnpm --filter @doit/web exec tsc --noEmit`: passou.
 - `pnpm --filter @doit/web exec next lint --file "src/components/items/bulk-actions.tsx" --file "src/components/items/quick-capture.tsx"`: passou, restando apenas warning preexistente de hook em `quick-capture.tsx`.
 - `pnpm --filter @doit/web build`: compilou e passou lint/typecheck/static generation; falhou no empacotamento standalone local do Windows por `EPERM` ao criar symlinks em `.next/standalone`, depois do ponto que falhava no CI.
+- GitHub Actions `Gates DEV` `26583128587`: passou.
+- GitHub Actions PR `Dev / Quality` `26583131770`: passou.
+- GitHub Actions PR `Dev / Security` `26583131864`: passou.
 
 ## Validação visual
 
 Nao executada. A alteração é restrita a tipagem/ref e remoção de código morto para desbloquear CI, sem mudança intencional de UI, layout, navegação ou fluxo visível.
 
-## Próximo passo
+## Resultado
 
-Commitar e enviar a correção para disparar novo run do GitHub Actions em Linux, onde o erro local de symlink do Windows não se aplica.
+PR `#25 Dev` voltou para `Checks passing` e `Up to date`.
