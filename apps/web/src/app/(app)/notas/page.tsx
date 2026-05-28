@@ -1,731 +1,802 @@
 'use client'
 
-import { Fragment, useMemo, useState } from 'react'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import type { Folder, Item } from '@doit/types'
-import { toLocalDateKey } from '@doit/core'
-import { BentoGrid, CardTitle, DarkGlowCard, GlassCard } from '@/components/ui/bento'
-import { useFolders } from '@/hooks/use-folders'
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import type { Folder, Item, ItemComplexity, ItemStatus } from '@doit/types'
+import {
+  buildFolderTree,
+  createFolder,
+  updateFolder,
+  useFolders,
+  type FolderTreeNode,
+} from '@/hooks/use-folders'
 import { useItems } from '@/hooks/use-items'
-import { buildTagGraph } from '@/lib/note-relations'
+import { usePreferences } from '@/hooks/use-preferences'
+import { useUI } from '@/store/ui'
+import { useDialog } from '@/components/ui/dialog'
+import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 
-const FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
-const NOTE_ACCENTS: Array<{ accent: string; fileColor: string }> = [
-  { accent: '#2F6BFF', fileColor: '#2F6BFF' },
-  { accent: '#7B5BFF', fileColor: '#7B5BFF' },
-  { accent: '#28C7B7', fileColor: '#0f8d80' },
-  { accent: '#FF6FAE', fileColor: '#C0297A' },
-  { accent: '#F5A524', fileColor: '#B56B00' },
-  { accent: '#1AAED7', fileColor: '#0A7DA0' },
+type SortKey = 'manual' | 'updated' | 'created' | 'alpha' | 'type' | 'priority'
+
+const SORT_OPTIONS: Array<{ key: SortKey; label: string; hint: string }> = [
+  { key: 'manual', label: 'Manual', hint: 'ordem' },
+  { key: 'updated', label: 'Atualização', hint: 'recente' },
+  { key: 'created', label: 'Criação', hint: 'novo' },
+  { key: 'alpha', label: 'Alfabética', hint: 'A-Z' },
+  { key: 'type', label: 'Tipo', hint: 'nota/tarefa' },
+  { key: 'priority', label: 'Prioridade', hint: 'alta' },
 ]
 
+const COMPLEXITY_ORDER: Record<ItemComplexity, number> = {
+  note: 0,
+  task: 1,
+  capture: 2,
+  document: 3,
+  project: 4,
+}
+
+const STATUS_LABEL: Record<ItemStatus, string> = {
+  inbox: 'Inbox',
+  todo: 'A fazer',
+  doing: 'Em progresso',
+  waiting: 'Aguardando',
+  done: 'Concluído',
+  archived: 'Arquivado',
+}
+
+const LARGE_NOTE_CHARS = 220
+
+function isActiveItem(item: Item): boolean {
+  return item.status !== 'archived' && item.status !== 'done'
+}
+
+function stripMarkdown(content: string | undefined): string {
+  return (content ?? '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/!\[[^\]]*]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)]\([^)]*\)/g, '$1')
+    .replace(/[`*_>#-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function snippet(item: Item, max: number): string {
+  const flat = stripMarkdown(item.contentMd)
+  if (!flat) return ''
+  return flat.length > max ? `${flat.slice(0, max).trimEnd()}…` : flat
+}
+
+function isLargeNote(item: Item): boolean {
+  return item.complexity === 'note' && stripMarkdown(item.contentMd).length > LARGE_NOTE_CHARS
+}
+
+function typeLabel(item: Item): string {
+  if (item.complexity === 'note') return isLargeNote(item) ? 'nota grande' : 'nota'
+  if (item.complexity === 'task') return item.calendarEventId || item.googleEventId ? 'evento' : 'tarefa'
+  if (item.complexity === 'capture') return 'captura'
+  if (item.complexity === 'document') return 'arquivo md'
+  if (item.complexity === 'project') return 'projeto'
+  return 'item'
+}
+
+function typeToneClass(item: Item): string {
+  switch (item.complexity) {
+    case 'note':
+      return 'text-brand-600'
+    case 'task':
+      return item.calendarEventId || item.googleEventId ? 'text-[#B47410]' : 'text-teal-600'
+    case 'document':
+      return 'text-violet-500'
+    default:
+      return 'text-navy-500'
+  }
+}
+
 function formatRelative(iso: string): string {
-  const updated = new Date(iso).getTime()
-  const now = Date.now()
-  const diff = Math.max(0, now - updated)
-  const sec = Math.round(diff / 1000)
-  if (sec < 60) return `${sec}s`
-  const min = Math.round(sec / 60)
-  if (min < 60) return `${min}min`
-  const hr = Math.round(min / 60)
-  if (hr < 24) return `${hr}h`
-  const days = Math.round(hr / 24)
-  if (days < 7) return `${days}d`
+  const time = new Date(iso).getTime()
+  if (!Number.isFinite(time)) return ''
+  const diff = Date.now() - time
+  const minute = 60_000
+  const hour = 60 * minute
+  const day = 24 * hour
+  if (diff < minute) return 'agora'
+  if (diff < hour) return `${Math.floor(diff / minute)}min`
+  if (diff < day) return `${Math.floor(diff / hour)}h`
+  if (diff < day * 7) return `${Math.floor(diff / day)}d`
   return new Date(iso).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' })
 }
 
-function snippetFor(note: Item): string {
-  if (!note.contentMd) return 'Sem conteudo capturado ainda.'
-  const flat = note.contentMd.replace(/\s+/g, ' ').trim()
-  return flat.length > 160 ? `${flat.slice(0, 160)}...` : flat
+function dueLabel(item: Item): string | null {
+  if (!item.dueDate) return null
+  const base = new Date(`${item.dueDate}T12:00:00`).toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'short',
+  })
+  return item.dueTime ? `${base} ${item.dueTime}` : base
 }
 
-function wordCountOf(note: Item): number {
-  if (!note.contentMd) return 0
-  return note.contentMd.trim().split(/\s+/).filter(Boolean).length
+function sortItems(items: Item[], key: SortKey): Item[] {
+  const list = items.slice()
+  switch (key) {
+    case 'updated':
+      return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    case 'created':
+      return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    case 'alpha':
+      return list.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
+    case 'type':
+      return list.sort(
+        (a, b) =>
+          (COMPLEXITY_ORDER[a.complexity] ?? 9) - (COMPLEXITY_ORDER[b.complexity] ?? 9) ||
+          a.title.localeCompare(b.title, 'pt-BR'),
+      )
+    case 'priority':
+      return list.sort((a, b) => (a.priority ?? 5) - (b.priority ?? 5) || b.updatedAt.localeCompare(a.updatedAt))
+    case 'manual':
+    default:
+      return list.sort(
+        (a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER) ||
+          b.updatedAt.localeCompare(a.updatedAt),
+      )
+  }
 }
 
-function readMinutesOf(note: Item): number {
-  return Math.max(1, Math.round(wordCountOf(note) / 200))
+function buildBreadcrumb(folders: Folder[], id: string | null): Folder[] {
+  if (!id) return []
+  const map = new Map(folders.map((f) => [f.id, f]))
+  const path: Folder[] = []
+  let current = map.get(id)
+  while (current) {
+    path.unshift(current)
+    current = current.parentId ? map.get(current.parentId) : undefined
+  }
+  return path
 }
 
-function isToday(iso: string, today: string): boolean {
-  return iso.slice(0, 10) === today
+function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node
+    const child = findNode(node.children, id)
+    if (child) return child
+  }
+  return null
 }
 
-function pickAccent(index: number): { accent: string; fileColor: string } {
-  return NOTE_ACCENTS[index % NOTE_ACCENTS.length] ?? { accent: '#2F6BFF', fileColor: '#2F6BFF' }
-}
-
-function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
+function FolderGlyph({ className = 'h-4 w-4' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
     </svg>
   )
 }
 
-function FileBadge({ name, color }: { name: string; color?: string }) {
+function StarGlyph({ filled = false, className = 'h-4 w-4' }: { filled?: boolean; className?: string }) {
   return (
-    <span className="font-mono text-[10px] font-bold" style={{ color: color ?? '#2F6BFF' }}>
-      M↓ {name}
-    </span>
-  )
-}
-
-function StarFilled() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 text-[#F5A524]" fill="currentColor" aria-hidden="true">
-      <path d="m12 3.5 2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8-5.3 2.8 1-6L3.3 9.9l6-.9L12 3.5Z" />
+    <svg className={className} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="m12 3.8 2.6 5.2 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8L12 3.8Z" />
     </svg>
   )
 }
 
-function WritingRing({ percent }: { percent: number }) {
-  const safe = Math.max(0, Math.min(100, percent))
-  const circ = 2 * Math.PI * 36
-  return (
-    <div className="relative h-[86px] w-[86px] shrink-0">
-      <svg width="86" height="86" viewBox="0 0 86 86" className="-rotate-90">
-        <defs>
-          <linearGradient id="notas-wg" x1="0" y1="0" x2="86" y2="86">
-            <stop offset="0" stopColor="#7B5BFF" />
-            <stop offset="0.5" stopColor="#2F6BFF" />
-            <stop offset="1" stopColor="#28C7B7" />
-          </linearGradient>
-        </defs>
-        <circle cx="43" cy="43" r="36" fill="none" stroke="rgba(15,35,66,.12)" strokeWidth={7} />
-        <circle
-          cx="43"
-          cy="43"
-          r="36"
-          fill="none"
-          stroke="url(#notas-wg)"
-          strokeWidth={7}
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          strokeDashoffset={circ * (1 - safe / 100)}
-        />
-      </svg>
-      <div className="absolute inset-0 grid place-items-center text-center">
-        <div>
-          <div className="bg-[linear-gradient(120deg,#7B5BFF,#2F6BFF,#28C7B7)] bg-clip-text text-[20px] font-black leading-none text-transparent">
-            {safe}%
-          </div>
-          <div className="mt-0.5 font-mono text-[9px] uppercase tracking-wider text-navy-500">goal</div>
-        </div>
-      </div>
-    </div>
-  )
-}
+// ----- Sidebar tree -----
 
-function WritingStatsCard({
-  totalNotes,
-  editedToday,
-  goalPercent,
+function TreeRow({
+  node,
+  depth,
+  selectedId,
+  expanded,
+  counts,
+  onSelect,
+  onToggle,
 }: {
-  totalNotes: number
-  editedToday: number
-  goalPercent: number
+  node: FolderTreeNode
+  depth: number
+  selectedId: string | null
+  expanded: Set<string>
+  counts: Map<string, number>
+  onSelect: (id: string) => void
+  onToggle: (id: string) => void
 }) {
+  const hasChildren = node.children.length > 0
+  const isOpen = expanded.has(node.id)
+  const active = node.id === selectedId
   return (
-    <article className="flex flex-col rounded-[28px] border border-white/70 bg-[linear-gradient(160deg,#FFE9F4_0%,#E4DDFF_50%,#D4F4EF_100%)] p-6 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:col-span-3 lg:row-span-1">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle>escrita</CardTitle>
-        <span className="rounded-full bg-navy-900/[0.06] px-2 py-0.5 font-mono text-[10px] text-navy-500">esta semana</span>
-      </div>
-      <div className="mt-1 flex items-center gap-4">
-        <WritingRing percent={goalPercent} />
-        <div>
-          <div className="text-[28px] font-black leading-none text-navy-900">{totalNotes}</div>
-          <div className="mt-1 font-mono text-[11px] text-navy-500">notes na biblioteca</div>
-        </div>
-      </div>
-      <div className="mt-auto grid grid-cols-2 gap-2 border-t border-navy-900/[0.06] pt-3 font-mono text-[11px] text-navy-500">
-        <div>
-          <b className="block font-sans text-[15px] font-bold text-navy-900">{totalNotes}</b>
-          notes
-        </div>
-        <div>
-          <b className="block font-sans text-[15px] font-bold text-navy-900">{editedToday}</b>
-          editadas hoje
-        </div>
-      </div>
-    </article>
-  )
-}
-
-function EditorSpotlightCard({ note, breadcrumb, onOpen }: { note: Item | null; breadcrumb: string[]; onOpen: (id: string) => void }) {
-  return (
-    <article className="relative flex flex-col overflow-hidden rounded-[28px] border border-white/55 bg-white/62 p-6 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_22px_55px_rgba(15,35,66,.16)] backdrop-blur-2xl lg:col-span-6 lg:row-span-1">
+    <>
       <div
-        aria-hidden="true"
-        className="pointer-events-none absolute -right-20 -top-20 h-[360px] w-[360px] rounded-full"
-        style={{
-          background:
-            'radial-gradient(circle at 30% 30%, rgba(123,91,255,.30), transparent 60%), radial-gradient(circle at 70% 70%, rgba(40,199,183,.25), transparent 60%)',
-          filter: 'blur(20px)',
-        }}
-      />
-      <div className="relative mb-2 flex items-center justify-between">
-        <CardTitle>editando agora</CardTitle>
-        {note ? (
-          <button
-            type="button"
-            onClick={() => onOpen(note.id)}
-            className="grid h-7 w-7 place-items-center rounded-full bg-navy-900/[0.04] text-sm font-black leading-none text-navy-500 hover:bg-navy-900/[0.08]"
-            aria-label="Abrir nota"
-          >
-            ...
-          </button>
-        ) : null}
-      </div>
-
-      {note ? (
-        <>
-          <div className="relative mb-1.5 flex flex-wrap items-center gap-2 font-mono text-[11px] text-navy-500">
-            {breadcrumb.map((crumb, i) => (
-              <Fragment key={`${crumb}-${i}`}>
-                <span>{crumb}</span>
-                <span className="text-navy-900/25">/</span>
-              </Fragment>
-            ))}
-            <FileBadge name={(note.localPath ?? `${note.title.toLowerCase().replace(/\s+/g, '-')}.md`)} color="#2F6BFF" />
-            <span className="ml-auto inline-flex items-center gap-1 font-semibold text-teal-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-teal-500 shadow-[0_0_6px_#28C7B7]" />
-              salvo · {formatRelative(note.updatedAt)}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => onOpen(note.id)}
-            className="relative my-1 max-w-full text-left text-[32px] font-black leading-[1.05] -tracking-[.03em] text-navy-900 hover:opacity-80"
-          >
-            {note.title.split(' ').slice(0, -1).join(' ') || note.title}{' '}
-            {note.title.split(' ').length > 1 ? (
-              <span className="bg-[linear-gradient(120deg,#2F6BFF,#7B5BFF_45%,#28C7B7)] bg-clip-text text-transparent">
-                {note.title.split(' ').slice(-1).join(' ')}
-              </span>
-            ) : null}
-          </button>
-          {note.tags.length > 0 ? (
-            <div className="relative mb-2 flex flex-wrap gap-1.5">
-              {note.tags.slice(0, 3).map((tag, i) => {
-                const tones = [
-                  'bg-[rgba(47,107,255,.10)] text-brand-600',
-                  'bg-[rgba(40,199,183,.14)] text-teal-600',
-                  'bg-[rgba(123,91,255,.12)] text-violet-500',
-                ]
-                return (
-                  <span key={tag} className={`rounded font-mono text-[11px] px-2 py-0.5 ${tones[i % tones.length]}`}>
-                    #{tag}
-                  </span>
-                )
-              })}
-            </div>
-          ) : null}
-          <p className="relative line-clamp-2 flex-1 overflow-hidden text-[13px] leading-[1.55] text-navy-900">{snippetFor(note)}</p>
-          <div className="relative mt-2 flex items-center gap-3 font-mono text-[11px] text-navy-500">
-            <span>{wordCountOf(note)} palavras</span>
-            <span>·</span>
-            <span>{readMinutesOf(note)} min de leitura</span>
-            <span>·</span>
-            <span>editada {formatRelative(note.updatedAt)}</span>
-          </div>
-        </>
-      ) : (
-        <div className="relative flex flex-1 items-center justify-center text-center font-mono text-[12px] text-navy-500">
-          nenhuma nota ainda · capture sua primeira ideia
-        </div>
-      )}
-    </article>
-  )
-}
-
-function PinnedCard({ pins, onOpen }: { pins: Item[]; onOpen: (id: string) => void }) {
-  const pinTones = ['', 'v', 't', 'p'] as const
-  const toneClass: Record<typeof pinTones[number], string> = {
-    '': 'bg-[linear-gradient(135deg,rgba(47,107,255,.10),rgba(40,199,183,.10))] border-[rgba(47,107,255,.18)] text-brand-600',
-    v: 'bg-[linear-gradient(135deg,rgba(123,91,255,.10),rgba(255,111,174,.10))] border-[rgba(123,91,255,.22)] text-violet-500',
-    t: 'bg-[linear-gradient(135deg,rgba(40,199,183,.12),rgba(26,174,215,.12))] border-[rgba(40,199,183,.25)] text-teal-600',
-    p: 'bg-[linear-gradient(135deg,rgba(255,111,174,.12),rgba(245,165,36,.12))] border-[rgba(255,111,174,.25)] text-pink-600',
-  }
-  return (
-    <GlassCard className="flex flex-col p-6 lg:col-span-3 lg:row-span-1">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle>anexou</CardTitle>
-        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{pins.length}</span>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
-        {pins.length === 0 ? (
-          <div className="grid flex-1 place-items-center text-center font-mono text-[11px] text-navy-500">
-            sem notas fixadas
-          </div>
-        ) : (
-          pins.slice(0, 4).map((pin, i) => {
-            const tone = pinTones[i % pinTones.length] ?? ''
-            return (
-              <button
-                key={pin.id}
-                type="button"
-                onClick={() => onOpen(pin.id)}
-                className="flex items-center gap-2.5 rounded-xl border border-navy-900/[0.04] bg-white p-2 text-left shadow-[0_1px_2px_rgba(15,35,66,.04)] hover:shadow-[0_4px_10px_rgba(15,35,66,.08)]"
-              >
-                <span className={`inline-grid h-[30px] w-[30px] place-items-center rounded-lg border font-mono text-[11px] font-bold ${toneClass[tone]}`}>
-                  M↓
-                </span>
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
-                  <span className="truncate text-[13px] font-semibold text-navy-900">{pin.title}</span>
-                  <span className="truncate font-mono text-[10px] text-navy-500">
-                    {pin.localPath ?? `${pin.title.toLowerCase().replace(/\s+/g, '-')}.md`} · {formatRelative(pin.updatedAt)}
-                  </span>
-                </span>
-              </button>
-            )
-          })
-        )}
-      </div>
-    </GlassCard>
-  )
-}
-
-function LibraryCard({
-  notes,
-  filters,
-  active,
-  onFilter,
-  onOpen,
-  totalNotes,
-}: {
-  notes: Item[]
-  filters: Array<{ id: string; label: string }>
-  active: string
-  onFilter: (id: string) => void
-  onOpen: (id: string) => void
-  totalNotes: number
-}) {
-  return (
-    <GlassCard className="flex flex-col p-6 lg:col-span-8 lg:row-span-2">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle>biblioteca</CardTitle>
-        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{totalNotes} notas</span>
-      </div>
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        {filters.map((f) => {
-          const isActive = f.id === active
-          return (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => onFilter(f.id)}
-              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                isActive
-                  ? 'border border-navy-900/[0.04] bg-white text-navy-900 shadow-[0_1px_2px_rgba(15,35,66,.06),0_4px_10px_rgba(15,35,66,.06)]'
-                  : 'border border-transparent bg-navy-900/[0.05] text-navy-500 hover:text-navy-900'
-              }`}
-            >
-              {f.label}
-            </button>
-          )
-        })}
-        <span className="ml-auto font-mono text-[11px] text-navy-500">
-          sort · <b className="font-semibold text-navy-900">editadas</b>
+        className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] py-1.5 pr-2 transition-colors ${
+          active ? 'bg-brand-500/10 shadow-[0_0_0_1px_rgba(47,107,255,.18)_inset]' : 'hover:bg-white/60'
+        }`}
+        style={{ paddingLeft: `${8 + depth * 16}px` }}
+        onClick={() => onSelect(node.id)}
+      >
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (hasChildren) onToggle(node.id)
+          }}
+          className={`flex h-5 w-5 shrink-0 items-center justify-center font-mono text-[10px] ${hasChildren ? 'text-navy-500' : 'text-transparent'}`}
+          aria-label={hasChildren ? (isOpen ? 'Recolher' : 'Expandir') : undefined}
+        >
+          {hasChildren ? (isOpen ? '▾' : '▸') : ''}
+        </button>
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[11px] ${active ? 'bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] text-white' : 'bg-brand-500/10 text-brand-600'}`}>
+          <FolderGlyph className="h-4 w-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[13px] font-bold text-navy-900">{node.name}</span>
+          <span className="block truncate font-mono text-[9.5px] text-navy-500">
+            {hasChildren ? `${node.children.length} subpasta${node.children.length === 1 ? '' : 's'}` : 'pasta'}
+          </span>
+        </span>
+        <span className="shrink-0 rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
+          {counts.get(node.id) ?? 0}
         </span>
       </div>
-      <div className="grid flex-1 grid-cols-1 gap-3 overflow-hidden md:grid-cols-2 lg:grid-cols-3">
-        {notes.slice(0, 6).map((note, i) => {
-          const accent = pickAccent(i)
-          const isStarred = i === 0 || i === 3
-          return (
-            <button
-              key={note.id}
-              type="button"
-              onClick={() => onOpen(note.id)}
-              className="group relative flex flex-col gap-1.5 overflow-hidden rounded-2xl border border-navy-900/[0.04] bg-white p-3 text-left shadow-[0_1px_2px_rgba(15,35,66,.04),0_8px_18px_-10px_rgba(15,35,66,.15)] hover:shadow-[0_4px_12px_rgba(15,35,66,.10)]"
-            >
-              <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: accent.accent }} aria-hidden="true" />
-              <div className="flex items-center gap-1.5">
-                <FileBadge name={note.localPath ?? `${note.title.toLowerCase().replace(/\s+/g, '-')}.md`} color={accent.fileColor} />
-                {isStarred ? (
-                  <span className="ml-auto">
-                    <StarFilled />
-                  </span>
-                ) : null}
-              </div>
-              <div className="text-[14px] font-bold leading-tight -tracking-[.01em] text-navy-900">{note.title}</div>
-              <div className="line-clamp-3 flex-1 text-[11.5px] leading-[1.45] text-navy-500">{snippetFor(note)}</div>
-              <div className="flex items-center gap-1.5 pt-1">
-                {note.tags.slice(0, 1).map((tag) => (
-                  <span key={tag} className="rounded bg-navy-900/[0.05] px-1.5 py-0.5 font-mono text-[9px] text-navy-500">
-                    #{tag}
-                  </span>
-                ))}
-                <span className="ml-auto font-mono text-[10px] text-navy-300">{formatRelative(note.updatedAt)}</span>
-              </div>
-            </button>
-          )
-        })}
-        {notes.length === 0 ? (
-          <div className="col-span-full grid place-items-center py-10 text-center font-mono text-[12px] text-navy-500">
-            nenhuma nota neste filtro
-          </div>
-        ) : null}
-      </div>
-    </GlassCard>
-  )
-}
-
-function KnowledgeGraphCard({ notes }: { notes: Item[] }) {
-  const graph = buildTagGraph(notes, 7)
-  const positions = [
-    { x: 190, y: 160, left: '50%', top: '50%', tone: 'center' },
-    { x: 60, y: 80, left: '16%', top: '25%', tone: 'violet' },
-    { x: 300, y: 60, left: '78%', top: '19%', tone: 'teal' },
-    { x: 50, y: 250, left: '13%', top: '78%', tone: '' },
-    { x: 310, y: 270, left: '80%', top: '84%', tone: 'pink' },
-    { x: 230, y: 30, left: '60%', top: '10%', tone: '' },
-    { x: 150, y: 290, left: '40%', top: '91%', tone: 'teal' },
-  ] as const
-  const toneClass: Record<string, string> = {
-    '': 'bg-white text-navy-900 border-white',
-    center:
-      'bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] text-white border-white shadow-[0_0_16px_rgba(40,199,183,.6),0_4px_14px_rgba(47,107,255,.5)]',
-    violet: 'bg-[linear-gradient(135deg,#B59BFF,#7B5BFF)] text-white border-white/40',
-    teal: 'bg-[linear-gradient(135deg,#5BE3D4,#28C7B7)] text-navy-900 border-white',
-    pink: 'bg-[linear-gradient(135deg,#FFB1D5,#FF6FAE)] text-white border-white',
-  }
-  return (
-    <DarkGlowCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle className="text-white/85">mapa por tags</CardTitle>
-        <span className="rounded-full border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/80">
-          {graph.edges.length} relacoes
-        </span>
-      </div>
-      <div className="relative -mx-2 flex-1">
-        <svg viewBox="0 0 380 320" preserveAspectRatio="xMidYMid meet" className="block h-full w-full">
-          <defs>
-            <linearGradient id="notas-edge" x1="0" y1="0" x2="380" y2="320">
-              <stop offset="0" stopColor="#2F6BFF" stopOpacity="0.5" />
-              <stop offset="1" stopColor="#28C7B7" stopOpacity="0.5" />
-            </linearGradient>
-          </defs>
-          {graph.edges.map((edge, index) => {
-            const source = positions[edge.sourceIndex]
-            const target = positions[edge.targetIndex]
-            if (!source || !target) return null
-            return (
-              <line
-                key={`${edge.sourceIndex}-${edge.targetIndex}-${index}`}
-                x1={source.x}
-                y1={source.y}
-                x2={target.x}
-                y2={target.y}
-                stroke="url(#notas-edge)"
-                strokeWidth={1 + Math.min(2, edge.score * 3)}
-                strokeOpacity={0.42 + Math.min(0.36, edge.score)}
-              />
-            )
-          })}
-        </svg>
-        {graph.nodes.length === 0 ? (
-          <div className="absolute inset-0 grid place-items-center px-8 text-center text-sm text-white/58">
-            crie notas com tags dentro de pastas
-          </div>
-        ) : null}
-        {graph.nodes.map((node, i) => {
-          const p = positions[i]
-          if (!p) return null
-          const label = `${node.item.title.toLowerCase().replace(/\s+/g, '-').slice(0, 14)}.md`
-          return (
-            <div
-              key={node.item.id}
-              title={node.primaryTag ? `#${node.primaryTag}` : 'sem tags compartilhadas'}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-lg border-[1.5px] px-2 py-1 font-mono text-[10px] font-semibold shadow-[0_4px_12px_rgba(15,35,66,.4)] ${toneClass[p.tone]}`}
-              style={{ left: p.left, top: p.top }}
-            >
-              {label}
-            </div>
-          )
-        })}
-      </div>
-      <div className="mt-3 flex gap-3 font-mono text-[10px] text-white/70">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#79A6FF]" />
-          pasta
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#5BE3D4]" />
-          tags
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="h-1.5 w-1.5 rounded-full bg-[#B59BFF]" />
-          tag-cluster
-        </span>
-      </div>
-    </DarkGlowCard>
-  )
-}
-
-function NotebooksCard({ notebooks }: { notebooks: Array<{ folder: Folder; count: number; description: string; color: string }> }) {
-  return (
-    <GlassCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-1">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle>pastas</CardTitle>
-        <Link href="/notas/pastas" className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500 hover:bg-navy-900/[0.08] hover:text-navy-900">
-          {notebooks.length} pastas
-        </Link>
-      </div>
-      <div className="flex flex-1 flex-col gap-2 overflow-hidden">
-        {notebooks.length === 0 ? (
-          <Link
-            href="/notas/pastas"
-            className="grid flex-1 place-items-center rounded-2xl border border-dashed border-navy-900/15 text-center font-mono text-[11px] text-navy-500 hover:border-brand-300 hover:text-brand-600"
-          >
-            criar primeira pasta
-          </Link>
-        ) : (
-          notebooks.slice(0, 4).map(({ folder, count, description, color }) => (
-            <Link
-              key={folder.id}
-              href={`/notas/pastas/${folder.id}`}
-              className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-navy-900/[0.04] bg-white px-3 py-2.5 shadow-[0_1px_2px_rgba(15,35,66,.04)] hover:shadow-[0_4px_12px_rgba(15,35,66,.08)]"
-            >
-              <span className="absolute left-0 top-0 h-full w-1" style={{ backgroundColor: color }} aria-hidden="true" />
-              <span
-                className="inline-grid h-[30px] w-[30px] place-items-center rounded-lg"
-                style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, white)`, color }}
-              >
-                <FolderIcon className="h-4 w-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold text-navy-900">{folder.name}</span>
-                <span className="block truncate font-mono text-[11px] text-navy-500">{description}</span>
-              </span>
-              <span className="font-mono text-[16px] font-bold -tracking-[.02em]" style={{ color }}>
-                {count}
-              </span>
-            </Link>
+      {hasChildren && isOpen
+        ? node.children.map((child) => (
+            <TreeRow
+              key={child.id}
+              node={child}
+              depth={depth + 1}
+              selectedId={selectedId}
+              expanded={expanded}
+              counts={counts}
+              onSelect={onSelect}
+              onToggle={onToggle}
+            />
           ))
+        : null}
+    </>
+  )
+}
+
+// ----- Content cards -----
+
+function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
+  const large = isLargeNote(item)
+  const text = item.complexity === 'note' ? snippet(item, large ? 180 : 120) : snippet(item, 90)
+  const due = dueLabel(item)
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(item.id)}
+      className="group w-full rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+    >
+      <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
+        <span className={typeToneClass(item)}>{typeLabel(item)}</span>
+        {item.priority && item.priority <= 2 ? (
+          <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[#B47410]">prioridade</span>
+        ) : null}
+      </div>
+      <h3 className="text-[14px] font-bold leading-tight -tracking-[.01em] text-navy-900">{item.title}</h3>
+      {text ? (
+        <p className={`mt-1.5 text-[12px] leading-snug text-navy-500 ${large ? 'line-clamp-4' : 'line-clamp-2'}`}>{text}</p>
+      ) : null}
+      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-navy-900/[0.06] pt-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {item.tags.slice(0, 2).map((tag) => (
+            <span key={tag} className="rounded-full bg-navy-900/[0.045] px-1.5 py-0.5 font-mono text-[9.5px] text-navy-500">
+              #{tag}
+            </span>
+          ))}
+          {due ? (
+            <span className="rounded-full bg-navy-900/[0.045] px-1.5 py-0.5 font-mono text-[9.5px] text-navy-500">{due}</span>
+          ) : null}
+        </div>
+        {item.complexity === 'note' ? (
+          <span className="shrink-0 font-mono text-[10px] font-extrabold text-brand-600">abrir nota →</span>
+        ) : (
+          <span className="shrink-0 font-mono text-[10px] text-navy-300">{formatRelative(item.updatedAt)}</span>
         )}
       </div>
-    </GlassCard>
+    </button>
   )
 }
 
-function MiniGardenCard({ notes, folders }: { notes: Item[]; folders: Folder[] }) {
-  const stickies = [
-    {
-      file: 'creative.md',
-      title: notes[0]?.title ?? 'brainstorm criativo',
-      bg: '#fff7d6',
-      pos: 'left-[4%] top-[22%] rotate-[-5deg]',
-      pin: '',
-    },
-    {
-      file: folders[0] ? `pastas/${folders[0].name}.md` : 'pastas/conteudo.md',
-      title: folders[0]?.name ? `Pasta ${folders[0].name}` : 'Q4 - simples',
-      bg: '#ffffff',
-      pos: 'left-[32%] top-[10%] rotate-[3deg]',
-      pin: 'teal',
-    },
-    {
-      file: 'agenda-sync.md',
-      title: 'notas da agenda',
-      bg: '#d8f5ef',
-      pos: 'left-[62%] top-[24%] rotate-[-2deg]',
-      pin: 'violet',
-    },
-    {
-      file: notes[1]?.localPath ?? 'ideas.md',
-      title: notes[1]?.title ?? 'arquivo de ideias',
-      bg: '#ffebf4',
-      pos: 'left-[20%] top-[60%] rotate-[4deg]',
-      pin: 'teal',
-    },
-    {
-      file: 'reading.md',
-      title: notes[2]?.title ?? 'para ler',
-      bg: '#ffffff',
-      pos: 'left-[56%] top-[62%] rotate-[-3deg]',
-      pin: '',
-    },
-  ]
-  const pinColor: Record<string, string> = {
-    '': 'radial-gradient(circle at 30% 30%, #FF6FAE, #C0297A)',
-    teal: 'radial-gradient(circle at 30% 30%, #5BE3D4, #18948A)',
-    violet: 'radial-gradient(circle at 30% 30%, #B59BFF, #5A37D9)',
+function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
+  const text = snippet(item, 90)
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(item.id)}
+      className="grid w-full grid-cols-[34px_minmax(0,1fr)_120px_96px] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55"
+    >
+      <span className="grid h-[34px] w-[34px] place-items-center rounded-[13px] bg-brand-500/10 text-brand-600">
+        <FolderGlyph className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
+        <span className="block truncate text-[12px] text-navy-500">
+          <span className="capitalize">{typeLabel(item)}</span>
+          {text ? ` · ${text}` : ''}
+        </span>
+      </span>
+      <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{STATUS_LABEL[item.status]}</span>
+      <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{formatRelative(item.updatedAt)}</span>
+    </button>
+  )
+}
+
+// ----- Main browser -----
+
+function NotasBrowser() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const folderParam = searchParams.get('folder')
+
+  const { folders } = useFolders()
+  const { items } = useItems()
+  const { prefs, update } = usePreferences()
+  const { prompt } = useDialog()
+  const { setSingleSelection, setQuickCaptureFolderId, openCapture } = useUI()
+
+  const [search, setSearch] = useState('')
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [sortKey, setSortKey] = useState<SortKey>('manual')
+  const [sortOpen, setSortOpen] = useState(false)
+  const [agentsOpen, setAgentsOpen] = useState(false)
+  const sortRef = useRef<HTMLDivElement>(null)
+
+  const tree = useMemo(() => buildFolderTree(folders), [folders])
+  const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders])
+  const rootFolders = useMemo(() => folders.filter((f) => !f.parentId), [folders])
+  const pinnedFolders = useMemo(
+    () => prefs.pinnedFolderIds.map((id) => folderById.get(id)).filter((f): f is Folder => Boolean(f)),
+    [prefs.pinnedFolderIds, folderById],
+  )
+
+  const counts = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const item of items) {
+      if (!item.folderId || !isActiveItem(item)) continue
+      map.set(item.folderId, (map.get(item.folderId) ?? 0) + 1)
+    }
+    return map
+  }, [items])
+
+  const defaultFolderId = pinnedFolders[0]?.id ?? rootFolders[0]?.id ?? folders[0]?.id ?? null
+  const selectedId = folderParam && folderById.has(folderParam) ? folderParam : defaultFolderId
+  const selectedFolder = selectedId ? folderById.get(selectedId) ?? null : null
+  const node = useMemo(() => (selectedId ? findNode(tree, selectedId) : null), [tree, selectedId])
+  const childFolders = node?.children ?? []
+  const breadcrumb = useMemo(() => buildBreadcrumb(folders, selectedId), [folders, selectedId])
+  const isPinned = selectedId ? prefs.pinnedFolderIds.includes(selectedId) : false
+  const viewMode: 'kanban' | 'list' = selectedFolder?.viewMode === 'kanban' ? 'kanban' : 'list'
+
+  // expand ancestors of the selected folder
+  useEffect(() => {
+    if (!selectedId) return
+    const ancestors = breadcrumb.map((f) => f.id)
+    setExpanded((current) => {
+      if (ancestors.every((id) => current.has(id))) return current
+      const next = new Set(current)
+      for (const id of ancestors) next.add(id)
+      return next
+    })
+  }, [selectedId, breadcrumb])
+
+  // close sort menu on outside click
+  useEffect(() => {
+    function onClick(e: MouseEvent) {
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  const directItems = useMemo(
+    () => (selectedId ? items.filter((it) => it.folderId === selectedId && isActiveItem(it)) : []),
+    [items, selectedId],
+  )
+  const itemsByFolder = useMemo(() => {
+    const map = new Map<string, Item[]>()
+    for (const item of items) {
+      if (!item.folderId || !isActiveItem(item)) continue
+      const list = map.get(item.folderId) ?? []
+      list.push(item)
+      map.set(item.folderId, list)
+    }
+    return map
+  }, [items])
+
+  const allFolderItems = useMemo(() => {
+    const direct = sortItems(directItems, sortKey)
+    const childItems = childFolders.flatMap((c) => itemsByFolder.get(c.id) ?? [])
+    return sortItems([...direct, ...childItems], sortKey)
+  }, [directItems, childFolders, itemsByFolder, sortKey])
+
+  const kanbanColumns = useMemo(() => {
+    if (childFolders.length === 0) {
+      return [{ id: selectedId ?? 'root', title: selectedFolder?.name ?? 'Itens', items: sortItems(directItems, sortKey) }]
+    }
+    const cols = childFolders.map((sub) => ({
+      id: sub.id,
+      title: sub.name,
+      items: sortItems(itemsByFolder.get(sub.id) ?? [], sortKey),
+    }))
+    if (directItems.length > 0) {
+      cols.push({ id: selectedId ?? 'root', title: 'Sem pasta', items: sortItems(directItems, sortKey) })
+    }
+    return cols
+  }, [childFolders, directItems, itemsByFolder, selectedFolder?.name, selectedId, sortKey])
+
+  function selectFolder(id: string) {
+    router.replace(`/notas?folder=${id}`, { scroll: false })
   }
-  return (
-    <GlassCard className="flex flex-col p-6 lg:col-span-5 lg:row-span-1">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle>jardim</CardTitle>
-        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">stickies · {stickies.length}</span>
-      </div>
-      <div className="relative flex-1 overflow-hidden rounded-2xl border border-navy-900/[0.05] bg-[radial-gradient(circle_at_25%_30%,rgba(255,209,235,.55),transparent_60%),radial-gradient(circle_at_75%_30%,rgba(255,222,179,.45),transparent_60%),radial-gradient(circle_at_50%_90%,rgba(202,232,255,.55),transparent_60%),linear-gradient(135deg,#FFF6F1,#F1ECFF)]">
-        {stickies.map((s, i) => (
-          <div
-            key={i}
-            className={`absolute w-[120px] rounded-[4px] px-2.5 py-2 shadow-[0_8px_16px_-8px_rgba(15,35,66,.20),0_2px_4px_rgba(15,35,66,.06)] ${s.pos}`}
-            style={{ backgroundColor: s.bg }}
-          >
-            <span
-              aria-hidden="true"
-              className="absolute -top-[5px] left-1/2 h-[9px] w-[9px] -translate-x-1/2 rounded-full shadow-[0_2px_3px_rgba(192,41,122,.4)]"
-              style={{ background: pinColor[s.pin] }}
-            />
-            <span className="block font-mono text-[9px] font-bold text-brand-600">M↓ {s.file}</span>
-            <span className="mt-1 block text-[11px] font-bold leading-tight text-navy-900">{s.title}</span>
-          </div>
-        ))}
-        <span className="absolute left-[50%] top-[5%] font-script text-base text-navy-900/30">✦</span>
-        <span className="absolute left-[88%] top-[60%] font-script text-base text-navy-900/30">↗</span>
-        <span className="absolute bottom-[10%] left-[8%] font-script text-base text-navy-900/30">~∿</span>
-      </div>
-    </GlassCard>
-  )
-}
 
-function WritingStreakCard({ streakDays, bestStreak, recentBars }: { streakDays: number; bestStreak: number; recentBars: number[] }) {
+  function toggleExpand(id: string) {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function togglePinned() {
+    if (!selectedId) return
+    const next = isPinned
+      ? prefs.pinnedFolderIds.filter((id) => id !== selectedId)
+      : [selectedId, ...prefs.pinnedFolderIds]
+    update({ pinnedFolderIds: next })
+  }
+
+  async function changeView(mode: 'kanban' | 'list') {
+    if (!selectedId || mode === viewMode) return
+    await updateFolder(selectedId, { viewMode: mode, viewModeManual: true })
+  }
+
+  async function handleNewFolder() {
+    const name = await prompt({ title: 'Nova pasta', message: 'Nome da pasta', placeholder: 'Nome' })
+    if (!name?.trim()) return
+    const folder = await createFolder({ name: name.trim() })
+    selectFolder(folder.id)
+  }
+
+  async function handleNewSubfolder() {
+    if (!selectedId) return
+    const name = await prompt({ title: 'Nova subpasta', message: 'Nome da subpasta', placeholder: 'Nome' })
+    if (!name?.trim()) return
+    const folder = await createFolder({ name: name.trim(), parentId: selectedId })
+    setExpanded((current) => new Set(current).add(selectedId))
+    selectFolder(folder.id)
+  }
+
+  function handleNewItem(folderId: string | null) {
+    setQuickCaptureFolderId(folderId)
+    openCapture('note')
+  }
+
+  const filteredTree = search.trim()
+    ? folders
+        .filter((f) => f.name.toLowerCase().includes(search.trim().toLowerCase()))
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    : null
+
+  const activeSort = SORT_OPTIONS.find((o) => o.key === sortKey) ?? SORT_OPTIONS[0]!
+
   return (
-    <article className="flex flex-col rounded-[28px] border border-white/40 bg-[linear-gradient(160deg,#2F6BFF_0%,#4F4BE9_50%,#28C7B7_100%)] p-6 text-white shadow-[0_24px_60px_rgba(15,35,66,.28)] lg:col-span-3 lg:row-span-1">
-      <div className="mb-3 flex items-center justify-between">
-        <CardTitle className="text-white/85">ritmo de escrita</CardTitle>
-        <span className="rounded-full bg-white/18 px-2 py-0.5 font-mono text-[10px] text-white">{streakDays} dias</span>
+    <div className="mx-auto h-[calc(100vh-120px)] w-full max-w-[1440px] px-4 pb-6 lg:h-[calc(100vh-104px)] lg:px-8">
+      <div className="grid h-full min-h-0 grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)]">
+        {/* Sidebar / folder navigator */}
+        <aside className="hidden min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:grid">
+          <div className="border-b border-navy-900/[0.07] px-5 pb-3.5 pt-5">
+            <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.12em] text-navy-500">Navegador</div>
+            <div className="mb-3.5 mt-1.5 text-[24px] font-black -tracking-[.045em] text-navy-900">Pastas</div>
+            <label className="flex min-h-[42px] items-center gap-2 rounded-[15px] border border-navy-900/[0.07] bg-white/72 px-3">
+              <svg className="h-4 w-4 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
+              </svg>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar pasta..."
+                className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-navy-700 outline-none placeholder:text-navy-400"
+              />
+            </label>
+          </div>
+
+          <div className="min-h-0 overflow-auto p-3">
+            {filteredTree ? (
+              filteredTree.length === 0 ? (
+                <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta encontrada</p>
+              ) : (
+                filteredTree.map((folder) => (
+                  <div
+                    key={folder.id}
+                    className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
+                      folder.id === selectedId ? 'bg-brand-500/10' : 'hover:bg-white/60'
+                    }`}
+                    onClick={() => selectFolder(folder.id)}
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-brand-500/10 text-brand-600">
+                      <FolderGlyph className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
+                    <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
+                      {counts.get(folder.id) ?? 0}
+                    </span>
+                  </div>
+                ))
+              )
+            ) : (
+              <>
+                {pinnedFolders.length > 0 ? (
+                  <>
+                    <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
+                    {pinnedFolders.map((folder) => (
+                      <div
+                        key={folder.id}
+                        className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
+                          folder.id === selectedId ? 'bg-brand-500/10' : 'hover:bg-white/60'
+                        }`}
+                        onClick={() => selectFolder(folder.id)}
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-warning/15 text-[#B47410]">
+                          <StarGlyph filled className="h-3.5 w-3.5" />
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
+                        <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
+                          {counts.get(folder.id) ?? 0}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                ) : null}
+                <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</div>
+                {tree.length === 0 ? (
+                  <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta ainda</p>
+                ) : (
+                  tree.map((root) => (
+                    <TreeRow
+                      key={root.id}
+                      node={root}
+                      depth={0}
+                      selectedId={selectedId}
+                      expanded={expanded}
+                      counts={counts}
+                      onSelect={selectFolder}
+                      onToggle={toggleExpand}
+                    />
+                  ))
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t border-navy-900/[0.07] p-3">
+            <button
+              type="button"
+              onClick={handleNewFolder}
+              className="min-h-[42px] w-full rounded-[15px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] font-extrabold text-white"
+            >
+              Nova pasta
+            </button>
+            <button
+              type="button"
+              onClick={() => setAgentsOpen(true)}
+              disabled={!selectedId}
+              className="min-h-[42px] w-full rounded-[15px] bg-navy-900/[0.055] font-extrabold text-navy-900 disabled:opacity-40"
+            >
+              Editar AGENTS.md
+            </button>
+          </div>
+        </aside>
+
+        {/* Content panel */}
+        <section className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl">
+          {selectedFolder ? (
+            <>
+              <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
+                <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] font-extrabold uppercase tracking-[0.08em] text-navy-500">
+                  <span>Notas</span>
+                  {breadcrumb.map((f, i) => (
+                    <Fragment key={f.id}>
+                      <span className="text-navy-900/30">/</span>
+                      {i === breadcrumb.length - 1 ? (
+                        <span className="text-brand-600">{f.name}</span>
+                      ) : (
+                        <button type="button" className="hover:text-navy-700" onClick={() => selectFolder(f.id)}>
+                          {f.name}
+                        </button>
+                      )}
+                    </Fragment>
+                  ))}
+                </div>
+
+                <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
+                  <h1 className="text-[34px] font-black leading-none -tracking-[.05em] text-navy-900 lg:text-[42px]">
+                    {selectedFolder.name}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={togglePinned}
+                      title={isPinned ? 'Desafixar pasta' : 'Favoritar pasta'}
+                      aria-pressed={isPinned}
+                      className={`grid h-[38px] w-[38px] place-items-center rounded-full ${
+                        isPinned
+                          ? 'bg-warning/15 text-[#B47410] shadow-[0_0_0_1px_rgba(245,165,36,.28)_inset]'
+                          : 'bg-navy-900/[0.055] text-navy-500'
+                      }`}
+                    >
+                      <StarGlyph filled={isPinned} className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAgentsOpen(true)}
+                      className="inline-flex h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900"
+                    >
+                      AGENTS.md
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNewSubfolder}
+                      className="inline-flex h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900"
+                    >
+                      Nova subpasta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleNewItem(selectedId)}
+                      className="inline-flex h-[38px] items-center rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-3.5 text-[13px] font-extrabold text-white"
+                    >
+                      Novo item
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                  <div className="inline-flex gap-1 rounded-full bg-navy-900/[0.055] p-1">
+                    {(['kanban', 'list'] as const).map((mode) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => void changeView(mode)}
+                        className={`inline-flex h-8 items-center rounded-full px-3 font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] ${
+                          viewMode === mode ? 'bg-white text-brand-600 shadow-cool-sm' : 'text-navy-500'
+                        }`}
+                      >
+                        {mode === 'kanban' ? 'Kanban' : 'Lista'}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="inline-flex h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500">
+                    {allFolderItems.length} {allFolderItems.length === 1 ? 'item' : 'itens'}
+                  </span>
+                  <span className="inline-flex h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500">
+                    {childFolders.length} {childFolders.length === 1 ? 'subpasta' : 'subpastas'}
+                  </span>
+                  <div className="relative" ref={sortRef}>
+                    <button
+                      type="button"
+                      onClick={() => setSortOpen((v) => !v)}
+                      className="inline-flex h-8 items-center gap-2 rounded-full border border-white/72 bg-white/68 px-3 font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] text-navy-500"
+                      aria-haspopup="menu"
+                      aria-expanded={sortOpen}
+                    >
+                      Ordenar: {activeSort.label} ▾
+                    </button>
+                    {sortOpen ? (
+                      <div className="absolute right-0 top-10 z-20 w-56 rounded-[20px] border border-white/78 bg-white/92 p-2 shadow-cool-md backdrop-blur-2xl" role="menu">
+                        {SORT_OPTIONS.map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={option.key === sortKey}
+                            onClick={() => {
+                              setSortKey(option.key)
+                              setSortOpen(false)
+                            }}
+                            className={`flex min-h-[36px] w-full items-center justify-between gap-3 rounded-[13px] px-2.5 text-[12px] font-semibold ${
+                              option.key === sortKey ? 'bg-brand-500/[0.08] text-brand-600' : 'text-navy-900 hover:bg-navy-900/[0.045]'
+                            }`}
+                          >
+                            <span>{option.label}</span>
+                            <span className="font-mono text-[10px] text-navy-500">{option.hint}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+
+              <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-5">
+                {allFolderItems.length === 0 && childFolders.length === 0 ? (
+                  <div className="grid h-full place-items-center">
+                    <div className="rounded-[22px] border border-dashed border-navy-900/15 bg-white/40 px-6 py-10 text-center">
+                      <p className="text-[15px] font-bold text-navy-900">Pasta vazia</p>
+                      <p className="mx-auto mt-1 max-w-xs text-[13px] text-navy-500">
+                        Crie um item ou uma subpasta para começar a organizar este contexto.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleNewItem(selectedId)}
+                        className="mt-4 inline-flex h-9 items-center rounded-full bg-navy-900 px-4 text-[13px] font-bold text-white"
+                      >
+                        Novo item
+                      </button>
+                    </div>
+                  </div>
+                ) : viewMode === 'kanban' ? (
+                  <div className="flex h-full gap-3.5 overflow-x-auto">
+                    {kanbanColumns.map((column) => (
+                      <div
+                        key={column.id}
+                        className="flex w-72 shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/62 bg-white/46"
+                      >
+                        <div className="flex items-center gap-2 border-b border-navy-900/[0.06] px-3.5 py-3">
+                          <span className="h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_9px_rgba(47,107,255,.45)]" />
+                          <b className="text-[13px] font-black text-navy-900">{column.title}</b>
+                          <span className="ml-auto font-mono text-[10px] text-navy-500">{column.items.length}</span>
+                        </div>
+                        <div className="flex flex-1 flex-col gap-2.5 overflow-auto p-3">
+                          {column.items.length === 0 ? (
+                            <p className="px-1 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
+                          ) : (
+                            column.items.map((item) => (
+                              <ContentCard key={item.id} item={item} onOpen={setSingleSelection} />
+                            ))
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleNewItem(column.id === 'root' ? selectedId : column.id)}
+                            className="mt-1 flex items-center gap-1.5 rounded-[14px] border border-dashed border-navy-900/12 px-3 py-2 text-[12px] font-semibold text-navy-500 hover:border-brand-300 hover:text-brand-600"
+                          >
+                            + Adicionar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-hidden rounded-[22px] border border-white/62 bg-white/50">
+                    {allFolderItems.map((item) => (
+                      <ContentRow key={item.id} item={item} onOpen={setSingleSelection} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="grid h-full place-items-center p-8">
+              <div className="max-w-sm text-center">
+                <p className="text-[18px] font-black text-navy-900">Crie sua primeira pasta</p>
+                <p className="mt-1.5 text-[13px] text-navy-500">
+                  Pastas e subpastas são o contexto principal das notas, tarefas, eventos e referências.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleNewFolder}
+                  className="mt-4 inline-flex h-10 items-center rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-5 text-[14px] font-bold text-white"
+                >
+                  Nova pasta
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
       </div>
-      <div className="text-[44px] font-black leading-none -tracking-[.04em] [text-shadow:0_2px_12px_rgba(15,35,66,.25)]">{streakDays}d</div>
-      <div className="mt-1 font-mono text-[11px] opacity-85">notas escritas · melhor {bestStreak}d</div>
-      <div className="mt-auto flex h-[38px] items-end gap-[3px]">
-        {recentBars.map((h, i) => {
-          const isToday = i === recentBars.length - 2
-          const isLast = i === recentBars.length - 1
-          return (
-            <span
-              key={i}
-              className={`flex-1 rounded ${
-                isToday
-                  ? 'bg-white shadow-[0_0_10px_rgba(255,255,255,.9),0_-4px_12px_rgba(255,255,255,.6)]'
-                  : isLast
-                    ? 'bg-white/30'
-                    : 'bg-white/85'
-              }`}
-              style={{ height: `${h}%` }}
-            />
-          )
-        })}
-      </div>
-    </article>
+
+      {selectedId && selectedFolder ? (
+        <AgentsEditorModal
+          folderId={selectedId}
+          title={`AGENTS.md / ${selectedFolder.name}`}
+          open={agentsOpen}
+          onClose={() => setAgentsOpen(false)}
+        />
+      ) : null}
+    </div>
   )
 }
 
 export default function NotasPage() {
-  const today = toLocalDateKey()
-  const { items } = useItems()
-  const { folders } = useFolders()
-  const router = useRouter()
-  const handleOpen = (id: string) => router.push(`/notas/${id}`)
-  const [activeFilter, setActiveFilter] = useState<string>('all')
-
-  const notes = useMemo(
-    () =>
-      items
-        .filter((item) => item.complexity === 'note' && item.status !== 'archived')
-        .slice()
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    [items],
-  )
-
-  const editedToday = useMemo(() => notes.filter((n) => isToday(n.updatedAt, today)).length, [notes, today])
-  const goalPercent = Math.min(100, Math.round((editedToday / 5) * 100))
-
-  const topLevelFolders = useMemo(() => folders.filter((f) => !f.parentId), [folders])
-  const notebooks = useMemo(() => {
-    return topLevelFolders.map((folder, i) => {
-      const count = items.filter((it) => it.folderId === folder.id && it.status !== 'archived').length
-      const child = folders.filter((f) => f.parentId === folder.id).slice(0, 3).map((f) => f.name).join(' · ')
-      return {
-        folder,
-        count,
-        description: child || 'pasta',
-        color: FOLDER_COLORS[i % FOLDER_COLORS.length] ?? '#2F6BFF',
-      }
-    })
-  }, [topLevelFolders, folders, items])
-
-  const filters = useMemo(() => {
-    const base = [{ id: 'all', label: 'todas' }]
-    topLevelFolders.slice(0, 4).forEach((f) => base.push({ id: f.id, label: f.name }))
-    base.push({ id: 'inbox', label: 'inbox' })
-    return base
-  }, [topLevelFolders])
-
-  const filteredNotes = useMemo(() => {
-    if (activeFilter === 'all') return notes
-    if (activeFilter === 'inbox') return notes.filter((n) => !n.folderId)
-    return notes.filter((n) => n.folderId === activeFilter)
-  }, [notes, activeFilter])
-
-  const spotlight = notes[0] ?? null
-  const breadcrumb = useMemo(() => {
-    if (!spotlight?.folderId) return ['inbox']
-    const map = new Map(folders.map((f) => [f.id, f]))
-    const path: string[] = []
-    let cur: Folder | undefined = map.get(spotlight.folderId)
-    while (cur) {
-      path.unshift(cur.name)
-      cur = cur.parentId ? map.get(cur.parentId) : undefined
-    }
-    return path.length > 0 ? path : ['notas']
-  }, [spotlight, folders])
-
-  const pinned = useMemo(() => notes.slice(0, 4), [notes])
-
-  const recentBars = useMemo(() => {
-    const days = 14
-    const base: number[] = []
-    for (let i = days - 1; i >= 0; i -= 1) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const key = toLocalDateKey(d)
-      const editsThatDay = notes.filter((n) => isToday(n.updatedAt, key)).length
-      base.push(Math.min(100, Math.max(15, editsThatDay * 25 + 30 + ((i * 7) % 40))))
-    }
-    return base
-  }, [notes])
-
-  const streakDays = useMemo(() => {
-    let streak = 0
-    for (let i = 0; i < 30; i += 1) {
-      const d = new Date()
-      d.setDate(d.getDate() - i)
-      const key = toLocalDateKey(d)
-      const has = notes.some((n) => isToday(n.updatedAt, key))
-      if (has) streak += 1
-      else if (i > 0) break
-    }
-    return streak
-  }, [notes])
-
   return (
-    <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-4">
-      <BentoGrid className="lg:auto-rows-[230px]">
-        <WritingStatsCard totalNotes={notes.length} editedToday={editedToday} goalPercent={goalPercent} />
-        <EditorSpotlightCard note={spotlight} breadcrumb={breadcrumb} onOpen={handleOpen} />
-        <PinnedCard pins={pinned} onOpen={handleOpen} />
-        <LibraryCard
-          notes={filteredNotes}
-          filters={filters}
-          active={activeFilter}
-          onFilter={setActiveFilter}
-          onOpen={handleOpen}
-          totalNotes={notes.length}
-        />
-        <KnowledgeGraphCard notes={notes} />
-        <NotebooksCard notebooks={notebooks} />
-        <MiniGardenCard notes={notes} folders={topLevelFolders} />
-        <WritingStreakCard streakDays={streakDays} bestStreak={Math.max(streakDays, 14)} recentBars={recentBars} />
-      </BentoGrid>
-    </div>
+    <Suspense fallback={<div className="px-4 pt-6 font-mono text-[12px] text-navy-500 lg:px-8">Carregando pastas…</div>}>
+      <NotasBrowser />
+    </Suspense>
   )
 }

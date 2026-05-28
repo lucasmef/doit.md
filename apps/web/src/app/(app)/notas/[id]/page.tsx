@@ -141,7 +141,7 @@ function SidebarTree({
                 {hasChildren ? <ChevronIcon open={isOpen} /> : <span className="block h-1 w-1 rounded-full bg-navy-300" />}
               </button>
               <Link
-                href={`/notas/pastas/${node.id}`}
+                href={`/notas?folder=${node.id}`}
                 className="flex min-w-0 flex-1 items-center gap-2 truncate"
                 style={{ color }}
               >
@@ -229,7 +229,7 @@ function Sidebar({
 
       <div className="flex items-center gap-1.5 px-4 pb-1 pt-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
         notebooks
-        <Link href="/notas/pastas" className="ml-auto inline-flex h-[18px] w-[18px] items-center justify-center rounded text-navy-500 hover:bg-navy-900/[0.08] hover:text-navy-900" aria-label="Gerenciar pastas">
+        <Link href="/notas" className="ml-auto inline-flex h-[18px] w-[18px] items-center justify-center rounded text-navy-500 hover:bg-navy-900/[0.08] hover:text-navy-900" aria-label="Gerenciar pastas">
           <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
@@ -238,7 +238,7 @@ function Sidebar({
 
       <div className="flex-1 overflow-auto px-2 pb-2">
         {tree.length === 0 ? (
-          <Link href="/notas/pastas" className="mt-2 block rounded-lg border border-dashed border-navy-900/15 px-3 py-2 text-center font-mono text-[11px] text-navy-500 hover:border-brand-300 hover:text-brand-600">
+          <Link href="/notas" className="mt-2 block rounded-lg border border-dashed border-navy-900/15 px-3 py-2 text-center font-mono text-[11px] text-navy-500 hover:border-brand-300 hover:text-brand-600">
             criar pastas
           </Link>
         ) : (
@@ -765,7 +765,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     const list: Array<{ label: string; href?: string; isFile?: boolean }> = [
       { label: 'notas', href: '/notas' },
     ]
-    folderPath.forEach((folder) => list.push({ label: folder.name, href: `/notas/pastas/${folder.id}` }))
+    folderPath.forEach((folder) => list.push({ label: folder.name, href: `/notas?folder=${folder.id}` }))
     list.push({ label: `M↓ ${fileName}`, isFile: true })
     return list
   }, [folderPath, fileName])
