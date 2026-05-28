@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { Folder, Item } from '@doit/types'
+import type { Folder, Item, ItemStatus, UpdateItemInput } from '@doit/types'
 import { buildFolderTree, useFolders, type FolderTreeNode } from '@/hooks/use-folders'
 import { updateItem, useItems } from '@/hooks/use-items'
 import { MarkdownEditor } from '@/components/items/markdown-editor'
@@ -42,6 +42,53 @@ function parseHeadings(markdown: string): Heading[] {
     result.push({ id, text, level })
   }
   return result
+}
+
+function countWords(markdown: string) {
+  const text = markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`[\]()!-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return text ? text.split(' ').length : 0
+}
+
+function taskProgress(markdown: string) {
+  const matches = markdown.match(/^\s*[-*]\s+\[[ xX]\]\s+/gm) ?? []
+  const done = matches.filter((line) => /\[[xX]\]/.test(line)).length
+  const total = matches.length
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0
+  return { done, total, percent }
+}
+
+function formatReadableDate(date?: string) {
+  if (!date) return null
+  const parsed = new Date(`${date}T00:00:00`)
+  if (Number.isNaN(parsed.getTime())) return date
+  return new Intl.DateTimeFormat('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  }).format(parsed)
+}
+
+function normalizeFileName(item: Item) {
+  if (item.localPath) return item.localPath.split(/[\\/]/).pop() ?? item.localPath
+  return `${(item.title || 'nota').toLowerCase().replace(/\s+/g, '-')}.md`
+}
+
+function findBacklinkItems(item: Item, items: Item[]) {
+  const title = item.title.toLowerCase()
+  const fileName = normalizeFileName(item).toLowerCase()
+  return items
+    .filter((candidate) => {
+      if (candidate.id === item.id || candidate.complexity !== 'note') return false
+      if (item.backlinks.includes(candidate.id)) return true
+      const content = `${candidate.title}\n${candidate.contentMd ?? ''}`.toLowerCase()
+      return content.includes(title) || content.includes(fileName)
+    })
+    .slice(0, 3)
 }
 
 function buildFolderPath(folders: Folder[], folderId?: string): Folder[] {
@@ -127,14 +174,25 @@ function SidebarTree({
 
 function Sidebar({
   folders,
+  notes,
   itemCounts,
   parentFolderId,
+  currentItemId,
 }: {
   folders: Folder[]
+  notes: Item[]
   itemCounts: Map<string, number>
   parentFolderId?: string
+  currentItemId: string
 }) {
   const tree = useMemo(() => buildFolderTree(folders), [folders])
+  const visibleNotes = useMemo(() => {
+    const scoped = parentFolderId
+      ? notes.filter((note) => note.folderId === parentFolderId)
+      : notes
+    return scoped.slice(0, 6)
+  }, [notes, parentFolderId])
+  const favoriteNotes = useMemo(() => notes.filter((note) => note.priority === 1).slice(0, 2), [notes])
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const initial = new Set<string>()
     if (parentFolderId) initial.add(parentFolderId)
@@ -149,7 +207,7 @@ function Sidebar({
     })
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/70 lg:bg-white/72 lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
+    <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/80 lg:bg-white/[.86] lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
       <div className="flex items-center gap-2.5 border-b border-navy-900/[0.06] px-4 py-3.5">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
           <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
@@ -182,7 +240,7 @@ function Sidebar({
       </Link>
 
       <div className="flex items-center gap-1.5 px-4 pb-1 pt-1.5 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
-        Pastas
+        notebooks
         <Link href="/notas/pastas" className="ml-auto inline-flex h-[18px] w-[18px] items-center justify-center rounded text-navy-500 hover:bg-navy-900/[0.08] hover:text-navy-900" aria-label="Gerenciar pastas">
           <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
             <path d="M12 5v14M5 12h14" />
@@ -198,166 +256,293 @@ function Sidebar({
         ) : (
           <SidebarTree tree={tree} itemCounts={itemCounts} expanded={expanded} toggle={toggle} />
         )}
-      </div>
 
-      <div className="border-t border-navy-900/[0.06] px-4 py-2.5">
-        <Link href="/dashboard" className="font-mono text-[11px] text-navy-500 hover:text-navy-900">
-          ← dashboard
-        </Link>
-      </div>
-    </aside>
-  )
-}
-
-function OutlineRail({ headings, savedAt }: { headings: Heading[]; savedAt?: string }) {
-  return (
-    <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/70 lg:bg-white/72 lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
-      <div className="border-b border-navy-900/[0.06] px-4 py-3">
-        <div className="font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">Outline</div>
-        <div className="mt-1 font-mono text-[10px] text-navy-300">{headings.length} headings</div>
-      </div>
-      <div className="flex-1 overflow-auto px-3 py-3">
-        {headings.length === 0 ? (
-          <div className="text-center font-mono text-[11px] text-navy-300">use # ## ### para criar uma estrutura</div>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {headings.map((h, i) => (
-              <li key={`${h.id}-${i}`}>
-                <a
-                  href={`#${h.id}`}
-                  className="block truncate rounded-md px-2 py-1 text-[12px] text-navy-700 hover:bg-navy-900/[0.05] hover:text-navy-900"
-                  style={{ paddingLeft: `${8 + (h.level - 1) * 12}px` }}
-                >
-                  {h.text}
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      {savedAt ? (
-        <div className="border-t border-navy-900/[0.06] px-4 py-2.5 font-mono text-[10px] text-navy-500">
-          atualizada {formatRelative(savedAt)}
+        <div className="mt-3 px-2 pb-1 pt-2 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+          files
         </div>
-      ) : null}
+        <div className="flex flex-col gap-px">
+          {visibleNotes.map((note) => (
+            <Link
+              key={note.id}
+              href={`/notas/${note.id}`}
+              className={`flex items-center gap-2 rounded-[7px] px-2 py-1.5 font-mono text-[12px] ${
+                note.id === currentItemId
+                  ? 'bg-[linear-gradient(135deg,rgba(47,107,255,.10),rgba(40,199,183,.10))] font-semibold text-navy-900 shadow-[inset_0_0_0_1px_rgba(47,107,255,.18)]'
+                  : 'text-navy-700 hover:bg-navy-900/[0.05]'
+              }`}
+            >
+              <span className="shrink-0 text-[11px] font-bold text-brand-600">M↓</span>
+              <span className="truncate">{normalizeFileName(note)}</span>
+              {note.priority === 1 ? <span className="ml-auto text-[#F5A524]">*</span> : null}
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-3 px-2 pb-1 pt-2 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+          favorites
+        </div>
+        <div className="flex flex-col gap-px">
+          {(favoriteNotes.length > 0 ? favoriteNotes : notes.slice(0, 2)).map((note) => (
+            <Link
+              key={`fav-${note.id}`}
+              href={`/notas/${note.id}`}
+              className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 font-mono text-[12px] text-navy-700 hover:bg-navy-900/[0.05]"
+            >
+              <span className="shrink-0 text-[11px] font-bold text-brand-600">M↓</span>
+              <span className="truncate">{normalizeFileName(note)}</span>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-3 px-2 pb-1 pt-2 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+          trash
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2.5 border-t border-navy-900/[0.06] px-4 py-2.5">
+        <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border border-white/70 bg-[linear-gradient(135deg,#FFB1D5,#B59BFF_60%,#28C7B7)] text-[10px] font-bold text-white">
+          LF
+        </span>
+        <div className="min-w-0 text-[12px] font-semibold text-navy-900">
+          doit.md
+          <small className="block truncate font-mono text-[10px] font-normal text-navy-500">
+            synced just now
+          </small>
+        </div>
+      </div>
     </aside>
   )
 }
 
-function CoverGradient() {
+function RailTitle({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className="relative h-[120px] w-full overflow-hidden"
-      style={{
-        background:
-          'radial-gradient(circle at 20% 30%, rgba(123,91,255,.55), transparent 60%), radial-gradient(circle at 80% 70%, rgba(40,199,183,.55), transparent 60%), linear-gradient(135deg, #2F6BFF 0%, #7B5BFF 50%, #28C7B7 100%)',
-      }}
-      aria-hidden="true"
-    >
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-        }}
-      />
+    <h4 className="mb-2 mt-4 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500 first:mt-0">
+      {children}
+    </h4>
+  )
+}
+
+const EDITABLE_STATUSES: ItemStatus[] = ['inbox', 'todo', 'doing', 'waiting', 'done']
+
+function PanelField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
+        {label}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+function panelControlClass() {
+  return 'w-full rounded-[8px] border border-navy-900/10 bg-white/70 px-2.5 py-2 text-[12px] text-navy-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100'
+}
+
+function NotePropertiesPanel({
+  item,
+  folders,
+  wordCount,
+  tagsDraft,
+  onTagsDraftChange,
+  onPatch,
+}: {
+  item: Item
+  folders: Folder[]
+  wordCount: number
+  tagsDraft: string
+  onTagsDraftChange: (value: string) => void
+  onPatch: (patch: UpdateItemInput) => void
+}) {
+  const normalizeTags = (value: string) =>
+    Array.from(
+      new Set(
+        value
+          .split(',')
+          .map((tag) => tag.trim().replace(/^#/, ''))
+          .filter(Boolean),
+      ),
+    )
+
+  return (
+    <div className="space-y-3 rounded-[12px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
+      <PanelField label="status">
+        <select
+          value={item.status}
+          onChange={(event) => onPatch({ status: event.target.value as ItemStatus })}
+          className={panelControlClass()}
+        >
+          {item.status === 'archived' ? <option value="archived">archived</option> : null}
+          {EDITABLE_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </PanelField>
+
+      <PanelField label="pasta">
+        <select
+          value={item.folderId ?? ''}
+          onChange={(event) =>
+            onPatch({ folderId: (event.target.value || null) as unknown as string })
+          }
+          className={panelControlClass()}
+        >
+          <option value="">inbox</option>
+          {folders.map((folder) => (
+            <option key={folder.id} value={folder.id}>
+              {folder.name}
+            </option>
+          ))}
+        </select>
+      </PanelField>
+
+      <PanelField label="data">
+        <input
+          type="date"
+          value={item.dueDate ?? ''}
+          onChange={(event) =>
+            onPatch({ dueDate: (event.target.value || null) as unknown as string })
+          }
+          className={panelControlClass()}
+        />
+      </PanelField>
+
+      <PanelField label="tags">
+        <input
+          value={tagsDraft}
+          onChange={(event) => onTagsDraftChange(event.target.value)}
+          onBlur={(event) => onPatch({ tags: normalizeTags(event.target.value) })}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              event.currentTarget.blur()
+            }
+          }}
+          placeholder="docs, baixo-risco"
+          className={panelControlClass()}
+        />
+      </PanelField>
+
+      <div className="font-mono text-[10px] text-navy-400">
+        editado {formatRelative(item.updatedAt)} · {wordCount} palavras
+      </div>
     </div>
   )
 }
 
-function StatusPill({ status }: { status: Item['status'] }) {
-  const tone: Record<string, { bg: string; text: string; dot: string }> = {
-    open: { bg: 'bg-[rgba(47,107,255,.10)]', text: 'text-brand-600', dot: 'bg-brand-600' },
-    done: { bg: 'bg-[rgba(40,199,183,.14)]', text: 'text-teal-600', dot: 'bg-teal-500' },
-    archived: { bg: 'bg-navy-900/[0.06]', text: 'text-navy-500', dot: 'bg-navy-400' },
-    snoozed: { bg: 'bg-[rgba(245,165,36,.16)]', text: 'text-[#B56B00]', dot: 'bg-[#F5A524]' },
-  }
-  const t = tone[status] ?? tone.open ?? { bg: 'bg-navy-900/[0.06]', text: 'text-navy-500', dot: 'bg-navy-400' }
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${t.bg} ${t.text}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />
-      {status}
-    </span>
-  )
-}
-
-function PropsGrid({
+function OutlineRail({
+  headings,
+  progress,
+  backlinks,
   item,
-  folderPath,
+  folders,
+  wordCount,
+  tagsDraft,
+  dueLabel,
+  onTagsDraftChange,
+  onPatch,
 }: {
+  headings: Heading[]
+  progress: { done: number; total: number; percent: number }
+  backlinks: Item[]
   item: Item
-  folderPath: Folder[]
+  folders: Folder[]
+  wordCount: number
+  tagsDraft: string
+  dueLabel: string | null
+  onTagsDraftChange: (value: string) => void
+  onPatch: (patch: UpdateItemInput) => void
 }) {
+  const progressLabel =
+    progress.total > 0 ? `${progress.done} / ${progress.total} feito` : 'sem tarefas'
+
   return (
-    <dl className="mb-7 grid grid-cols-[110px_1fr] gap-x-4 gap-y-1 border-b border-navy-900/[0.04] pb-6 text-[13px]">
-      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
-        Status
-      </dt>
-      <dd className="flex items-center gap-2 py-1">
-        <StatusPill status={item.status} />
-      </dd>
+    <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/80 lg:bg-white/[.86] lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
+      <div className="flex-1 overflow-auto p-4">
+        <RailTitle>propriedades</RailTitle>
+        <NotePropertiesPanel
+          item={item}
+          folders={folders}
+          wordCount={wordCount}
+          tagsDraft={tagsDraft}
+          onTagsDraftChange={onTagsDraftChange}
+          onPatch={onPatch}
+        />
 
-      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
-        Tags
-      </dt>
-      <dd className="flex flex-wrap items-center gap-1.5 py-1">
-        {item.tags.length === 0 ? (
-          <button type="button" className="rounded border border-dashed border-navy-900/15 px-2 py-0.5 text-[11px] text-navy-500">
-            adicionar tag
-          </button>
+        <RailTitle>anexos</RailTitle>
+        <div id="note-editor-attachments" />
+
+        <RailTitle>progresso</RailTitle>
+        <div className="rounded-[12px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
+          <div className="flex items-center justify-between font-mono text-[11px] text-navy-500">
+            <span>{progressLabel}</span>
+            <b className="text-navy-900">{progress.percent}%</b>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-navy-900/[0.08]">
+            <div
+              className="h-full rounded-full bg-[linear-gradient(90deg,#2F6BFF,#28C7B7)]"
+              style={{ width: `${progress.percent}%` }}
+            />
+          </div>
+          <div className="mt-2 font-mono text-[10px] text-navy-400">
+            {dueLabel ? `due ${dueLabel}` : 'sem vencimento'}
+          </div>
+        </div>
+
+        <RailTitle>outline</RailTitle>
+        {headings.length === 0 ? (
+          <div className="rounded-[10px] bg-white/35 px-3 py-2 font-mono text-[11px] text-navy-300">
+            use # ## ### para criar uma estrutura
+          </div>
         ) : (
-          item.tags.map((tag, i) => {
-            const tones = [
-              'bg-[rgba(47,107,255,.10)] text-brand-600',
-              'bg-[rgba(40,199,183,.14)] text-teal-600',
-              'bg-[rgba(123,91,255,.12)] text-violet-500',
-              'bg-[rgba(255,111,174,.12)] text-pink-600',
-            ]
-            return (
-              <span key={tag} className={`rounded font-mono text-[11px] px-2 py-0.5 ${tones[i % tones.length]}`}>
-                #{tag}
-              </span>
-            )
-          })
+          <nav className="flex flex-col gap-1">
+            {headings.map((h, i) => (
+              <a
+                key={`${h.id}-${i}`}
+                href={`#${h.id}`}
+                className={`flex items-center gap-2 truncate rounded-[7px] px-2 py-1.5 text-[12px] hover:bg-navy-900/[0.05] hover:text-navy-900 ${
+                  i === 0 ? 'bg-[rgba(47,107,255,.10)] font-semibold text-brand-600' : 'text-navy-700'
+                }`}
+                style={{ paddingLeft: `${8 + (h.level - 1) * 12}px` }}
+              >
+                <span className="font-mono text-[10px] text-navy-400">
+                  {'#'.repeat(h.level)}
+                </span>
+                <span className="truncate">{h.text}</span>
+              </a>
+            ))}
+          </nav>
         )}
-      </dd>
 
-      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
-        Pasta
-      </dt>
-      <dd className="flex items-center gap-2 py-1 font-mono text-[12px] text-navy-500">
-        {folderPath.length === 0 ? (
-          <span>inbox</span>
-        ) : (
-          folderPath.map((f, i) => (
-            <span key={f.id} className="inline-flex items-center gap-2">
-              <Link href={`/notas/pastas/${f.id}`} className="hover:text-navy-900">
-                {f.name}
+        <RailTitle>backlinks · {backlinks.length}</RailTitle>
+        <div className="flex flex-col gap-2">
+          {backlinks.length === 0 ? (
+            <div className="rounded-[10px] bg-white/35 px-3 py-2 font-mono text-[11px] text-navy-300">
+              nenhum backlink
+            </div>
+          ) : (
+            backlinks.map((link) => (
+              <Link
+                key={link.id}
+                href={`/notas/${link.id}`}
+                className="rounded-[10px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)] hover:bg-white/70"
+              >
+                <div className="font-mono text-[10px] font-semibold text-brand-600">
+                  M↓ {normalizeFileName(link)}
+                </div>
+                <div className="mt-1 truncate text-[12px] font-semibold text-navy-900">{link.title}</div>
+                <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-navy-500">
+                  {(link.contentMd ?? '').replace(/\s+/g, ' ').slice(0, 110) || 'Nota relacionada'}
+                </div>
               </Link>
-              {i < folderPath.length - 1 ? <span className="text-navy-900/25">/</span> : null}
-            </span>
-          ))
-        )}
-      </dd>
+            ))
+          )}
+        </div>
 
-      {item.dueDate ? (
-        <>
-          <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
-            Vencimento
-          </dt>
-          <dd className="py-1 font-mono text-[12px] text-navy-700">
-            {item.dueDate}
-            {item.dueTime ? ` · ${item.dueTime}` : ''}
-          </dd>
-        </>
-      ) : null}
-
-      <dt className="flex items-center gap-1.5 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-navy-500">
-        Atualizada
-      </dt>
-      <dd className="py-1 font-mono text-[12px] text-navy-500">{formatRelative(item.updatedAt)}</dd>
-    </dl>
+      </div>
+    </aside>
   )
 }
 
@@ -371,7 +556,7 @@ function EditorTopBar({
   onArchive: () => void
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.04] px-6 py-3">
+    <div className="flex shrink-0 items-center gap-3 border-b border-[#ECF0F5] px-6 py-3.5">
       <nav className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500">
         {crumbs.map((crumb, i) => (
           <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
@@ -399,20 +584,49 @@ function EditorTopBar({
               : 'bg-teal-500 shadow-[0_0_6px_#28C7B7]'
           }`}
         />
-        {saveStatus === 'saving' ? 'salvando...' : 'salvo'}
+        {saveStatus === 'saving' ? 'saving...' : 'saved · now'}
       </span>
+
+      <div className="hidden sm:flex">
+        <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-white bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] text-[9px] font-bold text-white">
+          LF
+        </span>
+      </div>
+
+      <div className="h-[18px] w-px bg-[#D9E1EA]" />
 
       <button
         type="button"
-        onClick={onArchive}
-        className="hidden h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] font-medium text-navy-500 hover:bg-navy-900/[0.05] hover:text-navy-900 sm:inline-flex"
+        onClick={() => window.print()}
+        className="hidden h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] font-medium text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900 sm:inline-flex"
       >
         <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="4" width="18" height="4" rx="1" />
-          <path d="M5 8v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8" />
-          <path d="M10 12h4" />
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
         </svg>
-        Arquivar
+        export
+      </button>
+      <button
+        type="button"
+        onClick={() => void navigator.clipboard?.writeText(window.location.href)}
+        className="hidden h-8 items-center gap-1.5 rounded-lg bg-navy-900 px-3 text-[12px] font-semibold text-white hover:bg-navy-700 sm:inline-flex"
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" />
+        </svg>
+        share
+      </button>
+      <button
+        type="button"
+        onClick={onArchive}
+        aria-label="More"
+        title="Arquivar"
+        className="hidden h-7 w-7 items-center justify-center rounded-[7px] text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900 sm:inline-flex"
+      >
+        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+          <circle cx="5" cy="12" r="1.2" />
+          <circle cx="12" cy="12" r="1.2" />
+          <circle cx="19" cy="12" r="1.2" />
+        </svg>
       </button>
     </div>
   )
@@ -436,17 +650,31 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
 
   const [localTitle, setLocalTitle] = useState('')
   const [localContent, setLocalContent] = useState('')
+  const [tagsDraft, setTagsDraft] = useState('')
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [hydrated, setHydrated] = useState(false)
+  const titleInputRef = useRef<HTMLTextAreaElement | null>(null)
   const titleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function autosizeTitle(el: HTMLTextAreaElement | null) {
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }
 
   useEffect(() => {
     if (!item || hydrated) return
     setLocalTitle(item.title)
     setLocalContent(item.contentMd ?? '')
+    setTagsDraft(item.tags.join(', '))
     setHydrated(true)
   }, [item, hydrated])
+
+  useEffect(() => {
+    if (!item) return
+    setTagsDraft(item.tags.join(', '))
+  }, [item?.id, item?.tags])
 
   const persist = useCallback(
     async (patch: { title?: string; contentMd?: string }) => {
@@ -488,8 +716,17 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     }
   }, [])
 
+  useEffect(() => {
+    autosizeTitle(titleInputRef.current)
+  }, [localTitle])
+
   const folderPath = useMemo(() => buildFolderPath(folders, item?.folderId), [folders, item])
   const headings = useMemo(() => parseHeadings(localContent), [localContent])
+  const noteItems = useMemo(() => items.filter((it) => it.complexity === 'note'), [items])
+  const progress = useMemo(() => taskProgress(localContent), [localContent])
+  const wordCount = useMemo(() => countWords(localContent), [localContent])
+  const backlinks = useMemo(() => (item ? findBacklinkItems(item, noteItems) : []), [item, noteItems])
+  const dueLabel = useMemo(() => formatReadableDate(item?.dueDate), [item?.dueDate])
   const fileName = useMemo(() => {
     if (!item) return 'nota.md'
     if (item.localPath) return item.localPath
@@ -509,6 +746,14 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     if (!item) return
     await updateItem(item.id, { status: 'archived' })
     router.push('/notas')
+  }
+
+  const handleMetadataPatch = (patch: UpdateItemInput) => {
+    if (!item) return
+    setSaveStatus('saving')
+    void updateItem(item.id, patch)
+      .then(() => setSaveStatus('saved'))
+      .catch(() => setSaveStatus('idle'))
   }
 
   if (isLoading) {
@@ -531,47 +776,64 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="grid h-full grid-cols-1 gap-3 px-3 pb-3 lg:grid-cols-[260px_1fr_280px] lg:gap-3.5 lg:px-3.5 lg:pb-3.5">
+    <div className="grid h-full grid-cols-1 gap-3.5 p-3.5 lg:grid-cols-[260px_1fr_280px]">
       <Sidebar
         folders={folders}
+        notes={noteItems}
         itemCounts={itemCounts}
         parentFolderId={item.folderId}
+        currentItemId={item.id}
       />
 
-      <main className="flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-white/55 bg-white shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]">
+      <main className="flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]">
         <EditorTopBar crumbs={crumbs} saveStatus={saveStatus} onArchive={handleArchive} />
+        <div id="note-editor-toolbar" />
 
         <div className="flex-1 overflow-auto" data-note-scroll-container="true">
-          <CoverGradient />
-          <div className="mx-auto w-full max-w-[760px] px-6 pb-20 lg:px-16">
-            <span className="-mt-10 mb-4 inline-flex h-[72px] w-[72px] items-center justify-center rounded-[18px] border border-navy-900/[0.04] bg-white font-mono text-[26px] font-bold text-brand-600 shadow-[0_8px_20px_rgba(15,35,66,.15)]">
+          <div className="mx-auto w-full max-w-[760px] px-6 pb-20 pt-10 lg:px-16">
+            <span className="mb-4 inline-flex h-[72px] w-[72px] items-center justify-center rounded-[18px] border border-navy-900/[0.04] bg-white font-mono text-[26px] font-bold text-brand-600 shadow-[0_8px_20px_rgba(15,35,66,.15)]">
               M↓
             </span>
 
-            <input
-              type="text"
+            <textarea
+              ref={titleInputRef}
               value={localTitle}
-              onChange={(e) => onTitleChange(e.target.value)}
+              rows={1}
+              onChange={(e) => {
+                onTitleChange(e.target.value)
+                autosizeTitle(e.currentTarget)
+              }}
               placeholder="Sem titulo"
-              className="mb-3 w-full bg-transparent text-[42px] font-black leading-[1.05] -tracking-[.03em] text-navy-900 outline-none placeholder:text-navy-200"
+              className="mb-3 block w-full resize-none overflow-hidden bg-transparent text-[46px] font-black leading-[1.05] -tracking-[.03em] text-navy-900 outline-none placeholder:text-navy-200"
               aria-label="Titulo"
             />
 
-            <PropsGrid item={item} folderPath={folderPath} />
-
-            <div className="-mx-1 rounded-2xl border border-navy-900/[0.04]">
-              <MarkdownEditor
-                value={localContent}
-                onChange={onContentChange}
-                itemId={item.id}
-                minHeight="min-h-[420px]"
-              />
-            </div>
+            <MarkdownEditor
+              value={localContent}
+              onChange={onContentChange}
+              itemId={item.id}
+              minHeight="min-h-[420px]"
+              hideDocumentActions
+              variant="sheet"
+              toolbarPortalId="note-editor-toolbar"
+              attachmentsPortalId="note-editor-attachments"
+            />
           </div>
         </div>
       </main>
 
-      <OutlineRail headings={headings} savedAt={item.updatedAt} />
+      <OutlineRail
+        headings={headings}
+        progress={progress}
+        backlinks={backlinks}
+        item={item}
+        folders={folders}
+        wordCount={wordCount}
+        tagsDraft={tagsDraft}
+        dueLabel={dueLabel}
+        onTagsDraftChange={setTagsDraft}
+        onPatch={handleMetadataPatch}
+      />
     </div>
   )
 }

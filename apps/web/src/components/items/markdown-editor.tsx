@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import useSWR from 'swr'
 import StarterKit from '@tiptap/starter-kit'
@@ -30,6 +31,9 @@ type Props = {
   itemId?: string
   focusAtStart?: boolean
   hideDocumentActions?: boolean
+  variant?: 'default' | 'sheet'
+  toolbarPortalId?: string
+  attachmentsPortalId?: string
 }
 
 type DriveUploadResult = {
@@ -228,8 +232,13 @@ export function MarkdownEditor({
   itemId,
   focusAtStart = false,
   hideDocumentActions = false,
+  variant = 'default',
+  toolbarPortalId,
+  attachmentsPortalId,
 }: Props) {
   const editorRef = useRef<Editor | null>(null)
+  const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null)
+  const [attachmentsHost, setAttachmentsHost] = useState<HTMLElement | null>(null)
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -258,7 +267,10 @@ export function MarkdownEditor({
     contentType: 'markdown',
     editorProps: {
       attributes: {
-        class: `${plain ? 'doit-note-editor' : 'prose prose-slate dark:prose-invert'} max-w-none ${minHeight} pl-9 pr-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
+        class:
+          variant === 'sheet'
+            ? `doit-note-sheet-prose max-w-none ${minHeight} px-0 py-0 text-[16px] leading-[1.65] outline-none focus:outline-none`
+            : `${plain ? 'doit-note-editor' : 'prose prose-slate dark:prose-invert'} max-w-none ${minHeight} pl-9 pr-5 py-4 text-[15px] leading-6 outline-none focus:outline-none`,
       },
       handlePaste: (_view, event) => {
         const activeEditor = editorRef.current
@@ -294,6 +306,22 @@ export function MarkdownEditor({
     attachmentsFetcher,
   )
   const uploadingFiles = uploads.filter((upload) => upload.status === 'uploading').length
+
+  useEffect(() => {
+    if (!toolbarPortalId) {
+      setToolbarHost(null)
+      return
+    }
+    setToolbarHost(document.getElementById(toolbarPortalId))
+  }, [toolbarPortalId])
+
+  useEffect(() => {
+    if (!attachmentsPortalId) {
+      setAttachmentsHost(null)
+      return
+    }
+    setAttachmentsHost(document.getElementById(attachmentsPortalId))
+  }, [attachmentsPortalId])
 
   useEffect(() => {
     if (!editor) return
@@ -440,13 +468,40 @@ export function MarkdownEditor({
     }
   }, [editor, itemId, handleFiles])
 
+  const toolbar = (
+    <EditorToolbarAccessible
+      editor={editor}
+      canUpload={!!itemId}
+      uploadingFiles={uploadingFiles}
+      onUploadFiles={() => fileInputRef.current?.click()}
+      hideDocumentActions={hideDocumentActions}
+      variant={variant}
+    />
+  )
+  const attachmentsPanel = (
+    <EditorAttachmentsPanel
+      canUpload={!!itemId}
+      uploadingFiles={uploadingFiles}
+      uploads={uploads}
+      attachments={attachmentData?.links ?? []}
+      onUploadFiles={() => fileInputRef.current?.click()}
+      onDelete={handleDeleteAttachment}
+    />
+  )
+
   return (
     <div
       className={`${
-        plain
-          ? 'flex h-full flex-col rounded-[26px] border border-white/55'
-          : 'flex flex-col overflow-hidden rounded-[22px] border border-white/55'
-      } bg-white/62 shadow-cool-sm backdrop-blur-xl transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100`}
+        variant === 'sheet'
+          ? 'flex flex-col'
+          : plain
+            ? 'flex h-full flex-col rounded-[26px] border border-white/55'
+            : 'flex flex-col overflow-hidden rounded-[22px] border border-white/55'
+      } ${
+        variant === 'sheet'
+          ? ''
+          : 'bg-white/62 shadow-cool-sm backdrop-blur-xl transition-colors focus-within:border-brand-300 focus-within:ring-2 focus-within:ring-brand-100'
+      }`}
     >
       <input
         ref={fileInputRef}
@@ -458,19 +513,19 @@ export function MarkdownEditor({
           event.target.value = ''
         }}
       />
-      <EditorToolbarAccessible
+      {toolbarHost ? createPortal(toolbar, toolbarHost) : toolbarPortalId ? null : toolbar}
+      <EditorContent
         editor={editor}
-        canUpload={!!itemId}
-        uploadingFiles={uploadingFiles}
-        onUploadFiles={() => fileInputRef.current?.click()}
-        hideDocumentActions={hideDocumentActions}
+        className={variant === 'sheet' ? 'bg-transparent' : 'flex-1 overflow-auto bg-white/25'}
       />
-      <EditorContent editor={editor} className="flex-1 overflow-auto bg-white/25" />
-      <AttachmentTray
-        uploads={uploads}
-        attachments={attachmentData?.links ?? []}
-        onDelete={handleDeleteAttachment}
-      />
+      {attachmentsHost ? createPortal(attachmentsPanel, attachmentsHost) : null}
+      {!attachmentsPortalId ? (
+        <AttachmentTray
+          uploads={uploads}
+          attachments={attachmentData?.links ?? []}
+          onDelete={handleDeleteAttachment}
+        />
+      ) : null}
     </div>
   )
 }
@@ -589,11 +644,13 @@ type EditorIconName =
   | 'bulletList'
   | 'orderedList'
   | 'taskList'
+  | 'toggleList'
   | 'collapse'
   | 'expand'
   | 'link'
   | 'paperclip'
   | 'quote'
+  | 'callout'
   | 'codeBlock'
   | 'table'
   | 'columnAdd'
@@ -699,6 +756,16 @@ function EditorIcon({ name }: { name: EditorIconName }) {
       </svg>
     )
   }
+  if (name === 'toggleList') {
+    return (
+      <svg {...common}>
+        <path d="m6 9 4 4 4-4" />
+        <path d="M18 6h2" />
+        <path d="M18 12h2" />
+        <path d="M18 18h2" />
+      </svg>
+    )
+  }
   if (name === 'collapse' || name === 'expand') {
     return (
       <svg {...common}>
@@ -728,6 +795,13 @@ function EditorIcon({ name }: { name: EditorIconName }) {
       <svg {...common}>
         <path d="M8 11H5.5A3.5 3.5 0 0 1 9 7.5V16H5v-5" />
         <path d="M18 11h-2.5A3.5 3.5 0 0 1 19 7.5V16h-4v-5" />
+      </svg>
+    )
+  }
+  if (name === 'callout') {
+    return (
+      <svg {...common}>
+        <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3h.5a8.5 8.5 0 0 1 8 8.5z" />
       </svg>
     )
   }
@@ -824,6 +898,97 @@ function AttachmentIcon({ label }: { label: string }) {
       <span className="absolute right-0 top-0 h-2 w-2 rounded-bl border-b border-l border-white/60 bg-white/45" />
       {label.slice(0, 4)}
     </span>
+  )
+}
+
+function EditorAttachmentsPanel({
+  canUpload,
+  uploadingFiles,
+  uploads,
+  attachments,
+  onUploadFiles,
+  onDelete,
+}: {
+  canUpload: boolean
+  uploadingFiles: number
+  uploads: UploadState[]
+  attachments: DriveAttachment[]
+  onUploadFiles: () => void
+  onDelete: (fileId: string, name: string) => void | Promise<void>
+}) {
+  const visibleUploads = uploads.filter(
+    (upload) =>
+      upload.status !== 'done' ||
+      !attachments.some((attachment) => attachment.webViewLink === upload.webViewLink),
+  )
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        onClick={onUploadFiles}
+        disabled={!canUpload || uploadingFiles > 0}
+        className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-dashed border-navy-900/15 bg-white/65 px-3 py-2 text-[12px] font-semibold text-navy-600 hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        <EditorIcon name="paperclip" />
+        {uploadingFiles > 0 ? 'enviando...' : 'anexar arquivo'}
+      </button>
+
+      {visibleUploads.length === 0 && attachments.length === 0 ? (
+        <div className="rounded-[10px] bg-white/40 px-3 py-2 font-mono text-[11px] text-navy-300">
+          nenhum anexo
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        {visibleUploads.map((upload) => (
+          <div key={upload.id} className="rounded-[10px] bg-white/60 p-2 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
+            <div className="flex items-center gap-2">
+              <AttachmentIcon label={fileExtension(upload.name, upload.mimeType)} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[12px] font-semibold text-navy-900">{upload.name}</div>
+                <div className="font-mono text-[10px] text-navy-500">
+                  {formatBytes(upload.size)} · {upload.status}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        {attachments.map((attachment) => (
+          <div
+            key={attachment.id ?? attachment.fileId}
+            className="rounded-[10px] bg-white/60 p-2 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]"
+          >
+            <div className="flex items-center gap-2">
+              <AttachmentIcon label={fileExtension(attachment.name, attachment.mimeType)} />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[12px] font-semibold text-navy-900">{attachment.name}</div>
+                <div className="font-mono text-[10px] text-navy-500">
+                  {formatBytes(attachment.size)} · {fileExtension(attachment.name, attachment.mimeType)}
+                </div>
+              </div>
+            </div>
+            <div className="mt-2 flex gap-1.5">
+              <a
+                href={attachment.webViewLink}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md px-2 py-1 text-[11px] font-semibold text-brand-700 hover:bg-surface-selected"
+              >
+                abrir
+              </a>
+              <button
+                type="button"
+                onClick={() => void onDelete(attachment.fileId, attachment.name)}
+                className="rounded-md px-2 py-1 text-[11px] font-semibold text-navy-400 hover:bg-red-50 hover:text-red-600"
+              >
+                excluir
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
 
@@ -959,12 +1124,14 @@ function EditorToolbarAccessible({
   uploadingFiles,
   onUploadFiles,
   hideDocumentActions = false,
+  variant = 'default',
 }: {
   editor: Editor | null
   canUpload: boolean
   uploadingFiles: number
   onUploadFiles: () => void
   hideDocumentActions?: boolean
+  variant?: 'default' | 'sheet'
 }) {
   const { prompt } = useDialog()
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false)
@@ -1102,8 +1269,13 @@ function EditorToolbarAccessible({
     </ToolbarGroup>
   ) : null
 
+  const toolbarClass =
+    variant === 'sheet'
+      ? 'relative z-[5] border-b border-[#ECF0F5] bg-white/96 px-[18px] py-2 backdrop-blur-md'
+      : 'sticky top-0 z-[5] border-b border-navy-900/[0.04] bg-white/96 px-4 py-2 backdrop-blur-md'
+
   return (
-    <div className="sticky top-0 z-[5] border-b border-navy-900/[0.04] bg-white/96 px-4 py-2 backdrop-blur-md">
+    <div className={toolbarClass}>
       <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-0 sm:flex">
         <ToolbarGroup>
           <ToolbarBtn
@@ -1196,21 +1368,21 @@ function EditorToolbarAccessible({
             <EditorIcon name="taskList" />
           </ToolbarBtn>
           <ToolbarBtn
-            title={shouldCollapseAll ? 'Recolher topicos' : 'Expandir topicos'}
+            title="Toggle list"
             disabled={!canToggleHeadings}
             onClick={() => setAllHeadingsCollapsed(editor, shouldCollapseAll)}
           >
-            <EditorIcon name={shouldCollapseAll ? 'collapse' : 'expand'} />
+            <EditorIcon name="toggleList" />
           </ToolbarBtn>
         </ToolbarGroup>
 
         <ToolbarGroup>
           <ToolbarBtn
-            title="Citacao"
+            title="Callout block"
             active={editor.isActive('blockquote')}
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
           >
-            <EditorIcon name="quote" />
+            <EditorIcon name="callout" />
           </ToolbarBtn>
           <ToolbarBtn
             title="Bloco de codigo"
@@ -1232,11 +1404,13 @@ function EditorToolbarAccessible({
           <ToolbarBtn title="Inserir tabela" onClick={insertTable} disabled={inTable}>
             <EditorIcon name="table" />
           </ToolbarBtn>
-          <IconUploadButton
-            canUpload={canUpload}
-            uploadingFiles={uploadingFiles}
-            onUploadFiles={onUploadFiles}
-          />
+          {variant === 'sheet' ? null : (
+            <IconUploadButton
+              canUpload={canUpload}
+              uploadingFiles={uploadingFiles}
+              onUploadFiles={onUploadFiles}
+            />
+          )}
         </ToolbarGroup>
 
         {tableTools}
@@ -1250,6 +1424,24 @@ function EditorToolbarAccessible({
               <EditorIcon name="print" />
             </ToolbarBtn>
           </ToolbarGroup>
+        ) : null}
+
+        {variant === 'sheet' ? (
+          <div className="ml-auto inline-flex items-center rounded-lg bg-[#ECF0F5] p-0.5">
+            {['edit', 'preview', 'split'].map((view, index) => (
+              <button
+                key={view}
+                type="button"
+                className={`rounded-md px-2.5 py-1 text-[11px] font-semibold ${
+                  index === 0
+                    ? 'bg-white text-navy-900 shadow-[0_1px_2px_rgba(15,35,66,.06)]'
+                    : 'text-navy-500 hover:text-navy-900'
+                }`}
+              >
+                {view}
+              </button>
+            ))}
+          </div>
         ) : null}
       </div>
 
