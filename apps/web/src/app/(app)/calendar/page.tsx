@@ -7,6 +7,7 @@ import { BentoGrid, CardTitle, DarkGlowCard, GlassCard } from '@/components/ui/b
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useItems } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
+import { CalendarBoard, EventSheet } from '@/components/calendar/calendar-board'
 
 const WEEKDAY_PT = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado']
 const MONTH_PT = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
@@ -98,20 +99,28 @@ function MonthCard({
   cursorYear,
   cursorMonth,
   todayKey,
+  selectedKey,
   events,
   items,
   onPrev,
   onNext,
   onToday,
+  onDayClick,
+  onEventClick,
+  onMaximize,
 }: {
   cursorYear: number
   cursorMonth: number
   todayKey: string
+  selectedKey: string
   events: CalendarEvent[]
   items: Item[]
   onPrev: () => void
   onNext: () => void
   onToday: () => void
+  onDayClick: (key: string) => void
+  onEventClick: (event: CalendarEvent) => void
+  onMaximize: () => void
 }) {
   const cells = useMemo(() => buildMonthCells(cursorYear, cursorMonth), [cursorYear, cursorMonth])
   const eventsMap = useMemo(() => eventsByDay(events), [events])
@@ -164,15 +173,25 @@ function MonthCard({
             </button>
           </div>
         </div>
-        <div className="inline-flex items-center gap-px rounded-full border border-white/55 bg-white/55 p-1 font-mono text-[10px] font-bold tracking-wider text-navy-500 shadow-cool-sm">
-          {(['DIA', 'SEM', 'MES', 'ANO'] as const).map((label) => (
-            <span
-              key={label}
-              className={`rounded-full px-2.5 py-1 ${label === 'MES' ? 'bg-white text-navy-900 shadow-cool-sm' : 'hover:text-navy-900'}`}
-            >
-              {label}
-            </span>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex items-center gap-px rounded-full border border-white/55 bg-white/55 p-1 font-mono text-[10px] font-bold tracking-wider text-navy-500 shadow-cool-sm">
+            {(['DIA', 'SEM', 'MES', 'ANO'] as const).map((label) => (
+              <span
+                key={label}
+                className={`rounded-full px-2.5 py-1 ${label === 'MES' ? 'bg-white text-navy-900 shadow-cool-sm' : 'hover:text-navy-900 cursor-pointer'}`}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+          <button onClick={onMaximize} className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/55 bg-white/55 text-navy-500 shadow-cool-sm transition-colors hover:bg-white hover:text-navy-900" title="Maximizar calendário">
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 3h6v6" />
+              <path d="M9 21H3v-6" />
+              <path d="M21 3l-7 7" />
+              <path d="M3 21l7-7" />
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -196,12 +215,15 @@ function MonthCard({
           return (
             <div
               key={i}
-              className={`relative flex min-h-[58px] flex-col gap-0.5 overflow-hidden rounded-[10px] p-1.5 ${
+              onClick={() => onDayClick(key)}
+              className={`relative flex min-h-[58px] flex-col gap-0.5 overflow-hidden rounded-[10px] p-1.5 cursor-pointer ${
                 isToday
                   ? 'border-[1.5px] border-navy-900 bg-white/92 shadow-[0_6px_16px_-8px_rgba(15,35,66,.30)]'
+                  : key === selectedKey
+                  ? 'border-[1.5px] border-brand-500 bg-white/80 shadow-[0_4px_12px_rgba(47,107,255,.2)]'
                   : isWeekend
-                    ? 'bg-white/35'
-                    : ''
+                    ? 'bg-white/35 hover:bg-white/50'
+                    : 'hover:bg-white/70'
               } ${!inMonth ? 'opacity-50' : ''}`}
             >
               {isToday ? (
@@ -216,7 +238,8 @@ function MonthCard({
               {visible.map((event, idx) => (
                 <span
                   key={event.id}
-                  className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight ${toneClass(eventTone(idx))}`}
+                  onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                  className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx))}`}
                   title={event.title}
                 >
                   {event.title}
@@ -273,14 +296,21 @@ function AgendaCard({
   events,
   items,
   now,
+  selectedDate,
   onItemClick,
+  onEventClick,
 }: {
   events: CalendarEvent[]
   items: Item[]
   now: Date
+  selectedDate: string
   onItemClick: (id: string) => void
+  onEventClick: (event: CalendarEvent) => void
 }) {
   const nowMs = now.getTime()
+  const isToday = selectedDate === toLocalDateKey(now)
+  const [y, m, d] = selectedDate.split('-').map(Number)
+  const displayDate = isToday ? 'hoje' : `${d?.toString().padStart(2, '0')}/${((m || 0) + 1).toString().padStart(2, '0')}`
   const rows = useMemo(() => {
     type Row = {
       key: string
@@ -310,6 +340,7 @@ function AgendaCard({
         done,
         isNow,
         starts: startMs,
+        onClick: () => onEventClick(event),
       })
     })
     items.forEach((item, i) => {
@@ -332,12 +363,12 @@ function AgendaCard({
   return (
     <GlassCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
       <div className="mb-3 flex items-center justify-between">
-        <CardTitle>agenda de hoje</CardTitle>
-        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{rows.length} itens</span>
+        <CardTitle>agenda</CardTitle>
+        <span className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-mono text-[10px] text-navy-500">{displayDate} · {rows.length} itens</span>
       </div>
       {rows.length === 0 ? (
         <div className="grid flex-1 place-items-center font-mono text-[11px] text-navy-500">
-          sem agenda hoje
+          sem agenda neste dia
         </div>
       ) : (
         <div className="relative flex-1 overflow-hidden pl-14">
@@ -585,17 +616,21 @@ export default function CalendarPage() {
   const { events } = useCalendarEvents(monthRange.from, monthRange.to)
 
   const todayKey = toLocalDateKey(now)
-  const todayEvents = useMemo(
-    () => events.filter((event) => toLocalDateKey(new Date(event.start)) === todayKey).sort((a, b) => a.start.localeCompare(b.start)),
-    [events, todayKey],
+  const [selectedDate, setSelectedDate] = useState<string>(todayKey)
+  const [fullscreen, setFullscreen] = useState(false)
+  const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
+
+  const selectedDayEvents = useMemo(
+    () => events.filter((event) => toLocalDateKey(new Date(event.start)) === selectedDate).sort((a, b) => a.start.localeCompare(b.start)),
+    [events, selectedDate],
   )
-  const todayItems = useMemo(
+  const selectedDayItems = useMemo(
     () =>
       items.filter((item) => {
         const key = item.dueDate ?? item.scheduledDate
-        return key === todayKey && item.status !== 'archived'
+        return key === selectedDate && item.status !== 'archived'
       }),
-    [items, todayKey],
+    [items, selectedDate],
   )
 
   const upcomingEvent = useMemo(() => {
@@ -636,6 +671,28 @@ export default function CalendarPage() {
     setCursor({ year: d.getFullYear(), month: d.getMonth() })
   }
 
+  if (fullscreen) {
+    return (
+      <div className="fixed inset-0 z-[200] bg-white">
+        <div className="absolute right-6 top-4 z-[210]">
+          <button
+            onClick={() => setFullscreen(false)}
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-navy-900/10 bg-white/80 text-navy-500 shadow-cool-sm backdrop-blur-md transition-colors hover:bg-white hover:text-navy-900"
+            title="Minimizar calendário"
+          >
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 14h6v6" />
+              <path d="M20 10h-6V4" />
+              <path d="M14 10l7-7" />
+              <path d="M3 21l7-7" />
+            </svg>
+          </button>
+        </div>
+        <CalendarBoard items={items} fullscreen={true} />
+      </div>
+    )
+  }
+
   return (
     <div className="px-4 pb-12 pt-3 lg:px-8 lg:pt-4">
       <BentoGrid className="lg:auto-rows-[140px]">
@@ -643,18 +700,31 @@ export default function CalendarPage() {
           cursorYear={cursor.year}
           cursorMonth={cursor.month}
           todayKey={todayKey}
+          selectedKey={selectedDate}
           events={events}
           items={items}
           onPrev={prev}
           onNext={next}
           onToday={goToday}
+          onDayClick={setSelectedDate}
+          onEventClick={setOpenEvent}
+          onMaximize={() => setFullscreen(true)}
         />
         <NowCard now={now} />
-        <AgendaCard events={todayEvents} items={todayItems} now={now} onItemClick={setSelectedItemId} />
+        <AgendaCard events={selectedDayEvents} items={selectedDayItems} now={now} selectedDate={selectedDate} onItemClick={setSelectedItemId} onEventClick={setOpenEvent} />
         <UpNextCard event={upcomingEvent} now={now} />
         <WeekLoadCard events={weekEvents} weekStart={weekStart} />
         <FocusBlocksCard events={weekEvents} weekStart={weekStart} />
       </BentoGrid>
+
+      {openEvent && (
+        <EventSheet
+          event={openEvent}
+          onSaved={() => setOpenEvent(null)}
+          onDeleted={() => setOpenEvent(null)}
+          onClose={() => setOpenEvent(null)}
+        />
+      )}
     </div>
   )
 }
