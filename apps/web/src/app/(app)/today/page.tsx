@@ -130,8 +130,8 @@ export default function TodayFocusedPage() {
   }
 
   return (
-    <main className="flex min-h-[calc(100vh-136px)] flex-col md:grid md:grid-cols-1">
-      <section className="relative flex min-h-0 flex-col overflow-hidden rounded-t-[26px] border-t border-white/70 bg-white/60 px-3 pt-4 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_-1px_0_rgba(15,35,66,.04)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-[20px] md:rounded-[28px] md:border md:bg-white/78 md:p-5">
+    <main className="mx-auto flex w-full max-w-5xl min-h-[calc(100vh-136px)] flex-col px-4 pb-6 lg:px-8">
+      <section className="relative flex min-h-0 flex-col overflow-hidden rounded-t-[26px] border-t border-white/70 bg-white/60 px-3 pt-3 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_-1px_0_rgba(15,35,66,.04)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-[20px] md:rounded-[28px] md:border md:bg-white/78 md:p-4">
         {/* Glow behind */}
         <div className="pointer-events-none absolute -right-[160px] -top-[160px] h-[420px] w-[420px] rounded-full opacity-72 blur-[20px]" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(123,91,255,.30), transparent 62%), radial-gradient(circle at 70% 70%, rgba(40,199,183,.28), transparent 62%)' }} />
         
@@ -139,27 +139,19 @@ export default function TodayFocusedPage() {
           <div className="overflow-auto px-4 py-5 md:px-8 md:py-7">
             
             {/* AGENDA SECTION */}
-            <section className="mb-8">
-              <div className="mb-3 flex items-center gap-2">
-                <div className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.14em] text-navy-500">
-                  <span className="h-1.5 w-1.5 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(40,199,183,.55)]" /> Agenda de hoje
-                </div>
-                <div className="font-mono text-[11px] font-semibold text-navy-300">{agendaEvents.length + todayItems.length} itens</div>
-                <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(15,35,66,.10),transparent_85%)]" />
-              </div>
+            <section className="mb-6">
               
               {agendaEvents.map(event => {
                 const isPast = new Date(event.start) < now
                 return (
-                  <article key={event.id} onClick={() => setOpenEvent(event)} className={`group relative mb-2.5 grid cursor-pointer grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-navy-900/[0.06] bg-white/60 p-3.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isPast ? 'opacity-50 grayscale hover:opacity-80' : ''}`}>
+                  <article key={event.id} onClick={() => setOpenEvent(event)} className={`group relative mb-2 grid cursor-pointer grid-cols-[56px_26px_minmax(0,1fr)_auto] items-center gap-3 rounded-[15px] border border-navy-900/[0.06] bg-white/60 p-2.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[80px_28px_minmax(0,1fr)_auto] md:p-3 ${isPast ? 'opacity-50 grayscale hover:opacity-80' : ''}`}>
                     <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:px-2 md:text-[13px]">{formatTime(event.start) || 'o dia'}</div>
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] text-white shadow-[0_3px_10px_rgba(47,107,255,.25)]">
                       <EventIcon />
                     </div>
                     <div className="min-w-0">
                       <div className="text-[14px] font-bold leading-snug tracking-tight text-navy-900 md:text-[16px]">{event.title}</div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
-                        <span className="rounded-full bg-[#2F6BFF]/10 px-2 py-0.5 font-bold text-[#2F6BFF]">Agenda</span>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
                         {event.start.startsWith(tomorrow) && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">amanhã</span>}
                       </div>
                     </div>
@@ -175,7 +167,7 @@ export default function TodayFocusedPage() {
                   ? 'grid-cols-[auto_28px_minmax(0,1fr)] md:grid-cols-[auto_30px_minmax(0,1fr)]'
                   : 'grid-cols-[28px_minmax(0,1fr)] md:grid-cols-[30px_minmax(0,1fr)]'
                 return (
-                  <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2.5 grid cursor-pointer select-none ${cols} items-center gap-3 rounded-[17px] border border-brand-500/20 bg-brand-500/[0.07] p-3.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2 grid cursor-pointer select-none ${cols} items-center gap-3 rounded-[15px] border border-brand-500/20 bg-brand-500/[0.07] p-2.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:p-3 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] bg-[linear-gradient(180deg,#2F6BFF,#28C7B7)]" />
                     {timed ? (
                       <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-2 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:text-[13px]">{item.dueTime}</div>
@@ -219,7 +211,7 @@ export default function TodayFocusedPage() {
                   const isOverdue = item.dueDate && item.dueDate < today
                   const isTempDone = temporarilyDone.has(item.id)
                   return (
-                    <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2.5 grid cursor-pointer select-none grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-navy-900/[0.06] bg-white/60 p-3.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2 grid cursor-pointer select-none grid-cols-[56px_26px_minmax(0,1fr)_auto] items-center gap-3 rounded-[15px] border border-navy-900/[0.06] bg-white/60 p-2.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[80px_28px_minmax(0,1fr)_auto] md:p-3 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
                       <div className={`whitespace-nowrap rounded-[10px] border px-1.5 py-1.5 text-center font-mono text-[11px] font-bold md:px-2 md:text-[13px] ${isOverdue ? 'border-red-500/20 bg-red-50 text-red-600' : 'border-navy-900/15 bg-navy-900/[0.07] text-navy-900'}`}>{item.status === 'doing' ? 'agora' : isOverdue ? 'atrasado' : 'prioridade'}</div>
                       <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
                         <TaskIcon done={isTempDone} />
