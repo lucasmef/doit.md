@@ -486,6 +486,16 @@ export function QuickCapture() {
   const [saving, setSaving] = useState(false)
   const [creatingFolder, setCreatingProject] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  // ID 029: no desktop o modal completo abre direto (compacto fica só para mobile).
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const update = () => setIsDesktop(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
   const [popover, setPopover] = useState<Popover>(null)
   const inputRef = useRef<TitleInputElement | null>(null)
   const setInputRef = useCallback((node: TitleInputElement | null) => {
@@ -959,7 +969,7 @@ export function QuickCapture() {
   if (editMode && !editItem) return null
 
   const saveDisabled = (isNote ? !titleFromNoteContent(contentMd) : !cleanTitle(title)) || saving
-  const isExpanded = editMode || expanded
+  const isExpanded = editMode || expanded || isDesktop
   const canSwitchMode =
     !isNote || contentMd.split(/\r?\n/).filter((line) => line.trim()).length <= 1
   const priorityConfig = PRIORITY_CONFIG[priority]
@@ -969,7 +979,7 @@ export function QuickCapture() {
 
   return (
     <div
-      className="fixed inset-0 isolate z-[100] flex items-end justify-center overflow-hidden bg-navy-900/24 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 isolate z-[100] flex items-end justify-center overflow-hidden bg-navy-900/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
@@ -1083,6 +1093,21 @@ export function QuickCapture() {
                       <path d="M6 6l12 12M18 6 6 18" />
                     </svg>
                   </button>
+                </div>
+              )}
+              {!isNote && !editMode && (
+                <div className="shrink-0 border-b border-navy-900/[0.04] px-5 pb-3 pt-3">
+                  <CaptureModeTabs
+                    mode="task"
+                    onModeChange={(nextMode) => {
+                      if (nextMode === 'event') {
+                        openCapture('event', dueDate || null)
+                        return
+                      }
+                      openCapture(nextMode)
+                      handleComplexityChange(nextMode)
+                    }}
+                  />
                 </div>
               )}
               {isNote && !editMode && (

@@ -130,6 +130,27 @@ export default function TodayFocusedPage() {
     return list
   }, [items, today])
 
+  // ID 020: lista unificada de tarefas/notas (hoje + foco/atrasados, sem duplicar) ordenada por:
+  // 1) com horário (por horário) → 2) prioridade alta → média → baixa → 3) sem prioridade (recentes primeiro).
+  // Eventos da agenda são renderizados antes desta lista. P4 conta como "sem prioridade".
+  const focusItems = useMemo(() => {
+    const byId = new Map<string, Item>()
+    for (const i of [...priorityItems, ...todayItems]) byId.set(i.id, i)
+    const list = Array.from(byId.values())
+    const prioRank = (i: Item) => (i.priority && i.priority < 4 ? i.priority : 99)
+    list.sort((a, b) => {
+      const aHas = Boolean(a.dueTime)
+      const bHas = Boolean(b.dueTime)
+      if (aHas !== bHas) return aHas ? -1 : 1
+      if (aHas && bHas) return (a.dueTime ?? '').localeCompare(b.dueTime ?? '')
+      const pa = prioRank(a)
+      const pb = prioRank(b)
+      if (pa !== pb) return pa - pb
+      return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
+    })
+    return list
+  }, [priorityItems, todayItems])
+
   // Counts for sidebar
   const todayCount = todayItems.length + agendaEvents.length
   const openCount = items.filter(i => i.status !== 'done').length
@@ -168,14 +189,16 @@ export default function TodayFocusedPage() {
     const isTempDone = temporarilyDone.has(item.id)
     const styleType = getTaskStyle(item)
     const isSelected = selectedItemId === item.id
-    
+    // ID 020: barra lateral por prioridade (1=alta/vermelho, 2=média/laranja, 3=baixa/amarelo, demais=neutro).
+    const prioClass = item.priority && item.priority < 4 ? `prio-${item.priority}` : 'prio-0'
+
     return (
-      <TaskArticle 
-        key={item.id} 
-        item={item} 
-        disabled={isTempDone} 
-        onOpen={setSingleSelection} 
-        className={`row ${styleType} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
+      <TaskArticle
+        key={item.id}
+        item={item}
+        disabled={isTempDone}
+        onOpen={setSingleSelection}
+        className={`row ${styleType} ${prioClass} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
       >
         <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
         <button 
@@ -235,7 +258,7 @@ export default function TodayFocusedPage() {
   const allItemsEmpty = agendaEvents.length === 0 && todayItems.length === 0 && priorityItems.length === 0
 
   return (
-    <div className="today-v3-layout flex-1 w-full h-full flex flex-col">
+    <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
       <div className="mobile-filters px-4 pt-2">
         {['Hoje', 'Agenda', 'Tarefas', 'Atrasados'].map(f => (
           <div 
@@ -330,9 +353,8 @@ export default function TodayFocusedPage() {
                 <div className="p-8 text-center text-sm text-gray-500 font-medium">Tudo limpo por hoje!</div>
               ) : (
                 <>
-                  {priorityItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
                   {agendaEvents.map(renderEvent)}
-                  {todayItems.map(item => renderTask(item))}
+                  {focusItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
                 </>
               )}
             </div>

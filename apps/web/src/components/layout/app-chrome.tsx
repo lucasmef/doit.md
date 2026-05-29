@@ -31,11 +31,11 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
 
       <div className="relative z-10 flex min-h-screen flex-col text-navy-900">
         <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-1 flex-col p-0 lg:p-7">
-          <div className="sticky top-0 z-50 lg:top-7 lg:mb-6">
+          <div className="sticky top-0 z-50 lg:top-7 lg:mb-4">
             <Topbar />
           </div>
           <NotificationFailureBanner />
-          <div className="flex flex-1 pt-5 lg:pt-0">
+          <div className="flex flex-1 pt-3 lg:pt-0">
             <main className={`flex-1 lg:pb-0 ${isCalendar ? 'pb-0' : 'pb-[calc(7rem+env(safe-area-inset-bottom))]'}`}>
               {children}
             </main>

@@ -19,6 +19,8 @@ export type Preferences = {
   theme: ThemePreference
   sidebarCollapsed: boolean
   pinnedFolderIds: string[]
+  /** Ordenação escolhida por pasta (ID 026). Chave = folderId ou 'root'; valor = SortKey. */
+  folderSort: Record<string, string>
   calendarWeekStartsOn: CalendarWeekStart
   defaultCalendarId: string
   defaultCalendarEventDurationMinutes: number
@@ -45,6 +47,7 @@ const DEFAULTS: Preferences = {
   theme: 'system',
   sidebarCollapsed: false,
   pinnedFolderIds: [],
+  folderSort: {},
   calendarWeekStartsOn: 'monday',
   defaultCalendarId: 'primary',
   defaultCalendarEventDurationMinutes: 30,
@@ -121,6 +124,10 @@ function read(): Preferences {
       pinnedFolderIds: Array.isArray(parsed.pinnedFolderIds)
         ? parsed.pinnedFolderIds.filter((id): id is string => typeof id === 'string')
         : [],
+      folderSort:
+        parsed.folderSort && typeof parsed.folderSort === 'object' && !Array.isArray(parsed.folderSort)
+          ? (parsed.folderSort as Record<string, string>)
+          : {},
       calendarWeekStartsOn,
       defaultCalendarId,
       defaultCalendarEventDurationMinutes,

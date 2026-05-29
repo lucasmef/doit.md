@@ -591,11 +591,19 @@ function ItemContextMenuContent({
     closeContextMenu()
   }
 
+  // ID 009: o menu (long press mobile / clique direito desktop) deixa claro qual item está selecionado:
+  // mostra o tipo + título sempre, não só no mobile.
+  const headerTypeLabel = targetItem.complexity === 'note' ? 'Nota' : 'Tarefa'
   const mobileHeader = (
     <>
       <div className="md:hidden mx-auto mb-3 h-1 w-12 rounded-full bg-navy-900/15" />
-      <div className="md:hidden px-1 pb-3 mb-2 border-b border-navy-900/10">
-        <b className="block text-[15px] tracking-tight truncate">{single ? targetItem.title : `${ids.length} itens`}</b>
+      <div className="px-1 pb-3 mb-2 border-b border-navy-900/10">
+        <span className="mb-0.5 block font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-brand-600">
+          {single ? headerTypeLabel : 'Seleção'}
+        </span>
+        <b className="block text-[15px] tracking-tight truncate md:text-[14px]">
+          {single ? (targetItem.title.trim() || 'Sem título') : `${ids.length} itens`}
+        </b>
         <span className="mt-1 block font-mono text-[10px] text-navy-500 truncate">
           {single ? (targetItem.tags?.length ? targetItem.tags.map(t => `#${t}`).join(', ') : 'Sem tags') : 'Múltiplos itens selecionados'}
         </span>

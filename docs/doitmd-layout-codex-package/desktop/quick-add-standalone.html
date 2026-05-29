@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<title>doit.md - quick add standalone</title>
+<style>
+
+:root {
+  --c-navy:#0F2342;
+  --c-blue:#2F6BFF;
+  --c-teal:#28C7B7;
+  --c-violet:#7B5BFF;
+  --c-cyan:#1AAED7;
+  --c-pink:#FF6FAE;
+  --c-amber:#F5A524;
+  --c-danger:#F04438;
+  --c-gray-50:#ECF0F5;
+  --c-gray-100:#D9E1EA;
+  --c-gray-200:#B6C2D2;
+  --c-gray-500:#46587A;
+  --c-gray-700:#1F3559;
+  --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r-card:28px;
+  --r-inner:18px;
+  --r-pill:999px;
+  --shadow-card:
+    0 1px 0 rgba(255,255,255,.70) inset,
+    0 -1px 0 rgba(15,35,66,.04) inset,
+    0 18px 40px -16px rgba(15,35,66,.18),
+    0 4px 12px rgba(15,35,66,.06);
+  --shadow-float:
+    0 34px 90px -42px rgba(15,35,66,.58),
+    0 10px 26px rgba(15,35,66,.10),
+    0 1px 0 rgba(255,255,255,.76) inset;
+}
+* { box-sizing:border-box; }
+html,body { margin:0; min-height:100%; }
+body {
+  font-family:var(--font-sans);
+  color:var(--c-navy);
+  background:#f4f1ff;
+}
+.wallpaper {
+  position:fixed;
+  inset:0;
+  z-index:0;
+  background:
+    radial-gradient(900px 700px at 12% 20%, rgba(123,91,255,.55), transparent 60%),
+    radial-gradient(800px 600px at 88% 14%, rgba(255,137,235,.42), transparent 62%),
+    radial-gradient(900px 800px at 78% 78%, rgba(40,199,183,.50), transparent 60%),
+    radial-gradient(1000px 900px at 18% 95%, rgba(47,107,255,.55), transparent 62%),
+    linear-gradient(135deg,#B7C9FF 0%,#DDD6FE 35%,#FBC9F0 60%,#CFF3EE 100%);
+}
+.wallpaper::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(255,255,255,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.08) 1px, transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(circle at center, black, transparent 75%);
+}
+.shell {
+  position:relative;
+  z-index:1;
+  width:min(1280px, calc(100vw - 48px));
+  min-height:100vh;
+  margin:0 auto;
+  padding:32px 0 56px;
+}
+.header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:26px;
+}
+.brand {
+  display:inline-flex;
+  align-items:center;
+  gap:12px;
+  border:1px solid rgba(255,255,255,.68);
+  background:rgba(255,255,255,.58);
+  border-radius:var(--r-pill);
+  padding:8px 16px 8px 8px;
+  box-shadow:var(--shadow-card);
+  backdrop-filter:blur(16px) saturate(180%);
+}
+.brand-mark {
+  width:32px;
+  height:32px;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--c-blue),var(--c-violet) 54%,var(--c-teal));
+}
+.brand b {
+  font-size:16px;
+  letter-spacing:-.03em;
+}
+.brand b span { color:var(--c-blue); }
+.nav-note {
+  border:1px solid rgba(255,255,255,.68);
+  background:rgba(255,255,255,.58);
+  border-radius:var(--r-pill);
+  padding:10px 15px;
+  color:var(--c-gray-500);
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:650;
+  box-shadow:var(--shadow-card);
+  backdrop-filter:blur(16px) saturate(180%);
+}
+.stage {
+  border-radius:34px;
+  background:rgba(255,255,255,.34);
+  border:1px solid rgba(255,255,255,.56);
+  box-shadow:var(--shadow-card);
+  backdrop-filter:blur(18px) saturate(180%);
+  padding:34px;
+}
+.title-block {
+  margin-bottom:24px;
+}
+.title-block h1 {
+  margin:0 0 8px;
+  font-size:38px;
+  line-height:1;
+  letter-spacing:-.055em;
+}
+.title-block p {
+  margin:0;
+  max-width:740px;
+  color:var(--c-gray-500);
+  font-size:14px;
+  line-height:1.5;
+}
+.icon {
+  width:18px;
+  height:18px;
+  display:inline-block;
+}
+
+
+.qa-demo {
+  display:grid;
+  grid-template-columns:1fr 430px;
+  gap:28px;
+  align-items:center;
+}
+.quick-card {
+  border-radius:28px;
+  background:rgba(255,255,255,.84);
+  border:1px solid rgba(255,255,255,.78);
+  box-shadow:var(--shadow-float);
+  padding:12px;
+  backdrop-filter:blur(24px) saturate(180%);
+}
+.mode-tabs {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:7px;
+  padding:5px;
+  border-radius:20px;
+  background:rgba(15,35,66,.045);
+  margin-bottom:12px;
+}
+.mode {
+  min-height:46px;
+  border:0;
+  border-radius:16px;
+  background:transparent;
+  color:var(--c-gray-500);
+  display:grid;
+  place-items:center;
+}
+.mode.active {
+  color:var(--c-blue);
+  background:rgba(47,107,255,.10);
+  box-shadow:0 2px 0 var(--c-blue);
+}
+.mode svg {
+  width:22px;
+  height:22px;
+}
+.input-row {
+  display:grid;
+  grid-template-columns:1fr 46px 46px;
+  gap:8px;
+  align-items:center;
+}
+.quick-input {
+  height:54px;
+  border-radius:18px;
+  border:1px solid rgba(15,35,66,.07);
+  background:rgba(255,255,255,.90);
+  padding:0 17px;
+  outline:0;
+  color:var(--c-navy);
+  font-family:var(--font-sans);
+  font-size:16px;
+  font-weight:720;
+  box-shadow:0 1px 0 rgba(255,255,255,.85) inset,0 10px 24px -20px rgba(15,35,66,.42);
+}
+.icon-button {
+  height:46px;
+  border:0;
+  border-radius:16px;
+  color:var(--c-navy);
+  background:rgba(15,35,66,.055);
+  display:grid;
+  place-items:center;
+}
+.icon-button.primary {
+  color:#fff;
+  background:linear-gradient(135deg,var(--c-blue),var(--c-violet));
+}
+.icon-button svg {
+  width:19px;
+  height:19px;
+}
+.detected-inline {
+  min-height:18px;
+  margin:7px 5px 0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:var(--c-gray-500);
+  font-family:var(--font-mono);
+  font-size:10.5px;
+  line-height:1.35;
+}
+.detected-inline .dot {
+  width:5px;
+  height:5px;
+  border-radius:999px;
+  background:var(--c-teal);
+  box-shadow:0 0 7px rgba(40,199,183,.85);
+}
+.detected-inline b {
+  color:var(--c-navy);
+  font-weight:850;
+}
+.large-modal {
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:none;
+  place-items:center;
+  background:rgba(15,35,66,.22);
+  backdrop-filter:blur(12px);
+}
+.large-modal.open { display:grid; }
+.modal-card {
+  width:min(620px, calc(100vw - 32px));
+  border-radius:30px;
+  background:rgba(255,255,255,.90);
+  border:1px solid rgba(255,255,255,.80);
+  box-shadow:var(--shadow-float);
+  overflow:hidden;
+}
+.modal-head {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:18px 20px 14px;
+  border-bottom:1px solid rgba(15,35,66,.07);
+}
+.modal-icon {
+  width:38px;
+  height:38px;
+  border-radius:14px;
+  background:linear-gradient(135deg,var(--c-blue),var(--c-violet));
+}
+.modal-title { flex:1; }
+.modal-title b { display:block; font-size:15px; }
+.modal-title span { display:block; margin-top:4px; font-family:var(--font-mono); font-size:10px; color:var(--c-gray-500); text-transform:uppercase; letter-spacing:.08em; }
+.close-btn {
+  width:32px;
+  height:32px;
+  border:0;
+  border-radius:11px;
+  background:rgba(15,35,66,.055);
+  color:var(--c-gray-500);
+}
+.modal-body {
+  padding:18px 20px;
+}
+.field-label {
+  margin-bottom:8px;
+  color:var(--c-gray-500);
+  font-family:var(--font-mono);
+  font-size:10px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+}
+.modal-input {
+  width:100%;
+  height:52px;
+  border-radius:18px;
+  border:1px solid rgba(15,35,66,.08);
+  background:rgba(255,255,255,.86);
+  padding:0 16px;
+  outline:0;
+  color:var(--c-navy);
+  font-family:var(--font-sans);
+  font-size:16px;
+  font-weight:720;
+}
+.form-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:14px;
+}
+.select-like {
+  min-height:44px;
+  border-radius:15px;
+  border:1px solid rgba(15,35,66,.08);
+  background:rgba(255,255,255,.72);
+  padding:0 13px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size:13px;
+  font-weight:700;
+}
+.select-like small { color:var(--c-gray-500); font-family:var(--font-mono); font-size:10px; }
+.modal-footer {
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:10px;
+  padding:14px 20px 18px;
+  border-top:1px solid rgba(15,35,66,.07);
+}
+.btn {
+  min-height:40px;
+  border:0;
+  border-radius:999px;
+  padding:0 16px;
+  font-weight:800;
+}
+.btn.ghost { background:rgba(15,35,66,.055); color:var(--c-gray-500); }
+.btn.primary { background:linear-gradient(135deg,var(--c-blue),var(--c-violet)); color:#fff; }
+.phone {
+  width:412px;
+  height:858px;
+  border-radius:56px;
+  background:#0a0a0a;
+  padding:12px;
+  box-shadow:0 0 0 2px rgba(255,255,255,.06) inset,0 0 0 6px #1a1a1a,0 50px 100px -30px rgba(15,35,66,.45);
+}
+.screen {
+  position:relative;
+  height:100%;
+  border-radius:44px;
+  overflow:hidden;
+  background:
+    radial-gradient(500px 420px at 10% 16%, rgba(123,91,255,.32), transparent 60%),
+    radial-gradient(520px 460px at 88% 20%, rgba(255,137,235,.28), transparent 62%),
+    radial-gradient(500px 480px at 76% 82%, rgba(40,199,183,.26), transparent 60%),
+    linear-gradient(135deg,#EEF3FF 0%,#F4F1FF 54%,#ECF7F4 100%);
+}
+.phone-content {
+  position:absolute;
+  inset:0;
+  padding:84px 16px 160px;
+  filter:blur(5px);
+  opacity:.46;
+}
+.blur-row {
+  height:58px;
+  border-radius:18px;
+  background:rgba(255,255,255,.64);
+  margin-bottom:12px;
+}
+.quick-sheet {
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  border-radius:30px 30px 0 0;
+  background:rgba(255,255,255,.92);
+  border:1px solid rgba(255,255,255,.76);
+  box-shadow:0 -28px 70px -36px rgba(15,35,66,.64);
+  backdrop-filter:blur(24px) saturate(180%);
+  padding:10px 14px 20px;
+}
+.handle {
+  width:48px;
+  height:5px;
+  border-radius:999px;
+  background:rgba(15,35,66,.14);
+  margin:0 auto 14px;
+}
+@media (max-width:1000px) {
+  .qa-demo { grid-template-columns:1fr; }
+  .phone { justify-self:center; }
+}
+
+</style>
+</head>
+<body>
+<div class="wallpaper" aria-hidden="true"></div>
+<main class="shell">
+  <header class="header">
+    <div class="brand"><div class="brand-mark"></div><b>doit<span>.md</span></b></div>
+    <div class="nav-note">standalone html · pronto para Codex</div>
+  </header>
+  
+<section class="stage">
+  <div class="title-block">
+    <h1>Quick add compacto</h1>
+    <p>Uma linha para digitar, data detectada em texto mínimo abaixo e botão para abrir o modal completo quando precisar de mais campos.</p>
+  </div>
+  <div class="qa-demo">
+    <div>
+      
+<div class="quick-card">
+  <div class="mode-tabs">
+    <button class="mode active" aria-label="Tarefa"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg></button>
+    <button class="mode" aria-label="Nota"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></button>
+    <button class="mode" aria-label="Evento"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v3M17 3v3M4 8h16"/><rect x="4" y="5" width="16" height="16" rx="2"/></svg></button>
+  </div>
+  <div class="input-row">
+    <input class="quick-input" value="Revisar layout amanhã 8 horas">
+    <button class="icon-button" id="openAdvanced" title="Abrir modal completo"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M9 21H3v-6M14 10 3 21"/></svg></button>
+    <button class="icon-button primary" title="Adicionar"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <div class="detected-inline">
+    <span class="dot"></span>
+    <span>Detectado: <b>amanhã</b> · <b>08:00</b></span>
+  </div>
+</div>
+
+    </div>
+    <div class="phone">
+      <div class="screen">
+        <div class="phone-content">
+          <div class="blur-row"></div><div class="blur-row"></div><div class="blur-row"></div><div class="blur-row"></div><div class="blur-row"></div>
+        </div>
+        <div class="quick-sheet">
+          <div class="handle"></div>
+          
+<div class="quick-card">
+  <div class="mode-tabs">
+    <button class="mode active" aria-label="Tarefa"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg></button>
+    <button class="mode" aria-label="Nota"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/></svg></button>
+    <button class="mode" aria-label="Evento"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3v3M17 3v3M4 8h16"/><rect x="4" y="5" width="16" height="16" rx="2"/></svg></button>
+  </div>
+  <div class="input-row">
+    <input class="quick-input" value="Revisar layout amanhã 8 horas">
+    <button class="icon-button" id="openAdvanced" title="Abrir modal completo"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M10 14 21 3M9 21H3v-6M14 10 3 21"/></svg></button>
+    <button class="icon-button primary" title="Adicionar"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <div class="detected-inline">
+    <span class="dot"></span>
+    <span>Detectado: <b>amanhã</b> · <b>08:00</b></span>
+  </div>
+</div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="large-modal" id="advancedModal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-head">
+      <div class="modal-icon"></div>
+      <div class="modal-title"><b>Adicionar tarefa completa</b><span>quando o quick add não for suficiente</span></div>
+      <button class="close-btn" id="closeAdvanced"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="field-label">Tarefa</div>
+      <input class="modal-input" value="Revisar layout amanhã 8 horas">
+      <div class="detected-inline">
+        <span class="dot"></span>
+        <span>Detectado: <b>amanhã</b> · <b>08:00</b></span>
+      </div>
+      <div class="form-grid">
+        <div>
+          <div class="field-label">Pasta</div>
+          <div class="select-like"><span>doit.md</span><small>⌄</small></div>
+        </div>
+        <div>
+          <div class="field-label">Prioridade</div>
+          <div class="select-like"><span>Alta</span><small>⌄</small></div>
+        </div>
+        <div>
+          <div class="field-label">Tags</div>
+          <div class="select-like"><span>#design, #mobile</span><small>editar</small></div>
+        </div>
+        <div>
+          <div class="field-label">Recorrência</div>
+          <div class="select-like"><span>Nenhuma</span><small>⌄</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn ghost" id="cancelAdvanced">Cancelar</button>
+      <button class="btn primary">Criar tarefa</button>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+const modal = document.getElementById('advancedModal');
+document.querySelectorAll('#openAdvanced').forEach(btn => {
+  btn.addEventListener('click', () => {
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+  });
+});
+['closeAdvanced','cancelAdvanced'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', () => {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  });
+});
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+});
+</script>
+
+</body>
+</html>
