@@ -11,6 +11,7 @@ import {
 } from '@/hooks/use-calendar-events'
 import { CalendarGrid } from '@/components/ui/calendar-grid'
 import { useUI } from '@/store/ui'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 import { useToast } from '@/components/ui/toast'
 import { usePreferences, type CalendarWeekStart } from '@/hooks/use-preferences'
 
@@ -955,6 +956,9 @@ export function EventSheet({
   const [endTime, setEndTime] = useState(toTimeInput(event.end, event.allDay))
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Esc fecha o painel do evento mesmo sem foco interno (ID 010).
+  useEscapeClose(true, onClose)
 
   async function handleSubmit(submitEvent: React.FormEvent) {
     submitEvent.preventDefault()

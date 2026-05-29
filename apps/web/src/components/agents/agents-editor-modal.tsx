@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { saveAgentsInstructions, useAgentsInstructions } from '@/hooks/use-agents'
 import { useToast } from '@/components/ui/toast'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 
 const DEFAULT_CONTENT = `# AGENTS.md
 
@@ -29,6 +30,9 @@ export function AgentsEditorModal({
     if (!open) return
     setValue(content || DEFAULT_CONTENT)
   }, [content, open])
+
+  // Esc fecha o editor de AGENTS.md mesmo sem foco interno (ID 010).
+  useEscapeClose(open, onClose)
 
   if (!open) return null
 
