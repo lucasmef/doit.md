@@ -2,10 +2,11 @@
 
 import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type { Folder, Item, UpdateItemInput } from '@doit/types'
 import { buildFolderTree, useFolders, type FolderTreeNode } from '@/hooks/use-folders'
 import { updateItem, useItems } from '@/hooks/use-items'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 import { MarkdownEditor } from '@/components/items/markdown-editor'
 import { findRelatedNotesInFolder, type RelatedNote } from '@/lib/note-relations'
 
@@ -672,11 +673,15 @@ function EditorTopBar({
 
 export default function NoteEditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const searchParams = useSearchParams()
+  const folderParam = searchParams.get('folder')
   const router = useRouter()
   const { items, isLoading } = useItems()
   const { folders } = useFolders()
 
   const item = useMemo(() => items.find((it) => it.id === id), [items, id])
+
+
 
   const itemCounts = useMemo(() => {
     const counts = new Map<string, number>()
@@ -691,6 +696,11 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [hydrated, setHydrated] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+  
+  useEscapeClose(!focusMode, () => {
+    if (folderParam) router.push(`/notas?folder=${folderParam}`)
+    else router.push('/notas')
+  })
   const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {

@@ -377,7 +377,7 @@ function RootFolderCard({
     <button
       type="button"
       onClick={() => onOpen(folder.id)}
-      className="group flex items-center gap-3 rounded-[18px] border border-white/70 bg-white/72 p-3.5 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+      className="group flex items-center gap-3 rounded-[18px] border border-white/70 bg-white/90 p-3.5 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${pinned ? 'bg-warning/15 text-[#B47410]' : 'bg-brand-500/10 text-brand-600'}`}>
         {pinned ? <StarGlyph filled className="h-5 w-5" /> : <FolderGlyph className="h-5 w-5" />}
@@ -440,7 +440,8 @@ function NotasBrowser() {
   const childFolders = node?.children ?? []
   const breadcrumb = useMemo(() => buildBreadcrumb(folders, selectedId), [folders, selectedId])
   const isPinned = selectedId ? prefs.pinnedFolderIds.includes(selectedId) : false
-  const viewMode: 'kanban' | 'list' = selectedFolder?.viewMode === 'kanban' ? 'kanban' : 'list'
+  const viewMode: 'kanban' | 'list' =
+    selectedFolder?.viewMode === 'kanban' && childFolders.length > 0 ? 'kanban' : 'list'
 
   // expand ancestors of the selected folder
   useEffect(() => {
@@ -567,9 +568,7 @@ function NotasBrowser() {
   // Conteúdo do navegador de pastas, reutilizado na sidebar (desktop) e no drawer (mobile).
   const folderNavContent = (
     <>
-      <div className="border-b border-navy-900/[0.07] px-5 pb-3.5 pt-5">
-        <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.12em] text-navy-500">Navegador</div>
-        <div className="mb-3.5 mt-1.5 text-[24px] font-black -tracking-[.045em] text-navy-900">Pastas</div>
+      <div className="border-b border-navy-900/[0.07] px-5 pb-3.5 pt-3.5">
         <label className="flex min-h-[42px] items-center gap-2 rounded-[15px] border border-navy-900/[0.07] bg-white/72 px-3">
           <svg className="h-4 w-4 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
