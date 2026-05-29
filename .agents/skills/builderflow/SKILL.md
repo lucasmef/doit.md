@@ -399,6 +399,23 @@ Do not mark a frontend-impacting task as done until the local server run, manual
 
 If the server cannot be started, the browser cannot be tested, or screenshots cannot be captured, mark the spec as `blocked` or `review`, explain the reason, and do not claim the frontend validation passed.
 
+### Visual proof screenshots and global copy
+
+Applies to every agent (Codex, Gemini, Antigravity, Claude).
+
+When a code fix has visual impact (layout, navigation, visual states, forms, screens) and the result must be proven, generate a screenshot of the fixed screen and save it in two places:
+
+1. In the project: `specs/artifacts/<short-slug>/` (the location already used for evidence).
+2. In the global folder: `G:\Meu Drive\.agentes` (save directly in the root of that folder). Create the folder if it does not exist.
+
+File name (simple convention, not rigid): `<project>-<screen|area>-<YYYY-MM-DD>[-n].png` — e.g. `doitmd-today-2026-05-29.png`. The name must make clear which project/screen/fix the screenshot proves.
+
+Only generate a screenshot when the change actually affects a visible UI and needs proof. Pure logic, infra, tests, or build changes do not require a screenshot.
+
+Sensitive data: prefer seeded/test data; avoid exposing real personal data, emails, tokens, or secrets in the screenshot; redact when necessary.
+
+If `G:\Meu Drive\.agentes` cannot be created or written in the session, record that in the living spec and proceed with the in-project evidence (do not block the task).
+
 ---
 
 ## Git and deploy policy
