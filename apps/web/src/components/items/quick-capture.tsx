@@ -977,10 +977,13 @@ export function QuickCapture() {
       }}
       {...swipeHandlers}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_700px_at_12%_20%,rgba(123,91,255,.55),transparent_60%),radial-gradient(800px_600px_at_88%_14%,rgba(255,111,174,.34),transparent_62%),radial-gradient(900px_800px_at_78%_78%,rgba(40,199,183,.44),transparent_60%),radial-gradient(1000px_900px_at_18%_95%,rgba(47,107,255,.46),transparent_62%),linear-gradient(135deg,#B7C9FF_0%,#DDD6FE_35%,#FBC9F0_60%,#CFF3EE_100%)] opacity-95"
-      />
+      {/* Aurora só no modo expandido; no compacto usa backdrop neutro p/ ficar esbranquiçado (ID 015). */}
+      {isExpanded ? (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(900px_700px_at_12%_20%,rgba(123,91,255,.55),transparent_60%),radial-gradient(800px_600px_at_88%_14%,rgba(255,111,174,.34),transparent_62%),radial-gradient(900px_800px_at_78%_78%,rgba(40,199,183,.44),transparent_60%),radial-gradient(1000px_900px_at_18%_95%,rgba(47,107,255,.46),transparent_62%),linear-gradient(135deg,#B7C9FF_0%,#DDD6FE_35%,#FBC9F0_60%,#CFF3EE_100%)] opacity-95"
+        />
+      ) : null}
       <div
         className={
           isExpanded
@@ -989,7 +992,7 @@ export function QuickCapture() {
                   ? `h-full max-h-none rounded-none border-0 bg-white sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
                   : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[30px]'
               }`
-            : 'relative w-full max-w-[500px] overflow-hidden bg-white/92 backdrop-blur-[24px] p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:pb-3 sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
+            : 'relative w-full max-w-[500px] overflow-hidden bg-white p-3 pb-[calc(1rem+env(safe-area-inset-bottom))] rounded-t-[30px] border border-white/76 shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] sm:rounded-[28px] sm:pb-3 sm:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset]'
         }
       >
         <form
@@ -1005,7 +1008,7 @@ export function QuickCapture() {
                 aria-label="Expandir"
                 title="Expandir"
               />
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3">
                 <CaptureModeTabs
                   mode={isNote ? 'note' : 'task'}
                   onModeChange={(nextMode) => {
@@ -1022,6 +1025,7 @@ export function QuickCapture() {
               <div className="flex items-center gap-2 rounded-[20px] border border-white/70 bg-white/76 p-1.5 shadow-cool-sm backdrop-blur-md">
                 <input
                   ref={setInputRef}
+                  autoFocus
                   value={title}
                   onChange={(e) => {
                     applyTitleShortcuts(e.target.value)
