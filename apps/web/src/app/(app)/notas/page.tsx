@@ -74,28 +74,6 @@ function isLargeNote(item: Item): boolean {
   return item.complexity === 'note' && stripMarkdown(item.contentMd).length > LARGE_NOTE_CHARS
 }
 
-function typeLabel(item: Item): string {
-  if (item.complexity === 'note') return isLargeNote(item) ? 'nota grande' : 'nota'
-  if (item.complexity === 'task') return item.calendarEventId || item.googleEventId ? 'evento' : 'tarefa'
-  if (item.complexity === 'capture') return 'captura'
-  if (item.complexity === 'document') return 'arquivo md'
-  if (item.complexity === 'project') return 'projeto'
-  return 'item'
-}
-
-function typeToneClass(item: Item): string {
-  switch (item.complexity) {
-    case 'note':
-      return 'text-brand-600'
-    case 'task':
-      return item.calendarEventId || item.googleEventId ? 'text-[#B47410]' : 'text-teal-600'
-    case 'document':
-      return 'text-violet-500'
-    default:
-      return 'text-navy-500'
-  }
-}
-
 function formatRelative(iso: string): string {
   const time = new Date(iso).getTime()
   if (!Number.isFinite(time)) return ''
