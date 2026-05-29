@@ -151,6 +151,34 @@ export default function TodayFocusedPage() {
     return list
   }, [priorityItems, todayItems])
 
+  // Mini-calendário dinâmico da sidebar (mês atual, início na segunda, hoje destacado, dias com conteúdo).
+  const datesWithContent = useMemo(() => {
+    const set = new Set<string>()
+    for (const it of items) {
+      if (it.status === 'done') continue
+      if (it.dueDate) set.add(it.dueDate)
+      if (it.scheduledDate) set.add(it.scheduledDate)
+    }
+    for (const e of events) {
+      const key = e.start?.slice(0, 10)
+      if (key) set.add(key)
+    }
+    return set
+  }, [items, events])
+
+  const miniDays = useMemo(() => {
+    const [y, m] = today.split('-').map(Number)
+    const year = y ?? new Date().getFullYear()
+    const month = (m ?? 1) - 1
+    const first = new Date(year, month, 1)
+    const offset = (first.getDay() + 6) % 7 // semana começando na segunda-feira
+    const start = new Date(year, month, 1 - offset)
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)
+      return { key: toLocalDateKey(d), day: d.getDate(), inMonth: d.getMonth() === month }
+    })
+  }, [today])
+
   // Counts for sidebar
   const todayCount = todayItems.length + agendaEvents.length
   const openCount = items.filter(i => i.status !== 'done').length
@@ -283,17 +311,18 @@ export default function TodayFocusedPage() {
               <b>Calendário</b>
               <span>mês</span>
             </div>
-            {/* Simple static calendar representation for now */}
             <div className="week">
-              <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+              <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
             </div>
             <div className="days">
-              <div className="day out">26</div><div className="day out">27</div><div className="day out">28</div><div className="day out">29</div><div className="day out">30</div><div className="day">01</div><div className="day">02</div>
-              <div className="day">03</div><div className="day">04</div><div className="day">05</div><div className="day">06</div><div className="day has-items">07</div><div className="day">08</div><div className="day">09</div>
-              <div className="day">10</div><div className="day">11</div><div className="day has-items">12</div><div className="day">13</div><div className="day">14</div><div className="day">15</div><div className="day">16</div>
-              <div className="day">17</div><div className="day">18</div><div className="day">19</div><div className="day">20</div><div className="day">21</div><div className="day">22</div><div className="day">23</div>
-              <div className="day">24</div><div className="day">25</div><div className="day active has-items">26</div><div className="day">27</div><div className="day">28</div><div className="day">29</div><div className="day">30</div>
-              <div className="day">31</div><div className="day out">01</div><div className="day out">02</div><div className="day out">03</div><div className="day out">04</div><div className="day out">05</div><div className="day out">06</div>
+              {miniDays.map((d) => (
+                <div
+                  key={d.key}
+                  className={`day${d.inMonth ? '' : ' out'}${d.key === today ? ' active' : ''}${datesWithContent.has(d.key) ? ' has-items' : ''}`}
+                >
+                  {String(d.day).padStart(2, '0')}
+                </div>
+              ))}
             </div>
           </div>
 

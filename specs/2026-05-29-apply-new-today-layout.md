@@ -84,7 +84,12 @@ Results:
 
 Frontend evidence:
 
-- *Blocked:* Attempted to capture screenshot using headless browser (puppeteer/playwright) but package installation failed due to workspace lockfile conflicts. Need manual review in the browser.
+- *Blocked (rodada inicial):* screenshot programático falhou.
+- **Correção validada (Playwright, sign-up + seed):** servidor `pnpm --filter @doit/web dev` em :3000 (encerrado ao final, PID finalizado). Script `specs/print-today-v3.mjs`.
+  - Diagnóstico no navegador: `--navy` resolve (`#0F2342`), board com **2 colunas** (`255px 1127px`, sem faixa vazia), mini-calendário com **hoje (29) destacado** dinamicamente.
+  - Screenshots: `specs/artifacts/2026-05-29-apply-new-today-layout/desktop-today-v3.png` e `mobile-today-v3.png`.
+- Mini-calendário agora é dinâmico (mês atual, início na segunda, hoje destacado, dias com itens marcados) — antes era estático/hardcoded.
+- Nota: itens do tipo `note` sem conteúdo/título renderizam linha sem título na lista (observado no seed de teste; itens reais têm título).
 
 ## Risks
 
