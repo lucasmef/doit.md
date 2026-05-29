@@ -52,16 +52,24 @@ export default function TodayFocusedPage() {
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
   const tomorrow = toLocalDateKey(tomorrowDate)
   const now = new Date()
+  const nowMs = now.getTime()
   const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
   const shouldShowTomorrow = currentTimeStr >= prefs.todayCalendarShowTomorrowAfterTime
-  
+  // Mesma regra usada em /itens: oculta eventos passados depois do tempo de tolerância configurado.
+  const hidePastMs = prefs.todayCalendarHidePastAfterHours * 60 * 60 * 1000
+
   const agendaEvents = useMemo(() => {
     return events.filter(e => {
-      if (e.start.startsWith(today)) return true
-      if (shouldShowTomorrow && e.start.startsWith(tomorrow)) return true
-      return false
+      const onToday = e.start.startsWith(today)
+      const onTomorrow = shouldShowTomorrow && e.start.startsWith(tomorrow)
+      if (!onToday && !onTomorrow) return false
+      if (!e.allDay) {
+        const endMs = new Date(e.end ?? e.start).getTime()
+        if (Number.isFinite(endMs) && nowMs - endMs >= hidePastMs) return false
+      }
+      return true
     }).sort((a, b) => a.start.localeCompare(b.start))
-  }, [events, today, tomorrow, shouldShowTomorrow])
+  }, [events, today, tomorrow, shouldShowTomorrow, nowMs, hidePastMs])
   
   const todayItems = useMemo(() => {
     return items.filter(i => (i.dueDate === today || i.scheduledDate === today) && i.status !== 'done')

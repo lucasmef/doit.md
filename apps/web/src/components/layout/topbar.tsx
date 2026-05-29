@@ -214,14 +214,10 @@ function formatSearchDate(dateStr: string): string {
   })
 }
 
-function dispatchCalendarAction(type: string) {
-  window.dispatchEvent(new Event(type))
-}
-
 export function Topbar() {
   const pathname = usePathname()
   const router = useRouter()
-  const { setQuickCaptureOpen, setSelectedItemId, calendarOpen, setCalendarOpen } = useUI()
+  const { setQuickCaptureOpen, setSelectedItemId } = useUI()
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [open, setOpen] = useState(false)
@@ -271,7 +267,6 @@ export function Topbar() {
 
   const items = data?.items || []
   const isSearching = query.trim().length > 1 && (query !== debounced || isLoading || isValidating)
-  const isCalendarPage = pathname === '/calendar'
   const mobilePageTitle = useMemo(() => {
     const parts = pathname.split('/').filter(Boolean)
     const last = parts[parts.length - 1]
@@ -384,13 +379,9 @@ export function Topbar() {
             )}
           </div>
           <button
-            onClick={() => {
-              setCalendarOpen(false)
-              window.dispatchEvent(new Event('doit:open-calendar-view'))
-              router.push('/upcoming?view=calendar')
-            }}
+            onClick={() => router.push('/calendar')}
             className={`inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
-              calendarOpen || pathname === '/upcoming'
+              pathname === '/calendar'
                 ? 'bg-white/80 text-brand-600 shadow-cool-sm'
                 : 'text-navy-500 hover:bg-white/65'
             }`}
@@ -521,46 +512,6 @@ export function Topbar() {
                   </Link>
                 )
               })}
-              {isCalendarPage ? (
-                <>
-                  <div className="px-3 pb-1 pt-3 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
-                    Calendario
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      dispatchCalendarAction('doit:open-calendar-filters')
-                    }}
-                    className="flex h-11 w-full items-center gap-3 rounded-full px-3.5 text-left text-[14px] font-medium text-navy-700 hover:bg-white/55"
-                  >
-                    <CalendarIcon />
-                    Filtros do calendario
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      dispatchCalendarAction('doit:calendar-go-today')
-                    }}
-                    className="flex h-11 w-full items-center gap-3 rounded-full px-3.5 text-left text-[14px] font-medium text-navy-700 hover:bg-white/55"
-                  >
-                    <CalendarIcon />
-                    Ir para hoje
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMobileMenuOpen(false)
-                      dispatchCalendarAction('doit:calendar-new-event')
-                    }}
-                    className="flex h-11 w-full items-center gap-3 rounded-full px-3.5 text-left text-[14px] font-medium text-navy-700 hover:bg-white/55"
-                  >
-                    <CalendarIcon />
-                    Novo evento
-                  </button>
-                </>
-              ) : null}
             </nav>
 
             <div className="space-y-2 border-t border-navy-900/[0.06] p-3">
