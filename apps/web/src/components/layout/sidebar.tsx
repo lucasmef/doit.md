@@ -107,7 +107,7 @@ const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/today', label: 'Hoje', icon: 'today' },
   { href: '/upcoming', label: 'Próximos', icon: 'upcoming' },
-  { href: '/calendar', label: 'Calendario', icon: 'calendar' },
+  { href: '/calendar', label: 'Calendário', icon: 'calendar' },
 ]
 
 const BOTTOM_NAV: { href: string; label: string; icon: IconKey }[] = [

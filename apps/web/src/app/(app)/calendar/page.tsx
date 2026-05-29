@@ -7,6 +7,7 @@ import { BentoGrid, CardTitle, VividBlueCard, GlassCard } from '@/components/ui/
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { useItems } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 import { EventSheet } from '@/components/calendar/calendar-board'
 
 const WEEKDAY_PT = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado']
@@ -250,7 +251,7 @@ function CalendarCard({
   const dayItems = itemsMap.get(dayKey) ?? []
 
   return (
-    <GlassCard className={`flex flex-col p-6 ${expanded ? 'h-full min-h-0 flex-1' : 'lg:col-span-8 lg:row-span-3'}`}>
+    <GlassCard className={`flex flex-col p-3 sm:p-5 lg:p-6 ${expanded ? 'h-full min-h-0 flex-1' : 'lg:col-span-8 lg:row-span-3'}`}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-baseline gap-3">
           <h2 className="text-[34px] font-black leading-none -tracking-[.04em] text-navy-900">
@@ -344,7 +345,7 @@ function CalendarCard({
               <div
                 key={i}
                 onClick={() => onDayClick(key)}
-                className={`relative flex min-h-[58px] flex-col gap-0.5 overflow-hidden rounded-[10px] p-1.5 cursor-pointer ${
+                className={`relative flex min-h-[72px] flex-col gap-1 overflow-hidden rounded-[10px] p-1.5 cursor-pointer lg:min-h-[58px] lg:gap-0.5 ${
                   isToday
                     ? 'border-[1.5px] border-navy-900 bg-white/92 shadow-[0_6px_16px_-8px_rgba(15,35,66,.30)]'
                     : key === selectedKey
@@ -367,7 +368,7 @@ function CalendarCard({
                   <span
                     key={event.id}
                     onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                    className={`truncate rounded px-1.5 py-1 text-[11px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))}`}
+                    className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))}`}
                     title={event.title}
                   >
                     {event.title}
@@ -377,7 +378,7 @@ function CalendarCard({
                   <span
                     key={item.id}
                     onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
-                    className={`truncate rounded px-1.5 py-1 text-[11px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx + visible.length))}`}
+                    className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx + visible.length))}`}
                     title={item.title}
                   >
                     {item.title}
@@ -544,6 +545,9 @@ function DayPopup({
     const d = new Date(date + 'T12:00:00')
     return d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   }, [date])
+
+  // Esc fecha o popup do dia mesmo sem foco interno (ID 010).
+  useEscapeClose(true, onClose)
 
   return (
     <div

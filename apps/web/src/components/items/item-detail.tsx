@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useItem, updateItem, archiveItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 import { ComplexitySelect } from './complexity-select'
 import { StatusSelect } from './status-select'
 import { ItemVersions } from './item-versions'
@@ -428,6 +429,12 @@ export function ItemDetail() {
       router.push(`/notas/${noteId}`)
     }
   }, [item, router, setSelectedItemId])
+
+  // Esc fecha o overlay de tarefa/evento mesmo quando o foco está fora dele (ID 010).
+  useEscapeClose(Boolean(selectedItemId && item && item.complexity !== 'note'), () => {
+    void flushAndClose()
+  })
+
   const { projects } = useProjects()
   const { items } = useItems()
   const { toast } = useToast()

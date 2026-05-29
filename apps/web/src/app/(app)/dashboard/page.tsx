@@ -448,8 +448,8 @@ export default function DashboardPage() {
         <BentoGrid className="auto-rows-[250px] gap-4 lg:gap-[18px]">
           <GlassCard className={`flex flex-col p-5 md:col-span-3 lg:col-span-3 lg:row-span-2 ${lightCardTone}`}>
             <div className="mb-3 flex items-center justify-between">
-              <CardTitle className="text-[15px] normal-case tracking-normal text-navy-900">Calendario</CardTitle>
-              <CardMore href="/calendar" label="Abrir calendario" />
+              <CardTitle className="text-[15px] normal-case tracking-normal text-navy-900">Calendário</CardTitle>
+              <CardMore href="/calendar" label="Abrir calendário" />
             </div>
             <CalendarDial today={today} events={todayEvents} />
           </GlassCard>

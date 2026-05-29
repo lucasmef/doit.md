@@ -13,6 +13,8 @@ import {
 import { useItems } from '@/hooks/use-items'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useUI } from '@/store/ui'
+import { useEscapeClose } from '@/hooks/use-escape-close'
+import { useLongPress } from '@/hooks/use-long-press'
 import { useDialog } from '@/components/ui/dialog'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 
@@ -254,14 +256,22 @@ function TreeRow({
 // ----- Content cards -----
 
 function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
+  const { openContextMenu } = useUI()
   const large = isLargeNote(item)
   const text = item.complexity === 'note' ? snippet(item, large ? 180 : 120) : snippet(item, 90)
   const due = dueLabel(item)
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => openContextMenu({ itemId: item.id, x: clientX, y: clientY }),
+  })
   return (
     <button
       type="button"
-      onClick={() => onOpen(item.id)}
-      className="group w-full rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+      onClick={() => {
+        if (consumeClick()) return
+        onOpen(item.id)
+      }}
+      {...longPressProps}
+      className="group w-full select-none rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
         <span className={typeToneClass(item)}>{typeLabel(item)}</span>
@@ -295,19 +305,28 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
 }
 
 function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
+  const { openContextMenu } = useUI()
   const text = snippet(item, 90)
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => openContextMenu({ itemId: item.id, x: clientX, y: clientY }),
+  })
   return (
     <button
       type="button"
-      onClick={() => onOpen(item.id)}
-      className="grid w-full grid-cols-[34px_minmax(0,1fr)_120px_96px] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55"
+      onClick={() => {
+        if (consumeClick()) return
+        onOpen(item.id)
+      }}
+      {...longPressProps}
+      className="grid w-full select-none grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
     >
       <span className="grid h-[34px] w-[34px] place-items-center rounded-[13px] bg-brand-500/10 text-brand-600">
         <FolderGlyph className="h-4 w-4" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
-        <span className="block truncate text-[12px] text-navy-500">
+        {/* No mobile mostra só o título; trecho/preview só no desktop (ID 013). */}
+        <span className="hidden truncate text-[12px] text-navy-500 sm:block">
           <span className="capitalize">{typeLabel(item)}</span>
           {text ? ` · ${text}` : ''}
         </span>
@@ -418,6 +437,9 @@ function NotasBrowser() {
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [])
+
+  // Esc fecha o drawer de pastas no mobile mesmo sem foco interno (ID 010).
+  useEscapeClose(mobileFoldersOpen, () => setMobileFoldersOpen(false))
 
   const directItems = useMemo(
     () => (selectedId ? items.filter((it) => it.folderId === selectedId && isActiveItem(it)) : []),
@@ -788,7 +810,18 @@ function NotasBrowser() {
                       >
                         <div className="flex items-center gap-2 border-b border-navy-900/[0.06] px-3.5 py-3">
                           <span className="h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_9px_rgba(47,107,255,.45)]" />
-                          <b className="text-[13px] font-black text-navy-900">{column.title}</b>
+                          {column.id !== selectedId && column.id !== 'root' ? (
+                            <button
+                              type="button"
+                              onClick={() => selectFolder(column.id)}
+                              className="min-w-0 flex-1 truncate text-left text-[13px] font-black text-navy-900 hover:text-brand-600"
+                              title={`Abrir ${column.title}`}
+                            >
+                              {column.title}
+                            </button>
+                          ) : (
+                            <b className="min-w-0 flex-1 truncate text-[13px] font-black text-navy-900">{column.title}</b>
+                          )}
                           <span className="ml-auto font-mono text-[10px] text-navy-500">{column.items.length}</span>
                         </div>
                         <div className="flex flex-1 flex-col gap-2.5 overflow-auto p-3">
@@ -811,11 +844,34 @@ function NotasBrowser() {
                     ))}
                   </div>
                 ) : (
-                  <div className="overflow-hidden rounded-[22px] border border-white/62 bg-white/50">
-                    {allFolderItems.map((item) => (
-                      <ContentRow key={item.id} item={item} onOpen={setSingleSelection} />
-                    ))}
-                  </div>
+                  <>
+                    {/* Subpastas navegáveis: garante entrar em pastas que só têm subpastas (ID 008). */}
+                    {childFolders.length > 0 ? (
+                      <div className="mb-5">
+                        <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">
+                          Subpastas
+                        </div>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                          {childFolders.map((sub) => (
+                            <RootFolderCard
+                              key={sub.id}
+                              folder={sub}
+                              subCount={sub.children.length}
+                              count={counts.get(sub.id) ?? 0}
+                              onOpen={selectFolder}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {allFolderItems.length > 0 ? (
+                      <div className="overflow-hidden rounded-[22px] border border-white/62 bg-white/50">
+                        {allFolderItems.map((item) => (
+                          <ContentRow key={item.id} item={item} onOpen={setSingleSelection} />
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
                 )}
               </div>
             </>
