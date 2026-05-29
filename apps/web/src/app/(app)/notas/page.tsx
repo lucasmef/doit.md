@@ -318,6 +318,39 @@ function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void
   )
 }
 
+function RootFolderCard({
+  folder,
+  pinned = false,
+  subCount,
+  count,
+  onOpen,
+}: {
+  folder: Folder
+  pinned?: boolean
+  subCount: number
+  count: number
+  onOpen: (id: string) => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(folder.id)}
+      className="group flex items-center gap-3 rounded-[18px] border border-white/70 bg-white/72 p-3.5 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:bg-white/90 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+    >
+      <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${pinned ? 'bg-warning/15 text-[#B47410]' : 'bg-brand-500/10 text-brand-600'}`}>
+        {pinned ? <StarGlyph filled className="h-5 w-5" /> : <FolderGlyph className="h-5 w-5" />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[15px] font-bold text-navy-900">{folder.name}</span>
+        <span className="block truncate font-mono text-[10.5px] text-navy-500">
+          {count} {count === 1 ? 'item' : 'itens'} · {subCount} {subCount === 1 ? 'subpasta' : 'subpastas'}
+        </span>
+      </span>
+      <span className="shrink-0 font-mono text-[10px] font-extrabold text-brand-600 opacity-0 transition group-hover:opacity-100">abrir →</span>
+    </button>
+  )
+}
+
 // ----- Main browser -----
 
 function NotasBrowser() {
@@ -336,6 +369,7 @@ function NotasBrowser() {
   const [sortKey, setSortKey] = useState<SortKey>('manual')
   const [sortOpen, setSortOpen] = useState(false)
   const [agentsOpen, setAgentsOpen] = useState(false)
+  const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
   const sortRef = useRef<HTMLDivElement>(null)
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
@@ -355,8 +389,8 @@ function NotasBrowser() {
     return map
   }, [items])
 
-  const defaultFolderId = pinnedFolders[0]?.id ?? rootFolders[0]?.id ?? folders[0]?.id ?? null
-  const selectedId = folderParam && folderById.has(folderParam) ? folderParam : defaultFolderId
+  // Sem auto-seleção: ao abrir /notas sem ?folder, fica na raiz (grade de pastas).
+  const selectedId = folderParam && folderById.has(folderParam) ? folderParam : null
   const selectedFolder = selectedId ? folderById.get(selectedId) ?? null : null
   const node = useMemo(() => (selectedId ? findNode(tree, selectedId) : null), [tree, selectedId])
   const childFolders = node?.children ?? []
@@ -423,6 +457,12 @@ function NotasBrowser() {
 
   function selectFolder(id: string) {
     router.replace(`/notas?folder=${id}`, { scroll: false })
+    setMobileFoldersOpen(false)
+  }
+
+  function goToRoot() {
+    router.replace('/notas', { scroll: false })
+    setMobileFoldersOpen(false)
   }
 
   function toggleExpand(id: string) {
@@ -476,33 +516,54 @@ function NotasBrowser() {
 
   const activeSort = SORT_OPTIONS.find((o) => o.key === sortKey) ?? SORT_OPTIONS[0]!
 
-  return (
-    <div className="mx-auto h-[calc(100vh-120px)] w-full max-w-[1440px] px-4 pb-6 lg:h-[calc(100vh-104px)] lg:px-8">
-      <div className="grid h-full min-h-0 grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)]">
-        {/* Sidebar / folder navigator */}
-        <aside className="hidden min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:grid">
-          <div className="border-b border-navy-900/[0.07] px-5 pb-3.5 pt-5">
-            <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.12em] text-navy-500">Navegador</div>
-            <div className="mb-3.5 mt-1.5 text-[24px] font-black -tracking-[.045em] text-navy-900">Pastas</div>
-            <label className="flex min-h-[42px] items-center gap-2 rounded-[15px] border border-navy-900/[0.07] bg-white/72 px-3">
-              <svg className="h-4 w-4 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
-              </svg>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar pasta..."
-                className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-navy-700 outline-none placeholder:text-navy-400"
-              />
-            </label>
-          </div>
+  // Conteúdo do navegador de pastas, reutilizado na sidebar (desktop) e no drawer (mobile).
+  const folderNavContent = (
+    <>
+      <div className="border-b border-navy-900/[0.07] px-5 pb-3.5 pt-5">
+        <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.12em] text-navy-500">Navegador</div>
+        <div className="mb-3.5 mt-1.5 text-[24px] font-black -tracking-[.045em] text-navy-900">Pastas</div>
+        <label className="flex min-h-[42px] items-center gap-2 rounded-[15px] border border-navy-900/[0.07] bg-white/72 px-3">
+          <svg className="h-4 w-4 text-navy-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-4.3-4.3M10.8 18a7.2 7.2 0 1 1 0-14.4 7.2 7.2 0 0 1 0 14.4Z" />
+          </svg>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar pasta..."
+            className="min-w-0 flex-1 bg-transparent font-mono text-[11px] text-navy-700 outline-none placeholder:text-navy-400"
+          />
+        </label>
+      </div>
 
-          <div className="min-h-0 overflow-auto p-3">
-            {filteredTree ? (
-              filteredTree.length === 0 ? (
-                <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta encontrada</p>
-              ) : (
-                filteredTree.map((folder) => (
+      <div className="min-h-0 overflow-auto p-3">
+        {filteredTree ? (
+          filteredTree.length === 0 ? (
+            <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta encontrada</p>
+          ) : (
+            filteredTree.map((folder) => (
+              <div
+                key={folder.id}
+                className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
+                  folder.id === selectedId ? 'bg-brand-500/10' : 'hover:bg-white/60'
+                }`}
+                onClick={() => selectFolder(folder.id)}
+              >
+                <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-brand-500/10 text-brand-600">
+                  <FolderGlyph className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
+                <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
+                  {counts.get(folder.id) ?? 0}
+                </span>
+              </div>
+            ))
+          )
+        ) : (
+          <>
+            {pinnedFolders.length > 0 ? (
+              <>
+                <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
+                {pinnedFolders.map((folder) => (
                   <div
                     key={folder.id}
                     className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
@@ -510,78 +571,64 @@ function NotasBrowser() {
                     }`}
                     onClick={() => selectFolder(folder.id)}
                   >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-brand-500/10 text-brand-600">
-                      <FolderGlyph className="h-4 w-4" />
+                    <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-warning/15 text-[#B47410]">
+                      <StarGlyph filled className="h-3.5 w-3.5" />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
                     <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
                       {counts.get(folder.id) ?? 0}
                     </span>
                   </div>
-                ))
-              )
-            ) : (
-              <>
-                {pinnedFolders.length > 0 ? (
-                  <>
-                    <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
-                    {pinnedFolders.map((folder) => (
-                      <div
-                        key={folder.id}
-                        className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
-                          folder.id === selectedId ? 'bg-brand-500/10' : 'hover:bg-white/60'
-                        }`}
-                        onClick={() => selectFolder(folder.id)}
-                      >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-warning/15 text-[#B47410]">
-                          <StarGlyph filled className="h-3.5 w-3.5" />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
-                        <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
-                          {counts.get(folder.id) ?? 0}
-                        </span>
-                      </div>
-                    ))}
-                  </>
-                ) : null}
-                <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</div>
-                {tree.length === 0 ? (
-                  <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta ainda</p>
-                ) : (
-                  tree.map((root) => (
-                    <TreeRow
-                      key={root.id}
-                      node={root}
-                      depth={0}
-                      selectedId={selectedId}
-                      expanded={expanded}
-                      counts={counts}
-                      onSelect={selectFolder}
-                      onToggle={toggleExpand}
-                    />
-                  ))
-                )}
+                ))}
               </>
+            ) : null}
+            <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</div>
+            {tree.length === 0 ? (
+              <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta ainda</p>
+            ) : (
+              tree.map((root) => (
+                <TreeRow
+                  key={root.id}
+                  node={root}
+                  depth={0}
+                  selectedId={selectedId}
+                  expanded={expanded}
+                  counts={counts}
+                  onSelect={selectFolder}
+                  onToggle={toggleExpand}
+                />
+              ))
             )}
-          </div>
+          </>
+        )}
+      </div>
 
-          <div className="space-y-2 border-t border-navy-900/[0.07] p-3">
-            <button
-              type="button"
-              onClick={handleNewFolder}
-              className="min-h-[42px] w-full rounded-[15px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] font-extrabold text-white"
-            >
-              Nova pasta
-            </button>
-            <button
-              type="button"
-              onClick={() => setAgentsOpen(true)}
-              disabled={!selectedId}
-              className="min-h-[42px] w-full rounded-[15px] bg-navy-900/[0.055] font-extrabold text-navy-900 disabled:opacity-40"
-            >
-              Editar AGENTS.md
-            </button>
-          </div>
+      <div className="space-y-2 border-t border-navy-900/[0.07] p-3">
+        <button
+          type="button"
+          onClick={handleNewFolder}
+          className="min-h-[42px] w-full rounded-[15px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] font-extrabold text-white"
+        >
+          Nova pasta
+        </button>
+        <button
+          type="button"
+          onClick={() => setAgentsOpen(true)}
+          disabled={!selectedId}
+          className="min-h-[42px] w-full rounded-[15px] bg-navy-900/[0.055] font-extrabold text-navy-900 disabled:opacity-40"
+        >
+          Editar AGENTS.md
+        </button>
+      </div>
+    </>
+  )
+
+  return (
+    <div className="mx-auto h-[calc(100vh-120px)] w-full max-w-[1440px] px-4 pb-6 lg:h-[calc(100vh-104px)] lg:px-8">
+      <div className="grid h-full min-h-0 grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)]">
+        {/* Sidebar / folder navigator (desktop) */}
+        <aside className="hidden min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:grid">
+          {folderNavContent}
         </aside>
 
         {/* Content panel */}
@@ -590,7 +637,18 @@ function NotasBrowser() {
             <>
               <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
                 <div className="flex flex-wrap items-center gap-1.5 font-mono text-[10px] font-extrabold uppercase tracking-[0.08em] text-navy-500">
-                  <span>Notas</span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileFoldersOpen(true)}
+                    className="mr-1 inline-flex items-center gap-1 rounded-full bg-navy-900/[0.06] px-2 py-1 text-[10px] font-extrabold text-navy-700 lg:hidden"
+                    aria-label="Abrir navegador de pastas"
+                  >
+                    <FolderGlyph className="h-3.5 w-3.5" />
+                    Pastas
+                  </button>
+                  <button type="button" className="hover:text-navy-700" onClick={goToRoot}>
+                    Notas
+                  </button>
                   {breadcrumb.map((f, i) => (
                     <Fragment key={f.id}>
                       <span className="text-navy-900/30">/</span>
@@ -761,7 +819,7 @@ function NotasBrowser() {
                 )}
               </div>
             </>
-          ) : (
+          ) : folders.length === 0 ? (
             <div className="grid h-full place-items-center p-8">
               <div className="max-w-sm text-center">
                 <p className="text-[18px] font-black text-navy-900">Crie sua primeira pasta</p>
@@ -777,9 +835,67 @@ function NotasBrowser() {
                 </button>
               </div>
             </div>
+          ) : (
+            // Raiz das notas: grade de pastas para o usuário escolher (sem abrir nenhuma automaticamente).
+            <>
+              <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
+                <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.08em] text-navy-500">Notas</div>
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
+                  <h1 className="text-[34px] font-black leading-none -tracking-[.05em] text-navy-900 lg:text-[42px]">Pastas</h1>
+                  <button
+                    type="button"
+                    onClick={handleNewFolder}
+                    className="inline-flex h-[38px] items-center rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-3.5 text-[13px] font-extrabold text-white"
+                  >
+                    Nova pasta
+                  </button>
+                </div>
+                <p className="mt-2 max-w-xl text-[13px] text-navy-500">Escolha uma pasta para ver suas notas, tarefas e referências.</p>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-5">
+                {pinnedFolders.length > 0 ? (
+                  <>
+                    <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
+                    <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {pinnedFolders.map((folder) => (
+                        <RootFolderCard key={folder.id} folder={folder} pinned subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {rootFolders.map((folder) => (
+                    <RootFolderCard key={folder.id} folder={folder} subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} />
+                  ))}
+                </div>
+              </div>
+            </>
           )}
         </section>
       </div>
+
+      {mobileFoldersOpen ? (
+        <div className="fixed inset-0 z-[200] lg:hidden" role="dialog" aria-modal="true">
+          <div
+            className="absolute inset-0 bg-navy-900/40 backdrop-blur-sm"
+            onClick={() => setMobileFoldersOpen(false)}
+          />
+          <div className="absolute inset-y-0 left-0 grid w-[min(86vw,340px)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-r border-white/55 bg-white/92 shadow-cool-lg backdrop-blur-2xl">
+            <button
+              type="button"
+              onClick={() => setMobileFoldersOpen(false)}
+              className="absolute right-3 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full bg-navy-900/[0.06] text-navy-500 hover:bg-navy-900/[0.10] hover:text-navy-900"
+              aria-label="Fechar navegador de pastas"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 18 18 6M6 6l12 12" />
+              </svg>
+            </button>
+            {folderNavContent}
+          </div>
+        </div>
+      ) : null}
 
       {selectedId && selectedFolder ? (
         <AgentsEditorModal

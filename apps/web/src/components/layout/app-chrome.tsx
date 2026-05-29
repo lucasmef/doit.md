@@ -3,12 +3,13 @@
 import { usePathname } from 'next/navigation'
 import { Topbar } from '@/components/layout/topbar'
 import { BottomNav } from '@/components/layout/bottom-nav'
-import { CalendarSidebar } from '@/components/layout/calendar-sidebar'
 import { NotificationFailureBanner } from '@/components/notifications/failure-banner'
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const noteEditorImmersive = pathname.startsWith('/notas/') && !pathname.startsWith('/notas/pastas')
+  // Em /calendar (mobile) o menu inferior é ocultado, então removemos o padding reservado para ele.
+  const isCalendar = pathname === '/calendar'
 
   if (noteEditorImmersive) {
     return (
@@ -35,10 +36,9 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
           </div>
           <NotificationFailureBanner />
           <div className="flex flex-1">
-            <main className="flex-1 pb-[calc(7rem+env(safe-area-inset-bottom))] lg:pb-0">
+            <main className={`flex-1 lg:pb-0 ${isCalendar ? 'pb-0' : 'pb-[calc(7rem+env(safe-area-inset-bottom))]'}`}>
               {children}
             </main>
-            <CalendarSidebar />
           </div>
         </div>
       </div>
