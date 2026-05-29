@@ -591,6 +591,8 @@ function ItemContextMenuContent({
     closeContextMenu()
   }
 
+  const mobileHeader = (
+    <>
       <div className="md:hidden mx-auto mb-3 h-1 w-12 rounded-full bg-navy-900/15" />
       <div className="md:hidden px-1 pb-3 mb-2 border-b border-navy-900/10">
         <b className="block text-[15px] tracking-tight truncate">{single ? targetItem.title : `${ids.length} itens`}</b>
@@ -598,10 +600,13 @@ function ItemContextMenuContent({
           {single ? (targetItem.tags?.length ? targetItem.tags.map(t => `#${t}`).join(', ') : 'Sem tags') : 'Múltiplos itens selecionados'}
         </span>
       </div>
-      
+    </>
+  )
+
   if (sub === 'folder') {
     return (
       <div className="min-w-[240px] max-md:w-full">
+        {mobileHeader}
         <MenuRow icon={<IconChevron />} label="Voltar" onClick={() => setSub(null)} />
         <MenuSeparator />
         <MenuRow
@@ -633,6 +638,7 @@ function ItemContextMenuContent({
   if (sub === 'priority') {
     return (
       <div className="min-w-[240px] max-md:w-full">
+        {mobileHeader}
         <MenuRow icon={<IconChevron />} label="Voltar" onClick={() => setSub(null)} />
         <MenuSeparator />
         {([1, 2, 3, 4] as Priority[]).map((p) => (
@@ -649,7 +655,7 @@ function ItemContextMenuContent({
 
   return (
     <div className="md:min-w-[240px] max-md:w-full">
-
+      {mobileHeader}
 
       <div className="mb-2 grid grid-cols-4 gap-[7px] rounded-[18px] bg-navy-900/5 p-1.5">
         <button

@@ -613,7 +613,7 @@ function NotasBrowser() {
 
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [sortKey, setSortKey] = useState<SortKey>('alpha-asc')
+  const [sortKey, setSortKey] = useState<SortKey>('alpha')
   const [sortOpen, setSortOpen] = useState(false)
   const [agentsForId, setAgentsForId] = useState<string | null>(null)
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
