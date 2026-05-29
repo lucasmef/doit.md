@@ -180,6 +180,29 @@ function StarGlyph({ filled = false, className = 'h-4 w-4' }: { filled?: boolean
   )
 }
 
+function NoteGlyph({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 3.5h7l3 3v14H7z" />
+      <path d="M14 3.5v4h4M9.5 12h5M9.5 15.5h5" />
+    </svg>
+  )
+}
+
+function TaskGlyph({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="4" />
+      <path d="m8.5 12 2.5 2.5L16 9" />
+    </svg>
+  )
+}
+
+// Ícone discreto por tipo para a lista (ID 013): nota vs tarefa/evento.
+function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?: string }) {
+  return item.complexity === 'note' ? <NoteGlyph className={className} /> : <TaskGlyph className={className} />
+}
+
 // ----- Sidebar tree -----
 
 function TreeRow({
@@ -271,7 +294,7 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
         onOpen(item.id)
       }}
       {...longPressProps}
-      className="group w-full select-none rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+      className="group w-full select-none touch-pan-y [-webkit-touch-callout:none] rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
         <span className={typeToneClass(item)}>{typeLabel(item)}</span>
@@ -318,14 +341,14 @@ function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void
         onOpen(item.id)
       }}
       {...longPressProps}
-      className="grid w-full select-none grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
+      className="grid w-full select-none touch-pan-y [-webkit-touch-callout:none] grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
     >
-      <span className="grid h-[34px] w-[34px] place-items-center rounded-[13px] bg-brand-500/10 text-brand-600">
-        <FolderGlyph className="h-4 w-4" />
+      <span className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${item.complexity === 'note' ? 'bg-brand-500/10 text-brand-600' : 'bg-teal-500/10 text-teal-600'}`}>
+        <ItemTypeGlyph item={item} className="h-4 w-4" />
       </span>
       <span className="min-w-0">
         <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
-        {/* No mobile mostra só o título; trecho/preview só no desktop (ID 013). */}
+        {/* No mobile só o título + ícone; trecho/rótulos só no desktop (ID 013). */}
         <span className="hidden truncate text-[12px] text-navy-500 sm:block">
           <span className="capitalize">{typeLabel(item)}</span>
           {text ? ` · ${text}` : ''}
@@ -389,7 +412,9 @@ function NotasBrowser() {
   const [sortOpen, setSortOpen] = useState(false)
   const [agentsOpen, setAgentsOpen] = useState(false)
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const sortRef = useRef<HTMLDivElement>(null)
+  const headerMenuRef = useRef<HTMLDivElement>(null)
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
   const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders])
@@ -429,10 +454,11 @@ function NotasBrowser() {
     })
   }, [selectedId, breadcrumb])
 
-  // close sort menu on outside click
+  // close sort/header menus on outside click
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false)
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target as Node)) setHeaderMenuOpen(false)
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
@@ -646,15 +672,16 @@ function NotasBrowser() {
   )
 
   return (
-    <div className="mx-auto h-[calc(100vh-120px)] w-full max-w-[1440px] px-4 pb-6 lg:h-[calc(100vh-104px)] lg:px-8">
-      <div className="grid h-full min-h-0 grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)]">
+    <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 lg:h-[calc(100vh-104px)] lg:px-8">
+      {/* Mobile: scroll único da janela; desktop: card de altura fixa com scroll interno (ID 008). */}
+      <div className="grid grid-cols-1 gap-[18px] lg:h-full lg:min-h-0 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Sidebar / folder navigator (desktop) */}
         <aside className="hidden min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:grid">
           {folderNavContent}
         </aside>
 
         {/* Content panel */}
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl">
+        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:min-h-0 lg:overflow-hidden">
           {selectedFolder ? (
             <>
               <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
@@ -690,12 +717,13 @@ function NotasBrowser() {
                     {selectedFolder.name}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2">
+                    {/* Desktop: ações inline (inalterado). */}
                     <button
                       type="button"
                       onClick={togglePinned}
                       title={isPinned ? 'Desafixar pasta' : 'Favoritar pasta'}
                       aria-pressed={isPinned}
-                      className={`grid h-[38px] w-[38px] place-items-center rounded-full ${
+                      className={`hidden h-[38px] w-[38px] place-items-center rounded-full lg:grid ${
                         isPinned
                           ? 'bg-warning/15 text-[#B47410] shadow-[0_0_0_1px_rgba(245,165,36,.28)_inset]'
                           : 'bg-navy-900/[0.055] text-navy-500'
@@ -706,24 +734,73 @@ function NotasBrowser() {
                     <button
                       type="button"
                       onClick={() => setAgentsOpen(true)}
-                      className="inline-flex h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900"
+                      className="hidden h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900 lg:inline-flex"
                     >
                       AGENTS.md
                     </button>
                     <button
                       type="button"
                       onClick={handleNewSubfolder}
-                      className="inline-flex h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900"
+                      className="hidden h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900 lg:inline-flex"
                     >
                       Nova subpasta
                     </button>
                     <button
                       type="button"
                       onClick={() => handleNewItem(selectedId)}
-                      className="inline-flex h-[38px] items-center rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-3.5 text-[13px] font-extrabold text-white"
+                      className="hidden h-[38px] items-center rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-3.5 text-[13px] font-extrabold text-white lg:inline-flex"
                     >
                       Novo item
                     </button>
+
+                    {/* Mobile: ações agrupadas em menu kebab (ID 016). */}
+                    <div className="relative lg:hidden" ref={headerMenuRef}>
+                      <button
+                        type="button"
+                        onClick={() => setHeaderMenuOpen((v) => !v)}
+                        aria-haspopup="menu"
+                        aria-expanded={headerMenuOpen}
+                        aria-label="Ações da pasta"
+                        className="grid h-[38px] w-[38px] place-items-center rounded-full bg-navy-900/[0.055] text-navy-700"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+                          <circle cx="12" cy="5" r="1.6" />
+                          <circle cx="12" cy="12" r="1.6" />
+                          <circle cx="12" cy="19" r="1.6" />
+                        </svg>
+                      </button>
+                      {headerMenuOpen ? (
+                        <div className="absolute right-0 top-11 z-30 w-52 overflow-hidden rounded-[18px] border border-white/78 bg-white/95 p-1.5 shadow-cool-md backdrop-blur-2xl" role="menu">
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { togglePinned(); setHeaderMenuOpen(false) }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                          >
+                            <StarGlyph filled={isPinned} className="h-4 w-4 text-[#B47410]" />
+                            {isPinned ? 'Desafixar pasta' : 'Favoritar pasta'}
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { handleNewSubfolder(); setHeaderMenuOpen(false) }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                          >
+                            <FolderGlyph className="h-4 w-4 text-brand-600" />
+                            Nova subpasta
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { setAgentsOpen(true); setHeaderMenuOpen(false) }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                          >
+                            <span className="font-mono text-[11px] font-bold text-navy-500">md</span>
+                            Editar AGENTS.md
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
 
@@ -742,10 +819,10 @@ function NotasBrowser() {
                       </button>
                     ))}
                   </div>
-                  <span className="inline-flex h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500">
+                  <span className="hidden h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500 lg:inline-flex">
                     {allFolderItems.length} {allFolderItems.length === 1 ? 'item' : 'itens'}
                   </span>
-                  <span className="inline-flex h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500">
+                  <span className="hidden h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500 lg:inline-flex">
                     {childFolders.length} {childFolders.length === 1 ? 'subpasta' : 'subpastas'}
                   </span>
                   <div className="relative" ref={sortRef}>
@@ -784,9 +861,9 @@ function NotasBrowser() {
                 </div>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-5">
+              <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto lg:p-5">
                 {allFolderItems.length === 0 && childFolders.length === 0 ? (
-                  <div className="grid h-full place-items-center">
+                  <div className="grid min-h-[50vh] place-items-center lg:h-full">
                     <div className="rounded-[22px] border border-dashed border-navy-900/15 bg-white/40 px-6 py-10 text-center">
                       <p className="text-[15px] font-bold text-navy-900">Pasta vazia</p>
                       <p className="mx-auto mt-1 max-w-xs text-[13px] text-navy-500">
@@ -802,7 +879,7 @@ function NotasBrowser() {
                     </div>
                   </div>
                 ) : viewMode === 'kanban' ? (
-                  <div className="flex h-full gap-3.5 overflow-x-auto">
+                  <div className="flex min-h-[60vh] gap-3.5 overflow-x-auto lg:h-full lg:min-h-0">
                     {kanbanColumns.map((column) => (
                       <div
                         key={column.id}
@@ -824,7 +901,7 @@ function NotasBrowser() {
                           )}
                           <span className="ml-auto font-mono text-[10px] text-navy-500">{column.items.length}</span>
                         </div>
-                        <div className="flex flex-1 flex-col gap-2.5 overflow-auto p-3">
+                        <div className="flex flex-1 flex-col gap-2.5 p-3 lg:overflow-auto">
                           {column.items.length === 0 ? (
                             <p className="px-1 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
                           ) : (
@@ -871,12 +948,20 @@ function NotasBrowser() {
                         ))}
                       </div>
                     ) : null}
+                    {/* Botão contextual no fim da lista (mobile); no desktop o "Novo item" fica no topo (ID 016). */}
+                    <button
+                      type="button"
+                      onClick={() => handleNewItem(selectedId)}
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-navy-900/15 px-3 py-3 text-[13px] font-bold text-navy-600 hover:border-brand-300 hover:text-brand-600 lg:hidden"
+                    >
+                      + Novo item
+                    </button>
                   </>
                 )}
               </div>
             </>
           ) : folders.length === 0 ? (
-            <div className="grid h-full place-items-center p-8">
+            <div className="grid min-h-[50vh] place-items-center p-8 lg:h-full">
               <div className="max-w-sm text-center">
                 <p className="text-[18px] font-black text-navy-900">Crie sua primeira pasta</p>
                 <p className="mt-1.5 text-[13px] text-navy-500">
@@ -908,7 +993,7 @@ function NotasBrowser() {
                 </div>
                 <p className="mt-2 max-w-xl text-[13px] text-navy-500">Escolha uma pasta para ver suas notas, tarefas e referências.</p>
               </div>
-              <div className="min-h-0 flex-1 overflow-auto p-4 lg:p-5">
+              <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto lg:p-5">
                 {pinnedFolders.length > 0 ? (
                   <>
                     <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>

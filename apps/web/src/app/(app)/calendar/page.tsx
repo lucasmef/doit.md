@@ -385,7 +385,7 @@ function CalendarCard({
                   </span>
                 ))}
                 {more > 0 ? (
-                  <span className="mt-auto font-mono text-[9.5px] text-navy-500">+{more} mais</span>
+                  <span className="mt-auto block rounded bg-navy-900/[0.06] px-1.5 py-0.5 text-center font-mono text-[10px] font-bold text-navy-600 lg:text-[9.5px]">+{more} mais</span>
                 ) : null}
               </div>
             )
@@ -394,7 +394,8 @@ function CalendarCard({
       ) : null}
 
       {viewMode === 'SEM' ? (
-        <div className="grid flex-1 grid-cols-7 gap-1.5 min-h-0">
+        // Mobile: faixa rolável horizontal com ~3 dias por vez (swipe); desktop: 7 colunas (ID 014).
+        <div className="flex min-h-0 flex-1 snap-x snap-mandatory gap-1.5 overflow-x-auto pb-1 lg:grid lg:grid-cols-7 lg:overflow-x-visible lg:pb-0">
           {weekDays.map((date) => {
             const key = toLocalDateKey(date)
             const isToday = key === todayKey
@@ -405,7 +406,7 @@ function CalendarCard({
               <div
                 key={key}
                 onClick={() => onDayClick(key)}
-                className={`flex min-h-0 cursor-pointer flex-col rounded-[12px] border p-2 transition-colors ${
+                className={`flex min-h-0 w-[30%] shrink-0 snap-start cursor-pointer flex-col rounded-[12px] border p-2 transition-colors lg:w-auto lg:shrink ${
                   isToday
                     ? 'border-[1.5px] border-navy-900 bg-white/85'
                     : key === selectedKey
@@ -432,7 +433,7 @@ function CalendarCard({
                     <span
                       key={event.id}
                       onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                      className={`truncate rounded px-1.5 py-1 text-[10.5px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx))}`}
+                      className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx))}`}
                       title={event.title}
                     >
                       {event.allDay ? '' : formatHM(event.start) + ' '}
@@ -443,7 +444,7 @@ function CalendarCard({
                     <span
                       key={item.id}
                       onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
-                      className={`truncate rounded px-1.5 py-1 text-[10.5px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx + colEvents.length))}`}
+                      className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx + colEvents.length))}`}
                       title={item.title}
                     >
                       {item.title}
@@ -1113,7 +1114,7 @@ export default function CalendarPage() {
     <div
       className={
         showExpanded
-          ? 'flex h-[calc(100dvh-10.5rem)] flex-col px-4 pb-4 pt-3 lg:h-[calc(100vh-8rem)] lg:px-8 lg:pt-0'
+          ? 'flex h-[calc(100dvh-5.5rem)] flex-col px-4 pb-3 pt-3 lg:h-[calc(100vh-8rem)] lg:px-8 lg:pt-0'
           : 'px-4 pb-12 pt-3 lg:px-8 lg:pt-0'
       }
     >
