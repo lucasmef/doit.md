@@ -6,6 +6,7 @@ import type { Folder, Item, ItemComplexity, ItemStatus } from '@doit/types'
 import {
   buildFolderTree,
   createFolder,
+  deleteFolder,
   updateFolder,
   useFolders,
   type FolderTreeNode,
@@ -17,6 +18,7 @@ import { useEscapeClose } from '@/hooks/use-escape-close'
 import { useLongPress } from '@/hooks/use-long-press'
 import { useDialog } from '@/components/ui/dialog'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
+import { flattenFolderOptions } from '@/components/folders/folder-options'
 
 type SortKey = 'manual' | 'updated' | 'created' | 'alpha' | 'type' | 'priority'
 
@@ -70,28 +72,6 @@ function snippet(item: Item, max: number): string {
 
 function isLargeNote(item: Item): boolean {
   return item.complexity === 'note' && stripMarkdown(item.contentMd).length > LARGE_NOTE_CHARS
-}
-
-function typeLabel(item: Item): string {
-  if (item.complexity === 'note') return isLargeNote(item) ? 'nota grande' : 'nota'
-  if (item.complexity === 'task') return item.calendarEventId || item.googleEventId ? 'evento' : 'tarefa'
-  if (item.complexity === 'capture') return 'captura'
-  if (item.complexity === 'document') return 'arquivo md'
-  if (item.complexity === 'project') return 'projeto'
-  return 'item'
-}
-
-function typeToneClass(item: Item): string {
-  switch (item.complexity) {
-    case 'note':
-      return 'text-brand-600'
-    case 'task':
-      return item.calendarEventId || item.googleEventId ? 'text-[#B47410]' : 'text-teal-600'
-    case 'document':
-      return 'text-violet-500'
-    default:
-      return 'text-navy-500'
-  }
 }
 
 function formatRelative(iso: string): string {
@@ -189,18 +169,18 @@ function NoteGlyph({ className = 'h-4 w-4' }: { className?: string }) {
   )
 }
 
-function TaskGlyph({ className = 'h-4 w-4' }: { className?: string }) {
+function TaskGlyph({ done, className = 'h-4 w-4' }: { done?: boolean; className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="4" width="16" height="16" rx="4" />
-      <path d="m8.5 12 2.5 2.5L16 9" />
+      {done && <path d="m8.5 12 2.5 2.5L16 9" />}
     </svg>
   )
 }
 
 // Ícone discreto por tipo para a lista (ID 013): nota vs tarefa/evento.
 function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?: string }) {
-  return item.complexity === 'note' ? <NoteGlyph className={className} /> : <TaskGlyph className={className} />
+  return item.complexity === 'note' ? <NoteGlyph className={className} /> : <TaskGlyph done={item.status === 'done'} className={className} />
 }
 
 // ----- Sidebar tree -----
@@ -213,6 +193,7 @@ function TreeRow({
   counts,
   onSelect,
   onToggle,
+  onMenu,
 }: {
   node: FolderTreeNode
   depth: number
@@ -221,18 +202,23 @@ function TreeRow({
   counts: Map<string, number>
   onSelect: (id: string) => void
   onToggle: (id: string) => void
+  onMenu: (id: string, x: number, y: number) => void
 }) {
   const hasChildren = node.children.length > 0
   const isOpen = expanded.has(node.id)
   const active = node.id === selectedId
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => onMenu(node.id, clientX, clientY),
+  })
   return (
     <>
       <div
-        className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] py-1.5 pr-2 transition-colors ${
+        className={`flex min-h-[42px] cursor-pointer touch-pan-y select-none items-center gap-2 rounded-[15px] py-1.5 pr-2 transition-colors [-webkit-touch-callout:none] ${
           active ? 'bg-brand-500/10 shadow-[0_0_0_1px_rgba(47,107,255,.18)_inset]' : 'hover:bg-white/60'
         }`}
         style={{ paddingLeft: `${8 + depth * 16}px` }}
-        onClick={() => onSelect(node.id)}
+        onClick={() => { if (consumeClick()) return; onSelect(node.id) }}
+        {...longPressProps}
       >
         <button
           type="button"
@@ -269,6 +255,7 @@ function TreeRow({
               counts={counts}
               onSelect={onSelect}
               onToggle={onToggle}
+              onMenu={onMenu}
             />
           ))
         : null}
@@ -297,7 +284,9 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
       className="group w-full select-none touch-pan-y [-webkit-touch-callout:none] rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
-        <span className={typeToneClass(item)}>{typeLabel(item)}</span>
+        <span className={`grid h-[22px] w-[22px] place-items-center rounded-md ${item.complexity === 'note' ? 'bg-brand-500/10 text-brand-600' : 'bg-teal-500/10 text-teal-600'}`}>
+          <ItemTypeGlyph item={item} className="h-3.5 w-3.5" />
+        </span>
         {item.priority && item.priority <= 2 ? (
           <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[#B47410]">prioridade</span>
         ) : null}
@@ -348,11 +337,11 @@ function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void
       </span>
       <span className="min-w-0">
         <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
-        {/* No mobile só o título + ícone; trecho/rótulos só no desktop (ID 013). */}
-        <span className="hidden truncate text-[12px] text-navy-500 sm:block">
-          <span className="capitalize">{typeLabel(item)}</span>
-          {text ? ` · ${text}` : ''}
-        </span>
+        {text ? (
+          <span className="hidden truncate text-[12px] text-navy-500 sm:block">
+            {text}
+          </span>
+        ) : null}
       </span>
       <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{STATUS_LABEL[item.status]}</span>
       <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{formatRelative(item.updatedAt)}</span>
@@ -366,18 +355,24 @@ function RootFolderCard({
   subCount,
   count,
   onOpen,
+  onMenu,
 }: {
   folder: Folder
   pinned?: boolean
   subCount: number
   count: number
   onOpen: (id: string) => void
+  onMenu?: (id: string, x: number, y: number) => void
 }) {
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => onMenu?.(folder.id, clientX, clientY),
+  })
   return (
     <button
       type="button"
-      onClick={() => onOpen(folder.id)}
-      className="group flex items-center gap-3 rounded-[18px] border border-white/70 bg-white/90 p-3.5 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+      onClick={() => { if (consumeClick()) return; onOpen(folder.id) }}
+      {...(onMenu ? longPressProps : {})}
+      className="group flex select-none items-center gap-3 rounded-[18px] border border-white/70 bg-white/90 p-3.5 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition touch-pan-y [-webkit-touch-callout:none] hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] ${pinned ? 'bg-warning/15 text-[#B47410]' : 'bg-brand-500/10 text-brand-600'}`}>
         {pinned ? <StarGlyph filled className="h-5 w-5" /> : <FolderGlyph className="h-5 w-5" />}
@@ -393,6 +388,194 @@ function RootFolderCard({
   )
 }
 
+// ----- Folder context menu (right-click desktop / long-press mobile) -----
+
+type FolderMenuState = { folderId: string; x: number; y: number }
+
+function FolderMenuRow({
+  icon,
+  label,
+  right,
+  danger,
+  onClick,
+}: {
+  icon: React.ReactNode
+  label: string
+  right?: string
+  danger?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex min-h-[40px] w-full items-center gap-2.5 rounded-[13px] px-2.5 text-left text-[13px] font-semibold transition-colors max-md:min-h-[44px] max-md:text-[14px] ${
+        danger ? 'text-danger hover:bg-red-500/[0.07]' : 'text-navy-900 hover:bg-navy-900/[0.045]'
+      }`}
+    >
+      <span className={`grid w-5 shrink-0 place-items-center text-[13px] ${danger ? 'text-danger' : 'text-navy-500'}`}>{icon}</span>
+      <span className="flex-1 truncate">{label}</span>
+      {right ? <span className="ml-auto shrink-0 font-mono text-[10px] text-navy-500">{right}</span> : null}
+    </button>
+  )
+}
+
+function FolderMenu({
+  folder,
+  breadcrumbLabel,
+  count,
+  pinned,
+  viewMode,
+  folders,
+  x,
+  y,
+  onClose,
+  onOpen,
+  onTogglePin,
+  onNewSub,
+  onSetView,
+  onRename,
+  onMove,
+  onAgents,
+  onCopyLink,
+  onDelete,
+}: {
+  folder: Folder
+  breadcrumbLabel: string
+  count: number
+  pinned: boolean
+  viewMode: 'kanban' | 'list'
+  folders: Folder[]
+  x: number
+  y: number
+  onClose: () => void
+  onOpen: () => void
+  onTogglePin: () => void
+  onNewSub: () => void
+  onSetView: (mode: 'kanban' | 'list') => void
+  onRename: () => void
+  onMove: (parentId: string | null) => void
+  onAgents: () => void
+  onCopyLink: () => void
+  onDelete: () => void
+}) {
+  const [sub, setSub] = useState<'move' | 'view' | null>(null)
+  const [pos, setPos] = useState({ left: x, top: y })
+  const openedAtRef = useRef(Date.now())
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
+  useEscapeClose(true, onClose)
+
+  useEffect(() => {
+    openedAtRef.current = Date.now()
+    const width = 286
+    const height = 440
+    setPos({
+      left: Math.max(8, Math.min(x, window.innerWidth - width - 8)),
+      top: Math.max(8, Math.min(y, window.innerHeight - height - 8)),
+    })
+  }, [x, y])
+
+  // Move: exclui a própria pasta e suas descendentes (não pode mover para dentro de si mesma).
+  const moveTargets = useMemo(() => {
+    const descendants = new Set<string>([folder.id])
+    let added = true
+    while (added) {
+      added = false
+      for (const f of folders) {
+        if (f.parentId && descendants.has(f.parentId) && !descendants.has(f.id)) {
+          descendants.add(f.id)
+          added = true
+        }
+      }
+    }
+    return flattenFolderOptions(folders).filter(({ folder: f }) => !descendants.has(f.id))
+  }, [folders, folder.id])
+
+  function handleBackdropDown() {
+    if (Date.now() - openedAtRef.current < 400) return
+    onClose()
+  }
+
+  const panelClass =
+    'max-md:fixed max-md:inset-x-0 max-md:bottom-0 max-md:w-full max-md:rounded-t-[30px] max-md:border-x-0 max-md:border-b-0 max-md:p-3.5 max-md:pb-[calc(1.25rem+env(safe-area-inset-bottom))] max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] md:fixed md:w-[286px] md:rounded-[22px] md:p-[9px] md:shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.1)] border border-white/78 bg-white/95 backdrop-blur-2xl'
+
+  return (
+    <div className="fixed inset-0 z-[130]" onMouseDown={handleBackdropDown}>
+      <div
+        className={panelClass}
+        style={isMobile ? {} : { left: pos.left, top: pos.top }}
+        onMouseDown={(e) => e.stopPropagation()}
+        role="menu"
+      >
+        {sub === 'move' ? (
+          <>
+            <FolderMenuRow icon="‹" label="Voltar" onClick={() => setSub(null)} />
+            <div className="my-1 h-px bg-navy-900/[0.07]" />
+            <FolderMenuRow icon="⌂" label="Raiz (sem pasta-mãe)" onClick={() => onMove(null)} />
+            <div className="max-h-64 overflow-y-auto">
+              {moveTargets.length === 0 ? (
+                <p className="px-2 py-3 text-center font-mono text-[11px] text-navy-300">Nenhum destino</p>
+              ) : (
+                moveTargets.map(({ folder: f, depth }) => (
+                  <FolderMenuRow
+                    key={f.id}
+                    icon="📁"
+                    label={`${' '.repeat(depth)}${f.name}`}
+                    onClick={() => onMove(f.id)}
+                  />
+                ))
+              )}
+            </div>
+          </>
+        ) : sub === 'view' ? (
+          <>
+            <FolderMenuRow icon="‹" label="Voltar" onClick={() => setSub(null)} />
+            <div className="my-1 h-px bg-navy-900/[0.07]" />
+            <FolderMenuRow icon="▤" label="Lista" right={viewMode === 'list' ? '✓' : undefined} onClick={() => onSetView('list')} />
+            <FolderMenuRow icon="▦" label="Kanban" right={viewMode === 'kanban' ? '✓' : undefined} onClick={() => onSetView('kanban')} />
+          </>
+        ) : (
+          <>
+            {isMobile ? <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-navy-900/15" /> : null}
+            <div className="border-b border-navy-900/[0.07] px-2.5 pb-2.5 max-md:px-1">
+              <b className="block truncate text-[13px] font-[850] text-navy-900 max-md:text-[15px]">{folder.name}</b>
+              <span className="mt-1 block truncate font-mono text-[10px] text-navy-500">{breadcrumbLabel} · {count} {count === 1 ? 'item' : 'itens'}</span>
+            </div>
+
+            <div className="my-2 grid grid-cols-3 gap-1.5">
+              <button type="button" onClick={onOpen} className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] bg-navy-900/[0.045] text-navy-900">
+                <span className="text-[16px] leading-none">↗</span>
+                <b className="text-[11px] font-[850]">Abrir</b>
+              </button>
+              <button type="button" onClick={onTogglePin} className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] ${pinned ? 'bg-warning/[0.18] text-[#B47410]' : 'bg-warning/[0.14] text-[#B47410]'}`}>
+                <span className="text-[16px] leading-none">{pinned ? '★' : '☆'}</span>
+                <b className="text-[11px] font-[850]">{pinned ? 'Favorita' : 'Favoritar'}</b>
+              </button>
+              <button type="button" onClick={onNewSub} className="flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] bg-navy-900/[0.045] text-navy-900">
+                <span className="text-[16px] leading-none">＋</span>
+                <b className="text-[11px] font-[850]">Subpasta</b>
+              </button>
+            </div>
+
+            <div className="border-t border-navy-900/[0.07] py-1">
+              <FolderMenuRow icon="▦" label="Visualização" right={`${viewMode === 'kanban' ? 'Kanban' : 'Lista'} ›`} onClick={() => setSub('view')} />
+              <FolderMenuRow icon="✎" label="Renomear" onClick={onRename} />
+              <FolderMenuRow icon="⇄" label="Mover" onClick={() => setSub('move')} />
+              <FolderMenuRow icon={<span className="font-mono text-[10px] font-bold">AG</span>} label="Editar AGENTS.md" onClick={onAgents} />
+              <FolderMenuRow icon="⛓" label="Copiar link" onClick={onCopyLink} />
+            </div>
+
+            <div className="border-t border-navy-900/[0.07] py-1">
+              <FolderMenuRow icon="🗑" label="Excluir pasta" danger onClick={onDelete} />
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ----- Main browser -----
 
 function NotasBrowser() {
@@ -403,22 +586,23 @@ function NotasBrowser() {
   const { folders } = useFolders()
   const { items } = useItems()
   const { prefs, update } = usePreferences()
-  const { prompt } = useDialog()
+  const { prompt, confirm } = useDialog()
   const { setSingleSelection, setQuickCaptureFolderId, openCapture } = useUI()
 
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [sortKey, setSortKey] = useState<SortKey>('manual')
+  const [sortKey, setSortKey] = useState<SortKey>('alpha')
   const [sortOpen, setSortOpen] = useState(false)
-  const [agentsOpen, setAgentsOpen] = useState(false)
+  const [agentsForId, setAgentsForId] = useState<string | null>(null)
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
+  const [folderMenu, setFolderMenu] = useState<FolderMenuState | null>(null)
   const sortRef = useRef<HTMLDivElement>(null)
   const headerMenuRef = useRef<HTMLDivElement>(null)
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
   const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders])
-  const rootFolders = useMemo(() => folders.filter((f) => !f.parentId), [folders])
+  const rootFolders = useMemo(() => folders.filter((f) => !f.parentId).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [folders])
   const pinnedFolders = useMemo(
     () => prefs.pinnedFolderIds.map((id) => folderById.get(id)).filter((f): f is Folder => Boolean(f)),
     [prefs.pinnedFolderIds, folderById],
@@ -433,11 +617,10 @@ function NotasBrowser() {
     return map
   }, [items])
 
-  // Sem auto-seleção: ao abrir /notas sem ?folder, fica na raiz (grade de pastas).
   const selectedId = folderParam && folderById.has(folderParam) ? folderParam : null
   const selectedFolder = selectedId ? folderById.get(selectedId) ?? null : null
   const node = useMemo(() => (selectedId ? findNode(tree, selectedId) : null), [tree, selectedId])
-  const childFolders = node?.children ?? []
+  const childFolders = useMemo(() => [...(node?.children ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [node])
   const breadcrumb = useMemo(() => buildBreadcrumb(folders, selectedId), [folders, selectedId])
   const isPinned = selectedId ? prefs.pinnedFolderIds.includes(selectedId) : false
   const viewMode: 'kanban' | 'list' =
@@ -557,6 +740,56 @@ function NotasBrowser() {
     openCapture('note')
   }
 
+  // ----- Ações do menu de contexto de pasta (parametrizadas por folderId) -----
+  function openFolderMenu(folderId: string, x: number, y: number) {
+    setFolderMenu({ folderId, x, y })
+  }
+
+  function togglePinnedFor(folderId: string) {
+    const next = prefs.pinnedFolderIds.includes(folderId)
+      ? prefs.pinnedFolderIds.filter((id) => id !== folderId)
+      : [folderId, ...prefs.pinnedFolderIds]
+    update({ pinnedFolderIds: next })
+  }
+
+  async function newSubfolderFor(folderId: string) {
+    const name = await prompt({ title: 'Nova subpasta', message: 'Nome da subpasta', placeholder: 'Nome' })
+    if (!name?.trim()) return
+    const folder = await createFolder({ name: name.trim(), parentId: folderId })
+    setExpanded((current) => new Set(current).add(folderId))
+    selectFolder(folder.id)
+  }
+
+  async function renameFolder(folderId: string) {
+    const current = folderById.get(folderId)
+    const name = await prompt({ title: 'Renomear pasta', message: 'Novo nome', defaultValue: current?.name ?? '', placeholder: 'Nome' })
+    if (!name?.trim() || name.trim() === current?.name) return
+    await updateFolder(folderId, { name: name.trim() })
+  }
+
+  async function moveFolder(folderId: string, parentId: string | null) {
+    await updateFolder(folderId, { parentId } as never)
+  }
+
+  function copyFolderLink(folderId: string) {
+    const url = `${window.location.origin}/notas?folder=${folderId}`
+    navigator.clipboard?.writeText(url)
+  }
+
+  async function deleteFolderWithConfirm(folderId: string) {
+    const f = folderById.get(folderId)
+    const ok = await confirm({
+      title: 'Excluir pasta',
+      message: `Excluir "${f?.name ?? 'pasta'}"? Subpastas também serão removidas e os itens ficarão sem pasta. Esta ação não pode ser desfeita.`,
+      confirmLabel: 'Excluir',
+      cancelLabel: 'Cancelar',
+      variant: 'danger',
+    })
+    if (!ok) return
+    await deleteFolder(folderId)
+    if (selectedId === folderId) goToRoot()
+  }
+
   const filteredTree = search.trim()
     ? folders
         .filter((f) => f.name.toLowerCase().includes(search.trim().toLowerCase()))
@@ -582,7 +815,7 @@ function NotasBrowser() {
         </label>
       </div>
 
-      <div className="min-h-0 overflow-auto p-3">
+      <div className="flex-1 p-3">
         {filteredTree ? (
           filteredTree.length === 0 ? (
             <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta encontrada</p>
@@ -643,6 +876,7 @@ function NotasBrowser() {
                   counts={counts}
                   onSelect={selectFolder}
                   onToggle={toggleExpand}
+                  onMenu={openFolderMenu}
                 />
               ))
             )}
@@ -660,7 +894,7 @@ function NotasBrowser() {
         </button>
         <button
           type="button"
-          onClick={() => setAgentsOpen(true)}
+          onClick={() => selectedId && setAgentsForId(selectedId)}
           disabled={!selectedId}
           className="min-h-[42px] w-full rounded-[15px] bg-navy-900/[0.055] font-extrabold text-navy-900 disabled:opacity-40"
         >
@@ -671,16 +905,16 @@ function NotasBrowser() {
   )
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 lg:h-[calc(100vh-104px)] lg:px-8">
-      {/* Mobile: scroll único da janela; desktop: card de altura fixa com scroll interno (ID 008). */}
-      <div className="grid grid-cols-1 gap-[18px] lg:h-full lg:min-h-0 lg:grid-cols-[340px_minmax(0,1fr)]">
+    <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 lg:min-h-[calc(100vh-104px)] lg:px-8">
+      {/* Scroll da página em vez de containers internos fixos */}
+      <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
         {/* Sidebar / folder navigator (desktop) */}
-        <aside className="hidden min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:grid">
+        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:flex">
           {folderNavContent}
         </aside>
 
         {/* Content panel */}
-        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:min-h-0 lg:overflow-hidden">
+        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl">
           {selectedFolder ? (
             <>
               <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
@@ -732,7 +966,7 @@ function NotasBrowser() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setAgentsOpen(true)}
+                      onClick={() => selectedId && setAgentsForId(selectedId)}
                       className="hidden h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900 lg:inline-flex"
                     >
                       AGENTS.md
@@ -752,15 +986,15 @@ function NotasBrowser() {
                       Novo item
                     </button>
 
-                    {/* Mobile: ações agrupadas em menu kebab (ID 016). */}
-                    <div className="relative lg:hidden" ref={headerMenuRef}>
+                    {/* Mobile & Desktop: ações agrupadas em menu kebab (ID 016/025). */}
+                    <div className="relative" ref={headerMenuRef}>
                       <button
                         type="button"
                         onClick={() => setHeaderMenuOpen((v) => !v)}
                         aria-haspopup="menu"
                         aria-expanded={headerMenuOpen}
                         aria-label="Ações da pasta"
-                        className="grid h-[38px] w-[38px] place-items-center rounded-full bg-navy-900/[0.055] text-navy-700"
+                        className="grid h-[38px] w-[38px] place-items-center rounded-full bg-navy-900/[0.055] text-navy-700 transition hover:bg-navy-900/10"
                       >
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
                           <circle cx="12" cy="5" r="1.6" />
@@ -791,11 +1025,21 @@ function NotasBrowser() {
                           <button
                             type="button"
                             role="menuitem"
-                            onClick={() => { setAgentsOpen(true); setHeaderMenuOpen(false) }}
+                            onClick={() => { if (selectedId) setAgentsForId(selectedId); setHeaderMenuOpen(false) }}
                             className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
                           >
                             <span className="font-mono text-[11px] font-bold text-navy-500">md</span>
                             Editar AGENTS.md
+                          </button>
+                          <div className="my-1 h-px bg-navy-900/10" />
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { if (selectedId) void deleteFolderWithConfirm(selectedId); setHeaderMenuOpen(false) }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-danger hover:bg-red-500/[0.07]"
+                          >
+                            <span className="font-mono text-[11px] font-bold text-danger">🗑</span>
+                            Excluir pasta
                           </button>
                         </div>
                       ) : null}
@@ -935,6 +1179,7 @@ function NotasBrowser() {
                               subCount={sub.children.length}
                               count={counts.get(sub.id) ?? 0}
                               onOpen={selectFolder}
+                              onMenu={openFolderMenu}
                             />
                           ))}
                         </div>
@@ -998,7 +1243,7 @@ function NotasBrowser() {
                     <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
                     <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {pinnedFolders.map((folder) => (
-                        <RootFolderCard key={folder.id} folder={folder} pinned subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} />
+                        <RootFolderCard key={folder.id} folder={folder} pinned subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} onMenu={openFolderMenu} />
                       ))}
                     </div>
                   </>
@@ -1006,7 +1251,7 @@ function NotasBrowser() {
                 <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {rootFolders.map((folder) => (
-                    <RootFolderCard key={folder.id} folder={folder} subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} />
+                    <RootFolderCard key={folder.id} folder={folder} subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} onMenu={openFolderMenu} />
                   ))}
                 </div>
               </div>
@@ -1037,12 +1282,35 @@ function NotasBrowser() {
         </div>
       ) : null}
 
-      {selectedId && selectedFolder ? (
+      {agentsForId ? (
         <AgentsEditorModal
-          folderId={selectedId}
-          title={`AGENTS.md / ${selectedFolder.name}`}
-          open={agentsOpen}
-          onClose={() => setAgentsOpen(false)}
+          folderId={agentsForId}
+          title={`AGENTS.md / ${folderById.get(agentsForId)?.name ?? 'pasta'}`}
+          open={Boolean(agentsForId)}
+          onClose={() => setAgentsForId(null)}
+        />
+      ) : null}
+
+      {folderMenu && folderById.get(folderMenu.folderId) ? (
+        <FolderMenu
+          folder={folderById.get(folderMenu.folderId)!}
+          breadcrumbLabel={buildBreadcrumb(folders, folderMenu.folderId).map((f) => f.name).join(' / ') || 'Notas'}
+          count={counts.get(folderMenu.folderId) ?? 0}
+          pinned={prefs.pinnedFolderIds.includes(folderMenu.folderId)}
+          viewMode={folderById.get(folderMenu.folderId)?.viewMode === 'kanban' ? 'kanban' : 'list'}
+          folders={folders}
+          x={folderMenu.x}
+          y={folderMenu.y}
+          onClose={() => setFolderMenu(null)}
+          onOpen={() => { selectFolder(folderMenu.folderId); setFolderMenu(null) }}
+          onTogglePin={() => { togglePinnedFor(folderMenu.folderId); setFolderMenu(null) }}
+          onNewSub={() => { const id = folderMenu.folderId; setFolderMenu(null); void newSubfolderFor(id) }}
+          onSetView={(mode) => { void updateFolder(folderMenu.folderId, { viewMode: mode, viewModeManual: true }); setFolderMenu(null) }}
+          onRename={() => { const id = folderMenu.folderId; setFolderMenu(null); void renameFolder(id) }}
+          onMove={(parentId) => { void moveFolder(folderMenu.folderId, parentId); setFolderMenu(null) }}
+          onAgents={() => { setAgentsForId(folderMenu.folderId); setFolderMenu(null) }}
+          onCopyLink={() => { copyFolderLink(folderMenu.folderId); setFolderMenu(null) }}
+          onDelete={() => { const id = folderMenu.folderId; setFolderMenu(null); void deleteFolderWithConfirm(id) }}
         />
       ) : null}
     </div>

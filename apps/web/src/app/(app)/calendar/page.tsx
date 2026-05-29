@@ -345,7 +345,7 @@ function CalendarCard({
               <div
                 key={i}
                 onClick={() => onDayClick(key)}
-                className={`relative flex min-h-[72px] flex-col gap-1 overflow-hidden rounded-[10px] p-1.5 cursor-pointer lg:min-h-[58px] lg:gap-0.5 ${
+                className={`flex min-h-0 flex-col gap-0.5 overflow-hidden p-1 lg:gap-1 lg:p-1.5 transition-colors cursor-pointer ${
                   isToday
                     ? 'border-[1.5px] border-navy-900 bg-white/92 shadow-[0_6px_16px_-8px_rgba(15,35,66,.30)]'
                     : key === selectedKey
@@ -368,7 +368,7 @@ function CalendarCard({
                   <span
                     key={event.id}
                     onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                    className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))}`}
+                    className={`block truncate rounded px-1 py-0.5 text-[9.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 lg:px-1.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))}`}
                     title={event.title}
                   >
                     {event.title}
@@ -378,7 +378,7 @@ function CalendarCard({
                   <span
                     key={item.id}
                     onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
-                    className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx + visible.length))}`}
+                    className={`block truncate rounded px-1 py-0.5 text-[9.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 lg:px-1.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx + visible.length))}`}
                     title={item.title}
                   >
                     {item.title}
@@ -740,7 +740,7 @@ function AgendaCard({
       ) : (
         <div className="relative flex-1 overflow-hidden pl-14">
           <div className="absolute bottom-1 left-14 top-1 w-px bg-navy-900/10" aria-hidden="true" />
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1">
             {rows.map((row) => {
               const dotTone = row.isNow
                 ? 'bg-navy-900 border-navy-900 shadow-[0_0_0_4px_rgba(15,35,66,.10)]'
@@ -753,12 +753,12 @@ function AgendaCard({
                   key={row.key}
                   type={row.onClick ? 'button' : undefined}
                   onClick={row.onClick}
-                  className="relative flex items-start gap-3 py-1.5 pl-4 text-left"
+                  className="relative flex items-start gap-3 py-1 pl-4 text-left"
                 >
-                  <span className="absolute -left-[60px] top-2 w-10 text-right font-mono text-[10.5px] tracking-wider text-navy-500">{row.hour}</span>
-                  <span className={`absolute -left-1 top-3 h-[9px] w-[9px] rounded-full border-2 ${dotTone}`} aria-hidden="true" />
+                  <span className="absolute -left-[60px] top-[7px] w-10 text-right font-mono text-[10px] tracking-wider text-navy-500">{row.hour}</span>
+                  <span className={`absolute -left-1 top-2.5 h-[9px] w-[9px] rounded-full border-2 ${dotTone}`} aria-hidden="true" />
                   <div
-                    className={`flex-1 rounded-[10px] border border-navy-900/[0.06] bg-white/60 px-3 py-2 [border-left-width:3px] ${
+                    className={`flex-1 rounded-[10px] border border-navy-900/[0.06] bg-white/60 px-2.5 py-1.5 [border-left-width:3px] ${
                       row.tone === 'blue' ? '[border-left-color:#2F6BFF]' : ''
                     } ${row.tone === 'teal' ? 'bg-[rgba(40,199,183,.07)] [border-left-color:#28C7B7]' : ''} ${
                       row.tone === 'violet' ? 'bg-[rgba(123,91,255,.07)] [border-left-color:#7B5BFF]' : ''
@@ -766,10 +766,10 @@ function AgendaCard({
                       row.tone === 'amber' ? 'bg-[rgba(245,165,36,.08)] [border-left-color:#F5A524]' : ''
                     } ${row.done ? 'opacity-65' : ''}`}
                   >
-                    <div className={`text-[13px] font-semibold leading-tight -tracking-[.01em] ${row.done ? 'text-navy-500 line-through' : 'text-navy-900'}`}>
+                    <div className={`text-[12px] font-semibold leading-tight -tracking-[.01em] ${row.done ? 'text-navy-500 line-through' : 'text-navy-900'}`}>
                       {row.title}
                     </div>
-                    <div className="mt-0.5 font-mono text-[10.5px] text-navy-500">{row.meta}</div>
+                    <div className="mt-0.5 font-mono text-[10px] text-navy-500">{row.meta}</div>
                   </div>
                 </Tag>
               )

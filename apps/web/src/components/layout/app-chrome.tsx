@@ -35,7 +35,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
             <Topbar />
           </div>
           <NotificationFailureBanner />
-          <div className="flex flex-1">
+          <div className="flex flex-1 pt-5 lg:pt-0">
             <main className={`flex-1 lg:pb-0 ${isCalendar ? 'pb-0' : 'pb-[calc(7rem+env(safe-area-inset-bottom))]'}`}>
               {children}
             </main>

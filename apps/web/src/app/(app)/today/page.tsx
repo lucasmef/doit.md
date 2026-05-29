@@ -39,6 +39,13 @@ function formatTime(dateStr: string) {
   }
 }
 
+function priorityColor(item: Item) {
+  if (item.priority === 1) return 'bg-red-500'
+  if (item.priority === 2) return 'bg-orange-500'
+  if (item.priority === 3) return 'bg-amber-400'
+  return 'bg-[linear-gradient(180deg,#2F6BFF,#28C7B7)]'
+}
+
 // Artigo de tarefa com toque simples (abrir) + toque longo / clique-direito (menu de ações) — ID 009.
 function TaskArticle({
   item,
@@ -106,11 +113,28 @@ export default function TodayFocusedPage() {
   }, [events, today, tomorrow, shouldShowTomorrow, nowMs, hidePastMs])
   
   const todayItems = useMemo(() => {
-    return items.filter(i => (i.dueDate === today || i.scheduledDate === today) && i.status !== 'done')
+    const list = items.filter(i => (i.dueDate === today || i.scheduledDate === today) && i.status !== 'done')
+    list.sort((a, b) => {
+      if (a.dueTime && !b.dueTime) return -1
+      if (!a.dueTime && b.dueTime) return 1
+      if (a.dueTime && b.dueTime) return a.dueTime.localeCompare(b.dueTime)
+      const pa = a.priority ?? 99
+      const pb = b.priority ?? 99
+      if (pa !== pb) return pa - pb
+      return a.title.localeCompare(b.title)
+    })
+    return list
   }, [items, today])
   
   const priorityItems = useMemo(() => {
-    return items.filter(i => (i.status === 'doing' || (i.dueDate && i.dueDate < today && i.status !== 'done')))
+    const list = items.filter(i => (i.status === 'doing' || (i.dueDate && i.dueDate < today && i.status !== 'done')))
+    list.sort((a, b) => {
+      const pa = a.priority ?? 99
+      const pb = b.priority ?? 99
+      if (pa !== pb) return pa - pb
+      return (a.dueDate ?? '').localeCompare(b.dueDate ?? '')
+    })
+    return list
   }, [items, today])
   
   if (itemsLoading || eventsLoading) {
@@ -168,7 +192,7 @@ export default function TodayFocusedPage() {
                   : 'grid-cols-[28px_minmax(0,1fr)] md:grid-cols-[30px_minmax(0,1fr)]'
                 return (
                   <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2 grid cursor-pointer select-none ${cols} items-center gap-3 rounded-[15px] border border-brand-500/20 bg-brand-500/[0.07] p-2.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:p-3 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <div className="absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] bg-[linear-gradient(180deg,#2F6BFF,#28C7B7)]" />
+                    <div className={`absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] ${priorityColor(item)}`} />
                     {timed ? (
                       <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-2 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:text-[13px]">{item.dueTime}</div>
                     ) : null}
@@ -212,6 +236,7 @@ export default function TodayFocusedPage() {
                   const isTempDone = temporarilyDone.has(item.id)
                   return (
                     <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2 grid cursor-pointer select-none grid-cols-[56px_26px_minmax(0,1fr)_auto] items-center gap-3 rounded-[15px] border border-navy-900/[0.06] bg-white/60 p-2.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[80px_28px_minmax(0,1fr)_auto] md:p-3 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div className={`absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] ${priorityColor(item)}`} />
                       <div className={`whitespace-nowrap rounded-[10px] border px-1.5 py-1.5 text-center font-mono text-[11px] font-bold md:px-2 md:text-[13px] ${isOverdue ? 'border-red-500/20 bg-red-50 text-red-600' : 'border-navy-900/15 bg-navy-900/[0.07] text-navy-900'}`}>{item.status === 'doing' ? 'agora' : isOverdue ? 'atrasado' : 'prioridade'}</div>
                       <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
                         <TaskIcon done={isTempDone} />
