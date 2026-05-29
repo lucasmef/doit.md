@@ -65,7 +65,7 @@ function TaskArticle({
         onOpen(item.id)
       }}
       {...longPressProps}
-      className={className}
+      className={`touch-pan-y [-webkit-touch-callout:none] ${className}`}
     >
       {children}
     </article>
@@ -169,23 +169,27 @@ export default function TodayFocusedPage() {
               
               {todayItems.map(item => {
                 const isTempDone = temporarilyDone.has(item.id)
+                // ID 011: sem coluna fixa de horário. Com horário => chip + checkbox + título; sem horário => checkbox + título (alinhado à esquerda).
+                const timed = Boolean(item.dueTime)
+                const cols = timed
+                  ? 'grid-cols-[auto_28px_minmax(0,1fr)] md:grid-cols-[auto_30px_minmax(0,1fr)]'
+                  : 'grid-cols-[28px_minmax(0,1fr)] md:grid-cols-[30px_minmax(0,1fr)]'
                 return (
-                  <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2.5 grid cursor-pointer select-none grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-brand-500/20 bg-brand-500/[0.07] p-3.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2.5 grid cursor-pointer select-none ${cols} items-center gap-3 rounded-[17px] border border-brand-500/20 bg-brand-500/[0.07] p-3.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] bg-[linear-gradient(180deg,#2F6BFF,#28C7B7)]" />
-                    {/* Sem badge "hoje" redundante; só mostra a caixa quando há horário (ID 011). */}
-                    {item.dueTime ? (
-                      <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:px-2 md:text-[13px]">{item.dueTime}</div>
-                    ) : (
-                      <div aria-hidden="true" />
-                    )}
+                    {timed ? (
+                      <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-2 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:text-[13px]">{item.dueTime}</div>
+                    ) : null}
                     <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
                       <TaskIcon done={isTempDone} />
                     </button>
                     <div className="min-w-0">
                       <div className={`text-[14px] font-bold leading-snug tracking-tight text-navy-900 md:text-[16px] ${isTempDone ? 'line-through text-navy-500' : ''}`}>{item.title}</div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
-                        {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
-                      </div>
+                      {item.tags.length > 0 ? (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
+                          {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
+                        </div>
+                      ) : null}
                     </div>
                   </TaskArticle>
                 )

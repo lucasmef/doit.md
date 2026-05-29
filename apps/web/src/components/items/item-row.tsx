@@ -199,12 +199,12 @@ export function ItemRow({
       style={{ animationDelay: staggerDelay }}
       className={
         isGlass
-          ? `group flex w-full cursor-pointer select-none items-center gap-3 rounded-[20px] border px-2 py-2.5 text-left shadow-cool-sm backdrop-blur-xl transition-colors animate-stagger-item ${
+          ? `group flex w-full cursor-pointer select-none touch-pan-y [-webkit-touch-callout:none] items-center gap-3 rounded-[20px] border px-2 py-2.5 text-left shadow-cool-sm backdrop-blur-xl transition-colors animate-stagger-item ${
               selected || active
                 ? 'border-white/70 bg-white/82 text-navy-900 ring-2 ring-brand-300/35'
                 : 'border-white/48 bg-white/52 hover:bg-white/72'
             }`
-          : `group flex w-full cursor-pointer select-none items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
+          : `group flex w-full cursor-pointer select-none touch-pan-y [-webkit-touch-callout:none] items-center gap-3 border-b px-1 py-2.5 text-left transition-colors animate-stagger-item ${
               selected
                 ? 'border-ui-border-selected bg-surface-selected'
                 : active
