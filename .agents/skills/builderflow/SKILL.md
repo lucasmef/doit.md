@@ -406,7 +406,7 @@ Applies to every agent (Codex, Gemini, Antigravity, Claude).
 When a code fix has visual impact (layout, navigation, visual states, forms, screens) and the result must be proven, generate a screenshot of the fixed screen and save it in two places:
 
 1. In the project: `specs/artifacts/<short-slug>/` (the location already used for evidence).
-2. In the global folder: `G:\.agentes` (save directly in the root of that folder). Create the folder if it does not exist.
+2. In the global folder: `G:\Meu Drive\.agentes` (save directly in the root of that folder). Create the folder if it does not exist.
 
 File name (simple convention, not rigid): `<project>-<screen|area>-<YYYY-MM-DD>[-n].png` — e.g. `doitmd-today-2026-05-29.png`. The name must make clear which project/screen/fix the screenshot proves.
 
@@ -414,7 +414,7 @@ Only generate a screenshot when the change actually affects a visible UI and nee
 
 Sensitive data: prefer seeded/test data; avoid exposing real personal data, emails, tokens, or secrets in the screenshot; redact when necessary.
 
-If `G:\.agentes` cannot be created or written in the session, record that in the living spec and proceed with the in-project evidence (do not block the task).
+If `G:\Meu Drive\.agentes` cannot be created or written in the session, record that in the living spec and proceed with the in-project evidence (do not block the task).
 
 ---
 

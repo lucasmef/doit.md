@@ -171,13 +171,13 @@ Nesses casos o agente deve:
 2. Rodar/validar a tela afetada (servidor local temporário quando necessário).
 3. Gerar o print da tela corrigida comprovando o resultado.
 4. Salvar o print **no projeto**, em `specs/artifacts/<slug-da-tarefa>/` (local já usado para evidências).
-5. Copiar o **mesmo print** para a pasta global `G:\.agentes` (salvar direto na raiz dessa pasta). Criar a pasta se não existir.
+5. Copiar o **mesmo print** para a pasta global `G:\Meu Drive\.agentes` (salvar direto na raiz dessa pasta). Criar a pasta se não existir.
 
 **Nome do arquivo** (padrão simples, sem rigidez): `<projeto>-<tela|area>-<AAAA-MM-DD>[-n].png` — ex.: `doitmd-today-2026-05-29.png`. O nome deve deixar claro **qual projeto/tela/correção** o print comprova.
 
 **Dados sensíveis:** preferir dados de teste/seed; evitar expor dados pessoais reais, e-mails, tokens ou segredos no print; ocultar/borrar quando necessário.
 
-> Observação: `G:\.agentes` fica no Google Drive local. Se a pasta não puder ser criada/gravada na sessão, registrar isso na entrega e seguir com a evidência salva no projeto (não bloquear a tarefa).
+> Observação: `G:\Meu Drive\.agentes` fica no Google Drive local. Se a pasta não puder ser criada/gravada na sessão, registrar isso na entrega e seguir com a evidência salva no projeto (não bloquear a tarefa).
 
 ---
 
