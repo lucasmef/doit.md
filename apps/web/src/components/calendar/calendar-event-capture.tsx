@@ -329,7 +329,7 @@ export function CalendarEventCapture() {
 
   return (
     <div
-      className="fixed inset-0 isolate z-[220] flex items-end justify-center overflow-hidden bg-navy-900/24 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 isolate z-[220] flex items-end justify-center overflow-hidden bg-navy-900/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(clickEvent) => {

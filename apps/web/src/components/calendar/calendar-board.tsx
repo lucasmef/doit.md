@@ -580,7 +580,7 @@ function CalendarFilterSheet({
 }) {
   return (
     <div
-      className={`fixed inset-0 z-[120] flex bg-navy-900/35 p-3 backdrop-blur-sm ${
+      className={`fixed inset-0 z-[120] flex bg-navy-900/35 p-3 backdrop-blur-[2px] ${
         fullscreen
           ? 'items-start justify-start sm:p-4 lg:p-5'
           : 'items-end lg:hidden'
@@ -758,7 +758,7 @@ function FullscreenDayEventsSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-navy-900/45 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-3"
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-0 backdrop-blur-[2px] sm:items-center sm:justify-center sm:p-3"
       role="dialog"
       aria-modal="true"
       onClick={(event) => {
@@ -997,7 +997,7 @@ export function EventSheet({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-sm sm:items-center sm:justify-center"
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-3 backdrop-blur-[2px] sm:items-center sm:justify-center"
       role="dialog"
       aria-modal="true"
       onClick={(clickEvent) => {

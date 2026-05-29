@@ -183,6 +183,13 @@ function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?
   return item.complexity === 'note' ? <NoteGlyph className={className} /> : <TaskGlyph done={item.status === 'done'} className={className} />
 }
 
+// ID 023: tarefa aberta usa tom neutro (checkbox vazio, não verde); verde/teal só quando concluída.
+function itemGlyphTone(item: Item): string {
+  if (item.complexity === 'note') return 'bg-brand-500/10 text-brand-600'
+  if (item.status === 'done') return 'bg-teal-500/10 text-teal-600'
+  return 'bg-navy-900/[0.05] text-navy-500'
+}
+
 // ----- Sidebar tree -----
 
 function TreeRow({
@@ -263,6 +270,43 @@ function TreeRow({
   )
 }
 
+// Linha plana de pasta na sidebar (Destacadas / busca) com menu de ações (ID 033).
+function SidebarFolderRow({
+  folder,
+  selectedId,
+  count,
+  pinned,
+  onSelect,
+  onMenu,
+}: {
+  folder: Folder
+  selectedId: string | null
+  count: number
+  pinned?: boolean
+  onSelect: (id: string) => void
+  onMenu: (id: string, x: number, y: number) => void
+}) {
+  const active = folder.id === selectedId
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => onMenu(folder.id, clientX, clientY),
+  })
+  return (
+    <div
+      className={`flex min-h-[42px] cursor-pointer touch-pan-y select-none items-center gap-2 rounded-[15px] px-2 py-1.5 [-webkit-touch-callout:none] ${
+        active ? 'bg-brand-500/10' : 'hover:bg-white/60'
+      }`}
+      onClick={() => { if (consumeClick()) return; onSelect(folder.id) }}
+      {...longPressProps}
+    >
+      <span className={`flex h-7 w-7 items-center justify-center rounded-[11px] ${pinned ? 'bg-warning/15 text-[#B47410]' : 'bg-brand-500/10 text-brand-600'}`}>
+        {pinned ? <StarGlyph filled className="h-3.5 w-3.5" /> : <FolderGlyph className="h-4 w-4" />}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
+      <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">{count}</span>
+    </div>
+  )
+}
+
 // ----- Content cards -----
 
 function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
@@ -284,7 +328,7 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
       className="group w-full select-none touch-pan-y [-webkit-touch-callout:none] rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
-        <span className={`grid h-[22px] w-[22px] place-items-center rounded-md ${item.complexity === 'note' ? 'bg-brand-500/10 text-brand-600' : 'bg-teal-500/10 text-teal-600'}`}>
+        <span className={`grid h-[22px] w-[22px] place-items-center rounded-md ${itemGlyphTone(item)}`}>
           <ItemTypeGlyph item={item} className="h-3.5 w-3.5" />
         </span>
         {item.priority && item.priority <= 2 ? (
@@ -332,7 +376,7 @@ function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void
       {...longPressProps}
       className="grid w-full select-none touch-pan-y [-webkit-touch-callout:none] grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
     >
-      <span className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${item.complexity === 'note' ? 'bg-brand-500/10 text-brand-600' : 'bg-teal-500/10 text-teal-600'}`}>
+      <span className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${itemGlyphTone(item)}`}>
         <ItemTypeGlyph item={item} className="h-4 w-4" />
       </span>
       <span className="min-w-0">
@@ -591,7 +635,6 @@ function NotasBrowser() {
 
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [sortKey, setSortKey] = useState<SortKey>('alpha')
   const [sortOpen, setSortOpen] = useState(false)
   const [agentsForId, setAgentsForId] = useState<string | null>(null)
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
@@ -625,6 +668,14 @@ function NotasBrowser() {
   const isPinned = selectedId ? prefs.pinnedFolderIds.includes(selectedId) : false
   const viewMode: 'kanban' | 'list' =
     selectedFolder?.viewMode === 'kanban' && childFolders.length > 0 ? 'kanban' : 'list'
+
+  // ID 026: ordenação alfabética por padrão e persistente por pasta (chave = folderId ou 'root').
+  const sortStorageKey = selectedId ?? 'root'
+  const savedSort = prefs.folderSort?.[sortStorageKey]
+  const sortKey: SortKey = SORT_OPTIONS.some((o) => o.key === savedSort) ? (savedSort as SortKey) : 'alpha'
+  function setSortKey(key: SortKey) {
+    update({ folderSort: { ...(prefs.folderSort ?? {}), [sortStorageKey]: key } })
+  }
 
   // expand ancestors of the selected folder
   useEffect(() => {
@@ -821,21 +872,14 @@ function NotasBrowser() {
             <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta encontrada</p>
           ) : (
             filteredTree.map((folder) => (
-              <div
+              <SidebarFolderRow
                 key={folder.id}
-                className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
-                  folder.id === selectedId ? 'bg-brand-500/10' : 'hover:bg-white/60'
-                }`}
-                onClick={() => selectFolder(folder.id)}
-              >
-                <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-brand-500/10 text-brand-600">
-                  <FolderGlyph className="h-4 w-4" />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
-                <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
-                  {counts.get(folder.id) ?? 0}
-                </span>
-              </div>
+                folder={folder}
+                selectedId={selectedId}
+                count={counts.get(folder.id) ?? 0}
+                onSelect={selectFolder}
+                onMenu={openFolderMenu}
+              />
             ))
           )
         ) : (
@@ -844,21 +888,15 @@ function NotasBrowser() {
               <>
                 <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
                 {pinnedFolders.map((folder) => (
-                  <div
+                  <SidebarFolderRow
                     key={folder.id}
-                    className={`flex min-h-[42px] cursor-pointer items-center gap-2 rounded-[15px] px-2 py-1.5 ${
-                      folder.id === selectedId ? 'bg-brand-500/10' : 'hover:bg-white/60'
-                    }`}
-                    onClick={() => selectFolder(folder.id)}
-                  >
-                    <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-warning/15 text-[#B47410]">
-                      <StarGlyph filled className="h-3.5 w-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
-                    <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">
-                      {counts.get(folder.id) ?? 0}
-                    </span>
-                  </div>
+                    folder={folder}
+                    selectedId={selectedId}
+                    count={counts.get(folder.id) ?? 0}
+                    pinned
+                    onSelect={selectFolder}
+                    onMenu={openFolderMenu}
+                  />
                 ))}
               </>
             ) : null}
@@ -909,7 +947,8 @@ function NotasBrowser() {
       {/* Scroll da página em vez de containers internos fixos */}
       <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
         {/* Sidebar / folder navigator (desktop) */}
-        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:flex">
+        {/* ID 016: sidebar acompanha o scroll da página (sticky), sem barra de rolagem interna própria. */}
+        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:flex lg:sticky lg:top-[96px] lg:self-start">
           {folderNavContent}
         </aside>
 
@@ -950,34 +989,7 @@ function NotasBrowser() {
                     {selectedFolder.name}
                   </h1>
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Desktop: ações inline (inalterado). */}
-                    <button
-                      type="button"
-                      onClick={togglePinned}
-                      title={isPinned ? 'Desafixar pasta' : 'Favoritar pasta'}
-                      aria-pressed={isPinned}
-                      className={`hidden h-[38px] w-[38px] place-items-center rounded-full lg:grid ${
-                        isPinned
-                          ? 'bg-warning/15 text-[#B47410] shadow-[0_0_0_1px_rgba(245,165,36,.28)_inset]'
-                          : 'bg-navy-900/[0.055] text-navy-500'
-                      }`}
-                    >
-                      <StarGlyph filled={isPinned} className="h-4 w-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => selectedId && setAgentsForId(selectedId)}
-                      className="hidden h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900 lg:inline-flex"
-                    >
-                      AGENTS.md
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleNewSubfolder}
-                      className="hidden h-[38px] items-center rounded-full bg-navy-900/[0.055] px-3.5 text-[13px] font-extrabold text-navy-900 lg:inline-flex"
-                    >
-                      Nova subpasta
-                    </button>
+                    {/* ID 025: no topo fica só a ação primária "Novo item"; o resto vai para o menu kebab. */}
                     <button
                       type="button"
                       onClick={() => handleNewItem(selectedId)}
@@ -1104,7 +1116,7 @@ function NotasBrowser() {
                 </div>
               </div>
 
-              <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto lg:p-5">
+              <div className="p-4 lg:p-5">
                 {allFolderItems.length === 0 && childFolders.length === 0 ? (
                   <div className="grid min-h-[50vh] place-items-center lg:h-full">
                     <div className="rounded-[22px] border border-dashed border-navy-900/15 bg-white/40 px-6 py-10 text-center">
@@ -1122,10 +1134,18 @@ function NotasBrowser() {
                     </div>
                   </div>
                 ) : viewMode === 'kanban' ? (
-                  <div className="flex min-h-[60vh] gap-3.5 overflow-x-auto lg:h-full lg:min-h-0">
+                  <div className="flex min-h-[60vh] gap-3.5 overflow-x-auto">
                     {kanbanColumns.map((column) => (
                       <div
                         key={column.id}
+                        // ID 034: clique direito no quadro/coluna abre o menu da pasta correspondente
+                        // (cards param o contextmenu via stopPropagation, então não conflita com itens).
+                        onContextMenu={(e) => {
+                          if (column.id !== 'root' && folderById.has(column.id)) {
+                            e.preventDefault()
+                            openFolderMenu(column.id, e.clientX, e.clientY)
+                          }
+                        }}
                         className="flex w-72 shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/62 bg-white/46"
                       >
                         <div className="flex items-center gap-2 border-b border-navy-900/[0.06] px-3.5 py-3">
@@ -1144,7 +1164,7 @@ function NotasBrowser() {
                           )}
                           <span className="ml-auto font-mono text-[10px] text-navy-500">{column.items.length}</span>
                         </div>
-                        <div className="flex flex-1 flex-col gap-2.5 p-3 lg:overflow-auto">
+                        <div className="flex flex-1 flex-col gap-2.5 p-3">
                           {column.items.length === 0 ? (
                             <p className="px-1 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
                           ) : (
@@ -1237,7 +1257,7 @@ function NotasBrowser() {
                 </div>
                 <p className="mt-2 max-w-xl text-[13px] text-navy-500">Escolha uma pasta para ver suas notas, tarefas e referências.</p>
               </div>
-              <div className="p-4 lg:min-h-0 lg:flex-1 lg:overflow-auto lg:p-5">
+              <div className="p-4 lg:p-5">
                 {pinnedFolders.length > 0 ? (
                   <>
                     <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
@@ -1263,7 +1283,7 @@ function NotasBrowser() {
       {mobileFoldersOpen ? (
         <div className="fixed inset-0 z-[200] lg:hidden" role="dialog" aria-modal="true">
           <div
-            className="absolute inset-0 bg-navy-900/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-navy-900/35 backdrop-blur-[2px]"
             onClick={() => setMobileFoldersOpen(false)}
           />
           <div className="absolute inset-y-0 left-0 grid w-[min(86vw,340px)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden border-r border-white/55 bg-white/92 shadow-cool-lg backdrop-blur-2xl">

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>doit.md - menu de pasta simplificado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#0F2342;--blue:#2F6BFF;--teal:#28C7B7;--violet:#7B5BFF;--amber:#F5A524;--danger:#F04438;--gray:#46587A;
+  --sans:"Inter",system-ui,sans-serif;--mono:"JetBrains Mono",monospace;
+  --shadow:0 1px 0 rgba(255,255,255,.72) inset,0 18px 40px -18px rgba(15,35,66,.2),0 4px 12px rgba(15,35,66,.06);
+  --float:0 34px 90px -42px rgba(15,35,66,.58),0 10px 26px rgba(15,35,66,.1)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--sans);color:var(--navy);background:#f4f1ff}
+.wall{position:fixed;inset:0;z-index:0;background:radial-gradient(900px 700px at 12% 20%,rgba(123,91,255,.55),transparent 60%),radial-gradient(800px 600px at 88% 14%,rgba(255,137,235,.42),transparent 62%),radial-gradient(900px 800px at 78% 78%,rgba(40,199,183,.5),transparent 60%),linear-gradient(135deg,#B7C9FF,#DDD6FE 35%,#FBC9F0 60%,#CFF3EE)}
+.app{position:relative;z-index:1;width:min(1280px,calc(100vw - 44px));min-height:100vh;margin:0 auto;padding:28px 0 44px}
+.top{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:18px;margin-bottom:22px}
+.brand,.nav,.search,.card{background:rgba(255,255,255,.62);border:1px solid rgba(255,255,255,.72);box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(180%)}
+.brand{width:max-content;display:flex;align-items:center;gap:12px;border-radius:999px;padding:8px 16px 8px 8px}
+.mark{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--violet) 54%,var(--teal));display:grid;place-items:center;color:white;font-weight:900}
+.brand b{font-size:16px;letter-spacing:-.03em}.brand span{color:var(--blue)}
+.nav{justify-self:center;display:flex;gap:4px;padding:6px;border-radius:999px}.nav a{height:36px;border-radius:999px;display:flex;align-items:center;padding:0 14px;color:var(--gray);font-size:13px;font-weight:650;text-decoration:none}.nav a.active{color:var(--navy);background:white}
+.search{justify-self:end;height:42px;min-width:230px;border-radius:999px;display:flex;align-items:center;padding:0 14px;font-family:var(--mono);font-size:12px;color:var(--gray)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 410px;gap:26px;align-items:start}
+.preview{min-height:640px;border-radius:34px;background:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.56);box-shadow:var(--shadow);padding:28px;position:relative;overflow:hidden}
+.title h1{margin:0 0 8px;font-size:36px;line-height:1;letter-spacing:-.055em}.title p{margin:0 0 18px;color:var(--gray);font-size:14px;line-height:1.45;max-width:720px}
+.folder-pane{width:340px;border-radius:28px;overflow:hidden}.pane-head{padding:18px 20px 14px;border-bottom:1px solid rgba(15,35,66,.07)}.kicker{font-family:var(--mono);font-size:10px;font-weight:850;color:var(--gray);letter-spacing:.12em;text-transform:uppercase}.pane-title{margin-top:6px;font-size:24px;font-weight:950;letter-spacing:-.045em}.tree{padding:12px}
+.node{display:grid;grid-template-columns:18px 30px minmax(0,1fr) auto;gap:8px;align-items:center;min-height:42px;border-radius:15px;padding:6px 9px;margin-bottom:4px}.node.active{background:rgba(47,107,255,.1);box-shadow:0 0 0 1px rgba(47,107,255,.18) inset}.node.child{margin-left:20px}.chev{font-family:var(--mono);font-size:10px;color:var(--gray)}.folder-icon{width:30px;height:30px;border-radius:11px;display:grid;place-items:center;color:var(--blue);background:rgba(47,107,255,.1)}.node.active .folder-icon{color:white;background:linear-gradient(135deg,var(--blue),var(--violet))}.node b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.node span{display:block;margin-top:2px;color:var(--gray);font-family:var(--mono);font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.count{font-family:var(--mono);font-size:10px;color:var(--gray);font-weight:850;border-radius:999px;background:rgba(15,35,66,.055);padding:4px 7px}
+.menu{position:absolute;top:205px;left:306px;width:286px;border-radius:22px;background:rgba(255,255,255,.92);border:1px solid rgba(255,255,255,.78);box-shadow:var(--float);backdrop-filter:blur(24px) saturate(180%);padding:9px;z-index:10}
+.menu-title{padding:8px 10px 10px;border-bottom:1px solid rgba(15,35,66,.07);margin-bottom:7px}.menu-title b{display:block;font-size:13px;font-weight:850}.menu-title span{display:block;margin-top:4px;color:var(--gray);font-family:var(--mono);font-size:10px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px}
+.quick-btn{min-height:54px;border:0;border-radius:15px;background:rgba(15,35,66,.045);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--navy);font-family:var(--sans)}.quick-btn.star{color:#B47410;background:rgba(245,165,36,.14)}.quick-btn b{font-size:11px;font-weight:850}.quick-btn span{font-size:16px;line-height:1}
+.menu-section{padding:6px 0;border-top:1px solid rgba(15,35,66,.07)}.menu-section:first-of-type{border-top:0}
+.menu-row{min-height:38px;border-radius:13px;padding:0 10px;display:flex;align-items:center;gap:10px;color:var(--navy);font-size:13px;font-weight:690}.menu-row:hover{background:rgba(15,35,66,.045)}.menu-row .ico{width:18px;text-align:center;color:var(--gray)}.menu-row .right{margin-left:auto;color:var(--gray);font-family:var(--mono);font-size:10px}.menu-row.danger{color:var(--danger)}.menu-row.danger .ico{color:var(--danger)}
+.phone{width:410px;height:780px;border-radius:52px;background:#0a0a0a;padding:12px;box-shadow:0 0 0 2px rgba(255,255,255,.06) inset,0 0 0 6px #1a1a1a,0 50px 100px -30px rgba(15,35,66,.45)}.screen{position:relative;height:100%;border-radius:40px;overflow:hidden;background:radial-gradient(500px 420px at 10% 16%,rgba(123,91,255,.32),transparent 60%),radial-gradient(520px 460px at 88% 20%,rgba(255,137,235,.28),transparent 62%),radial-gradient(500px 480px at 76% 82%,rgba(40,199,183,.26),transparent 60%),linear-gradient(135deg,#EEF3FF 0%,#F4F1FF 54%,#ECF7F4 100%)}.phone-list{position:absolute;inset:0;padding:84px 16px 160px;filter:blur(5px);opacity:.5}.phone-row{height:58px;border-radius:18px;background:rgba(255,255,255,.64);margin-bottom:12px}.sheet{position:absolute;left:0;right:0;bottom:0;border-radius:30px 30px 0 0;background:rgba(255,255,255,.93);border:1px solid rgba(255,255,255,.76);box-shadow:0 -28px 70px -36px rgba(15,35,66,.64);backdrop-filter:blur(24px) saturate(180%);padding:10px 14px 24px}.handle{width:48px;height:5px;border-radius:999px;background:rgba(15,35,66,.14);margin:0 auto 12px}.sheet-title{padding:0 4px 12px}.sheet-title b{display:block;font-size:15px;letter-spacing:-.02em}.sheet-title span{display:block;margin-top:4px;font-family:var(--mono);font-size:10px;color:var(--gray)}.sheet .menu-row{min-height:42px;border-radius:15px;font-size:14px}
+@media(max-width:1000px){.top{grid-template-columns:1fr}.nav{justify-self:start;max-width:100%;overflow:auto}.search{display:none}.stage{grid-template-columns:1fr}.phone{justify-self:center}.menu{position:static;margin-top:16px}.preview{min-height:auto}.folder-pane{width:100%}}
+</style>
+</head>
+<body>
+<div class="wall"></div>
+<main class="app">
+<header class="top">
+  <div class="brand"><div class="mark">✓</div><b>doit<span>.md</span></b></div>
+  <nav class="nav"><a>Hoje</a><a>Itens</a><a class="active">Notas</a><a>Pastas</a><a>Calendário</a></nav>
+  <div class="search">Buscar pastas · Ctrl K</div>
+</header>
+
+<section class="stage">
+  <div class="preview">
+    <div class="title">
+      <h1>Menu de pasta simplificado</h1>
+      <p>Reduzi para as ações mais usadas. Ações avançadas como exportar, duplicar estrutura e aplicar AGENTS.md nas subpastas saem do menu principal e podem ir para configurações da pasta.</p>
+    </div>
+
+    <aside class="card folder-pane">
+      <div class="pane-head"><div class="kicker">Navegador</div><div class="pane-title">Pastas</div></div>
+      <div class="tree">
+        <div class="node"><div class="chev">▾</div><div class="folder-icon">📁</div><div><b>Conteúdo</b><span>4 subpastas</span></div><div class="count">42</div></div>
+        <div class="node child active"><div class="chev">▾</div><div class="folder-icon">📁</div><div><b>Roteiros</b><span>kanban ativo</span></div><div class="count">18</div></div>
+        <div class="node child"><div class="chev">▸</div><div class="folder-icon">📁</div><div><b>Referências visuais</b><span>Drive e imagens</span></div><div class="count">12</div></div>
+        <div class="node"><div class="chev">▸</div><div class="folder-icon">📁</div><div><b>doit.md</b><span>specs e decisões</span></div><div class="count">18</div></div>
+      </div>
+    </aside>
+
+    <div class="menu">
+      <div class="menu-title"><b>Roteiros</b><span>Conteúdo / Roteiros · 18 itens</span></div>
+
+      <div class="quick">
+        <button class="quick-btn"><span>↗</span><b>Abrir</b></button>
+        <button class="quick-btn star"><span>★</span><b>Favoritar</b></button>
+        <button class="quick-btn"><span>＋</span><b>Subpasta</b></button>
+      </div>
+
+      <div class="menu-section">
+        <div class="menu-row"><span class="ico">▦</span><span>Visualização</span><span class="right">Kanban ›</span></div>
+        <div class="menu-row"><span class="ico">✎</span><span>Renomear</span></div>
+        <div class="menu-row"><span class="ico">⇄</span><span>Mover</span></div>
+        <div class="menu-row"><span class="ico">AG</span><span>Editar AGENTS.md</span></div>
+        <div class="menu-row"><span class="ico">⛓</span><span>Copiar link</span></div>
+      </div>
+
+      <div class="menu-section">
+        <div class="menu-row danger"><span class="ico">🗑</span><span>Excluir pasta</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="phone-list"><div class="phone-row"></div><div class="phone-row"></div><div class="phone-row"></div><div class="phone-row"></div></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-title"><b>Roteiros</b><span>Conteúdo / Roteiros · 18 itens</span></div>
+
+        <div class="quick">
+          <button class="quick-btn"><span>↗</span><b>Abrir</b></button>
+          <button class="quick-btn star"><span>★</span><b>Favoritar</b></button>
+          <button class="quick-btn"><span>＋</span><b>Subpasta</b></button>
+        </div>
+
+        <div class="menu-section">
+          <div class="menu-row"><span class="ico">▦</span><span>Visualização</span><span class="right">Kanban</span></div>
+          <div class="menu-row"><span class="ico">✎</span><span>Renomear</span></div>
+          <div class="menu-row"><span class="ico">⇄</span><span>Mover</span></div>
+          <div class="menu-row"><span class="ico">AG</span><span>Editar AGENTS.md</span></div>
+          <div class="menu-row"><span class="ico">⛓</span><span>Copiar link</span></div>
+        </div>
+
+        <div class="menu-section">
+          <div class="menu-row danger"><span class="ico">🗑</span><span>Excluir pasta</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+</body>
+</html>

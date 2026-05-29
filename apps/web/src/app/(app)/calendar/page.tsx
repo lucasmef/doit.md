@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CalendarEvent, Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 import { BentoGrid, CardTitle, VividBlueCard, GlassCard } from '@/components/ui/bento'
@@ -185,6 +185,8 @@ function CalendarCard({
   onItemClick,
   onToggleExpand,
   expanded,
+  monthMaxVisible,
+  selectedEventId,
   onPickMonth,
   viewMode,
   setViewMode,
@@ -202,6 +204,8 @@ function CalendarCard({
   onItemClick: (id: string) => void
   onToggleExpand: () => void
   expanded: boolean
+  monthMaxVisible: number
+  selectedEventId: string | null
   onPickMonth: (year: number, month: number) => void
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
@@ -338,8 +342,9 @@ function CalendarCard({
             const cellEvents = eventsMap.get(key) ?? []
             const cellItems = itemsMap.get(key) ?? []
             const total = cellEvents.length + cellItems.length
-            const visible = cellEvents.slice(0, 2)
-            const visibleItems = cellItems.slice(0, Math.max(0, 2 - visible.length))
+            // ID 022: no fullscreen desktop mostra mais eventos por célula (usa a altura), reduzindo truncamento.
+            const visible = cellEvents.slice(0, monthMaxVisible)
+            const visibleItems = cellItems.slice(0, Math.max(0, monthMaxVisible - visible.length))
             const more = total - visible.length - visibleItems.length
             return (
               <div
@@ -368,7 +373,7 @@ function CalendarCard({
                   <span
                     key={event.id}
                     onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                    className={`block truncate rounded px-1 py-0.5 text-[9.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 lg:px-1.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))}`}
+                    className={`block truncate rounded px-1 py-0.5 text-[9.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 lg:px-1.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))} ${event.id === selectedEventId ? 'ring-[1.5px] ring-navy-900 ring-offset-1' : ''}`}
                     title={event.title}
                   >
                     {event.title}
@@ -385,7 +390,8 @@ function CalendarCard({
                   </span>
                 ))}
                 {more > 0 ? (
-                  <span className="mt-auto block rounded bg-navy-900/[0.06] px-1.5 py-0.5 text-center font-mono text-[10px] font-bold text-navy-600 lg:text-[9.5px]">+{more} mais</span>
+                  // ID 031: mobile mostra apenas "+X"; desktop mantém "+X mais".
+                  <span className="mt-auto block rounded bg-navy-900/[0.06] px-1.5 py-0.5 text-center font-mono text-[10px] font-bold text-navy-600 lg:text-[9.5px]">+{more}<span className="hidden lg:inline"> mais</span></span>
                 ) : null}
               </div>
             )
@@ -433,7 +439,7 @@ function CalendarCard({
                     <span
                       key={event.id}
                       onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                      className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx))}`}
+                      className={`line-clamp-2 whitespace-normal break-words rounded px-1.5 py-1 text-[11px] font-semibold leading-[1.25] cursor-pointer hover:opacity-80 lg:line-clamp-none lg:truncate lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx))} ${event.id === selectedEventId ? 'ring-[1.5px] ring-navy-900 ring-offset-1' : ''}`}
                       title={event.title}
                     >
                       {event.allDay ? '' : formatHM(event.start) + ' '}
@@ -473,7 +479,7 @@ function CalendarCard({
                   key={event.id}
                   type="button"
                   onClick={() => onEventClick(event)}
-                  className="flex items-center gap-3 rounded-[12px] border border-navy-900/[0.06] bg-white/65 px-3 py-2.5 text-left transition-colors hover:bg-white/85"
+                  className={`flex items-center gap-3 rounded-[12px] border bg-white/65 px-3 py-2.5 text-left transition-colors hover:bg-white/85 ${event.id === selectedEventId ? 'border-navy-900 ring-[1.5px] ring-navy-900' : 'border-navy-900/[0.06]'}`}
                 >
                   <span className={`h-9 w-1.5 shrink-0 rounded-full ${toneClass(eventTone(idx))}`} />
                   <span className="w-24 shrink-0 font-mono text-[11.5px] font-semibold text-navy-500">
@@ -552,7 +558,7 @@ function DayPopup({
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-end bg-navy-900/45 p-0 backdrop-blur-sm sm:items-center sm:justify-center sm:p-3"
+      className="fixed inset-0 z-[120] flex items-end bg-navy-900/35 p-0 backdrop-blur-[2px] sm:items-center sm:justify-center sm:p-3"
       role="dialog"
       aria-modal="true"
       onClick={(event) => {
@@ -670,12 +676,14 @@ function AgendaCard({
   now,
   onItemClick,
   onEventClick,
+  selectedEventId,
 }: {
   events: CalendarEvent[]
   items: Item[]
   now: Date
   onItemClick: (id: string) => void
   onEventClick: (event: CalendarEvent) => void
+  selectedEventId: string | null
 }) {
   const nowMs = now.getTime()
   const rows = useMemo(() => {
@@ -688,6 +696,7 @@ function AgendaCard({
       done: boolean
       isNow: boolean
       starts: number
+      selected?: boolean
       onClick?: () => void
     }
     const list: Row[] = []
@@ -707,6 +716,7 @@ function AgendaCard({
         done,
         isNow,
         starts: startMs,
+        selected: event.id === selectedEventId,
         onClick: () => onEventClick(event),
       })
     })
@@ -725,7 +735,7 @@ function AgendaCard({
       })
     })
     return list.sort((a, b) => a.starts - b.starts).slice(0, 6)
-  }, [events, items, nowMs, onItemClick, onEventClick])
+  }, [events, items, nowMs, onItemClick, onEventClick, selectedEventId])
 
   return (
     <GlassCard className="flex flex-col p-6 lg:col-span-4 lg:row-span-2">
@@ -764,7 +774,7 @@ function AgendaCard({
                       row.tone === 'violet' ? 'bg-[rgba(123,91,255,.07)] [border-left-color:#7B5BFF]' : ''
                     } ${row.tone === 'pink' ? 'bg-[rgba(255,111,174,.07)] [border-left-color:#FF6FAE]' : ''} ${
                       row.tone === 'amber' ? 'bg-[rgba(245,165,36,.08)] [border-left-color:#F5A524]' : ''
-                    } ${row.done ? 'opacity-65' : ''}`}
+                    } ${row.done ? 'opacity-65' : ''} ${row.selected ? 'ring-[1.5px] ring-navy-900' : ''}`}
                   >
                     <div className={`text-[12px] font-semibold leading-tight -tracking-[.01em] ${row.done ? 'text-navy-500 line-through' : 'text-navy-900'}`}>
                       {row.title}
@@ -1002,6 +1012,12 @@ export default function CalendarPage() {
   const [expanded, setExpanded] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
+  // ID 032: evento selecionado fica destacado (persiste após fechar o modal até outro ser escolhido).
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
+  const handleEventClick = useCallback((event: CalendarEvent) => {
+    setSelectedEventId(event.id)
+    setOpenEvent(event)
+  }, [])
 
   // On phones the calendar opens directly maximized (like the Google Calendar app),
   // keeping the doit chrome; the maximize/minimize toggle is desktop-only.
@@ -1100,10 +1116,12 @@ export default function CalendarPage() {
       onNext={next}
       onToday={goToday}
       onDayClick={handleDayClick}
-      onEventClick={setOpenEvent}
+      onEventClick={handleEventClick}
       onItemClick={setSelectedItemId}
       onToggleExpand={() => setExpanded((value) => !value)}
       expanded={showExpanded}
+      monthMaxVisible={!isMobile && expanded ? 6 : 2}
+      selectedEventId={selectedEventId}
       onPickMonth={handlePickMonth}
       viewMode={viewMode}
       setViewMode={setViewMode}
@@ -1124,7 +1142,7 @@ export default function CalendarPage() {
         <BentoGrid className="lg:auto-rows-[240px]">
           {calendarCard}
           <NowCard now={now} />
-          <AgendaCard events={todayEvents} items={todayItems} now={now} onItemClick={setSelectedItemId} onEventClick={setOpenEvent} />
+          <AgendaCard events={todayEvents} items={todayItems} now={now} onItemClick={setSelectedItemId} onEventClick={handleEventClick} selectedEventId={selectedEventId} />
           <UpNextCard event={upcomingEvent} now={now} />
           <WeekLoadCard events={weekEvents} weekStart={weekStart} />
           <FocusBlocksCard events={weekEvents} weekStart={weekStart} />
@@ -1138,7 +1156,7 @@ export default function CalendarPage() {
           items={popupItems}
           onEventClick={(event) => {
             setOpenDayKey(null)
-            setOpenEvent(event)
+            handleEventClick(event)
           }}
           onItemClick={(id) => {
             setOpenDayKey(null)

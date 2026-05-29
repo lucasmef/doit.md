@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>doit.md - Hoje single board v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0F2342;
+  --blue: #2F6BFF;
+  --teal: #28C7B7;
+  --violet: #7B5BFF;
+  --pink: #FF6FAE;
+  --amber: #F5A524;
+  --danger: #F04438;
+  --gray: #46587A;
+  --muted: #8A96AF;
+  --line: rgba(15,35,66,.075);
+  --paper: rgba(255,255,255,.95);
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --shadow:
+    0 1px 0 rgba(255,255,255,.86) inset,
+    0 36px 90px -48px rgba(15,35,66,.42),
+    0 8px 20px rgba(15,35,66,.06);
+}
+
+* { box-sizing: border-box; }
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--sans);
+  color: var(--navy);
+  background: #F4F1FF;
+  overflow: hidden;
+}
+
+.wallpaper {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(980px 760px at 13% 16%, rgba(123,91,255,.54), transparent 62%),
+    radial-gradient(850px 640px at 88% 12%, rgba(255,137,235,.40), transparent 62%),
+    radial-gradient(980px 760px at 82% 86%, rgba(40,199,183,.45), transparent 62%),
+    linear-gradient(135deg, #B7C9FF 0%, #DDD6FE 36%, #FBC9F0 62%, #CFF3EE 100%);
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  width: min(1500px, calc(100vw - 48px));
+  height: calc(100vh - 56px);
+  margin: 28px auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
+}
+
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 18px;
+}
+
+.brand,
+.nav,
+.search {
+  background: rgba(255,255,255,.58);
+  border: 1px solid rgba(255,255,255,.68);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.72) inset,
+    0 18px 40px -20px rgba(15,35,66,.18);
+  backdrop-filter: blur(16px) saturate(180%);
+}
+
+.brand {
+  width: max-content;
+  border-radius: 999px;
+  padding: 8px 16px 8px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: var(--blue);
+  font-weight: 900;
+  box-shadow: 0 1px 3px rgba(15,35,66,.08);
+}
+
+.brand b {
+  font-size: 16px;
+  letter-spacing: -.03em;
+}
+
+.brand b span {
+  color: var(--blue);
+}
+
+.nav {
+  justify-self: center;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  border-radius: 999px;
+}
+
+.nav a {
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: var(--gray);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.nav a.active {
+  color: var(--navy);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15,35,66,.06), 0 4px 10px rgba(15,35,66,.06);
+}
+
+.top-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.search {
+  min-width: 250px;
+  height: 42px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.new-btn {
+  height: 42px;
+  border: 0;
+  border-radius: 16px;
+  padding: 0 18px;
+  color: #fff;
+  font-weight: 850;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+  box-shadow: 0 12px 28px -18px rgba(47,107,255,.86);
+}
+
+.profile {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 850;
+  background: linear-gradient(135deg, var(--violet), var(--teal));
+}
+
+.board {
+  min-height: 0;
+  border-radius: 30px;
+  background: var(--paper);
+  border: 1px solid rgba(255,255,255,.86);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 255px minmax(620px, 1fr) 350px;
+}
+
+.sidebar {
+  min-height: 0;
+  padding: 22px 22px 18px;
+  background: linear-gradient(180deg, rgba(248,250,255,.72), rgba(248,250,255,.42));
+  border-right: 1px solid var(--line);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 18px;
+}
+
+.month-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.month-top b {
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: -.02em;
+}
+
+.month-top span {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.calendar {
+  border-radius: 22px;
+  background: rgba(255,255,255,.62);
+  border: 1px solid rgba(15,35,66,.045);
+  padding: 14px;
+}
+
+.calendar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.calendar-title span {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+.week,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+  text-align: center;
+}
+
+.week {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 850;
+  margin-bottom: 6px;
+}
+
+.day {
+  height: 25px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.day.out {
+  opacity: .36;
+}
+
+.day.has-items::after {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--teal);
+  margin-top: -2px;
+}
+
+.day.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+  box-shadow: 0 8px 18px -12px rgba(47,107,255,.85);
+}
+
+.day.active::after {
+  background: #fff;
+}
+
+.sidebar-list {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.side-row {
+  min-height: 38px;
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 740;
+}
+
+.side-row.active {
+  color: var(--blue);
+  background: rgba(47,107,255,.10);
+}
+
+.side-row svg,
+.action svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+}
+
+.count {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.contexts {
+  display: grid;
+  gap: 8px;
+}
+
+.context-title {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.context-row {
+  min-height: 34px;
+  border-radius: 13px;
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 0 10px;
+  background: rgba(255,255,255,.58);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--blue);
+  box-shadow: 0 0 8px rgba(47,107,255,.40);
+}
+
+.dot.teal {
+  background: var(--teal);
+  box-shadow: 0 0 8px rgba(40,199,183,.40);
+}
+
+.dot.pink {
+  background: var(--pink);
+  box-shadow: 0 0 8px rgba(255,111,174,.40);
+}
+
+.center {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  background: #fff;
+}
+
+.center-head {
+  padding: 18px 34px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgba(15,35,66,.055);
+}
+
+.center-title-inline {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.center-title-inline h1 {
+  margin: 0;
+  font-size: 36px;
+  line-height: .95;
+  font-weight: 950;
+  letter-spacing: -.06em;
+}
+
+.center-title-inline span {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.filter-pills {
+  display: inline-flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgba(15,35,66,.045);
+}
+
+.filter-pills span {
+  min-height: 30px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.filter-pills .active {
+  color: var(--blue);
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15,35,66,.06);
+}
+
+.content-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 34px 18px;
+}
+
+.list {
+  border-top: 1px solid rgba(15,35,66,.055);
+}
+
+.row {
+  min-height: 44px;
+  display: grid;
+  grid-template-columns: 66px 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(15,35,66,.055);
+  position: relative;
+}
+
+.row.event {
+  background: linear-gradient(90deg, rgba(47,107,255,.038), transparent 70%);
+}
+
+.row.task {
+  background: linear-gradient(90deg, rgba(40,199,183,.044), transparent 70%);
+}
+
+.row.personal {
+  background: linear-gradient(90deg, rgba(245,165,36,.050), transparent 70%);
+}
+
+.row.done {
+  opacity: .46;
+}
+
+.row:hover {
+  background: linear-gradient(90deg, rgba(47,107,255,.075), transparent 72%);
+}
+
+.row.selected {
+  background: linear-gradient(90deg, rgba(47,107,255,.12), rgba(47,107,255,.035) 60%, transparent);
+}
+
+.row.selected::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--blue);
+}
+
+.time {
+  height: 28px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  color: var(--gray);
+  background: rgba(15,35,66,.04);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.row.selected .time {
+  color: #fff;
+  background: var(--navy);
+}
+
+.icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+}
+
+.icon svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+}
+
+.icon.task-icon {
+  color: #0E8A7E;
+  background: rgba(40,199,183,.13);
+  border: 1.5px solid rgba(40,199,183,.30);
+}
+
+.icon.personal-icon {
+  color: #B47410;
+  background: rgba(245,165,36,.13);
+  border: 1.5px solid rgba(245,165,36,.30);
+}
+
+.icon.done-icon {
+  color: #fff;
+  background: var(--teal);
+  border-color: var(--teal);
+}
+
+.row-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.row-title {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 760;
+  letter-spacing: -.015em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  flex-shrink: 0;
+  display: flex;
+  gap: 7px;
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.badge {
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.badge.event-badge {
+  color: var(--blue);
+  background: rgba(47,107,255,.08);
+}
+
+.badge.task-badge {
+  color: #0E8A7E;
+  background: rgba(40,199,183,.11);
+}
+
+.badge.personal-badge {
+  color: #B47410;
+  background: rgba(245,165,36,.13);
+}
+
+.more {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--gray);
+  background: rgba(15,35,66,.045);
+  opacity: 0;
+}
+
+.row:hover .more,
+.row.selected .more {
+  opacity: 1;
+}
+
+.detail {
+  min-height: 0;
+  background: linear-gradient(180deg, rgba(248,250,255,.68), rgba(248,250,255,.42));
+  border-left: 1px solid var(--line);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.detail-head {
+  padding: 28px 26px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.detail-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.type {
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  color: var(--blue);
+  background: rgba(47,107,255,.10);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+  margin-bottom: 10px;
+}
+
+.detail-title h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.02;
+  letter-spacing: -.045em;
+}
+
+.close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--gray);
+  background: rgba(15,35,66,.055);
+}
+
+.detail-scroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 26px 24px;
+}
+
+.detail-section {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.detail-section:last-child {
+  border-bottom: 0;
+}
+
+.detail-label {
+  margin-bottom: 10px;
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+}
+
+.info-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.info-row {
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  align-items: center;
+  gap: 8px;
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 740;
+}
+
+.info-row span {
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.people {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 850;
+  background: linear-gradient(135deg, var(--violet), var(--pink));
+  border: 2px solid rgba(255,255,255,.72);
+}
+
+.avatar.teal {
+  background: linear-gradient(135deg, var(--teal), #1AAED7);
+}
+
+.avatar.blue {
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+}
+
+.description {
+  margin: 0;
+  color: var(--gray);
+  font-size: 13px;
+  line-height: 1.48;
+}
+
+.actions {
+  display: grid;
+  gap: 8px;
+}
+
+.action {
+  min-height: 40px;
+  border: 0;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  color: var(--navy);
+  background: rgba(255,255,255,.58);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 780;
+  text-align: left;
+}
+
+.action.primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+}
+
+.action.danger {
+  color: var(--danger);
+  background: rgba(240,68,56,.08);
+}
+
+.mobile-filters {
+  display: none;
+}
+
+@media (max-width: 1180px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100vh; }
+  .board { grid-template-columns: 240px minmax(0, 1fr); }
+  .detail { display: none; }
+}
+
+@media (max-width: 820px) {
+  .app {
+    width: calc(100vw - 24px);
+    margin: 14px auto;
+  }
+
+  .topbar {
+    grid-template-columns: 1fr;
+  }
+
+  .nav {
+    justify-self: start;
+    max-width: 100%;
+    overflow: auto;
+  }
+
+  .top-actions {
+    justify-self: start;
+  }
+
+  .search,
+  .sidebar {
+    display: none;
+  }
+
+  .board {
+    grid-template-columns: 1fr;
+  }
+
+  .mobile-filters {
+    display: flex;
+    gap: 8px;
+    overflow: auto;
+    padding-bottom: 10px;
+  }
+
+  .mobile-filter {
+    flex: 0 0 auto;
+    min-height: 38px;
+    border-radius: 999px;
+    padding: 0 13px;
+    display: flex;
+    align-items: center;
+    color: var(--gray);
+    background: rgba(255,255,255,.68);
+    border: 1px solid rgba(255,255,255,.72);
+    font-size: 13px;
+    font-weight: 750;
+  }
+
+  .mobile-filter.active {
+    color: var(--blue);
+    background: rgba(47,107,255,.10);
+  }
+
+  .center-head {
+    padding: 16px 18px 10px;
+  }
+
+  .center-title-inline {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  .filter-pills {
+    display: none;
+  }
+
+  .content-scroll {
+    padding: 12px 18px 18px;
+  }
+
+  .row {
+    grid-template-columns: 56px 30px minmax(0, 1fr);
+    min-height: 54px;
+  }
+
+  .row-main {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .more {
+    display: none;
+  }
+}
+
+/* ============================================================
+   v3 - Metadados/tags na lateral e sem "hoje" nos itens do dia
+   ============================================================ */
+
+.row {
+  grid-template-columns: 58px 30px minmax(0, 1fr) minmax(150px, 210px) 28px;
+}
+
+.row-main {
+  display: contents;
+}
+
+.row-title {
+  grid-column: 3;
+}
+
+.meta {
+  grid-column: 4;
+  justify-self: end;
+  justify-content: flex-end;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.meta span:not(.badge) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.more {
+  grid-column: 5;
+}
+
+.time.empty {
+  color: rgba(70,88,122,.45);
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+}
+
+.row.task .time.empty,
+.row.personal .time.empty {
+  color: rgba(40,199,183,.62);
+}
+
+.row.personal .time.empty {
+  color: rgba(245,165,36,.75);
+}
+
+@media (max-width: 1040px) {
+  .row {
+    grid-template-columns: 54px 30px minmax(0, 1fr) 28px;
+  }
+
+  .row-main {
+    display: flex;
+  }
+
+  .row-title {
+    grid-column: auto;
+  }
+
+  .meta {
+    grid-column: auto;
+    justify-self: auto;
+    justify-content: flex-start;
+    white-space: normal;
+  }
+
+  .more {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 820px) {
+  .row {
+    grid-template-columns: 48px 30px minmax(0, 1fr);
+  }
+
+  .time.empty {
+    font-size: 12px;
+  }
+}
+
+</style>
+</head>
+
+<body>
+<div class="wallpaper" aria-hidden="true"></div>
+
+<main class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">✓</div>
+      <b>doit<span>.md</span></b>
+    </div>
+
+    <nav class="nav">
+      <a>Dashboard</a>
+      <a>Itens</a>
+      <a class="active">Hoje</a>
+      <a>Notas</a>
+      <a>Calendário</a>
+      <a>Ajustes</a>
+    </nav>
+
+    <div class="top-actions">
+      <div class="search">Buscar · Ctrl K</div>
+      <button class="new-btn">+ Novo</button>
+      <div class="profile">L</div>
+    </div>
+  </header>
+
+  <div class="mobile-filters">
+    <div class="mobile-filter active">Hoje</div>
+    <div class="mobile-filter">Agenda</div>
+    <div class="mobile-filter">Tarefas</div>
+    <div class="mobile-filter">Atrasados</div>
+  </div>
+
+  <section class="board">
+    <aside class="sidebar">
+      <div class="month-top">
+        <b>Maio 2026</b>
+        <span>Hoje</span>
+      </div>
+
+      <div class="calendar">
+        <div class="calendar-title">
+          <b>Calendário</b>
+          <span>mês completo</span>
+        </div>
+        <div class="week">
+          <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
+        </div>
+        <div class="days">
+          <div class="day out">26</div><div class="day out">27</div><div class="day out">28</div><div class="day out">29</div><div class="day out">30</div><div class="day">01</div><div class="day">02</div>
+          <div class="day">03</div><div class="day">04</div><div class="day">05</div><div class="day">06</div><div class="day has-items">07</div><div class="day">08</div><div class="day">09</div>
+          <div class="day">10</div><div class="day">11</div><div class="day has-items">12</div><div class="day">13</div><div class="day">14</div><div class="day">15</div><div class="day">16</div>
+          <div class="day">17</div><div class="day">18</div><div class="day">19</div><div class="day">20</div><div class="day">21</div><div class="day">22</div><div class="day">23</div>
+          <div class="day">24</div><div class="day">25</div><div class="day active has-items">26</div><div class="day">27</div><div class="day">28</div><div class="day">29</div><div class="day">30</div>
+          <div class="day">31</div><div class="day out">01</div><div class="day out">02</div><div class="day out">03</div><div class="day out">04</div><div class="day out">05</div><div class="day out">06</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-list">
+        <div class="side-row active">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span>Hoje</span>
+          <span class="count">11</span>
+        </div>
+        <div class="side-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
+          <span>Abertos</span>
+          <span class="count">8</span>
+        </div>
+        <div class="side-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+          <span>Agenda</span>
+          <span class="count">5</span>
+        </div>
+        <div class="side-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
+          <span>Tarefas</span>
+          <span class="count">6</span>
+        </div>
+        <div class="side-row">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 8v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+          <span>Atrasados</span>
+          <span class="count">2</span>
+        </div>
+      </nav>
+
+      <div class="contexts">
+        <div class="context-title">Contextos</div>
+        <div class="context-row"><div class="dot"></div><span>doit.md</span><span class="count">3</span></div>
+        <div class="context-row"><div class="dot teal"></div><span>Loja</span><span class="count">4</span></div>
+        <div class="context-row"><div class="dot pink"></div><span>Marketing</span><span class="count">2</span></div>
+      </div>
+    </aside>
+
+    <section class="center">
+      <div class="center-head">
+        <div class="center-title-inline">
+          <h1>Hoje</h1>
+          <span>terça-feira, 26 de maio</span>
+        </div>
+        <div class="filter-pills">
+          <span class="active">Todos</span>
+          <span>Agenda</span>
+          <span>Tarefas</span>
+        </div>
+      </div>
+
+      <div class="content-scroll">
+        <div class="list">
+          <article class="row event done">
+            <div class="time">08:00</div>
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Fisio</div>
+              <div class="meta"><span class="badge event-badge">Agenda</span><span>finalizado</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row event done">
+            <div class="time">09:00</div>
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Retorno Mariane</div>
+              <div class="meta"><span class="badge event-badge">Agenda</span><span>finalizado</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row task">
+            <div class="time empty">•</div>
+            <div class="icon task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M8 12l3 3 5-6"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Conferir vendas do mês</div>
+              <div class="meta"><span class="badge task-badge">Financeiro</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row task">
+            <div class="time empty">•</div>
+            <div class="icon task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M8 12l3 3 5-6"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Acompanhar devoluções</div>
+              <div class="meta"><span class="badge task-badge">Loja</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row selected event">
+            <div class="time">18:00</div>
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Rever anúncios</div>
+              <div class="meta"><span class="badge event-badge">Agenda</span><span>Marketing</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row task">
+            <div class="time empty">•</div>
+            <div class="icon task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M8 12l3 3 5-6"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Orçamentos</div>
+              <div class="meta"><span class="badge task-badge">Comercial</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row personal">
+            <div class="time">10:30</div>
+            <div class="icon personal-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M8 12l3 3 5-6"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Punha chave</div>
+              <div class="meta"><span class="badge personal-badge">Pessoal</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row task">
+            <div class="time empty">•</div>
+            <div class="icon task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M8 12l3 3 5-6"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Devolução mouse e nb</div>
+              <div class="meta"><span class="badge task-badge">Loja</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row task">
+            <div class="time empty">•</div>
+            <div class="icon task-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2.4"><path d="M8 12l3 3 5-6"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Mandar boleto Cristini novo</div>
+              <div class="meta"><span class="badge task-badge">Financeiro</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+
+          <article class="row event">
+            <div class="time">21:00</div>
+            <div class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+            </div>
+            <div class="row-main">
+              <div class="row-title">Desafios e Oportunidades para a Engenharia de Software no Agronegócio</div>
+              <div class="meta"><span class="badge event-badge">Agenda</span><span>Evento</span></div>
+            </div>
+            <button class="more">⋯</button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <aside class="detail">
+      <div class="detail-head">
+        <div class="detail-title">
+          <span class="type">Agenda</span>
+          <h2>Rever anúncios</h2>
+        </div>
+        <button class="close">×</button>
+      </div>
+
+      <div class="detail-scroll">
+        <section class="detail-section">
+          <div class="detail-label">Detalhes</div>
+          <div class="info-grid">
+            <div class="info-row"><span>Data</span><b>26 de maio</b></div>
+            <div class="info-row"><span>Horário</span><b>18:00 - 19:00</b></div>
+            <div class="info-row"><span>Pasta</span><b>Marketing</b></div>
+            <div class="info-row"><span>Status</span><b>Aberto</b></div>
+          </div>
+        </section>
+
+        <section class="detail-section">
+          <div class="detail-label">Participantes</div>
+          <div class="people">
+            <div class="avatar">L</div>
+            <div class="avatar teal">R</div>
+            <div class="avatar blue">M</div>
+            <div class="avatar">+2</div>
+          </div>
+        </section>
+
+        <section class="detail-section">
+          <div class="detail-label">Descrição</div>
+          <p class="description">Analisar desempenho dos anúncios ativos no Meta e Google Ads. Ver campanhas com maior custo e separar ajustes para amanhã.</p>
+        </section>
+
+        <section class="detail-section">
+          <div class="detail-label">Ações rápidas</div>
+          <div class="actions">
+            <button class="action primary">✓ Marcar como concluído</button>
+            <button class="action">▣ Reagendar</button>
+            <button class="action">✎ Editar</button>
+            <button class="action">□ Mover para pasta</button>
+            <button class="action danger">⌫ Excluir</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+  </section>
+</main>
+</body>
+</html>
