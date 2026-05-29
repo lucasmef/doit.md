@@ -125,6 +125,10 @@ export function BottomNav() {
 
   if (overlayOpen) return null
 
+  // Em /calendar (mobile) o menu inferior é ocultado para liberar área útil;
+  // a barra superior com menu sanduíche continua visível.
+  if (pathname === '/calendar') return null
+
   const visible = prefs.mobileNav.filter((entry) => entry.visible).slice(0, 4)
   const splitIndex = Math.ceil(visible.length / 2)
   const leftItems = visible.slice(0, splitIndex)
@@ -157,7 +161,7 @@ export function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-3 z-[80] flex h-[64px] items-center gap-1 rounded-[24px] border border-white/55 bg-white/72 px-2 shadow-[0_1px_0_rgba(255,255,255,.72)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-2xl lg:hidden"
+      className="fixed inset-x-3 z-[80] flex h-[64px] items-center gap-1 rounded-[24px] border border-white/70 bg-white/90 px-2 shadow-[0_1px_0_rgba(255,255,255,.85)_inset,0_18px_40px_-16px_rgba(15,35,66,.22),0_4px_12px_rgba(15,35,66,.08)] backdrop-blur-2xl lg:hidden"
       style={{ bottom: 'max(env(safe-area-inset-bottom), 12px)' }}
     >
       {leftItems.map((entry) => renderLink(entry.id))}

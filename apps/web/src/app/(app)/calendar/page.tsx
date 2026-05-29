@@ -367,7 +367,7 @@ function CalendarCard({
                   <span
                     key={event.id}
                     onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                    className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx))}`}
+                    className={`truncate rounded px-1.5 py-1 text-[11px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))}`}
                     title={event.title}
                   >
                     {event.title}
@@ -377,7 +377,7 @@ function CalendarCard({
                   <span
                     key={item.id}
                     onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
-                    className={`truncate rounded px-1.5 py-0.5 text-[10.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx + visible.length))}`}
+                    className={`truncate rounded px-1.5 py-1 text-[11px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx + visible.length))}`}
                     title={item.title}
                   >
                     {item.title}
@@ -431,7 +431,7 @@ function CalendarCard({
                     <span
                       key={event.id}
                       onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
-                      className={`truncate rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx))}`}
+                      className={`truncate rounded px-1.5 py-1 text-[10.5px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx))}`}
                       title={event.title}
                     >
                       {event.allDay ? '' : formatHM(event.start) + ' '}
@@ -442,7 +442,7 @@ function CalendarCard({
                     <span
                       key={item.id}
                       onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
-                      className={`truncate rounded px-1.5 py-0.5 text-[10px] font-semibold leading-tight cursor-pointer hover:opacity-80 ${toneClass(eventTone(idx + colEvents.length))}`}
+                      className={`truncate rounded px-1.5 py-1 text-[10.5px] font-semibold leading-snug cursor-pointer hover:opacity-80 lg:py-0.5 lg:text-[10px] lg:leading-tight ${toneClass(eventTone(idx + colEvents.length))}`}
                       title={item.title}
                     >
                       {item.title}

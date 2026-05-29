@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useItem, updateItem, archiveItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
@@ -415,8 +415,19 @@ function ToolButton({
 
 export function ItemDetail() {
   const pathname = usePathname()
+  const router = useRouter()
   const { selectedItemId, setSelectedItemId } = useUI()
   const { item, isLoading } = useItem(selectedItemId)
+
+  // Notas usam o editor imersivo dedicado (/notas/[id]); o overlay atende
+  // apenas tarefas/eventos/capturas/projetos. Redireciona em vez de abrir o overlay.
+  useEffect(() => {
+    if (item && item.complexity === 'note') {
+      const noteId = item.id
+      setSelectedItemId(null)
+      router.push(`/notas/${noteId}`)
+    }
+  }, [item, router, setSelectedItemId])
   const { projects } = useProjects()
   const { items } = useItems()
   const { toast } = useToast()
@@ -897,6 +908,9 @@ export function ItemDetail() {
   }
 
   if (!selectedItemId) return null
+
+  // Evita o flash do overlay enquanto o redirecionamento para /notas/[id] acontece.
+  if (item && item.complexity === 'note') return null
 
   if (isLoading || !item) {
     return (

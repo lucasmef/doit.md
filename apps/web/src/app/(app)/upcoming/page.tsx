@@ -1,10 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useItems } from '@/hooks/use-items'
 import { ItemList } from '@/components/items/item-list'
-import { CalendarBoard } from '@/components/calendar/calendar-board'
 import { CardTitle, GlassCard, MetricCard } from '@/components/ui/bento'
 import type { Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
@@ -33,9 +30,6 @@ const GROUP_ORDER = ['Amanha', 'Esta semana', 'Proxima semana', 'Mais tarde']
 
 export default function UpcomingPage() {
   const { items, isLoading } = useItems()
-  const router = useRouter()
-  const [view, setView] = useState<'list' | 'calendar'>('list')
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null)
 
   const todayStr = toLocalDateKey()
   const future = items.filter(
@@ -50,81 +44,8 @@ export default function UpcomingPage() {
     return acc
   }, {})
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    setView(params.get('view') === 'calendar' ? 'calendar' : 'list')
-    const openCalendar = () => setView('calendar')
-    window.addEventListener('doit:open-calendar-view', openCalendar)
-    return () => window.removeEventListener('doit:open-calendar-view', openCalendar)
-  }, [])
-
-  function setViewMode(nextView: 'list' | 'calendar') {
-    setView(nextView)
-    router.replace(nextView === 'calendar' ? '/upcoming?view=calendar' : '/upcoming')
-  }
-
-  const ViewSwitch = (
-    <div className="fixed bottom-20 right-4 z-40 rounded-full border border-white/55 bg-white/58 p-1 shadow-cool-lg backdrop-blur-2xl lg:bottom-5">
-      <div className="flex rounded-full bg-white/32 p-1">
-        <button
-          type="button"
-          onClick={() => setViewMode('list')}
-          className={`rounded-full px-4 py-2 text-[12px] font-bold transition-colors ${
-            view === 'list'
-              ? 'bg-white text-brand-700 shadow-cool-sm'
-              : 'text-navy-600 hover:bg-white/70'
-          }`}
-        >
-          Lista
-        </button>
-        <button
-          type="button"
-          onClick={() => setViewMode('calendar')}
-          className={`rounded-full px-4 py-2 text-[12px] font-bold transition-colors ${
-            view === 'calendar'
-              ? 'bg-white text-brand-700 shadow-cool-sm'
-              : 'text-navy-600 hover:bg-white/70'
-          }`}
-        >
-          Calendario
-        </button>
-      </div>
-    </div>
-  )
-
-  function handleListTouchEnd(event: React.TouchEvent<HTMLDivElement>) {
-    const start = touchStartRef.current
-    const touch = event.changedTouches[0]
-    touchStartRef.current = null
-    if (!start || !touch) return
-
-    const deltaX = touch.clientX - start.x
-    const deltaY = touch.clientY - start.y
-    if (deltaX < -60 && Math.abs(deltaY) < 50) {
-      setViewMode('calendar')
-    }
-  }
-
-  if (view === 'calendar') {
-    return (
-      <div className="flex h-full min-h-0 w-full flex-col">
-        {ViewSwitch}
-        <CalendarBoard items={future} />
-      </div>
-    )
-  }
-
   return (
-    <div
-      className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-4 pb-28 pt-4 sm:px-6 lg:pb-8"
-      onTouchStart={(event) => {
-        const touch = event.touches[0]
-        if (touch) touchStartRef.current = { x: touch.clientX, y: touch.clientY }
-      }}
-      onTouchEnd={handleListTouchEnd}
-    >
-      {ViewSwitch}
-
+    <div className="mx-auto flex min-h-full w-full max-w-6xl flex-col px-4 pb-28 pt-4 sm:px-6 lg:pb-8">
       <div className="mb-5">
         <p className="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-brand-700">
           Linha do tempo
@@ -133,7 +54,7 @@ export default function UpcomingPage() {
           Proximos
         </h1>
         <p className="mt-2 max-w-xl text-sm text-navy-600">
-          Itens com data futura agrupados por janela, com calendario a um toque.
+          Itens com data futura agrupados por janela. O calendario fica em /calendar.
         </p>
       </div>
 

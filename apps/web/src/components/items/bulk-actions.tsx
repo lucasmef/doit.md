@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BulkItemActionInput, Item, ItemRecurrence, ItemStatus } from '@doit/types'
 import { STATUS_LABELS, toLocalDateKey } from '@doit/core'
 import { bulkUpdateItems, createItem, useItems } from '@/hooks/use-items'
@@ -752,9 +752,13 @@ export function ItemContextMenu() {
     return map
   }, [activeItems, archivedItems])
   const [position, setPosition] = useState({ left: 0, top: 0 })
+  // Quando o menu abre por toque longo, ao soltar o dedo o navegador sintetiza um mousedown que
+  // cairia no backdrop e fecharia o menu imediatamente. Ignoramos eventos logo após a abertura.
+  const openedAtRef = useRef(0)
 
   useEffect(() => {
     if (!contextMenu) return
+    openedAtRef.current = Date.now()
     const width = 260
     const height = 460
     setPosition({
@@ -762,6 +766,11 @@ export function ItemContextMenu() {
       top: Math.max(8, Math.min(contextMenu.y, window.innerHeight - height - 8)),
     })
   }, [contextMenu])
+
+  function handleBackdropDown() {
+    if (Date.now() - openedAtRef.current < 400) return
+    closeContextMenu()
+  }
 
   useEffect(() => {
     if (!contextMenu) return
@@ -788,7 +797,7 @@ export function ItemContextMenu() {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
 
   return (
-    <div className="fixed inset-0 z-[130]" onMouseDown={closeContextMenu}>
+    <div className="fixed inset-0 z-[130]" onMouseDown={handleBackdropDown}>
       <div
         className="fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:rounded-t-[30px] max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:bg-white/96 max-md:p-4 max-md:pb-10 max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] max-md:backdrop-blur-2xl md:max-h-[min(420px,calc(100vh-16px))] md:overflow-y-auto md:rounded-[24px] md:border md:border-white/76 md:bg-white/86 md:p-2 md:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset] md:backdrop-blur-[24px]"
         style={isMobile ? {} : { left: position.left, top: position.top }}
