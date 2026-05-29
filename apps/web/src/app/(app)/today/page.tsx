@@ -9,25 +9,24 @@ import { useLongPress } from '@/hooks/use-long-press'
 import { toLocalDateKey } from '@doit/core'
 import { EventSheet } from '@/components/calendar/calendar-board'
 import type { CalendarEvent, Item } from '@doit/types'
+import { useProjects } from '@/hooks/use-projects'
+import './today.css'
 
-function EventIcon({ className = 'h-3.5 w-3.5' }) {
+function EventIcon({ className = 'h-[15px] w-[15px]' }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M7 3v3M17 3v3M4 8h16" />
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
       <rect x="4" y="5" width="16" height="16" rx="2" />
+      <path d="M7 3v3M17 3v3M4 9h16" />
     </svg>
   )
 }
 
-function TaskIcon({ done }: { done?: boolean }) {
-  if (done) {
-    return (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 12l5 5L20 6" />
-      </svg>
-    )
-  }
-  return null
+function TaskIcon() {
+  return (
+    <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
+      <path d="M8 12l3 3 5-6" />
+    </svg>
+  )
 }
 
 function formatTime(dateStr: string) {
@@ -39,14 +38,7 @@ function formatTime(dateStr: string) {
   }
 }
 
-function priorityColor(item: Item) {
-  if (item.priority === 1) return 'bg-red-500'
-  if (item.priority === 2) return 'bg-orange-500'
-  if (item.priority === 3) return 'bg-amber-400'
-  return 'bg-[linear-gradient(180deg,#2F6BFF,#28C7B7)]'
-}
-
-// Artigo de tarefa com toque simples (abrir) + toque longo / clique-direito (menu de ações) — ID 009.
+// Artigo de tarefa com toque simples (abrir) + toque longo / clique-direito (menu de ações).
 function TaskArticle({
   item,
   disabled,
@@ -82,11 +74,13 @@ function TaskArticle({
 export default function TodayFocusedPage() {
   const { items, isLoading: itemsLoading } = useItems()
   const { events, isLoading: eventsLoading } = useCalendarEvents()
+  const { projects } = useProjects()
   const { prefs } = usePreferences()
-  const { setSingleSelection } = useUI()
+  const { setSingleSelection, selectedItemId } = useUI()
   
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const [temporarilyDone, setTemporarilyDone] = useState<Set<string>>(new Set())
+  const [mobileFilter, setMobileFilter] = useState('Hoje')
   
   const today = toLocalDateKey()
   const tomorrowDate = new Date()
@@ -96,7 +90,6 @@ export default function TodayFocusedPage() {
   const nowMs = now.getTime()
   const currentTimeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
   const shouldShowTomorrow = currentTimeStr >= prefs.todayCalendarShowTomorrowAfterTime
-  // Mesma regra usada em /itens: oculta eventos passados depois do tempo de tolerância configurado.
   const hidePastMs = prefs.todayCalendarHidePastAfterHours * 60 * 60 * 1000
 
   const agendaEvents = useMemo(() => {
@@ -136,6 +129,24 @@ export default function TodayFocusedPage() {
     })
     return list
   }, [items, today])
+
+  // Counts for sidebar
+  const todayCount = todayItems.length + agendaEvents.length
+  const openCount = items.filter(i => i.status !== 'done').length
+  const tasksCount = items.filter(i => i.complexity === 'task' && i.status !== 'done').length
+  const overdueCount = items.filter(i => i.dueDate && i.dueDate < today && i.status !== 'done').length
+
+  const getFolderName = (folderId?: string) => {
+    if (!folderId) return ''
+    const p = projects.find(p => p.id === folderId)
+    return p ? p.name : ''
+  }
+
+  const getTaskStyle = (item: Item) => {
+    const isPersonal = getFolderName(item.folderId).toLowerCase() === 'pessoal' || item.tags.some(t => t.toLowerCase() === 'pessoal')
+    if (isPersonal) return 'personal'
+    return 'task'
+  }
   
   if (itemsLoading || eventsLoading) {
     return <div className="flex h-[calc(100vh-136px)] items-center justify-center font-mono text-sm text-navy-500">carregando today...</div>
@@ -153,110 +164,180 @@ export default function TodayFocusedPage() {
     }, 1500)
   }
 
-  return (
-    <main className="mx-auto flex w-full max-w-5xl min-h-[calc(100vh-136px)] flex-col px-4 pb-6 lg:px-8">
-      <section className="relative flex min-h-0 flex-col overflow-hidden rounded-t-[26px] border-t border-white/70 bg-white/60 px-3 pt-3 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_-1px_0_rgba(15,35,66,.04)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-[20px] md:rounded-[28px] md:border md:bg-white/78 md:p-4">
-        {/* Glow behind */}
-        <div className="pointer-events-none absolute -right-[160px] -top-[160px] h-[420px] w-[420px] rounded-full opacity-72 blur-[20px]" style={{ background: 'radial-gradient(circle at 30% 30%, rgba(123,91,255,.30), transparent 62%), radial-gradient(circle at 70% 70%, rgba(40,199,183,.28), transparent 62%)' }} />
-        
-        <div className="relative z-10 flex min-h-[calc(100vh-176px)] flex-1 flex-col overflow-hidden rounded-t-[24px] bg-white/50 md:rounded-[26px]">
-          <div className="overflow-auto px-4 py-5 md:px-8 md:py-7">
-            
-            {/* AGENDA SECTION */}
-            <section className="mb-6">
-              
-              {agendaEvents.map(event => {
-                const isPast = new Date(event.start) < now
-                return (
-                  <article key={event.id} onClick={() => setOpenEvent(event)} className={`group relative mb-2 grid cursor-pointer grid-cols-[56px_26px_minmax(0,1fr)_auto] items-center gap-3 rounded-[15px] border border-navy-900/[0.06] bg-white/60 p-2.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[80px_28px_minmax(0,1fr)_auto] md:p-3 ${isPast ? 'opacity-50 grayscale hover:opacity-80' : ''}`}>
-                    <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:px-2 md:text-[13px]">{formatTime(event.start) || 'o dia'}</div>
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] text-white shadow-[0_3px_10px_rgba(47,107,255,.25)]">
-                      <EventIcon />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[14px] font-bold leading-snug tracking-tight text-navy-900 md:text-[16px]">{event.title}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
-                        {event.start.startsWith(tomorrow) && <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">amanhã</span>}
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-              
-              {todayItems.map(item => {
-                const isTempDone = temporarilyDone.has(item.id)
-                // ID 011: sem coluna fixa de horário. Com horário => chip + checkbox + título; sem horário => checkbox + título (alinhado à esquerda).
-                const timed = Boolean(item.dueTime)
-                const cols = timed
-                  ? 'grid-cols-[auto_28px_minmax(0,1fr)] md:grid-cols-[auto_30px_minmax(0,1fr)]'
-                  : 'grid-cols-[28px_minmax(0,1fr)] md:grid-cols-[30px_minmax(0,1fr)]'
-                return (
-                  <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2 grid cursor-pointer select-none ${cols} items-center gap-3 rounded-[15px] border border-brand-500/20 bg-brand-500/[0.07] p-2.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:p-3 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <div className={`absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] ${priorityColor(item)}`} />
-                    {timed ? (
-                      <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-2 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:text-[13px]">{item.dueTime}</div>
-                    ) : null}
-                    <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
-                      <TaskIcon done={isTempDone} />
-                    </button>
-                    <div className="min-w-0">
-                      <div className={`text-[14px] font-bold leading-snug tracking-tight text-navy-900 md:text-[16px] ${isTempDone ? 'line-through text-navy-500' : ''}`}>{item.title}</div>
-                      {item.tags.length > 0 ? (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
-                          {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
-                        </div>
-                      ) : null}
-                    </div>
-                  </TaskArticle>
-                )
-              })}
-            </section>
-            
-            {/* PRIORITY SECTION */}
-            {priorityItems.length > 0 && (
-              <section className="mb-8">
-                <div className="mb-3 flex items-center gap-2">
-                  <div className="inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.14em] text-navy-500">
-                    <span className="h-1.5 w-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(123,91,255,.55)]" /> Prioridade
-                  </div>
-                  <div className="font-mono text-[11px] font-semibold text-navy-300">{priorityItems.length} itens</div>
-                <div className="h-px flex-1 bg-[linear-gradient(90deg,rgba(15,35,66,.10),transparent_85%)]" />
-                {priorityItems.some(i => i.dueDate && i.dueDate < today) && (
-                  <button onClick={(e) => {
-                    e.stopPropagation()
-                    priorityItems.filter(i => i.dueDate && i.dueDate < today).forEach(item => updateItem(item.id, { dueDate: today }))
-                  }} className="rounded-[8px] bg-red-500/10 px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-brand-500/10 hover:text-brand-600">
-                    trazer atrasadas para hoje
-                  </button>
-                )}
-              </div>
-                
-                {priorityItems.map(item => {
-                  const isOverdue = item.dueDate && item.dueDate < today
-                  const isTempDone = temporarilyDone.has(item.id)
-                  return (
-                    <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2 grid cursor-pointer select-none grid-cols-[56px_26px_minmax(0,1fr)_auto] items-center gap-3 rounded-[15px] border border-navy-900/[0.06] bg-white/60 p-2.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[80px_28px_minmax(0,1fr)_auto] md:p-3 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div className={`absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] ${priorityColor(item)}`} />
-                      <div className={`whitespace-nowrap rounded-[10px] border px-1.5 py-1.5 text-center font-mono text-[11px] font-bold md:px-2 md:text-[13px] ${isOverdue ? 'border-red-500/20 bg-red-50 text-red-600' : 'border-navy-900/15 bg-navy-900/[0.07] text-navy-900'}`}>{item.status === 'doing' ? 'agora' : isOverdue ? 'atrasado' : 'prioridade'}</div>
-                      <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
-                        <TaskIcon done={isTempDone} />
-                      </button>
-                      <div className="min-w-0">
-                        <div className={`text-[14px] font-bold leading-snug tracking-tight text-navy-900 md:text-[16px] ${isTempDone ? 'line-through text-navy-500' : ''}`}>{item.title}</div>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2 font-mono text-[10px] text-navy-500 md:text-[11px]">
-                          {item.status === 'doing' && <span className="rounded-full bg-violet-500/10 px-2 py-0.5 font-bold text-violet-600">em foco</span>}
-                          {isOverdue && <span className="rounded-full bg-red-500/10 px-2 py-0.5 font-bold text-red-600">atrasado</span>}
-                          {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
-                        </div>
-                      </div>
-                    </TaskArticle>
-                  )
-                })}
-              </section>
+  const renderTask = (item: Item, isOverdue: boolean = false) => {
+    const isTempDone = temporarilyDone.has(item.id)
+    const styleType = getTaskStyle(item)
+    const isSelected = selectedItemId === item.id
+    
+    return (
+      <TaskArticle 
+        key={item.id} 
+        item={item} 
+        disabled={isTempDone} 
+        onOpen={setSingleSelection} 
+        className={`row ${styleType} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
+      >
+        <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
+        <button 
+          onClick={(e) => !isTempDone && handleCompleteTask(e, item)} 
+          onPointerDown={(e) => e.stopPropagation()} 
+          className={`icon ${styleType}-icon ${isTempDone ? 'done-icon' : ''} transition-colors cursor-pointer`}
+        >
+          <TaskIcon />
+        </button>
+        <div className="row-main">
+          <div className="row-title">{item.title}</div>
+          <div className="meta">
+            {isOverdue && <span className="text-red-500 font-bold">Atrasado</span>}
+            {item.status === 'doing' && <span className="text-violet-500 font-bold">Foco</span>}
+            {getFolderName(item.folderId) && (
+              <span className={`badge ${styleType}-badge`}>{getFolderName(item.folderId)}</span>
             )}
-
+            {item.tags.map(t => <span key={t}>#{t}</span>)}
           </div>
         </div>
+        <button className="more" onClick={(e) => {
+          e.stopPropagation();
+          setSingleSelection(item.id);
+        }}>⋯</button>
+      </TaskArticle>
+    )
+  }
+
+  const renderEvent = (event: CalendarEvent) => {
+    const isPast = new Date(event.start) < now
+    return (
+      <article 
+        key={event.id} 
+        onClick={() => setOpenEvent(event)} 
+        className={`row event cursor-pointer ${isPast ? 'done' : ''}`}
+      >
+        <div className="time">{formatTime(event.start) || 'o dia'}</div>
+        <div className="icon">
+          <EventIcon />
+        </div>
+        <div className="row-main">
+          <div className="row-title">{event.title}</div>
+          <div className="meta">
+            <span className="badge event-badge">Agenda</span>
+            {isPast ? <span>finalizado</span> : null}
+            {event.start.startsWith(tomorrow) ? <span>amanhã</span> : null}
+          </div>
+        </div>
+        <button className="more" onClick={(e) => {
+          e.stopPropagation();
+          setOpenEvent(event);
+        }}>⋯</button>
+      </article>
+    )
+  }
+
+  const allItemsEmpty = agendaEvents.length === 0 && todayItems.length === 0 && priorityItems.length === 0
+
+  return (
+    <div className="today-v3-layout flex-1 w-full h-full flex flex-col">
+      <div className="mobile-filters px-4 pt-2">
+        {['Hoje', 'Agenda', 'Tarefas', 'Atrasados'].map(f => (
+          <div 
+            key={f}
+            onClick={() => setMobileFilter(f)}
+            className={`mobile-filter cursor-pointer ${mobileFilter === f ? 'active' : ''}`}
+          >
+            {f}
+          </div>
+        ))}
+      </div>
+
+      <section className="board flex-1 mx-4 mb-4 lg:mx-0 lg:mb-0">
+        <aside className="sidebar hidden lg:grid">
+          <div className="month-top">
+            <b>{now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</b>
+            <span>Hoje</span>
+          </div>
+
+          <div className="calendar">
+            <div className="calendar-title">
+              <b>Calendário</b>
+              <span>mês</span>
+            </div>
+            {/* Simple static calendar representation for now */}
+            <div className="week">
+              <span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span>
+            </div>
+            <div className="days">
+              <div className="day out">26</div><div className="day out">27</div><div className="day out">28</div><div className="day out">29</div><div className="day out">30</div><div className="day">01</div><div className="day">02</div>
+              <div className="day">03</div><div className="day">04</div><div className="day">05</div><div className="day">06</div><div className="day has-items">07</div><div className="day">08</div><div className="day">09</div>
+              <div className="day">10</div><div className="day">11</div><div className="day has-items">12</div><div className="day">13</div><div className="day">14</div><div className="day">15</div><div className="day">16</div>
+              <div className="day">17</div><div className="day">18</div><div className="day">19</div><div className="day">20</div><div className="day">21</div><div className="day">22</div><div className="day">23</div>
+              <div className="day">24</div><div className="day">25</div><div className="day active has-items">26</div><div className="day">27</div><div className="day">28</div><div className="day">29</div><div className="day">30</div>
+              <div className="day">31</div><div className="day out">01</div><div className="day out">02</div><div className="day out">03</div><div className="day out">04</div><div className="day out">05</div><div className="day out">06</div>
+            </div>
+          </div>
+
+          <nav className="sidebar-list">
+            <div className="side-row active cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span>Hoje</span>
+              <span className="count">{todayCount}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
+              <span>Abertos</span>
+              <span className="count">{openCount}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+              <span>Agenda</span>
+              <span className="count">{agendaEvents.length}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
+              <span>Tarefas</span>
+              <span className="count">{tasksCount}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M12 8v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+              <span>Atrasados</span>
+              <span className="count">{overdueCount}</span>
+            </div>
+          </nav>
+          
+          {/* Static contexts for UI parity */}
+          <div className="contexts hidden xl:grid">
+            <div className="context-title">Contextos</div>
+            <div className="context-row"><div className="dot"></div><span>doit.md</span><span className="count">3</span></div>
+            <div className="context-row"><div className="dot teal"></div><span>Loja</span><span className="count">4</span></div>
+            <div className="context-row"><div className="dot pink"></div><span>Marketing</span><span className="count">2</span></div>
+          </div>
+        </aside>
+
+        <section className="center">
+          <div className="center-head">
+            <div className="center-title-inline">
+              <h1>Hoje</h1>
+              <span>{now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+            </div>
+            <div className="filter-pills hidden md:inline-flex">
+              <span className="active cursor-pointer">Todos</span>
+              <span className="cursor-pointer">Agenda</span>
+              <span className="cursor-pointer">Tarefas</span>
+            </div>
+          </div>
+
+          <div className="content-scroll">
+            <div className="list">
+              {allItemsEmpty ? (
+                <div className="p-8 text-center text-sm text-gray-500 font-medium">Tudo limpo por hoje!</div>
+              ) : (
+                <>
+                  {priorityItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
+                  {agendaEvents.map(renderEvent)}
+                  {todayItems.map(item => renderTask(item))}
+                </>
+              )}
+            </div>
+          </div>
+        </section>
       </section>
 
       {openEvent && (
@@ -267,6 +348,6 @@ export default function TodayFocusedPage() {
           onClose={() => setOpenEvent(null)}
         />
       )}
-    </main>
+    </div>
   )
 }
