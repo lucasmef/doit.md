@@ -15,7 +15,7 @@ const ROUTE_LABELS: Record<string, string> = {
   inbox: 'Inbox',
   today: 'Hoje',
   upcoming: 'Proximos',
-  calendar: 'Calendario',
+  calendar: 'Calendário',
   archive: 'Arquivo',
   projects: 'Pastas',
   tags: 'Tags',
@@ -29,7 +29,7 @@ const DESKTOP_NAV_ITEMS = [
   { href: '/itens', label: 'Itens', icon: 'items', match: ['/itens', '/inbox', '/upcoming'] },
   { href: '/today', label: 'Hoje', icon: 'today', match: ['/today'] },
   { href: '/notas', label: 'Notas', icon: 'notes', match: ['/notas'] },
-  { href: '/calendar', label: 'Calendario', icon: 'calendar', match: ['/calendar'] },
+  { href: '/calendar', label: 'Calendário', icon: 'calendar', match: ['/calendar'] },
   { href: '/settings', label: 'Ajustes', icon: 'settings', match: ['/settings'] },
 ] as const
 
@@ -41,7 +41,7 @@ const MOBILE_NAV_ITEMS: Array<{ href: string; label: string; icon: MobileIconKin
   { href: '/itens', label: 'Itens', icon: 'items' },
   { href: '/inbox', label: 'Inbox', icon: 'inbox' },
   { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
-  { href: '/calendar', label: 'Calendario', icon: 'calendar' },
+  { href: '/calendar', label: 'Calendário', icon: 'calendar' },
   { href: '/notas', label: 'Notas', icon: 'notes' },
   { href: '/settings', label: 'Ajustes', icon: 'settings' },
 ]

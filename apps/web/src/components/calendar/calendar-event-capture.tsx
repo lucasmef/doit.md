@@ -7,6 +7,7 @@ import { createCalendarEvent, useGoogleCalendars } from '@/hooks/use-calendar-ev
 import { usePreferences } from '@/hooks/use-preferences'
 import { useToast } from '@/components/ui/toast'
 import { useUI } from '@/store/ui'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 import { CaptureModeTabs, createCaptureSwipeHandlers } from '@/components/capture/capture-mode-tabs'
 
 const DATE_WORD_SHORTCUT =
@@ -257,6 +258,9 @@ export function CalendarEventCapture() {
     setExpanded(false)
     requestAnimationFrame(() => titleRef.current?.focus())
   }, [calendarEventCaptureOpen, calendars, duration, preferredCalendarId, selectedDate])
+
+  // Esc fecha a captura de evento mesmo sem foco interno (ID 010).
+  useEscapeClose(calendarEventCaptureOpen, () => setCalendarEventCaptureOpen(false))
 
   if (!calendarEventCaptureOpen) return null
 

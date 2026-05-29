@@ -5,6 +5,7 @@ import { useItems, updateItem } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useUI } from '@/store/ui'
+import { useLongPress } from '@/hooks/use-long-press'
 import { toLocalDateKey } from '@doit/core'
 import { EventSheet } from '@/components/calendar/calendar-board'
 import type { CalendarEvent, Item } from '@doit/types'
@@ -36,6 +37,39 @@ function formatTime(dateStr: string) {
   } catch {
     return ''
   }
+}
+
+// Artigo de tarefa com toque simples (abrir) + toque longo / clique-direito (menu de ações) — ID 009.
+function TaskArticle({
+  item,
+  disabled,
+  onOpen,
+  className,
+  children,
+}: {
+  item: Item
+  disabled?: boolean
+  onOpen: (id: string) => void
+  className: string
+  children: React.ReactNode
+}) {
+  const { openContextMenu } = useUI()
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => openContextMenu({ itemId: item.id, x: clientX, y: clientY }),
+  })
+  return (
+    <article
+      onClick={() => {
+        if (disabled) return
+        if (consumeClick()) return
+        onOpen(item.id)
+      }}
+      {...longPressProps}
+      className={className}
+    >
+      {children}
+    </article>
+  )
 }
 
 export default function TodayFocusedPage() {
@@ -118,7 +152,7 @@ export default function TodayFocusedPage() {
                 const isPast = new Date(event.start) < now
                 return (
                   <article key={event.id} onClick={() => setOpenEvent(event)} className={`group relative mb-2.5 grid cursor-pointer grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-navy-900/[0.06] bg-white/60 p-3.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isPast ? 'opacity-50 grayscale hover:opacity-80' : ''}`}>
-                    <div className="whitespace-nowrap rounded-[10px] border border-navy-900/[0.08] bg-white px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:px-2 md:text-[13px]">{formatTime(event.start) || 'o dia'}</div>
+                    <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:px-2 md:text-[13px]">{formatTime(event.start) || 'o dia'}</div>
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] text-white shadow-[0_3px_10px_rgba(47,107,255,.25)]">
                       <EventIcon />
                     </div>
@@ -136,10 +170,15 @@ export default function TodayFocusedPage() {
               {todayItems.map(item => {
                 const isTempDone = temporarilyDone.has(item.id)
                 return (
-                  <article key={item.id} onClick={() => !isTempDone && setSingleSelection(item.id)} className={`group relative mb-2.5 grid cursor-pointer grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-brand-500/20 bg-brand-500/[0.07] p-3.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2.5 grid cursor-pointer select-none grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-brand-500/20 bg-brand-500/[0.07] p-3.5 transition-all hover:-translate-y-[1px] hover:bg-brand-500/10 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="absolute bottom-3 left-[-1px] top-3 w-[3px] rounded-r-[3px] bg-[linear-gradient(180deg,#2F6BFF,#28C7B7)]" />
-                    <div className="whitespace-nowrap rounded-[10px] border border-navy-900 bg-navy-900 px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-white md:px-2 md:text-[13px]">hoje</div>
-                    <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
+                    {/* Sem badge "hoje" redundante; só mostra a caixa quando há horário (ID 011). */}
+                    {item.dueTime ? (
+                      <div className="whitespace-nowrap rounded-[10px] border border-navy-900/15 bg-navy-900/[0.07] px-1.5 py-1.5 text-center font-mono text-[11px] font-bold text-navy-900 md:px-2 md:text-[13px]">{item.dueTime}</div>
+                    ) : (
+                      <div aria-hidden="true" />
+                    )}
+                    <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
                       <TaskIcon done={isTempDone} />
                     </button>
                     <div className="min-w-0">
@@ -148,7 +187,7 @@ export default function TodayFocusedPage() {
                         {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
                       </div>
                     </div>
-                  </article>
+                  </TaskArticle>
                 )
               })}
             </section>
@@ -176,9 +215,9 @@ export default function TodayFocusedPage() {
                   const isOverdue = item.dueDate && item.dueDate < today
                   const isTempDone = temporarilyDone.has(item.id)
                   return (
-                    <article key={item.id} onClick={() => !isTempDone && setSingleSelection(item.id)} className={`group relative mb-2.5 grid cursor-pointer grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-navy-900/[0.06] bg-white/60 p-3.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
-                      <div className={`whitespace-nowrap rounded-[10px] border px-1.5 py-1.5 text-center font-mono text-[11px] font-bold md:px-2 md:text-[13px] ${isOverdue ? 'border-red-500/20 bg-red-50 text-red-600' : 'border-navy-900/[0.08] bg-white text-navy-900'}`}>{item.status === 'doing' ? 'agora' : isOverdue ? 'atrasado' : 'prioridade'}</div>
-                      <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
+                    <TaskArticle key={item.id} item={item} disabled={isTempDone} onOpen={setSingleSelection} className={`group relative mb-2.5 grid cursor-pointer select-none grid-cols-[60px_28px_minmax(0,1fr)_auto] items-center gap-3 rounded-[17px] border border-navy-900/[0.06] bg-white/60 p-3.5 transition-all hover:-translate-y-[1px] hover:border-navy-900/10 hover:bg-white/90 md:grid-cols-[88px_30px_minmax(0,1fr)_auto] md:p-4 ${isTempDone ? 'opacity-50 pointer-events-none' : ''}`}>
+                      <div className={`whitespace-nowrap rounded-[10px] border px-1.5 py-1.5 text-center font-mono text-[11px] font-bold md:px-2 md:text-[13px] ${isOverdue ? 'border-red-500/20 bg-red-50 text-red-600' : 'border-navy-900/15 bg-navy-900/[0.07] text-navy-900'}`}>{item.status === 'doing' ? 'agora' : isOverdue ? 'atrasado' : 'prioridade'}</div>
+                      <button onClick={(e) => !isTempDone && handleCompleteTask(e, item)} onPointerDown={(e) => e.stopPropagation()} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border-[1.5px] transition-colors ${isTempDone ? 'border-teal-500 bg-teal-500 text-white' : 'border-navy-300 bg-white text-navy-300 hover:border-teal-500 hover:bg-teal-500 hover:text-white'}`}>
                         <TaskIcon done={isTempDone} />
                       </button>
                       <div className="min-w-0">
@@ -189,7 +228,7 @@ export default function TodayFocusedPage() {
                           {item.tags.map(t => <span key={t} className="rounded-full bg-navy-900/[0.05] px-2 py-0.5 font-bold">#{t}</span>)}
                         </div>
                       </div>
-                    </article>
+                    </TaskArticle>
                   )
                 })}
               </section>

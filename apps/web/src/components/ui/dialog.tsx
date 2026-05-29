@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { useEscapeClose } from '@/hooks/use-escape-close'
 
 type ConfirmOptions = {
   message: string
@@ -94,6 +95,9 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
     setState(null)
     setValue('')
   }
+
+  // Esc fecha o diálogo mesmo sem foco interno (ID 010).
+  useEscapeClose(state !== null, () => close(state?.kind === 'confirm' ? false : null))
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
