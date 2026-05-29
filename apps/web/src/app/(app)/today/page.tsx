@@ -258,7 +258,7 @@ export default function TodayFocusedPage() {
   const allItemsEmpty = agendaEvents.length === 0 && todayItems.length === 0 && priorityItems.length === 0
 
   return (
-    <div className="today-v3-layout flex-1 w-full h-full flex flex-col">
+    <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
       <div className="mobile-filters px-4 pt-2">
         {['Hoje', 'Agenda', 'Tarefas', 'Atrasados'].map(f => (
           <div 

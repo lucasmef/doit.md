@@ -55,15 +55,19 @@ Reason: The request is a direct application of a provided UI layout to an existi
 - 2026-05-29 11:52 - Extracted CSS to `today.css` and rewrote `page.tsx`.
 - 2026-05-29 11:58 - Server tested, but programmatic screenshot failed.
 - 2026-05-29 12:23 - Updated spec to done, committing and pushing to dev.
+- 2026-05-29 (correção) - Layout estava "ruim": três bugs encontrados e corrigidos (ver Decisions).
 
 ## Decisions
 
 - Extracted specific CSS to `today.css` scoped with `.today-v3-layout` instead of rewriting completely to Tailwind to ensure pixel-perfect parity with the provided HTML template.
+- **Correção (bug do Gemini):** as variáveis de tema estavam em `.today-v3-layout .today-v3-layout` (classe aninhada que nunca casa) → `var(--navy)`, gradientes e sombras nunca aplicavam, quebrando o visual. Corrigido para `.today-v3-layout`.
+- **Correção:** o `.board` era grid de 3 colunas (`255px / 1fr / 350px`) mas só renderiza sidebar + center; o detalhe do item é o `<ItemDetail/>` global (drawer). A 3ª coluna ficava vazia (faixa de 350px à direita). Board passou a 2 colunas (`255px minmax(0,1fr)`); o painel de detalhe do mockup é coberto pelo drawer global.
+- **Correção:** raiz da página passou a ter altura fixa no desktop (`lg:h-[calc(100vh-8rem)]`) para o board preencher a viewport e o `.content-scroll` rolar internamente como no mockup; no mobile flui com o scroll da página.
 
 ## Files changed
 
-- `apps/web/src/app/(app)/today/page.tsx` - Replaced structure with new `board`, `sidebar`, and `center` blocks.
-- `apps/web/src/app/(app)/today/today.css` - Created with layout styles extracted from the static HTML.
+- `apps/web/src/app/(app)/today/page.tsx` - Replaced structure with new `board`, `sidebar`, and `center` blocks. **Correção:** raiz com altura desktop `lg:h-[calc(100vh-8rem)]`.
+- `apps/web/src/app/(app)/today/today.css` - Created with layout styles extracted from the static HTML. **Correção:** escopo das variáveis (`.today-v3-layout`) e board em 2 colunas.
 - `specs/2026-05-29-apply-new-today-layout.md` - Created living spec.
 
 ## Validation

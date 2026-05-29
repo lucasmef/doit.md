@@ -1,5 +1,5 @@
 
-.today-v3-layout .today-v3-layout {
+.today-v3-layout {
   --navy: #0F2342;
   --blue: #2F6BFF;
   --teal: #28C7B7;
@@ -171,7 +171,9 @@
   box-shadow: var(--shadow);
   overflow: hidden;
   display: grid;
-  grid-template-columns: 255px minmax(620px, 1fr) 350px;
+  /* O detalhe do item é o drawer global <ItemDetail/>, então o board usa 2 colunas
+     (sidebar + lista) e não reserva a 3ª coluna do mockup (evita faixa vazia à direita). */
+  grid-template-columns: 255px minmax(0, 1fr);
 }
 
 .today-v3-layout .sidebar {
