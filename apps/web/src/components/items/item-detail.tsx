@@ -414,7 +414,7 @@ function ToolButton({
   )
 }
 
-export function ItemDetail() {
+export function ItemDetail({ inline = false }: { inline?: boolean } = {}) {
   const pathname = usePathname()
   const router = useRouter()
   const { selectedItemId, setSelectedItemId } = useUI()
@@ -1386,594 +1386,607 @@ export function ItemDetail() {
   }
 
   if (!isNote && (item.complexity === 'task' || item.complexity === 'capture')) {
+    const taskContentBlock = (
+      <div className={`w-full ${inline ? 'h-full flex flex-col rounded-[24px]' : 'max-w-[560px] rounded-[28px]'} overflow-visible border border-white/70 bg-white/90 shadow-cool-lg backdrop-blur-[2px]`}>
+        <div className="flex flex-col">
+          <div className="px-5 pb-4 pt-5">
+            <div className="flex items-center gap-3">
+              <textarea
+                ref={taskTitleRef}
+                value={title}
+                onKeyDown={handleTaskTitleKeyDown}
+                onChange={(e) => {
+                  handleTitleChange(e)
+                  autosizeTextarea(e.currentTarget)
+                }}
+                placeholder="Nome da tarefa"
+                rows={1}
+                className="max-h-40 min-w-0 flex-1 resize-none overflow-hidden border-none bg-transparent text-[16px] font-semibold leading-6 text-slate-900 outline-none placeholder:text-slate-300"
+              />
+              <button
+                type="button"
+                title="Trocar para nota"
+                onClick={() => handleComplexityChange('note')}
+                className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-white/60 bg-white/46 px-2 text-[12px] font-medium text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white/75 hover:text-slate-800"
+              >
+                <IconNote className="h-3.5 w-3.5" />
+                Nota
+              </button>
+            </div>
+
+            <textarea
+              ref={taskContentRef}
+              value={content}
+              onChange={(e) => {
+                handleContentChange(e.target.value)
+                autosizeTextarea(e.currentTarget)
+              }}
+              placeholder="DescriÃ§Ã£o"
+              rows={2}
+              className="mt-1 block min-h-[48px] w-full resize-none overflow-hidden border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
+            />
+
+            <div className="relative mt-2 flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <ToolButton
+                  title="Selecionar data"
+                  active={!!dueDate}
+                  onClick={() => setPopover(popover === 'date' ? null : 'date')}
+                >
+                  <IconCalendar className="h-3.5 w-3.5" />
+                  {isTodaySelected ? 'Hoje' : dueDate ? formatDueDate(dueDate) : 'Hoje'}
+                </ToolButton>
+                {popover === 'date' && (
+                  <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                    {DATE_SUGGESTIONS.map((suggestion) => {
+                      const value = suggestion.getValue()
+                      return (
+                        <button
+                          key={suggestion.label}
+                          type="button"
+                          onClick={() => {
+                            setDueDate(value)
+                            if (selectedItemId) updateItem(selectedItemId, { dueDate: value })
+                            setPopover(null)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconCalendar className="h-3.5 w-3.5 text-brand-600" />
+                          <span className="flex-1">{suggestion.label}</span>
+                          <span className="text-[11px] font-normal text-slate-400">
+                            {formatDueDate(value)}
+                          </span>
+                          {dueDate === value && (
+                            <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                          )}
+                        </button>
+                      )
+                    })}
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => {
+                        setDueDate(e.target.value)
+                        if (selectedItemId)
+                          updateItem(
+                            selectedItemId,
+                            nullablePatch({ dueDate: e.target.value || null }),
+                          )
+                      }}
+                      className="mt-1 h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    <div className="mt-2 border-t border-ui-border-soft pt-2">
+                      <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">
+                        HorÃ¡rio
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDueTimeChange(dueTime || '09:00')}
+                        className={`flex h-8 w-full items-center gap-2 rounded-[10px] border px-2 text-left text-[12px] outline-none transition-colors ${
+                          dueTime
+                            ? 'border-ui-border-selected bg-surface-selected text-brand-700'
+                            : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
+                        }`}
+                      >
+                        <IconCalendar className="h-3.5 w-3.5" />
+                        <span className="flex-1">
+                          {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horÃ¡rio'}
+                        </span>
+                        {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                      </button>
+                      <div className="mt-1 grid grid-cols-2 gap-1">
+                        {TIME_SUGGESTIONS.map((time) => (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => handleDueTimeChange(time)}
+                            className={`flex items-center justify-between rounded-[10px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
+                              dueTime === time
+                                ? 'bg-surface-selected text-brand-700'
+                                : 'bg-surface-soft text-slate-700'
+                            }`}
+                          >
+                            {formatTimeLabel(time)}
+                            {dueTime === time && (
+                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-1 max-h-36 overflow-y-auto rounded-[10px] border border-ui-border-soft bg-white p-1">
+                        {TIME_OPTIONS.map((time) => (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => handleDueTimeChange(time)}
+                            className={`flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
+                              dueTime === time
+                                ? 'bg-surface-selected text-brand-700'
+                                : 'text-slate-700'
+                            }`}
+                          >
+                            <span className="flex-1">{formatTimeLabel(time)}</span>
+                            {dueTime === time && (
+                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                      {dueTime && (
+                        <button
+                          type="button"
+                          onClick={() => handleDueTimeChange('')}
+                          className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
+                        >
+                          Remover horÃ¡rio
+                        </button>
+                      )}
+                    </div>
+                    {dueDate && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDueDate('')
+                          setDueTime('')
+                          if (selectedItemId)
+                            updateItem(
+                              selectedItemId,
+                              nullablePatch({ dueDate: null, dueTime: null }),
+                            )
+                          setPopover(null)
+                        }}
+                        className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
+                      >
+                        Remover data
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <ToolButton
+                  title="Editar prioridade"
+                  active={priority < 4}
+                  onClick={() => setPopover(popover === 'priority' ? null : 'priority')}
+                >
+                  <IconFlag className={`h-3.5 w-3.5 ${priorityConfig.color}`} />
+                </ToolButton>
+                {popover === 'priority' && (
+                  <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
+                    {PRIORITIES.map((p) => {
+                      const cfg = PRIORITY_CONFIG[p]
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => {
+                            handlePriorityChange(p)
+                            setPopover(null)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconFlag className={`h-3.5 w-3.5 ${cfg.color}`} />
+                          <span className="flex-1">
+                            {cfg.label} - {cfg.title}
+                          </span>
+                          {priority === p && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <ToolButton
+                  title="Selecionar recorrÃªncia"
+                  active={!!recurrence}
+                  onClick={() => setPopover(popover === 'recurrence' ? null : 'recurrence')}
+                >
+                  <IconRepeat className="h-3.5 w-3.5" />
+                  {recurrence ? recurrenceLabel : ''}
+                </ToolButton>
+                {popover === 'recurrence' && (
+                  <RecurrencePopover
+                    value={recurrence}
+                    dueDate={dueDate}
+                    onChange={handleRecurrenceChange}
+                  />
+                )}
+              </div>
+
+              <div className="relative">
+                <ToolButton
+                  title="Selecionar ou criar tag"
+                  active={tagList.length > 0}
+                  onClick={() => setPopover(popover === 'tags' ? null : 'tags')}
+                >
+                  <IconTag className="h-3.5 w-3.5" />
+                  {tagList.length > 0 ? tagList.length : ''}
+                </ToolButton>
+                {popover === 'tags' && (
+                  <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                    {tagList.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-1">
+                        {tagList.map((tag) => (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() =>
+                              updateTags(tagList.filter((current) => current !== tag))
+                            }
+                            className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
+                          >
+                            @{tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <input
+                      value={tagQuery}
+                      onChange={(e) => setTagQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          addTag(tagQuery)
+                        }
+                      }}
+                      placeholder="Buscar ou criar tag"
+                      className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                      autoFocus
+                    />
+                    <div className="mt-1 max-h-44 overflow-y-auto">
+                      {filteredTags.slice(0, 8).map((tag) => (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => addTag(tag)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
+                        </button>
+                      ))}
+                      {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
+                        <button
+                          type="button"
+                          onClick={() => addTag(tagQuery)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected"
+                        >
+                          <IconTag className="h-3.5 w-3.5 text-slate-400" />
+                          Criar @{normalizeToken(tagQuery)}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 border-t border-white/55 bg-white/66 px-5 py-3 backdrop-blur">
+            <div className="relative min-w-0 flex-1">
+              <button
+                type="button"
+                title="Selecionar ou criar pasta"
+                onClick={() => setPopover(popover === 'project' ? null : 'project')}
+                className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-white/60 bg-white/46 px-2 text-[12px] font-medium text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white/75 hover:text-slate-800"
+              >
+                <IconInbox className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
+              </button>
+              {popover === 'project' && (
+                <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <input
+                    value={projectQuery}
+                    onChange={(e) => setProjectQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        void addProject(projectQuery)
+                      }
+                    }}
+                    placeholder="Buscar ou criar pasta"
+                    className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
+                    autoFocus
+                  />
+                  <div className="mt-1 max-h-52 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleProjectChange('')
+                        setPopover(null)
+                      }}
+                      className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                    >
+                      <IconInbox className="h-3.5 w-3.5 text-slate-400" />
+                      Inbox
+                      {!item.folderId && (
+                        <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />
+                      )}
+                    </button>
+                    {filteredProjects.map(({ folder: project, depth }) => {
+                      const id = projectIdOf(project)
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            handleProjectChange(id)
+                            setProjectQuery('')
+                            setPopover(null)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
+                        >
+                          <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <span
+                            className="min-w-0 flex-1 truncate"
+                            style={{ paddingLeft: depth ? depth * 12 : 0 }}
+                          >
+                            {project.name}
+                          </span>
+                          {item.folderId === id && (
+                            <IconCheck className="h-3.5 w-3.5 text-slate-500" />
+                          )}
+                        </button>
+                      )
+                    })}
+                    {projectQuery.trim() &&
+                      !activeProjects.some(
+                        (project) =>
+                          normalizeToken(project.name) === normalizeToken(projectQuery),
+                      ) && (
+                        <button
+                          type="button"
+                          disabled={creatingProject}
+                          onClick={() => void addProject(projectQuery)}
+                          className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
+                        >
+                          <span className="text-base leading-none">+</span>
+                          {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
+                        </button>
+                      )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <span className="hidden text-[11px] text-slate-400 sm:inline">
+              {dirty || isSaving ? 'Salvando...' : 'Salvo'}
+            </span>
+            <button
+              type="button"
+              onClick={handleArchive}
+              className="h-8 rounded-full px-3 text-[12px] font-semibold text-slate-400 hover:bg-white/75 hover:text-red-500"
+            >
+              Arquivar
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedItemId(null)}
+              className="h-8 rounded-full px-3 text-[12px] font-semibold text-slate-500 hover:bg-white/75 hover:text-slate-700"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedItemId(null)}
+              className="h-8 rounded-full bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
+            >
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+
+    if (inline) return taskContentBlock
+
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/22 p-3 pt-[6vh] backdrop-blur-md sm:p-4 sm:pt-[8vh]"
+        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/22 p-3 pt-[6vh] backdrop-blur-[2px] sm:p-4 sm:pt-[8vh]"
         role="dialog"
         aria-modal="true"
         onPointerDown={handleBackdropPointerDown}
         onClick={handleBackdropClick}
         onKeyDown={handleModalKeyDown}
       >
-        <div className="w-full max-w-[560px] overflow-visible rounded-[28px] border border-white/70 bg-white/90 shadow-cool-lg backdrop-blur-xl">
-          <div className="flex flex-col">
-            <div className="px-5 pb-4 pt-5">
-              <div className="flex items-center gap-3">
-                <textarea
-                  ref={taskTitleRef}
-                  value={title}
-                  onKeyDown={handleTaskTitleKeyDown}
-                  onChange={(e) => {
-                    handleTitleChange(e)
-                    autosizeTextarea(e.currentTarget)
-                  }}
-                  placeholder="Nome da tarefa"
-                  rows={1}
-                  className="max-h-40 min-w-0 flex-1 resize-none overflow-hidden border-none bg-transparent text-[16px] font-semibold leading-6 text-slate-900 outline-none placeholder:text-slate-300"
-                />
-                <button
-                  type="button"
-                  title="Trocar para nota"
-                  onClick={() => handleComplexityChange('note')}
-                  className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-white/60 bg-white/46 px-2 text-[12px] font-medium text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white/75 hover:text-slate-800"
-                >
-                  <IconNote className="h-3.5 w-3.5" />
-                  Nota
-                </button>
-              </div>
-
-              <textarea
-                ref={taskContentRef}
-                value={content}
-                onChange={(e) => {
-                  handleContentChange(e.target.value)
-                  autosizeTextarea(e.currentTarget)
-                }}
-                placeholder="DescriÃ§Ã£o"
-                rows={2}
-                className="mt-1 block min-h-[48px] w-full resize-none overflow-hidden border-none bg-transparent text-[14px] leading-5 text-slate-700 outline-none placeholder:text-slate-300"
-              />
-
-              <div className="relative mt-2 flex flex-wrap items-center gap-2">
-                <div className="relative">
-                  <ToolButton
-                    title="Selecionar data"
-                    active={!!dueDate}
-                    onClick={() => setPopover(popover === 'date' ? null : 'date')}
-                  >
-                    <IconCalendar className="h-3.5 w-3.5" />
-                    {isTodaySelected ? 'Hoje' : dueDate ? formatDueDate(dueDate) : 'Hoje'}
-                  </ToolButton>
-                  {popover === 'date' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
-                      {DATE_SUGGESTIONS.map((suggestion) => {
-                        const value = suggestion.getValue()
-                        return (
-                          <button
-                            key={suggestion.label}
-                            type="button"
-                            onClick={() => {
-                              setDueDate(value)
-                              if (selectedItemId) updateItem(selectedItemId, { dueDate: value })
-                              setPopover(null)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                          >
-                            <IconCalendar className="h-3.5 w-3.5 text-brand-600" />
-                            <span className="flex-1">{suggestion.label}</span>
-                            <span className="text-[11px] font-normal text-slate-400">
-                              {formatDueDate(value)}
-                            </span>
-                            {dueDate === value && (
-                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
-                            )}
-                          </button>
-                        )
-                      })}
-                      <input
-                        type="date"
-                        value={dueDate}
-                        onChange={(e) => {
-                          setDueDate(e.target.value)
-                          if (selectedItemId)
-                            updateItem(
-                              selectedItemId,
-                              nullablePatch({ dueDate: e.target.value || null }),
-                            )
-                        }}
-                        className="mt-1 h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
-                      />
-                      <div className="mt-2 border-t border-ui-border-soft pt-2">
-                        <div className="mb-1 px-1 text-[11px] font-medium text-slate-400">
-                          HorÃ¡rio
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDueTimeChange(dueTime || '09:00')}
-                          className={`flex h-8 w-full items-center gap-2 rounded-[10px] border px-2 text-left text-[12px] outline-none transition-colors ${
-                            dueTime
-                              ? 'border-ui-border-selected bg-surface-selected text-brand-700'
-                              : 'border-ui-border-soft bg-surface-soft text-slate-500 hover:bg-white hover:text-slate-800'
-                          }`}
-                        >
-                          <IconCalendar className="h-3.5 w-3.5" />
-                          <span className="flex-1">
-                            {dueTime ? formatTimeLabel(dueTime) : 'Adicionar horÃ¡rio'}
-                          </span>
-                          {dueTime && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
-                        </button>
-                        <div className="mt-1 grid grid-cols-2 gap-1">
-                          {TIME_SUGGESTIONS.map((time) => (
-                            <button
-                              key={time}
-                              type="button"
-                              onClick={() => handleDueTimeChange(time)}
-                              className={`flex items-center justify-between rounded-[10px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
-                                dueTime === time
-                                  ? 'bg-surface-selected text-brand-700'
-                                  : 'bg-surface-soft text-slate-700'
-                              }`}
-                            >
-                              {formatTimeLabel(time)}
-                              {dueTime === time && (
-                                <IconCheck className="h-3.5 w-3.5 text-slate-500" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                        <div className="mt-1 max-h-36 overflow-y-auto rounded-[10px] border border-ui-border-soft bg-white p-1">
-                          {TIME_OPTIONS.map((time) => (
-                            <button
-                              key={time}
-                              type="button"
-                              onClick={() => handleDueTimeChange(time)}
-                              className={`flex w-full items-center gap-2 rounded-[8px] px-2 py-1.5 text-left text-[12px] hover:bg-surface-selected ${
-                                dueTime === time
-                                  ? 'bg-surface-selected text-brand-700'
-                                  : 'text-slate-700'
-                              }`}
-                            >
-                              <span className="flex-1">{formatTimeLabel(time)}</span>
-                              {dueTime === time && (
-                                <IconCheck className="h-3.5 w-3.5 text-slate-500" />
-                              )}
-                            </button>
-                          ))}
-                        </div>
-                        {dueTime && (
-                          <button
-                            type="button"
-                            onClick={() => handleDueTimeChange('')}
-                            className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
-                          >
-                            Remover horÃ¡rio
-                          </button>
-                        )}
-                      </div>
-                      {dueDate && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDueDate('')
-                            setDueTime('')
-                            if (selectedItemId)
-                              updateItem(
-                                selectedItemId,
-                                nullablePatch({ dueDate: null, dueTime: null }),
-                              )
-                            setPopover(null)
-                          }}
-                          className="mt-1 flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-500 hover:bg-surface-selected"
-                        >
-                          Remover data
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <ToolButton
-                    title="Editar prioridade"
-                    active={priority < 4}
-                    onClick={() => setPopover(popover === 'priority' ? null : 'priority')}
-                  >
-                    <IconFlag className={`h-3.5 w-3.5 ${priorityConfig.color}`} />
-                  </ToolButton>
-                  {popover === 'priority' && (
-                    <div className="absolute left-0 top-9 z-10 w-44 rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
-                      {PRIORITIES.map((p) => {
-                        const cfg = PRIORITY_CONFIG[p]
-                        return (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => {
-                              handlePriorityChange(p)
-                              setPopover(null)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                          >
-                            <IconFlag className={`h-3.5 w-3.5 ${cfg.color}`} />
-                            <span className="flex-1">
-                              {cfg.label} - {cfg.title}
-                            </span>
-                            {priority === p && <IconCheck className="h-3.5 w-3.5 text-slate-500" />}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="relative">
-                  <ToolButton
-                    title="Selecionar recorrÃªncia"
-                    active={!!recurrence}
-                    onClick={() => setPopover(popover === 'recurrence' ? null : 'recurrence')}
-                  >
-                    <IconRepeat className="h-3.5 w-3.5" />
-                    {recurrence ? recurrenceLabel : ''}
-                  </ToolButton>
-                  {popover === 'recurrence' && (
-                    <RecurrencePopover
-                      value={recurrence}
-                      dueDate={dueDate}
-                      onChange={handleRecurrenceChange}
-                    />
-                  )}
-                </div>
-
-                <div className="relative">
-                  <ToolButton
-                    title="Selecionar ou criar tag"
-                    active={tagList.length > 0}
-                    onClick={() => setPopover(popover === 'tags' ? null : 'tags')}
-                  >
-                    <IconTag className="h-3.5 w-3.5" />
-                    {tagList.length > 0 ? tagList.length : ''}
-                  </ToolButton>
-                  {popover === 'tags' && (
-                    <div className="absolute left-0 top-9 z-10 w-64 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
-                      {tagList.length > 0 && (
-                        <div className="mb-2 flex flex-wrap gap-1">
-                          {tagList.map((tag) => (
-                            <button
-                              key={tag}
-                              type="button"
-                              onClick={() =>
-                                updateTags(tagList.filter((current) => current !== tag))
-                              }
-                              className="rounded-[8px] bg-surface-soft px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-surface-selected"
-                            >
-                              @{tag}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <input
-                        value={tagQuery}
-                        onChange={(e) => setTagQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault()
-                            addTag(tagQuery)
-                          }
-                        }}
-                        placeholder="Buscar ou criar tag"
-                        className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
-                        autoFocus
-                      />
-                      <div className="mt-1 max-h-44 overflow-y-auto">
-                        {filteredTags.slice(0, 8).map((tag) => (
-                          <button
-                            key={tag}
-                            type="button"
-                            onClick={() => addTag(tag)}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                          >
-                            <IconTag className="h-3.5 w-3.5 text-slate-400" />@{tag}
-                          </button>
-                        ))}
-                        {tagQuery.trim() && !knownTags.includes(normalizeToken(tagQuery)) && (
-                          <button
-                            type="button"
-                            onClick={() => addTag(tagQuery)}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected"
-                          >
-                            <IconTag className="h-3.5 w-3.5 text-slate-400" />
-                            Criar @{normalizeToken(tagQuery)}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 border-t border-white/55 bg-white/66 px-5 py-3 backdrop-blur">
-              <div className="relative min-w-0 flex-1">
-                <button
-                  type="button"
-                  title="Selecionar ou criar pasta"
-                  onClick={() => setPopover(popover === 'project' ? null : 'project')}
-                  className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-full border border-white/60 bg-white/46 px-2 text-[12px] font-medium text-slate-500 shadow-sm backdrop-blur transition-colors hover:bg-white/75 hover:text-slate-800"
-                >
-                  <IconInbox className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
-                </button>
-                {popover === 'project' && (
-                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
-                    <input
-                      value={projectQuery}
-                      onChange={(e) => setProjectQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          void addProject(projectQuery)
-                        }
-                      }}
-                      placeholder="Buscar ou criar pasta"
-                      className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
-                      autoFocus
-                    />
-                    <div className="mt-1 max-h-52 overflow-y-auto">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleProjectChange('')
-                          setPopover(null)
-                        }}
-                        className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                      >
-                        <IconInbox className="h-3.5 w-3.5 text-slate-400" />
-                        Inbox
-                        {!item.folderId && (
-                          <IconCheck className="ml-auto h-3.5 w-3.5 text-slate-500" />
-                        )}
-                      </button>
-                      {filteredProjects.map(({ folder: project, depth }) => {
-                        const id = projectIdOf(project)
-                        return (
-                          <button
-                            key={id}
-                            type="button"
-                            onClick={() => {
-                              handleProjectChange(id)
-                              setProjectQuery('')
-                              setPopover(null)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] text-slate-700 hover:bg-surface-selected"
-                          >
-                            <FolderGlyph className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                            <span
-                              className="min-w-0 flex-1 truncate"
-                              style={{ paddingLeft: depth ? depth * 12 : 0 }}
-                            >
-                              {project.name}
-                            </span>
-                            {item.folderId === id && (
-                              <IconCheck className="h-3.5 w-3.5 text-slate-500" />
-                            )}
-                          </button>
-                        )
-                      })}
-                      {projectQuery.trim() &&
-                        !activeProjects.some(
-                          (project) =>
-                            normalizeToken(project.name) === normalizeToken(projectQuery),
-                        ) && (
-                          <button
-                            type="button"
-                            disabled={creatingProject}
-                            onClick={() => void addProject(projectQuery)}
-                            className="flex w-full items-center gap-2 rounded-[10px] bg-surface-soft px-2 py-1.5 text-left text-[12px] font-medium text-slate-700 hover:bg-surface-selected disabled:opacity-50"
-                          >
-                            <span className="text-base leading-none">+</span>
-                            {creatingProject ? 'Criando...' : `Criar "${projectQuery.trim()}"`}
-                          </button>
-                        )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <span className="hidden text-[11px] text-slate-400 sm:inline">
-                {dirty || isSaving ? 'Salvando...' : 'Salvo'}
-              </span>
-              <button
-                type="button"
-                onClick={handleArchive}
-                className="h-8 rounded-full px-3 text-[12px] font-semibold text-slate-400 hover:bg-white/75 hover:text-red-500"
-              >
-                Arquivar
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedItemId(null)}
-                className="h-8 rounded-full px-3 text-[12px] font-semibold text-slate-500 hover:bg-white/75 hover:text-slate-700"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => setSelectedItemId(null)}
-                className="h-8 rounded-full bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        </div>
+        {content}
       </div>
     )
   }
 
+  const mainContent = (
+    <div
+      className={`flex flex-col overflow-hidden border border-white/70 bg-white/90 shadow-cool-lg backdrop-blur-[2px] transition-all duration-300 ${
+        inline ? 'h-full w-full rounded-[24px]' :
+        isNote
+          ? 'h-full w-full max-w-5xl rounded-t-2xl sm:rounded-xl'
+          : 'max-h-[85vh] w-full max-w-lg rounded-t-2xl sm:rounded-xl'
+      }`}
+    >
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-white/45 bg-white/42 px-6 py-4 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setSelectedItemId(null)}
+            className="-ml-2 rounded-full p-2 text-slate-400 transition-colors hover:bg-white/75 hover:text-slate-600"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+          <span className="text-sm font-medium text-slate-500">{isNote ? 'Nota' : 'Tarefa'}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-xs text-slate-400">
+            {dirty || isSaving ? 'Salvando...' : 'Salvo'}
+          </span>
+          <button
+            onClick={handleArchive}
+            className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
+          >
+            Arquivar
+          </button>
+        </div>
+      </div>
+
+      <div className={`flex-1 overflow-y-auto ${isNote ? 'flex flex-col lg:flex-row' : ''}`}>
+        {/* Main Content Area */}
+        <div
+          className={`p-4 sm:p-6 space-y-4 sm:space-y-6 ${isNote ? 'flex-1 lg:border-r border-ui-border-soft' : ''}`}
+        >
+          {/* Título */}
+          <input
+            value={title}
+            onChange={handleTitleChange}
+            placeholder="Título"
+            className={`w-full font-bold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300 ${
+              isNote ? 'text-3xl' : 'text-xl'
+            }`}
+          />
+
+          {/* Editor Markdown */}
+          <div className="min-h-[200px]">
+            <label className="text-xs text-slate-400 font-medium block mb-2">Conteúdo</label>
+            <MarkdownEditor value={content} onChange={handleContentChange} itemId={item.id} />
+          </div>
+        </div>
+
+        {/* Sidebar Properties (only visible or layouted differently for notes) */}
+        <div
+          className={`${isNote ? 'w-full lg:w-80 p-4 sm:p-6 space-y-4 sm:space-y-6 bg-white/36 backdrop-blur' : 'px-6 pb-6 space-y-4'}`}
+        >
+          {/* Status */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Status</label>
+            <StatusSelect value={item.status} onChange={handleStatusChange} />
+          </div>
+
+          {!isNote && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
+              <PrioritySelect value={priority} onChange={handlePriorityChange} />
+            </div>
+          )}
+
+          {/* Complexidade */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Complexidade</label>
+            <ComplexitySelect value={item.complexity} onChange={handleComplexityChange} />
+          </div>
+
+          {/* Prazo (Mainly for tasks) */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Prazo</label>
+            <DueDatePicker value={dueDate} onChange={handleDueDateChange} />
+            {dueDate && (
+              <button
+                onClick={handleCreateCalendarEvent}
+                disabled={creatingEvent}
+                className="flex items-center gap-1.5 text-[12px] text-brand-600 hover:text-brand-700 disabled:opacity-50 transition-colors w-fit"
+              >
+                <svg
+                  className="w-3.5 h-3.5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <path d="M16 2v4M8 2v4M3 10h18" />
+                  <path d="M12 14v4M10 16h4" strokeLinecap="round" />
+                </svg>
+                {creatingEvent ? 'Criando...' : 'Google Calendar'}
+              </button>
+            )}
+          </div>
+
+          {/* Pasta */}
+          <div className="grid grid-cols-1 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[13px] font-medium text-slate-500">Pasta</label>
+              <select
+                value={item.folderId ?? ''}
+                onChange={(e) => handleProjectChange(e.target.value)}
+                className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+              >
+                <option value="">Nenhum</option>
+                {projects
+                  .filter((p) => p.status !== 'archived')
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-slate-500">Etiquetas</label>
+            <input
+              value={tags}
+              onChange={(e) => setTags(e.target.value)}
+              onBlur={handleTagsBlur}
+              placeholder="ex: trabalho, urgente"
+              className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
+            />
+          </div>
+
+          {/* Versions only in Note mode or at the bottom */}
+          {isNote && (
+            <div className="pt-4 border-t border-slate-100">
+              <ItemVersions itemId={item.id} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer info */}
+      <div className="flex justify-between border-t border-white/45 bg-white/42 px-6 py-3 text-[10px] text-slate-400 backdrop-blur">
+        <span>Criado em {new Date(item.createdAt).toLocaleString('pt-BR')}</span>
+        <span>Atualizado em {new Date(item.updatedAt).toLocaleString('pt-BR')}</span>
+      </div>
+    </div>
+  )
+
+  if (inline) return mainContent
+
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/22 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/22 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}
     >
-      <div
-        className={`flex flex-col overflow-hidden border border-white/70 bg-white/90 shadow-cool-lg backdrop-blur-xl transition-all duration-300 ${
-          isNote
-            ? 'h-full w-full max-w-5xl rounded-t-2xl sm:rounded-xl'
-            : 'max-h-[85vh] w-full max-w-lg rounded-t-2xl sm:rounded-xl'
-        }`}
-      >
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-white/45 bg-white/42 px-6 py-4 backdrop-blur">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSelectedItemId(null)}
-              className="-ml-2 rounded-full p-2 text-slate-400 transition-colors hover:bg-white/75 hover:text-slate-600"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <span className="text-sm font-medium text-slate-500">{isNote ? 'Nota' : 'Tarefa'}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-xs text-slate-400">
-              {dirty || isSaving ? 'Salvando...' : 'Salvo'}
-            </span>
-            <button
-              onClick={handleArchive}
-              className="text-xs font-semibold text-slate-400 hover:text-red-500 transition-colors px-2 py-1"
-            >
-              Arquivar
-            </button>
-          </div>
-        </div>
-
-        <div className={`flex-1 overflow-y-auto ${isNote ? 'flex flex-col lg:flex-row' : ''}`}>
-          {/* Main Content Area */}
-          <div
-            className={`p-6 space-y-6 ${isNote ? 'flex-1 lg:border-r border-ui-border-soft' : ''}`}
-          >
-            {/* TÃ­tulo */}
-            <input
-              value={title}
-              onChange={handleTitleChange}
-              placeholder="TÃ­tulo"
-              className={`w-full font-bold text-slate-900 border-none outline-none bg-transparent placeholder:text-slate-300 ${
-                isNote ? 'text-3xl' : 'text-xl'
-              }`}
-            />
-
-            {/* Editor Markdown */}
-            <div className="min-h-[200px]">
-              <label className="text-xs text-slate-400 font-medium block mb-2">ConteÃºdo</label>
-              <MarkdownEditor value={content} onChange={handleContentChange} itemId={item.id} />
-            </div>
-          </div>
-
-          {/* Sidebar Properties (only visible or layouted differently for notes) */}
-          <div
-            className={`${isNote ? 'w-full lg:w-80 p-6 space-y-6 bg-white/36 backdrop-blur' : 'px-6 pb-6 space-y-4'}`}
-          >
-            {/* Status */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-slate-500">Status</label>
-              <StatusSelect value={item.status} onChange={handleStatusChange} />
-            </div>
-
-            {!isNote && (
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-slate-500">Prioridade</label>
-                <PrioritySelect value={priority} onChange={handlePriorityChange} />
-              </div>
-            )}
-
-            {/* Complexidade */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-slate-500">Complexidade</label>
-              <ComplexitySelect value={item.complexity} onChange={handleComplexityChange} />
-            </div>
-
-            {/* Prazo (Mainly for tasks) */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-slate-500">Prazo</label>
-              <DueDatePicker value={dueDate} onChange={handleDueDateChange} />
-              {dueDate && (
-                <button
-                  onClick={handleCreateCalendarEvent}
-                  disabled={creatingEvent}
-                  className="flex items-center gap-1.5 text-[12px] text-brand-600 hover:text-brand-700 disabled:opacity-50 transition-colors w-fit"
-                >
-                  <svg
-                    className="w-3.5 h-3.5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <path d="M16 2v4M8 2v4M3 10h18" />
-                    <path d="M12 14v4M10 16h4" strokeLinecap="round" />
-                  </svg>
-                  {creatingEvent ? 'Criando...' : 'Google Calendar'}
-                </button>
-              )}
-            </div>
-
-            {/* Pasta */}
-            <div className="grid grid-cols-1 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-slate-500">Pasta</label>
-                <select
-                  value={item.folderId ?? ''}
-                  onChange={(e) => handleProjectChange(e.target.value)}
-                  className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-                >
-                  <option value="">Nenhum</option>
-                  {projects
-                    .filter((p) => p.status !== 'archived')
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-slate-500">Etiquetas</label>
-              <input
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                onBlur={handleTagsBlur}
-                placeholder="ex: trabalho, urgente"
-                className="w-full text-[14px] border border-ui-border-soft rounded-[10px] px-3 py-2 bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors"
-              />
-            </div>
-
-            {/* Versions only in Note mode or at the bottom */}
-            {isNote && (
-              <div className="pt-4 border-t border-slate-100">
-                <ItemVersions itemId={item.id} />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer info */}
-        <div className="flex justify-between border-t border-white/45 bg-white/42 px-6 py-3 text-[10px] text-slate-400 backdrop-blur">
-          <span>Criado em {new Date(item.createdAt).toLocaleString('pt-BR')}</span>
-          <span>Atualizado em {new Date(item.updatedAt).toLocaleString('pt-BR')}</span>
-        </div>
-      </div>
+      {mainContent}
     </div>
   )
 }

@@ -197,7 +197,7 @@ function Sidebar({
 
   return (
     <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/80 lg:bg-white/[.86] lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
-      <div className="flex items-center gap-2.5 border-b border-navy-900/[0.06] px-4 py-3.5">
+      <Link href="/hoje" className="flex items-center gap-2.5 border-b border-navy-900/[0.06] px-4 py-3.5 hover:bg-navy-900/[0.02]">
         <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
           <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
         </span>
@@ -214,7 +214,7 @@ function Sidebar({
             <path d="m15 18-6-6 6-6" />
           </svg>
         </Link>
-      </div>
+      </Link>
 
       <Link
         href="/notas"
@@ -555,7 +555,10 @@ function EditorTopBar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-[#ECF0F5] px-6 py-3.5">
+    <div className="flex shrink-0 items-center gap-3 border-b border-[#ECF0F5] px-4 py-3.5 sm:px-6">
+      <Link href="/hoje" className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)] lg:hidden" aria-label="Ir para Hoje">
+        <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
+      </Link>
       <nav className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500">
         {crumbs.map((crumb, i) => (
           <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
@@ -701,6 +704,9 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     if (folderParam) router.push(`/notas?folder=${folderParam}`)
     else router.push('/notas')
   })
+  const contentRef = useRef(localContent)
+  useEffect(() => { contentRef.current = localContent }, [localContent])
+  const pendingSaveRef = useRef(false)
   const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -722,6 +728,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
       try {
         await updateItem(item.id, patch)
         setSaveStatus('saved')
+        pendingSaveRef.current = false
       } catch {
         setSaveStatus('idle')
       }
@@ -732,6 +739,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const onContentChange = useCallback(
     (value: string) => {
       setLocalContent(value)
+      pendingSaveRef.current = true
       if (contentTimer.current) clearTimeout(contentTimer.current)
       contentTimer.current = setTimeout(() => {
         void persist({ contentMd: value })
@@ -741,10 +749,14 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   )
 
   useEffect(() => {
+    const currentItem = item
     return () => {
       if (contentTimer.current) clearTimeout(contentTimer.current)
+      if (pendingSaveRef.current && currentItem) {
+        void updateItem(currentItem.id, { contentMd: contentRef.current })
+      }
     }
-  }, [])
+  }, [item])
 
   useEffect(() => {
     if (!focusMode) return undefined

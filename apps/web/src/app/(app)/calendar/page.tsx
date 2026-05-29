@@ -391,7 +391,7 @@ function CalendarCard({
                 ))}
                 {more > 0 ? (
                   // ID 031: mobile mostra apenas "+X"; desktop mantém "+X mais".
-                  <span className="mt-auto block rounded bg-navy-900/[0.06] px-1.5 py-0.5 text-center font-mono text-[10px] font-bold text-navy-600 lg:text-[9.5px]">+{more}<span className="hidden lg:inline"> mais</span></span>
+                  <span className="mt-auto block rounded bg-navy-900/[0.06] px-1 py-0.5 text-center font-mono text-[9px] font-bold leading-tight text-navy-600 lg:px-1.5 lg:text-[9.5px]">+{more}<span className="hidden lg:inline"> mais</span></span>
                 ) : null}
               </div>
             )
@@ -1120,7 +1120,7 @@ export default function CalendarPage() {
       onItemClick={setSelectedItemId}
       onToggleExpand={() => setExpanded((value) => !value)}
       expanded={showExpanded}
-      monthMaxVisible={!isMobile && expanded ? 6 : 2}
+      monthMaxVisible={!isMobile && expanded ? 6 : 3}
       selectedEventId={selectedEventId}
       onPickMonth={handlePickMonth}
       viewMode={viewMode}

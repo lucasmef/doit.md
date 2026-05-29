@@ -170,10 +170,11 @@ function NoteGlyph({ className = 'h-4 w-4' }: { className?: string }) {
 }
 
 function TaskGlyph({ done, className = 'h-4 w-4' }: { done?: boolean; className?: string }) {
+  // ID 023: checkbox style for open tasks
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="4" width="16" height="16" rx="4" />
-      {done && <path d="m8.5 12 2.5 2.5L16 9" />}
+      <rect x="4.5" y="4.5" width="15" height="15" rx="3.5" fill={done ? 'currentColor' : 'white'} className={done ? '' : 'text-brand-500'} />
+      {done && <path d="m9 12 2.5 2.5L15 9.5" stroke="white" strokeWidth={2} />}
     </svg>
   )
 }
@@ -187,7 +188,7 @@ function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?
 function itemGlyphTone(item: Item): string {
   if (item.complexity === 'note') return 'bg-brand-500/10 text-brand-600'
   if (item.status === 'done') return 'bg-teal-500/10 text-teal-600'
-  return 'bg-navy-900/[0.05] text-navy-500'
+  return 'text-brand-500 bg-transparent' // no background for open task, just border
 }
 
 // ----- Sidebar tree -----
@@ -303,6 +304,32 @@ function SidebarFolderRow({
       </span>
       <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{folder.name}</span>
       <span className="rounded-full bg-navy-900/[0.06] px-1.5 py-0.5 font-mono text-[10px] font-bold text-navy-500">{count}</span>
+    </div>
+  )
+}
+
+function SidebarNoteRow({
+  item,
+  onOpen,
+  onMenu,
+}: {
+  item: Item
+  onOpen: (id: string) => void
+  onMenu: (id: string, x: number, y: number) => void
+}) {
+  const { longPressProps, consumeClick } = useLongPress({
+    onLongPress: ({ clientX, clientY }) => onMenu(item.id, clientX, clientY),
+  })
+  return (
+    <div
+      className="flex min-h-[42px] cursor-pointer touch-pan-y select-none items-center gap-2 rounded-[15px] px-2 py-1.5 [-webkit-touch-callout:none] hover:bg-white/60"
+      onClick={() => { if (consumeClick()) return; onOpen(item.id) }}
+      {...longPressProps}
+    >
+      <span className="flex h-7 w-7 items-center justify-center rounded-[11px] bg-warning/15 text-[#B47410]">
+        <StarGlyph filled className="h-3.5 w-3.5" />
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-bold text-navy-900">{item.title || 'Sem título'}</span>
     </div>
   )
 }
@@ -483,6 +510,12 @@ function FolderMenu({
   onAgents,
   onCopyLink,
   onDelete,
+  completedVisibility,
+  onSetCompletedVisibility,
+  hasVisibleCompleted,
+  onClearCompleted,
+  onMoveUp,
+  onMoveDown,
 }: {
   folder: Folder
   breadcrumbLabel: string
@@ -502,8 +535,14 @@ function FolderMenu({
   onAgents: () => void
   onCopyLink: () => void
   onDelete: () => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  completedVisibility: 'show' | 'hide'
+  onSetCompletedVisibility: (v: 'show' | 'hide') => void
+  hasVisibleCompleted: boolean
+  onClearCompleted: () => void
 }) {
-  const [sub, setSub] = useState<'move' | 'view' | null>(null)
+  const [sub, setSub] = useState<'move' | 'view' | 'completed' | null>(null)
   const [pos, setPos] = useState({ left: x, top: y })
   const openedAtRef = useRef(Date.now())
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
@@ -579,6 +618,19 @@ function FolderMenu({
             <FolderMenuRow icon="▤" label="Lista" right={viewMode === 'list' ? '✓' : undefined} onClick={() => onSetView('list')} />
             <FolderMenuRow icon="▦" label="Kanban" right={viewMode === 'kanban' ? '✓' : undefined} onClick={() => onSetView('kanban')} />
           </>
+        ) : sub === 'completed' ? (
+          <>
+            <FolderMenuRow icon="‹" label="Voltar" onClick={() => setSub(null)} />
+            <div className="my-1 h-px bg-navy-900/[0.07]" />
+            <FolderMenuRow icon="👁" label="Mostrar concluídos" right={completedVisibility === 'show' ? '✓' : undefined} onClick={() => onSetCompletedVisibility('show')} />
+            <FolderMenuRow icon="🙈" label="Ocultar concluídos" right={completedVisibility === 'hide' ? '✓' : undefined} onClick={() => onSetCompletedVisibility('hide')} />
+            {hasVisibleCompleted && completedVisibility === 'show' ? (
+              <>
+                <div className="my-1 h-px bg-navy-900/[0.07]" />
+                <FolderMenuRow icon="✨" label="Limpar concluídos" onClick={onClearCompleted} />
+              </>
+            ) : null}
+          </>
         ) : (
           <>
             {isMobile ? <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-navy-900/15" /> : null}
@@ -604,8 +656,11 @@ function FolderMenu({
 
             <div className="border-t border-navy-900/[0.07] py-1">
               <FolderMenuRow icon="▦" label="Visualização" right={`${viewMode === 'kanban' ? 'Kanban' : 'Lista'} ›`} onClick={() => setSub('view')} />
+              <FolderMenuRow icon="✓" label="Concluídos" right={`${completedVisibility === 'show' ? 'Mostrando' : 'Oculto'} ›`} onClick={() => setSub('completed')} />
               <FolderMenuRow icon="✎" label="Renomear" onClick={onRename} />
               <FolderMenuRow icon="⇄" label="Mover" onClick={() => setSub('move')} />
+              {onMoveUp && <FolderMenuRow icon="↑" label="Mover para cima" onClick={onMoveUp} />}
+              {onMoveDown && <FolderMenuRow icon="↓" label="Mover para baixo" onClick={onMoveDown} />}
               <FolderMenuRow icon={<span className="font-mono text-[10px] font-bold">AG</span>} label="Editar AGENTS.md" onClick={onAgents} />
               <FolderMenuRow icon="⛓" label="Copiar link" onClick={onCopyLink} />
             </div>
@@ -631,14 +686,13 @@ function NotasBrowser() {
   const { items } = useItems()
   const { prefs, update } = usePreferences()
   const { prompt, confirm } = useDialog()
-  const { setSingleSelection, setQuickCaptureFolderId, openCapture } = useUI()
+  const { setSingleSelection, setQuickCaptureFolderId, openCapture, openContextMenu } = useUI()
 
   const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [sortOpen, setSortOpen] = useState(false)
   const [agentsForId, setAgentsForId] = useState<string | null>(null)
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const [folderMenu, setFolderMenu] = useState<FolderMenuState | null>(null)
   const sortRef = useRef<HTMLDivElement>(null)
   const headerMenuRef = useRef<HTMLDivElement>(null)
@@ -649,6 +703,10 @@ function NotasBrowser() {
   const pinnedFolders = useMemo(
     () => prefs.pinnedFolderIds.map((id) => folderById.get(id)).filter((f): f is Folder => Boolean(f)),
     [prefs.pinnedFolderIds, folderById],
+  )
+  const pinnedNotes = useMemo(
+    () => items.filter((it) => it.complexity === 'note' && prefs.pinnedNoteIds.includes(it.id)),
+    [items, prefs.pinnedNoteIds],
   )
 
   const counts = useMemo(() => {
@@ -665,7 +723,6 @@ function NotasBrowser() {
   const node = useMemo(() => (selectedId ? findNode(tree, selectedId) : null), [tree, selectedId])
   const childFolders = useMemo(() => [...(node?.children ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [node])
   const breadcrumb = useMemo(() => buildBreadcrumb(folders, selectedId), [folders, selectedId])
-  const isPinned = selectedId ? prefs.pinnedFolderIds.includes(selectedId) : false
   const viewMode: 'kanban' | 'list' =
     selectedFolder?.viewMode === 'kanban' && childFolders.length > 0 ? 'kanban' : 'list'
 
@@ -693,7 +750,6 @@ function NotasBrowser() {
   useEffect(() => {
     function onClick(e: MouseEvent) {
       if (sortRef.current && !sortRef.current.contains(e.target as Node)) setSortOpen(false)
-      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target as Node)) setHeaderMenuOpen(false)
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
@@ -702,20 +758,36 @@ function NotasBrowser() {
   // Esc fecha o drawer de pastas no mobile mesmo sem foco interno (ID 010).
   useEscapeClose(mobileFoldersOpen, () => setMobileFoldersOpen(false))
 
-  const directItems = useMemo(
-    () => (selectedId ? items.filter((it) => it.folderId === selectedId && isActiveItem(it)) : []),
-    [items, selectedId],
-  )
+  const directItems = useMemo(() => {
+    if (!selectedId) return []
+    const visibility = prefs.folderCompletedVisibility[selectedId] ?? 'hide'
+    const clearedAt = prefs.folderCompletedClearedAt[selectedId]
+    return items.filter((it) => {
+      if (it.folderId !== selectedId || !isActiveItem(it)) return false
+      if (it.status === 'done') {
+        if (visibility === 'hide') return false
+        if (clearedAt && new Date(it.updatedAt) <= new Date(clearedAt)) return false
+      }
+      return true
+    })
+  }, [items, selectedId, prefs.folderCompletedVisibility, prefs.folderCompletedClearedAt])
+
   const itemsByFolder = useMemo(() => {
     const map = new Map<string, Item[]>()
     for (const item of items) {
       if (!item.folderId || !isActiveItem(item)) continue
+      const visibility = prefs.folderCompletedVisibility[item.folderId] ?? 'hide'
+      const clearedAt = prefs.folderCompletedClearedAt[item.folderId]
+      if (item.status === 'done') {
+        if (visibility === 'hide') continue
+        if (clearedAt && new Date(item.updatedAt) <= new Date(clearedAt)) continue
+      }
       const list = map.get(item.folderId) ?? []
       list.push(item)
       map.set(item.folderId, list)
     }
     return map
-  }, [items])
+  }, [items, prefs.folderCompletedVisibility, prefs.folderCompletedClearedAt])
 
   const allFolderItems = useMemo(() => {
     const direct = sortItems(directItems, sortKey)
@@ -757,13 +829,6 @@ function NotasBrowser() {
     })
   }
 
-  function togglePinned() {
-    if (!selectedId) return
-    const next = isPinned
-      ? prefs.pinnedFolderIds.filter((id) => id !== selectedId)
-      : [selectedId, ...prefs.pinnedFolderIds]
-    update({ pinnedFolderIds: next })
-  }
 
   async function changeView(mode: 'kanban' | 'list') {
     if (!selectedId || mode === viewMode) return
@@ -777,14 +842,6 @@ function NotasBrowser() {
     selectFolder(folder.id)
   }
 
-  async function handleNewSubfolder() {
-    if (!selectedId) return
-    const name = await prompt({ title: 'Nova subpasta', message: 'Nome da subpasta', placeholder: 'Nome' })
-    if (!name?.trim()) return
-    const folder = await createFolder({ name: name.trim(), parentId: selectedId })
-    setExpanded((current) => new Set(current).add(selectedId))
-    selectFolder(folder.id)
-  }
 
   function handleNewItem(folderId: string | null) {
     setQuickCaptureFolderId(folderId)
@@ -884,7 +941,7 @@ function NotasBrowser() {
           )
         ) : (
           <>
-            {pinnedFolders.length > 0 ? (
+            {pinnedFolders.length > 0 || pinnedNotes.length > 0 ? (
               <>
                 <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
                 {pinnedFolders.map((folder) => (
@@ -896,6 +953,14 @@ function NotasBrowser() {
                     pinned
                     onSelect={selectFolder}
                     onMenu={openFolderMenu}
+                  />
+                ))}
+                {pinnedNotes.map((note) => (
+                  <SidebarNoteRow
+                    key={note.id}
+                    item={note}
+                    onOpen={setSingleSelection}
+                    onMenu={(id, x, y) => openContextMenu({ itemId: id, x, y })}
                   />
                 ))}
               </>
@@ -943,17 +1008,16 @@ function NotasBrowser() {
   )
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 lg:min-h-[calc(100vh-104px)] lg:px-8">
+    <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 lg:min-h-[calc(100vh-104px)] lg:px-8 mobile-no-select">
       {/* Scroll da página em vez de containers internos fixos */}
       <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
         {/* Sidebar / folder navigator (desktop) */}
-        {/* ID 016: sidebar acompanha o scroll da página (sticky), sem barra de rolagem interna própria. */}
-        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:flex lg:sticky lg:top-[96px] lg:self-start">
+        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/50 shadow-cool-sm backdrop-blur-[2px] lg:flex lg:sticky lg:top-[96px] lg:self-start">
           {folderNavContent}
         </aside>
 
         {/* Content panel */}
-        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl">
+        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/50 shadow-cool-sm backdrop-blur-[2px]">
           {selectedFolder ? (
             <>
               <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
@@ -1002,9 +1066,12 @@ function NotasBrowser() {
                     <div className="relative" ref={headerMenuRef}>
                       <button
                         type="button"
-                        onClick={() => setHeaderMenuOpen((v) => !v)}
-                        aria-haspopup="menu"
-                        aria-expanded={headerMenuOpen}
+                        onClick={(e) => {
+                          if (selectedId) {
+                            const rect = e.currentTarget.getBoundingClientRect()
+                            openFolderMenu(selectedId, rect.right, rect.bottom)
+                          }
+                        }}
                         aria-label="Ações da pasta"
                         className="grid h-[38px] w-[38px] place-items-center rounded-full bg-navy-900/[0.055] text-navy-700 transition hover:bg-navy-900/10"
                       >
@@ -1014,47 +1081,6 @@ function NotasBrowser() {
                           <circle cx="12" cy="19" r="1.6" />
                         </svg>
                       </button>
-                      {headerMenuOpen ? (
-                        <div className="absolute right-0 top-11 z-30 w-52 overflow-hidden rounded-[18px] border border-white/78 bg-white/95 p-1.5 shadow-cool-md backdrop-blur-2xl" role="menu">
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => { togglePinned(); setHeaderMenuOpen(false) }}
-                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
-                          >
-                            <StarGlyph filled={isPinned} className="h-4 w-4 text-[#B47410]" />
-                            {isPinned ? 'Desafixar pasta' : 'Favoritar pasta'}
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => { handleNewSubfolder(); setHeaderMenuOpen(false) }}
-                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
-                          >
-                            <FolderGlyph className="h-4 w-4 text-brand-600" />
-                            Nova subpasta
-                          </button>
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => { if (selectedId) setAgentsForId(selectedId); setHeaderMenuOpen(false) }}
-                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
-                          >
-                            <span className="font-mono text-[11px] font-bold text-navy-500">md</span>
-                            Editar AGENTS.md
-                          </button>
-                          <div className="my-1 h-px bg-navy-900/10" />
-                          <button
-                            type="button"
-                            role="menuitem"
-                            onClick={() => { if (selectedId) void deleteFolderWithConfirm(selectedId); setHeaderMenuOpen(false) }}
-                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-danger hover:bg-red-500/[0.07]"
-                          >
-                            <span className="font-mono text-[11px] font-bold text-danger">🗑</span>
-                            Excluir pasta
-                          </button>
-                        </div>
-                      ) : null}
                     </div>
                   </div>
                 </div>
@@ -1258,12 +1284,15 @@ function NotasBrowser() {
                 <p className="mt-2 max-w-xl text-[13px] text-navy-500">Escolha uma pasta para ver suas notas, tarefas e referências.</p>
               </div>
               <div className="p-4 lg:p-5">
-                {pinnedFolders.length > 0 ? (
+                {pinnedFolders.length > 0 || pinnedNotes.length > 0 ? (
                   <>
                     <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
                     <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {pinnedFolders.map((folder) => (
                         <RootFolderCard key={folder.id} folder={folder} pinned subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} onMenu={openFolderMenu} />
+                      ))}
+                      {pinnedNotes.map((note) => (
+                        <ContentCard key={note.id} item={note} onOpen={setSingleSelection} />
                       ))}
                     </div>
                   </>
@@ -1331,6 +1360,46 @@ function NotasBrowser() {
           onAgents={() => { setAgentsForId(folderMenu.folderId); setFolderMenu(null) }}
           onCopyLink={() => { copyFolderLink(folderMenu.folderId); setFolderMenu(null) }}
           onDelete={() => { const id = folderMenu.folderId; setFolderMenu(null); void deleteFolderWithConfirm(id) }}
+          completedVisibility={prefs.folderCompletedVisibility[folderMenu.folderId] ?? 'hide'}
+          onSetCompletedVisibility={(v) => {
+            update({ folderCompletedVisibility: { ...(prefs.folderCompletedVisibility || {}), [folderMenu.folderId]: v } })
+            setFolderMenu(null)
+          }}
+          hasVisibleCompleted={items.some((it) => {
+            if (it.folderId !== folderMenu.folderId || it.status !== 'done') return false
+            const clearedAt = prefs.folderCompletedClearedAt[folderMenu.folderId]
+            return !clearedAt || new Date(it.updatedAt) > new Date(clearedAt)
+          })}
+          onClearCompleted={() => {
+            update({ folderCompletedClearedAt: { ...(prefs.folderCompletedClearedAt || {}), [folderMenu.folderId]: new Date().toISOString() } })
+            setFolderMenu(null)
+          }}
+          onMoveUp={
+            prefs.pinnedFolderIds.includes(folderMenu.folderId) && prefs.pinnedFolderIds.indexOf(folderMenu.folderId) > 0
+              ? () => {
+                  const arr = [...prefs.pinnedFolderIds]
+                  const i = arr.indexOf(folderMenu.folderId)
+                  const temp = arr[i]!
+                  arr[i] = arr[i - 1]!
+                  arr[i - 1] = temp
+                  update({ pinnedFolderIds: arr })
+                  setFolderMenu(null)
+                }
+              : undefined
+          }
+          onMoveDown={
+            prefs.pinnedFolderIds.includes(folderMenu.folderId) && prefs.pinnedFolderIds.indexOf(folderMenu.folderId) < prefs.pinnedFolderIds.length - 1
+              ? () => {
+                  const arr = [...prefs.pinnedFolderIds]
+                  const i = arr.indexOf(folderMenu.folderId)
+                  const temp = arr[i]!
+                  arr[i] = arr[i + 1]!
+                  arr[i + 1] = temp
+                  update({ pinnedFolderIds: arr })
+                  setFolderMenu(null)
+                }
+              : undefined
+          }
         />
       ) : null}
     </div>
