@@ -626,7 +626,6 @@ export function QuickCapture() {
       }
       requestAnimationFrame(focusInput)
       setTimeout(focusInput, 80)
-      setTimeout(focusInput, 250)
     } else {
       setTitle('')
       setContentMd('')
@@ -998,7 +997,7 @@ export function QuickCapture() {
       <div
         className={
           isExpanded
-            ? `relative w-full overflow-hidden border border-white/80 bg-white/[0.90] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[2px] sm:max-h-none sm:overflow-visible sm:rounded-[28px] ${
+            ? `relative w-full overflow-hidden border border-white/80 bg-white/[0.90] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px] sm:max-h-none sm:overflow-visible sm:rounded-[28px] ${
                 isNote
                   ? `h-full max-h-none rounded-none border-0 bg-white sm:h-auto sm:max-w-[720px] sm:rounded-[24px] sm:border`
                   : 'max-h-[calc(100dvh-1rem)] max-w-[560px] rounded-t-[30px]'
@@ -1033,7 +1032,7 @@ export function QuickCapture() {
                 />
               </div>
 
-              <div className="flex items-center gap-2 rounded-[20px] border border-white/70 bg-white/76 p-1.5 shadow-cool-sm backdrop-blur-[2px]">
+              <div className="flex items-center gap-2 rounded-[20px] border border-white/70 bg-white/76 p-1.5 shadow-cool-sm backdrop-blur-md">
                 <input
                   ref={setInputRef}
                   autoFocus

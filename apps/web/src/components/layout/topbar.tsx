@@ -371,17 +371,9 @@ export function Topbar() {
               <SearchResults
                 items={items}
                 isSearching={isSearching}
-                onSelect={(item) => {
+                onSelect={(itemId) => {
                   setOpen(false)
-                  if (item.complexity === 'note') {
-                    if (item.folderId) {
-                      router.push(`/notas/${item.id}?folder=${item.folderId}`)
-                    } else {
-                      router.push(`/notas/${item.id}`)
-                    }
-                  } else {
-                    setSelectedItemId(item.id)
-                  }
+                  setSelectedItemId(itemId)
                 }}
               />
             )}
@@ -447,18 +439,10 @@ export function Topbar() {
             <SearchResults
               items={items}
               isSearching={isSearching}
-              onSelect={(item) => {
-                  setOpen(false)
-                  setMobileSearchOpen(false)
-                  if (item.complexity === 'note') {
-                    if (item.folderId) {
-                      router.push(`/notas/${item.id}?folder=${item.folderId}`)
-                    } else {
-                      router.push(`/notas/${item.id}`)
-                    }
-                  } else {
-                    setSelectedItemId(item.id)
-                  }
+              onSelect={(itemId) => {
+                setOpen(false)
+                setMobileSearchOpen(false)
+                setSelectedItemId(itemId)
               }}
             />
           )}
@@ -467,7 +451,7 @@ export function Topbar() {
 
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[220] isolate bg-navy-900/40 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-[220] isolate bg-navy-900/40 backdrop-blur-md lg:hidden"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
@@ -560,7 +544,7 @@ function SearchResults({
 }: {
   items: Item[]
   isSearching: boolean
-  onSelect: (item: Item) => void
+  onSelect: (itemId: string) => void
 }) {
   return (
     <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
@@ -573,7 +557,7 @@ function SearchResults({
           {items.map((item) => (
             <button
               key={item.id}
-              onClick={() => onSelect(item)}
+              onClick={() => onSelect(item.id)}
               className="w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-soft"
             >
               <span className="block truncate font-medium text-navy-900">{item.title}</span>
