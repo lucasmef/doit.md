@@ -28,8 +28,8 @@ export function CaptureModeTabs({
             onClick={() => onModeChange(item.mode)}
             className={`inline-flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[10px] px-2 text-[13px] font-semibold transition-colors sm:h-10 ${
               active
-                ? 'bg-[#EAF1FF] text-brand-600 shadow-[inset_0_-2.5px_0_rgba(47,107,255,1)]'
-                : 'bg-white/60 text-navy-500 shadow-[inset_0_0_0_1px_rgba(15,35,66,0.05)] hover:bg-white hover:text-navy-900'
+                ? 'bg-white text-brand-600 shadow-sm ring-1 ring-black/5'
+                : 'text-navy-600 hover:bg-black/5 hover:text-navy-900'
             }`}
             aria-pressed={active}
             aria-label={`Capturar ${item.label.toLowerCase()}`}

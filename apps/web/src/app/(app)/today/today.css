@@ -442,7 +442,7 @@
 .today-v3-layout .row {
   min-height: 44px;
   display: grid;
-  grid-template-columns: 66px 30px minmax(0, 1fr) auto;
+  
   align-items: center;
   gap: 10px;
   padding: 7px 0;
@@ -518,22 +518,26 @@
   stroke: currentColor;
 }
 
-.today-v3-layout .icon.task-icon {
-  color: #0E8A7E;
-  background: rgba(40,199,183,.13);
-  border: 1.5px solid rgba(40,199,183,.30);
+.today-v3-layout .icon.task-icon,
+.today-v3-layout .icon.personal-icon {
+  color: #fff;
+  background: #fff;
+  border: 1.5px solid var(--blue);
 }
 
-.today-v3-layout .icon.personal-icon {
-  color: #B47410;
-  background: rgba(245,165,36,.13);
-  border: 1.5px solid rgba(245,165,36,.30);
+.today-v3-layout .icon.task-icon svg,
+.today-v3-layout .icon.personal-icon svg {
+  opacity: 0;
+}
+
+.today-v3-layout .icon.done-icon svg {
+  opacity: 1;
 }
 
 .today-v3-layout .icon.done-icon {
   color: #fff;
-  background: var(--teal);
-  border-color: var(--teal);
+  background: var(--blue);
+  border-color: var(--blue);
 }
 
 .today-v3-layout .row-main {

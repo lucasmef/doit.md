@@ -26,6 +26,9 @@ export type Preferences = {
   defaultCalendarEventDurationMinutes: number
   todayCalendarHidePastAfterHours: number
   todayCalendarShowTomorrowAfterTime: string
+  pinnedNoteIds: string[]
+  folderCompletedVisibility: Record<string, 'show' | 'hide'>
+  folderCompletedClearedAt: Record<string, string>
 }
 
 export type ThemePreference = 'light' | 'dark' | 'system'
@@ -53,6 +56,9 @@ const DEFAULTS: Preferences = {
   defaultCalendarEventDurationMinutes: 30,
   todayCalendarHidePastAfterHours: 2,
   todayCalendarShowTomorrowAfterTime: '18:00',
+  pinnedNoteIds: [],
+  folderCompletedVisibility: {},
+  folderCompletedClearedAt: {},
 }
 
 const STORAGE_KEY = 'doit:preferences'
@@ -133,6 +139,17 @@ function read(): Preferences {
       defaultCalendarEventDurationMinutes,
       todayCalendarHidePastAfterHours: hidePastHours,
       todayCalendarShowTomorrowAfterTime: showTomorrowTime,
+      pinnedNoteIds: Array.isArray(parsed.pinnedNoteIds)
+        ? parsed.pinnedNoteIds.filter((id): id is string => typeof id === 'string')
+        : [],
+      folderCompletedVisibility:
+        parsed.folderCompletedVisibility && typeof parsed.folderCompletedVisibility === 'object' && !Array.isArray(parsed.folderCompletedVisibility)
+          ? (parsed.folderCompletedVisibility as Record<string, 'show' | 'hide'>)
+          : {},
+      folderCompletedClearedAt:
+        parsed.folderCompletedClearedAt && typeof parsed.folderCompletedClearedAt === 'object' && !Array.isArray(parsed.folderCompletedClearedAt)
+          ? (parsed.folderCompletedClearedAt as Record<string, string>)
+          : {},
     }
   } catch {
     return DEFAULTS
@@ -168,6 +185,17 @@ export function usePreferences() {
       next.pinnedFolderIds = Array.from(
         new Set(patch.pinnedFolderIds.filter((id): id is string => typeof id === 'string')),
       )
+    }
+    if (patch.pinnedNoteIds) {
+      next.pinnedNoteIds = Array.from(
+        new Set(patch.pinnedNoteIds.filter((id): id is string => typeof id === 'string')),
+      )
+    }
+    if (patch.folderCompletedVisibility) {
+      next.folderCompletedVisibility = { ...next.folderCompletedVisibility, ...patch.folderCompletedVisibility }
+    }
+    if (patch.folderCompletedClearedAt) {
+      next.folderCompletedClearedAt = { ...next.folderCompletedClearedAt, ...patch.folderCompletedClearedAt }
     }
     if (next.calendarWeekStartsOn !== 'monday' && next.calendarWeekStartsOn !== 'sunday') {
       next.calendarWeekStartsOn = DEFAULTS.calendarWeekStartsOn
