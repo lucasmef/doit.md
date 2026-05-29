@@ -6,7 +6,6 @@ import { STATUS_LABELS, toLocalDateKey } from '@doit/core'
 import { bulkUpdateItems, createItem, useItems } from '@/hooks/use-items'
 import { useFolders } from '@/hooks/use-folders'
 import { useUI } from '@/store/ui'
-import { usePreferences } from '@/hooks/use-preferences'
 import { useToast } from '@/components/ui/toast'
 import { PRIORITY_CONFIG, type Priority } from './priority-select'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
@@ -529,7 +528,6 @@ function ItemContextMenuContent({
   const { closeContextMenu, setSingleSelection } = useUI()
   const { folders } = useFolders()
   const { toast } = useToast()
-  const { prefs, update } = usePreferences()
   const [sub, setSub] = useState<Sub>(null)
   const [showCustomDate, setShowCustomDate] = useState(false)
   const [customDate, setCustomDate] = useState(targetItem.dueDate ?? '')
@@ -585,16 +583,6 @@ function ItemContextMenuContent({
       status: 'todo',
     })
     toast('Item duplicado', 'success')
-    closeContextMenu()
-  }
-
-  function togglePin() {
-    if (!single || targetItem.complexity !== 'note') return
-    const isPinned = prefs.pinnedNoteIds.includes(targetItem.id)
-    const next = isPinned 
-      ? prefs.pinnedNoteIds.filter(id => id !== targetItem.id)
-      : [targetItem.id, ...prefs.pinnedNoteIds]
-    update({ pinnedNoteIds: next })
     closeContextMenu()
   }
 
@@ -752,9 +740,6 @@ function ItemContextMenuContent({
       <div className="py-1 border-t border-ui-border-soft">
         <MenuRow icon={<IconCopy />} label="Duplicar" onClick={duplicate} />
         <MenuRow icon={<IconEdit />} label="Editar item" onClick={openEdit} />
-        {targetItem.complexity === 'note' && single && (
-           <MenuRow icon={prefs.pinnedNoteIds.includes(targetItem.id) ? <IconCheck /> : <IconFolder />} label={prefs.pinnedNoteIds.includes(targetItem.id) ? 'Remover destaque' : 'Destacar nota'} onClick={togglePin} />
-        )}
         {targetItem.dueDate && (
            <MenuRow icon={<IconCalendar />} label="Remover data" onClick={() => setDate(null)} />
         )}
@@ -829,7 +814,7 @@ export function ItemContextMenu() {
   return (
     <div className="fixed inset-0 z-[130]" onMouseDown={handleBackdropDown}>
       <div
-        className="fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:rounded-t-[30px] max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:bg-white/96 max-md:p-4 max-md:pb-10 max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] max-md:backdrop-blur-[2px] md:max-h-[min(420px,calc(100vh-16px))] md:overflow-y-auto md:rounded-[24px] md:border md:border-white/76 md:bg-white/86 md:p-2 md:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset] md:backdrop-blur-[2px]"
+        className="fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:rounded-t-[30px] max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:bg-white/96 max-md:p-4 max-md:pb-10 max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] max-md:backdrop-blur-2xl md:max-h-[min(420px,calc(100vh-16px))] md:overflow-y-auto md:rounded-[24px] md:border md:border-white/76 md:bg-white/86 md:p-2 md:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset] md:backdrop-blur-[24px]"
         style={isMobile ? {} : { left: position.left, top: position.top }}
         onMouseDown={(e) => e.stopPropagation()}
       >

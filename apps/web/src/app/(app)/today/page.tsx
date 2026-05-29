@@ -8,7 +8,6 @@ import { useUI } from '@/store/ui'
 import { useLongPress } from '@/hooks/use-long-press'
 import { toLocalDateKey } from '@doit/core'
 import { EventSheet } from '@/components/calendar/calendar-board'
-import { ItemDetail } from '@/components/items/item-detail'
 import type { CalendarEvent, Item } from '@doit/types'
 import { useProjects } from '@/hooks/use-projects'
 import './today.css'
@@ -28,6 +27,15 @@ function TaskIcon() {
       <path d="M8 12l3 3 5-6" />
     </svg>
   )
+}
+
+function formatTime(dateStr: string) {
+  try {
+    const d = new Date(dateStr)
+    return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  } catch {
+    return ''
+  }
 }
 
 // Artigo de tarefa com toque simples (abrir) + toque longo / clique-direito (menu de ações).
@@ -72,7 +80,7 @@ export default function TodayFocusedPage() {
   
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const [temporarilyDone, setTemporarilyDone] = useState<Set<string>>(new Set())
-  const [viewFilter, setViewFilter] = useState('Hoje')
+  const [mobileFilter, setMobileFilter] = useState('Hoje')
   
   const today = toLocalDateKey()
   const tomorrowDate = new Date()
@@ -126,21 +134,8 @@ export default function TodayFocusedPage() {
   // 1) com horário (por horário) → 2) prioridade alta → média → baixa → 3) sem prioridade (recentes primeiro).
   // Eventos da agenda são renderizados antes desta lista. P4 conta como "sem prioridade".
   const focusItems = useMemo(() => {
-    let source = [...priorityItems, ...todayItems]
-
-    if (viewFilter === 'Abertos') {
-      source = items.filter(i => i.status !== 'done')
-    } else if (viewFilter === 'Tarefas') {
-      source = items.filter(i => i.complexity === 'task' && i.status !== 'done')
-    } else if (viewFilter === 'Atrasados') {
-      source = items.filter(i => i.dueDate && i.dueDate < today && i.status !== 'done')
-    } else if (viewFilter !== 'Hoje' && viewFilter !== 'Agenda') {
-      // Must be a specific date
-      source = items.filter(i => i.dueDate === viewFilter && i.status !== 'done')
-    }
-
     const byId = new Map<string, Item>()
-    for (const i of source) byId.set(i.id, i)
+    for (const i of [...priorityItems, ...todayItems]) byId.set(i.id, i)
     const list = Array.from(byId.values())
     const prioRank = (i: Item) => (i.priority && i.priority < 4 ? i.priority : 99)
     list.sort((a, b) => {
@@ -154,14 +149,7 @@ export default function TodayFocusedPage() {
       return (b.createdAt ?? '').localeCompare(a.createdAt ?? '')
     })
     return list
-  }, [priorityItems, todayItems, items, viewFilter, today])
-
-  const filteredEvents = useMemo(() => {
-    if (viewFilter === 'Agenda') return events
-    if (viewFilter === 'Hoje') return agendaEvents
-    if (viewFilter === 'Abertos' || viewFilter === 'Tarefas' || viewFilter === 'Atrasados') return []
-    return events.filter(e => e.start.startsWith(viewFilter))
-  }, [events, agendaEvents, viewFilter])
+  }, [priorityItems, todayItems])
 
   // Mini-calendário dinâmico da sidebar (mês atual, início na segunda, hoje destacado, dias com conteúdo).
   const datesWithContent = useMemo(() => {
@@ -193,9 +181,9 @@ export default function TodayFocusedPage() {
 
   // Counts for sidebar
   const todayCount = todayItems.length + agendaEvents.length
-  
-  
-  
+  const openCount = items.filter(i => i.status !== 'done').length
+  const tasksCount = items.filter(i => i.complexity === 'task' && i.status !== 'done').length
+  const overdueCount = items.filter(i => i.dueDate && i.dueDate < today && i.status !== 'done').length
 
   const getFolderName = (folderId?: string) => {
     if (!folderId) return ''
@@ -238,15 +226,15 @@ export default function TodayFocusedPage() {
         item={item}
         disabled={isTempDone}
         onOpen={setSingleSelection}
-        className={`row ${item.dueTime ? 'has-time' : 'no-time'} ${styleType} ${prioClass} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
+        className={`row ${styleType} ${prioClass} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
       >
-        {item.dueTime ? <div className="time">{item.dueTime}</div> : null}
+        <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
         <button 
           onClick={(e) => !isTempDone && handleCompleteTask(e, item)} 
           onPointerDown={(e) => e.stopPropagation()} 
           className={`icon ${styleType}-icon ${isTempDone ? 'done-icon' : ''} transition-colors cursor-pointer`}
         >
-          {isTempDone && <TaskIcon />}
+          <TaskIcon />
         </button>
         <div className="row-main">
           <div className="row-title">{item.title}</div>
@@ -270,21 +258,20 @@ export default function TodayFocusedPage() {
   const renderEvent = (event: CalendarEvent) => {
     const isPast = new Date(event.start) < now
     return (
-      <article
-        key={event.id}
-
-        onClick={() => setOpenEvent(event)}
-        className={`row event ${event.allDay ? 'no-time' : 'has-time'} ${isPast ? 'done' : ''}`}
+      <article 
+        key={event.id} 
+        onClick={() => setOpenEvent(event)} 
+        className={`row event cursor-pointer ${isPast ? 'done' : ''}`}
       >
-        {event.allDay ? null : <div className="time">{event.start.slice(11, 16)}</div>}
-        <div className="icon event-icon">
+        <div className="time">{formatTime(event.start) || 'o dia'}</div>
+        <div className="icon">
           <EventIcon />
         </div>
         <div className="row-main">
           <div className="row-title">{event.title}</div>
           <div className="meta">
             <span className="badge event-badge">Agenda</span>
-            
+            {isPast ? <span>finalizado</span> : null}
             {event.start.startsWith(tomorrow) ? <span>amanhã</span> : null}
           </div>
         </div>
@@ -300,6 +287,18 @@ export default function TodayFocusedPage() {
 
   return (
     <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
+      <div className="mobile-filters px-4 pt-2">
+        {['Hoje', 'Agenda', 'Tarefas', 'Atrasados'].map(f => (
+          <div 
+            key={f}
+            onClick={() => setMobileFilter(f)}
+            className={`mobile-filter cursor-pointer ${mobileFilter === f ? 'active' : ''}`}
+          >
+            {f}
+          </div>
+        ))}
+      </div>
+
       <section className="board flex-1 mx-4 mb-4 lg:mx-0 lg:mb-0">
         <aside className="sidebar hidden lg:grid">
           <div className="month-top">
@@ -307,43 +306,61 @@ export default function TodayFocusedPage() {
             <span>Hoje</span>
           </div>
 
-          <nav className="nav-links mt-10">
-            <a href="#" className={viewFilter === 'Hoje' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setViewFilter('Hoje') }}>Hoje</a>
-            <a href="#" className={viewFilter === 'Abertos' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setViewFilter('Abertos') }}>Em aberto</a>
-            <a href="#" className={viewFilter === 'Agenda' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setViewFilter('Agenda') }}>Agenda</a>
-          </nav>
-
           <div className="calendar">
             <div className="calendar-title">
               <b>Calendário</b>
+              <span>mês</span>
             </div>
             <div className="week">
               <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
             </div>
             <div className="days">
-              {miniDays.map((d, i) => {
-                const dayStr = d.key
-                const hasContent = datesWithContent.has(dayStr)
-                return (
-                  <div
-                    key={`day-${i}`}
-                    className={`day ${dayStr === today ? 'today' : ''} ${hasContent ? 'has-items' : ''} ${viewFilter === dayStr ? 'bg-slate-200' : ''}`}
-                    onClick={() => setViewFilter(dayStr)}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    {String(d.day).padStart(2, '0')}
-                  </div>
-                )
-              })}
+              {miniDays.map((d) => (
+                <div
+                  key={d.key}
+                  className={`day${d.inMonth ? '' : ' out'}${d.key === today ? ' active' : ''}${datesWithContent.has(d.key) ? ' has-items' : ''}`}
+                >
+                  {String(d.day).padStart(2, '0')}
+                </div>
+              ))}
             </div>
           </div>
 
           <nav className="sidebar-list">
             <div className="side-row active cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
               <span>Hoje</span>
               <span className="count">{todayCount}</span>
             </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
+              <span>Abertos</span>
+              <span className="count">{openCount}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
+              <span>Agenda</span>
+              <span className="count">{agendaEvents.length}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
+              <span>Tarefas</span>
+              <span className="count">{tasksCount}</span>
+            </div>
+            <div className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M12 8v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
+              <span>Atrasados</span>
+              <span className="count">{overdueCount}</span>
+            </div>
           </nav>
+          
+          {/* Static contexts for UI parity */}
+          <div className="contexts hidden xl:grid">
+            <div className="context-title">Contextos</div>
+            <div className="context-row"><div className="dot"></div><span>doit.md</span><span className="count">3</span></div>
+            <div className="context-row"><div className="dot teal"></div><span>Loja</span><span className="count">4</span></div>
+            <div className="context-row"><div className="dot pink"></div><span>Marketing</span><span className="count">2</span></div>
+          </div>
         </aside>
 
         <section className="center">
@@ -351,6 +368,11 @@ export default function TodayFocusedPage() {
             <div className="center-title-inline">
               <h1>Hoje</h1>
               <span>{now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+            </div>
+            <div className="filter-pills hidden md:inline-flex">
+              <span className="active cursor-pointer">Todos</span>
+              <span className="cursor-pointer">Agenda</span>
+              <span className="cursor-pointer">Tarefas</span>
             </div>
           </div>
 
@@ -360,20 +382,13 @@ export default function TodayFocusedPage() {
                 <div className="p-8 text-center text-sm text-gray-500 font-medium">Tudo limpo por hoje!</div>
               ) : (
                 <>
-                  {filteredEvents.map(renderEvent)}
-                  {focusItems.map(item => renderTask(item, !!(item.dueDate && item.dueDate < today)))}
+                  {agendaEvents.map(renderEvent)}
+                  {focusItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
                 </>
               )}
             </div>
           </div>
         </section>
-
-        {/* Right Panel */}
-        {selectedItemId && (
-          <aside className="right hidden xl:flex w-[400px] xl:w-[480px] shrink-0 border-l border-ui-border-soft bg-white/40 h-full relative z-10 p-4">
-            <ItemDetail inline />
-          </aside>
-        )}
       </section>
 
       {openEvent && (
