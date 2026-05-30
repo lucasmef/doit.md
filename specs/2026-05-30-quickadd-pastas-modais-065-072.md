@@ -118,7 +118,13 @@ Commands run:
 
 Frontend evidence (Playwright desktop 1440×1100 + mobile Pixel 5):
 
-- `specs/artifacts/2026-05-30-quickadd-pastas-modais-065-072/` (19 prints).
+- `specs/artifacts/2026-05-30-quickadd-pastas-modais-065-072/` (25 prints).
+- Complemento 072: modais EXPANDIDOS no mobile (adição tarefa/nota) e modais de
+  EDIÇÃO — `editar-tarefa-modal-*` (quick-capture editMode "Salvar") e
+  `editar-nota-*` (editor imersivo `/notas/[id]`, ID 062). Edição de evento depende
+  de evento real do Google Calendar (não capturável no ambiente de teste).
+- Pasta numerada para revisão do usuário: `G:\Meu Drive\.agentes\doitmd-modais-tipos\`
+  (subpastas `desktop/` e `mobile/`, com `INDICE.txt`).
 - Confirmados: quick add na pasta abre **Tarefa** com pasta pré-selecionada
   (065+069), botão "+ Adicionar" na lista (066), "Mover pasta" no kebab +
   submenu de destino sem a própria pasta (070), "Remover data" com ícone
