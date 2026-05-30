@@ -2,6 +2,7 @@
 
 import { Fragment, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import type { Folder, Item, ItemComplexity, ItemStatus } from '@doit/types'
 import {
   buildFolderTree,
@@ -11,7 +12,7 @@ import {
   useFolders,
   type FolderTreeNode,
 } from '@/hooks/use-folders'
-import { useItems } from '@/hooks/use-items'
+import { useItems, bulkUpdateItems } from '@/hooks/use-items'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useUI } from '@/store/ui'
 import { useEscapeClose } from '@/hooks/use-escape-close'
@@ -483,6 +484,9 @@ function FolderMenu({
   onAgents,
   onCopyLink,
   onDelete,
+  onToggleHideCompleted,
+  onReorder,
+  onClearCompleted,
 }: {
   folder: Folder
   breadcrumbLabel: string
@@ -502,6 +506,9 @@ function FolderMenu({
   onAgents: () => void
   onCopyLink: () => void
   onDelete: () => void
+  onToggleHideCompleted: () => void
+  onReorder: (direction: 'up' | 'down') => void
+  onClearCompleted: () => void
 }) {
   const [sub, setSub] = useState<'move' | 'view' | null>(null)
   const [pos, setPos] = useState({ left: x, top: y })
@@ -604,11 +611,30 @@ function FolderMenu({
 
             <div className="border-t border-navy-900/[0.07] py-1">
               <FolderMenuRow icon="▦" label="Visualização" right={`${viewMode === 'kanban' ? 'Kanban' : 'Lista'} ›`} onClick={() => setSub('view')} />
+              <FolderMenuRow
+                icon={folder.hideCompleted !== false ? '👁️' : '🙈'}
+                label={folder.hideCompleted !== false ? 'Manter concluídos visíveis' : 'Ocultar concluídos'}
+                onClick={onToggleHideCompleted}
+              />
+              {folder.hideCompleted === false && (
+                <FolderMenuRow
+                  icon="🧹"
+                  label="Limpar concluídos"
+                  onClick={onClearCompleted}
+                />
+              )}
               <FolderMenuRow icon="✎" label="Renomear" onClick={onRename} />
               <FolderMenuRow icon="⇄" label="Mover" onClick={() => setSub('move')} />
               <FolderMenuRow icon={<span className="font-mono text-[10px] font-bold">AG</span>} label="Editar AGENTS.md" onClick={onAgents} />
               <FolderMenuRow icon="⛓" label="Copiar link" onClick={onCopyLink} />
             </div>
+
+            {pinned && (
+              <div className="border-t border-navy-900/[0.07] py-1">
+                <FolderMenuRow icon="▲" label="Mover para cima / esquerda" onClick={() => onReorder('up')} />
+                <FolderMenuRow icon="▼" label="Mover para baixo / direita" onClick={() => onReorder('down')} />
+              </div>
+            )}
 
             <div className="border-t border-navy-900/[0.07] py-1">
               <FolderMenuRow icon="🗑" label="Excluir pasta" danger onClick={onDelete} />
@@ -650,6 +676,9 @@ function NotasBrowser() {
     () => prefs.pinnedFolderIds.map((id) => folderById.get(id)).filter((f): f is Folder => Boolean(f)),
     [prefs.pinnedFolderIds, folderById],
   )
+  const pinnedNotes = useMemo(() => {
+    return items.filter((it) => it.complexity === 'note' && it.status !== 'archived' && !it.deletedAt && prefs.pinnedNoteIds?.includes(it.id))
+  }, [items, prefs.pinnedNoteIds])
 
   const counts = useMemo(() => {
     const map = new Map<string, number>()
@@ -702,26 +731,39 @@ function NotasBrowser() {
   // Esc fecha o drawer de pastas no mobile mesmo sem foco interno (ID 010).
   useEscapeClose(mobileFoldersOpen, () => setMobileFoldersOpen(false))
 
+  const isHideCompleted = selectedFolder ? selectedFolder.hideCompleted !== false : true
+
   const directItems = useMemo(
-    () => (selectedId ? items.filter((it) => it.folderId === selectedId && isActiveItem(it)) : []),
-    [items, selectedId],
+    () => {
+      if (!selectedId) return []
+      return items.filter((it) => {
+        if (it.folderId !== selectedId) return false
+        if (it.status === 'archived') return false
+        if (it.status === 'done' && isHideCompleted) return false
+        return true
+      })
+    },
+    [items, selectedId, isHideCompleted],
   )
+
   const itemsByFolder = useMemo(() => {
     const map = new Map<string, Item[]>()
     for (const item of items) {
-      if (!item.folderId || !isActiveItem(item)) continue
+      if (!item.folderId) continue
+      if (item.status === 'archived') continue
+      const f = folderById.get(item.folderId)
+      const hideComp = f ? f.hideCompleted !== false : true
+      if (item.status === 'done' && hideComp) continue
       const list = map.get(item.folderId) ?? []
       list.push(item)
       map.set(item.folderId, list)
     }
     return map
-  }, [items])
+  }, [items, folderById])
 
   const allFolderItems = useMemo(() => {
-    const direct = sortItems(directItems, sortKey)
-    const childItems = childFolders.flatMap((c) => itemsByFolder.get(c.id) ?? [])
-    return sortItems([...direct, ...childItems], sortKey)
-  }, [directItems, childFolders, itemsByFolder, sortKey])
+    return sortItems(directItems, sortKey)
+  }, [directItems, sortKey])
 
   const kanbanColumns = useMemo(() => {
     if (childFolders.length === 0) {
@@ -884,7 +926,7 @@ function NotasBrowser() {
           )
         ) : (
           <>
-            {pinnedFolders.length > 0 ? (
+            {pinnedFolders.length > 0 || pinnedNotes.length > 0 ? (
               <>
                 <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
                 {pinnedFolders.map((folder) => (
@@ -897,6 +939,16 @@ function NotasBrowser() {
                     onSelect={selectFolder}
                     onMenu={openFolderMenu}
                   />
+                ))}
+                {pinnedNotes.map((note) => (
+                  <Link
+                    key={note.id}
+                    href={`/notas/${note.id}`}
+                    className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 font-mono text-[12px] text-navy-700 hover:bg-navy-900/[0.05]"
+                  >
+                    <span className="shrink-0 text-[11px] font-bold text-brand-600">★</span>
+                    <span className="truncate">{note.title}</span>
+                  </Link>
                 ))}
               </>
             ) : null}
@@ -1025,6 +1077,82 @@ function NotasBrowser() {
                             <StarGlyph filled={isPinned} className="h-4 w-4 text-[#B47410]" />
                             {isPinned ? 'Desafixar pasta' : 'Favoritar pasta'}
                           </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={async () => {
+                              if (selectedId) {
+                                await updateFolder(selectedId, { hideCompleted: !isHideCompleted })
+                              }
+                              setHeaderMenuOpen(false)
+                            }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                          >
+                            <span className="text-[14px]">{isHideCompleted ? '👁️' : '🙈'}</span>
+                            {isHideCompleted ? 'Manter concluídos visíveis' : 'Ocultar concluídos'}
+                          </button>
+                          {!isHideCompleted && (
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={async () => {
+                                const completedItems = directItems.filter((it) => it.status === 'done')
+                                if (completedItems.length > 0) {
+                                  await bulkUpdateItems({
+                                    ids: completedItems.map((it) => it.id),
+                                    patch: { folderId: '' }
+                                  })
+                                }
+                                setHeaderMenuOpen(false)
+                              }}
+                              className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                            >
+                              <span className="text-[14px]">🧹</span>
+                              Limpar concluídos
+                            </button>
+                          )}
+                          {isPinned && (
+                            <>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  const index = prefs.pinnedFolderIds.indexOf(selectedId!)
+                                  if (index > 0) {
+                                    const nextIds = [...prefs.pinnedFolderIds]
+                                    const temp = nextIds[index]!
+                                    nextIds[index] = nextIds[index - 1]!
+                                    nextIds[index - 1] = temp
+                                    update({ pinnedFolderIds: nextIds })
+                                  }
+                                  setHeaderMenuOpen(false)
+                                }}
+                                className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                              >
+                                <span className="text-[14px]">▲</span>
+                                Mover destaque para esquerda
+                              </button>
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  const index = prefs.pinnedFolderIds.indexOf(selectedId!)
+                                  if (index !== -1 && index < prefs.pinnedFolderIds.length - 1) {
+                                    const nextIds = [...prefs.pinnedFolderIds]
+                                    const temp = nextIds[index]!
+                                    nextIds[index] = nextIds[index + 1]!
+                                    nextIds[index + 1] = temp
+                                    update({ pinnedFolderIds: nextIds })
+                                  }
+                                  setHeaderMenuOpen(false)
+                                }}
+                                className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                              >
+                                <span className="text-[14px]">▼</span>
+                                Mover destaque para direita
+                              </button>
+                            </>
+                          )}
                           <button
                             type="button"
                             role="menuitem"
@@ -1258,12 +1386,15 @@ function NotasBrowser() {
                 <p className="mt-2 max-w-xl text-[13px] text-navy-500">Escolha uma pasta para ver suas notas, tarefas e referências.</p>
               </div>
               <div className="p-4 lg:p-5">
-                {pinnedFolders.length > 0 ? (
+                {pinnedFolders.length > 0 || pinnedNotes.length > 0 ? (
                   <>
                     <div className="mb-2 px-1 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Destacadas</div>
                     <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
                       {pinnedFolders.map((folder) => (
                         <RootFolderCard key={folder.id} folder={folder} pinned subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} onMenu={openFolderMenu} />
+                      ))}
+                      {pinnedNotes.map((note) => (
+                        <ContentCard key={note.id} item={note} onOpen={setSingleSelection} />
                       ))}
                     </div>
                   </>
@@ -1331,6 +1462,43 @@ function NotasBrowser() {
           onAgents={() => { setAgentsForId(folderMenu.folderId); setFolderMenu(null) }}
           onCopyLink={() => { copyFolderLink(folderMenu.folderId); setFolderMenu(null) }}
           onDelete={() => { const id = folderMenu.folderId; setFolderMenu(null); void deleteFolderWithConfirm(id) }}
+          onToggleHideCompleted={() => {
+            const folderId = folderMenu.folderId
+            const f = folderById.get(folderId)
+            const newVal = f ? f.hideCompleted !== false : true
+            void updateFolder(folderId, { hideCompleted: !newVal })
+            setFolderMenu(null)
+          }}
+          onReorder={(direction) => {
+            const folderId = folderMenu.folderId
+            const index = prefs.pinnedFolderIds.indexOf(folderId)
+            if (index !== -1) {
+              const nextIds = [...prefs.pinnedFolderIds]
+              if (direction === 'up' && index > 0) {
+                const temp = nextIds[index]!
+                nextIds[index] = nextIds[index - 1]!
+                nextIds[index - 1] = temp
+                update({ pinnedFolderIds: nextIds })
+              } else if (direction === 'down' && index < nextIds.length - 1) {
+                const temp = nextIds[index]!
+                nextIds[index] = nextIds[index + 1]!
+                nextIds[index + 1] = temp
+                update({ pinnedFolderIds: nextIds })
+              }
+            }
+            setFolderMenu(null)
+          }}
+          onClearCompleted={async () => {
+            const folderId = folderMenu.folderId
+            const completedItems = items.filter((it) => it.folderId === folderId && it.status === 'done')
+            if (completedItems.length > 0) {
+              await bulkUpdateItems({
+                ids: completedItems.map((it) => it.id),
+                patch: { folderId: '' }
+              })
+            }
+            setFolderMenu(null)
+          }}
         />
       ) : null}
     </div>

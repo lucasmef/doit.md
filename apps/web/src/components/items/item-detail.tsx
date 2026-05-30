@@ -921,7 +921,7 @@ export function ItemDetail() {
 
   if (isLoading || !item) {
     return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/40 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-navy-900/35 backdrop-blur-[2px]">
         <div className="animate-pulse rounded-xl bg-white p-8 shadow-cool-lg">
           <div className="h-6 bg-slate-100 rounded mb-4 w-48" />
           <div className="h-4 bg-slate-100 rounded mb-2 w-32" />
@@ -1388,7 +1388,7 @@ export function ItemDetail() {
   if (!isNote && (item.complexity === 'task' || item.complexity === 'capture')) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/22 p-3 pt-[6vh] backdrop-blur-md sm:p-4 sm:pt-[8vh]"
+        className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-navy-900/35 p-3 pt-[6vh] backdrop-blur-[2px] sm:p-4 sm:pt-[8vh]"
         role="dialog"
         aria-modal="true"
         onPointerDown={handleBackdropPointerDown}
@@ -1812,7 +1812,7 @@ export function ItemDetail() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/22 p-0 backdrop-blur-md sm:items-center sm:p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-navy-900/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => e.target === e.currentTarget && setSelectedItemId(null)}

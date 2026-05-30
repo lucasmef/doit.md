@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import type { Folder, Item, UpdateItemInput } from '@doit/types'
 import { buildFolderTree, useFolders, type FolderTreeNode } from '@/hooks/use-folders'
 import { updateItem, useItems } from '@/hooks/use-items'
+import { usePreferences } from '@/hooks/use-preferences'
 import { useEscapeClose } from '@/hooks/use-escape-close'
 import { MarkdownEditor } from '@/components/items/markdown-editor'
 import { findRelatedNotesInFolder, type RelatedNote } from '@/lib/note-relations'
@@ -198,12 +199,14 @@ function Sidebar({
   return (
     <aside className="hidden lg:flex lg:flex-col lg:overflow-hidden lg:rounded-[24px] lg:border lg:border-white/80 lg:bg-white/[.86] lg:shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)] lg:backdrop-blur-2xl">
       <div className="flex items-center gap-2.5 border-b border-navy-900/[0.06] px-4 py-3.5">
-        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
-          <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
-        </span>
-        <span className="text-[14px] font-black tracking-tight text-navy-900">
-          doit<span className="text-brand-600">.md</span>
-        </span>
+        <Link href="/today" className="flex items-center gap-2.5 hover:opacity-80">
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
+            <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />
+          </span>
+          <span className="text-[14px] font-black tracking-tight text-navy-900">
+            doit<span className="text-brand-600">.md</span>
+          </span>
+        </Link>
         <Link
           href="/notas"
           className="ml-auto inline-flex h-[26px] w-[26px] items-center justify-center rounded-lg bg-navy-900/[0.05] text-navy-500 hover:bg-navy-900/[0.10] hover:text-navy-900"
@@ -547,11 +550,15 @@ function EditorTopBar({
   saveStatus,
   onArchive,
   onDownload,
+  isPinned,
+  onTogglePin,
 }: {
   crumbs: Array<{ label: string; href?: string; isFile?: boolean }>
   saveStatus: 'idle' | 'saving' | 'saved'
   onArchive: () => void
   onDownload: () => void
+  isPinned?: boolean
+  onTogglePin?: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
@@ -593,6 +600,21 @@ function EditorTopBar({
       </div>
 
       <div className="h-[18px] w-px bg-[#D9E1EA]" />
+
+      {onTogglePin && (
+        <button
+          type="button"
+          onClick={onTogglePin}
+          className={`inline-flex h-7 w-7 items-center justify-center rounded-[7px] text-[14px] ${
+            isPinned
+              ? 'bg-warning/[0.15] text-[#B47410] hover:bg-warning/[0.20]'
+              : 'text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900'
+          }`}
+          title={isPinned ? 'Remover destaque' : 'Destacar nota'}
+        >
+          {isPinned ? '★' : '☆'}
+        </button>
+      )}
 
       <button
         type="button"
@@ -647,6 +669,20 @@ function EditorTopBar({
               role="menu"
               className="absolute right-0 top-[calc(100%+6px)] z-50 w-44 overflow-hidden rounded-[12px] border border-navy-900/10 bg-white py-1 shadow-[0_12px_32px_rgba(15,35,66,.20),0_2px_8px_rgba(15,35,66,.08)]"
             >
+              {onTogglePin && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMenuOpen(false)
+                    onTogglePin()
+                  }}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium text-navy-700 hover:bg-navy-50"
+                >
+                  <span className="text-[14px] leading-none">{isPinned ? '★' : '☆'}</span>
+                  {isPinned ? 'Remover destaque' : 'Destacar nota'}
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"
@@ -678,6 +714,15 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const router = useRouter()
   const { items, isLoading } = useItems()
   const { folders } = useFolders()
+  const { prefs, update: updatePrefs } = usePreferences()
+
+  const isPinned = prefs.pinnedNoteIds?.includes(id) ?? false
+  const handleTogglePin = useCallback(() => {
+    const next = isPinned
+      ? (prefs.pinnedNoteIds ?? []).filter((noteId) => noteId !== id)
+      : [id, ...(prefs.pinnedNoteIds ?? [])]
+    updatePrefs({ pinnedNoteIds: next })
+  }, [id, isPinned, prefs.pinnedNoteIds, updatePrefs])
 
   const item = useMemo(() => items.find((it) => it.id === id), [items, id])
 
@@ -848,6 +893,8 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
           saveStatus={saveStatus}
           onArchive={handleArchive}
           onDownload={handleDownload}
+          isPinned={isPinned}
+          onTogglePin={handleTogglePin}
         />
         <div id="note-editor-toolbar" />
 

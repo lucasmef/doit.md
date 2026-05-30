@@ -16,6 +16,7 @@ const FOLDER_PATCH_FIELDS = new Set<keyof UpdateFolderInput>([
   'order',
   'viewMode',
   'viewModeManual',
+  'hideCompleted',
 ])
 
 function pickFolderPatch(input: unknown): UpdateFolderInput {

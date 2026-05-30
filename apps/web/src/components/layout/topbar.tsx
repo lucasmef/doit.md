@@ -461,7 +461,7 @@ export function Topbar() {
 
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[220] isolate bg-navy-900/40 backdrop-blur-md lg:hidden"
+          className="fixed inset-0 z-[220] isolate bg-navy-900/35 backdrop-blur-[2px] lg:hidden"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
