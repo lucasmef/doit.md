@@ -310,7 +310,7 @@ function SidebarFolderRow({
 
 // ----- Content cards -----
 
-function ContentCard({ item, onOpen, onToggle }: { item: Item; onOpen: (id: string) => void; onToggle?: (id: string, next: ItemStatus) => void }) {
+function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
   const { openContextMenu } = useUI()
   const large = isLargeNote(item)
   const text = item.complexity === 'note' ? snippet(item, large ? 180 : 120) : snippet(item, 90)

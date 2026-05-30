@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { test } from '@playwright/test'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -24,7 +24,7 @@ async function saveScreenshot(page: import('@playwright/test').Page, name: strin
   try {
     const global = await globalPath(name)
     await fs.copyFile(local, global)
-  } catch (err) {
+  } catch {
     // ignore missing global drive
   }
 }
@@ -41,7 +41,7 @@ test('capture fixes', async ({ page }) => {
     await page.getByLabel('Senha').fill('Password123!')
     await page.getByRole('button', { name: 'Criar conta' }).click()
     await page.waitForURL(/\/today$/, { timeout: 10000 })
-  } catch (e) {
+  } catch {
     console.log('Already logged in or signup failed, proceeding...')
   }
 

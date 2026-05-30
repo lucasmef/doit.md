@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useItems, updateItem, bulkUpdateItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
