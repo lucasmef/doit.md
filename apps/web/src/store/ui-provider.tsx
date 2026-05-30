@@ -29,6 +29,7 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   const [captureMode, setCaptureMode] = useState<CaptureMode>('task')
   const [lastCaptureMode, setLastCaptureMode] = useState<CaptureMode>('task')
   const [quickCaptureFolderId, setQuickCaptureFolderId] = useState<string | null>(null)
+  const [quickCaptureDate, setQuickCaptureDate] = useState<string | null>(null)
   const [quickCaptureEditId, setQuickCaptureEditId] = useState<string | null>(null)
   const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -164,6 +165,9 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       setCalendarEventCaptureOpen(true)
       return
     }
+    // ID 065/068: tarefa/nota herdam o dia aberto (ex.: calendário) quando informado;
+    // sem data explícita ficamos com null (a adição rápida decide pelo contexto da tela).
+    setQuickCaptureDate(date ?? null)
     setCalendarEventCaptureOpen(false)
     setQuickCaptureOpenState(true)
   }, [lastCaptureMode])
@@ -276,6 +280,8 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
         openCapture,
         quickCaptureFolderId,
         setQuickCaptureFolderId,
+        quickCaptureDate,
+        setQuickCaptureDate,
         quickCaptureEditId,
         setQuickCaptureEditId,
         editingItemId, 

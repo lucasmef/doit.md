@@ -444,7 +444,7 @@ function RootFolderCard({
 
 // ----- Folder context menu (right-click desktop / long-press mobile) -----
 
-type FolderMenuState = { folderId: string; x: number; y: number }
+type FolderMenuState = { folderId: string; x: number; y: number; initialSub?: 'move' }
 
 function FolderMenuRow({
   icon,
@@ -483,6 +483,7 @@ function FolderMenu({
   folders,
   x,
   y,
+  initialSub,
   onClose,
   onOpen,
   onTogglePin,
@@ -505,6 +506,7 @@ function FolderMenu({
   folders: Folder[]
   x: number
   y: number
+  initialSub?: 'move'
   onClose: () => void
   onOpen: () => void
   onTogglePin: () => void
@@ -519,7 +521,7 @@ function FolderMenu({
   onReorder: (direction: 'up' | 'down') => void
   onClearCompleted: () => void
 }) {
-  const [sub, setSub] = useState<'move' | 'view' | null>(null)
+  const [sub, setSub] = useState<'move' | 'view' | null>(initialSub ?? null)
   const [pos, setPos] = useState({ left: x, top: y })
   const openedAtRef = useRef(Date.now())
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
@@ -840,7 +842,9 @@ function NotasBrowser() {
 
   function handleNewItem(folderId: string | null) {
     setQuickCaptureFolderId(folderId)
-    openCapture('note')
+    // ID 069: adição rápida na pasta/Kanban cria tarefa por padrão; o usuário troca
+    // para nota pelas abas de modo do próprio modal quando quiser.
+    openCapture('task')
   }
 
   // ID 059: concluir/reabrir tarefa pelo checkbox da lista da pasta (mesmo comportamento
@@ -1216,6 +1220,21 @@ function NotasBrowser() {
                             <FolderGlyph className="h-4 w-4 text-brand-600 opacity-60" />
                             Nova subpasta
                           </button>
+                          {/* ID 070: mover a pasta atual para dentro de outra (ou raiz).
+                              Reusa o fluxo seguro do FolderMenu, que exclui a própria
+                              pasta e descendentes como destino. */}
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={(e) => {
+                              if (selectedId) setFolderMenu({ folderId: selectedId, x: e.clientX, y: e.clientY, initialSub: 'move' })
+                              setHeaderMenuOpen(false)
+                            }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                          >
+                            <span className="text-[14px] text-navy-500">⇄</span>
+                            Mover pasta
+                          </button>
                           <button
                             type="button"
                             role="menuitem"
@@ -1389,13 +1408,14 @@ function NotasBrowser() {
                         ))}
                       </div>
                     ) : null}
-                    {/* Botão contextual no fim da lista (mobile); no desktop o "Novo item" fica no topo (ID 016). */}
+                    {/* ID 066: botão Adicionar também no modo lista (desktop + mobile),
+                        mesmo padrão do Kanban; cria na pasta atual. */}
                     <button
                       type="button"
                       onClick={() => handleNewItem(selectedId)}
-                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-navy-900/15 px-3 py-3 text-[13px] font-bold text-navy-600 hover:border-brand-300 hover:text-brand-600 lg:hidden"
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-[16px] border border-dashed border-navy-900/15 px-3 py-3 text-[13px] font-bold text-navy-600 hover:border-brand-300 hover:text-brand-600"
                     >
-                      + Novo item
+                      + Adicionar
                     </button>
                   </>
                 )}
@@ -1500,6 +1520,7 @@ function NotasBrowser() {
           folders={folders}
           x={folderMenu.x}
           y={folderMenu.y}
+          initialSub={folderMenu.initialSub}
           onClose={() => setFolderMenu(null)}
           onOpen={() => { selectFolder(folderMenu.folderId); setFolderMenu(null) }}
           onTogglePin={() => { togglePinnedFor(folderMenu.folderId); setFolderMenu(null) }}

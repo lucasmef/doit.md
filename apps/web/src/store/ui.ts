@@ -29,6 +29,9 @@ export type UIState = {
   openCapture: (mode?: CaptureMode, date?: string | null) => void
   quickCaptureFolderId: string | null
   setQuickCaptureFolderId: (folderId: string | null) => void
+  // ID 065/068: data do dia aberto (calendário) para a adição rápida criar com essa data.
+  quickCaptureDate: string | null
+  setQuickCaptureDate: (date: string | null) => void
   quickCaptureEditId: string | null
   setQuickCaptureEditId: (id: string | null) => void
   editingItemId: string | null
@@ -63,6 +66,8 @@ export const UIContext = createContext<UIState>({
   openCapture: () => {},
   quickCaptureFolderId: null,
   setQuickCaptureFolderId: () => {},
+  quickCaptureDate: null,
+  setQuickCaptureDate: () => {},
   quickCaptureEditId: null,
   setQuickCaptureEditId: () => {},
   editingItemId: null,
