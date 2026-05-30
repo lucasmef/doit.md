@@ -157,7 +157,7 @@ Frontend evidence:
 
 ## Next step
 
-Revisão local do diff e commit/push na branch `dev`. Pontos para revisão manual:
+Commit/push feitos na branch `dev` (commit `56b418e`). Pontos para revisão manual:
 - Confirmar visualmente em dispositivo mobile real (e2e cobriu apenas desktop;
   o fluxo de API é o mesmo, então a expectativa é de paridade).
 - Decidir, em iteração futura, se a ocorrência concluída deve ter o campo
