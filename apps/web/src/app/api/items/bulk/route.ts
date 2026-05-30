@@ -13,6 +13,7 @@ import {
   validateItemState,
 } from '@/lib/api/item-guards'
 import { createManualAuditLog } from '@/lib/api/audit-log'
+import { spawnNextRecurrenceIfNeeded } from '@/lib/api/recurrence'
 
 export const dynamic = 'force-dynamic'
 
@@ -240,6 +241,10 @@ export async function PATCH(req: NextRequest) {
 
       if (item) {
         updated.push(mapDocToItem(item))
+        // Recorrência: ao concluir em massa, cria a próxima ocorrência por item.
+        if (body.patch && Object.prototype.hasOwnProperty.call(body.patch, 'status')) {
+          await spawnNextRecurrenceIfNeeded(current, body.patch.status, userId)
+        }
         // Anexo segue a nota: detecta mudança de folder pra reposicionar no Drive.
         const folderUnset = Object.prototype.hasOwnProperty.call(unset, 'folderId')
         const folderSet = Object.prototype.hasOwnProperty.call(set, 'folderId')

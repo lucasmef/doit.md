@@ -7,11 +7,7 @@ import type { Priority } from './priority-select'
 import { DONE_CHECK_ANIMATION_MS } from './completion-feedback'
 import { updateItem } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
-import {
-  formatRecurrenceLabel,
-  nextRecurringDate as computeNextRecurringDate,
-  toLocalDateKey,
-} from '@doit/core'
+import { formatRecurrenceLabel, toLocalDateKey } from '@doit/core'
 
 function formatDueDate(dateStr: string): string {
   const tomorrowDate = new Date()
@@ -71,21 +67,6 @@ export function ItemRow({
     e.stopPropagation()
     if (item.status === 'archived') {
       await updateItem(item.id, { status: 'todo' })
-      return
-    }
-
-    if (item.status !== 'done' && item.recurrence) {
-      setOptimisticDone(true)
-      setJustCompleted(true)
-      setTimeout(() => setJustCompleted(false), DONE_CHECK_ANIMATION_MS)
-      try {
-        await updateItem(item.id, {
-          status: 'todo',
-          dueDate: computeNextRecurringDate(item.dueDate, item.recurrence),
-        })
-      } finally {
-        setOptimisticDone(false)
-      }
       return
     }
 

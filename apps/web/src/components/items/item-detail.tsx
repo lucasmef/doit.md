@@ -17,11 +17,7 @@ import type { Priority } from './priority-select'
 import { useToast } from '@/components/ui/toast'
 import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-options'
 import type { ItemComplexity, ItemRecurrence, ItemStatus, UpdateItemInput } from '@doit/types'
-import {
-  formatRecurrenceLabel,
-  nextRecurringDate as computeNextRecurringDate,
-  toLocalDateKey,
-} from '@doit/core'
+import { formatRecurrenceLabel, toLocalDateKey } from '@doit/core'
 
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'project' | null
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
@@ -765,23 +761,8 @@ export function ItemDetail() {
 
   function handleStatusChange(status: ItemStatus) {
     if (!selectedItemId || !item) return
-    const activeRecurrence = recurrence || item.recurrence
-    if (item.status !== 'done' && status === 'done' && activeRecurrence) {
-      if (saveTimeout.current) {
-        clearTimeout(saveTimeout.current)
-        saveTimeout.current = null
-      }
-      pendingPatch.current = null
-      const nextDueDate = computeNextRecurringDate(dueDate || item.dueDate, activeRecurrence)
-      setDueDate(nextDueDate)
-      setDirty(false)
-      setIsSaving(false)
-      updateItem(selectedItemId, {
-        status: 'todo',
-        dueDate: nextDueDate,
-      })
-      return
-    }
+    // Recorrência (criar próxima ocorrência ao concluir) é tratada no servidor,
+    // no funil de PATCH /api/items, para cobrir todos os fluxos de conclusão.
     updateItem(selectedItemId, { status })
   }
 
