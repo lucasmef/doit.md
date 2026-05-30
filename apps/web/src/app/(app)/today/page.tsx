@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useItems, updateItem } from '@/hooks/use-items'
+import Link from 'next/link'
+import { useItems, updateItem, bulkUpdateItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useUI } from '@/store/ui'
@@ -26,6 +27,18 @@ function TaskIcon({ checked }: { checked?: boolean }) {
     <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
       <rect x="5" y="5" width="14" height="14" rx="4" />
       {checked ? <path d="M8.5 12.5 11 15l4.5-6" /> : null}
+    </svg>
+  )
+}
+
+// ID 049: ícone de recorrência (símbolo de repetição) para tarefas recorrentes.
+function RecurrenceIcon({ className = 'recur-icon' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M17 2.5 20 5.5 17 8.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 5.5H8.5A4.5 4.5 0 0 0 4 10" strokeLinecap="round" />
+      <path d="M7 21.5 4 18.5 7 15.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 18.5h11.5A4.5 4.5 0 0 0 20 14" strokeLinecap="round" />
     </svg>
   )
 }
@@ -78,12 +91,16 @@ export default function TodayFocusedPage() {
   const { projects } = useProjects()
   const { prefs } = usePreferences()
   const { setSingleSelection, selectedItemId } = useUI()
-  
+
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
   const [temporarilyDone, setTemporarilyDone] = useState<Set<string>>(new Set())
-  const [mobileFilter, setMobileFilter] = useState('Hoje')
-  
   const today = toLocalDateKey()
+  // ID 040: dia selecionado no calendário lateral (padrão = hoje).
+  const [selectedDay, setSelectedDay] = useState(today)
+  // ID 053: filtro por tag da lista atual.
+  const [activeTag, setActiveTag] = useState<string | null>(null)
+  const isToday = selectedDay === today
+
   const tomorrowDate = new Date()
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
   const tomorrow = toLocalDateKey(tomorrowDate)
@@ -105,7 +122,7 @@ export default function TodayFocusedPage() {
       return true
     }).sort((a, b) => a.start.localeCompare(b.start))
   }, [events, today, tomorrow, shouldShowTomorrow, nowMs, hidePastMs])
-  
+
   const todayItems = useMemo(() => {
     const list = items.filter(i => (i.dueDate === today || i.scheduledDate === today) && i.status !== 'done')
     list.sort((a, b) => {
@@ -119,7 +136,13 @@ export default function TodayFocusedPage() {
     })
     return list
   }, [items, today])
-  
+
+  // Tarefas atrasadas (dias anteriores) ainda abertas — usadas no foco e no botão "Reagendar" (ID 048).
+  const overdueItems = useMemo(
+    () => items.filter(i => i.dueDate && i.dueDate < today && i.status !== 'done' && i.status !== 'archived'),
+    [items, today],
+  )
+
   const priorityItems = useMemo(() => {
     const list = items.filter(i => (i.status === 'doing' || (i.dueDate && i.dueDate < today && i.status !== 'done')))
     list.sort((a, b) => {
@@ -131,9 +154,7 @@ export default function TodayFocusedPage() {
     return list
   }, [items, today])
 
-  // ID 020: lista unificada de tarefas/notas (hoje + foco/atrasados, sem duplicar) ordenada por:
-  // 1) com horário (por horário) → 2) prioridade alta → média → baixa → 3) sem prioridade (recentes primeiro).
-  // Eventos da agenda são renderizados antes desta lista. P4 conta como "sem prioridade".
+  // ID 020: lista de foco do dia atual (hoje + foco/atrasados, sem duplicar).
   const focusItems = useMemo(() => {
     const byId = new Map<string, Item>()
     for (const i of [...priorityItems, ...todayItems]) byId.set(i.id, i)
@@ -152,7 +173,39 @@ export default function TodayFocusedPage() {
     return list
   }, [priorityItems, todayItems])
 
-  // Mini-calendário dinâmico da sidebar (mês atual, início na segunda, hoje destacado, dias com conteúdo).
+  // ID 040: itens/eventos do dia selecionado. Dia atual = lista de foco; outro dia = itens daquele dia.
+  const dayItems = useMemo(() => {
+    if (isToday) return focusItems
+    const list = items.filter(
+      i => (i.dueDate === selectedDay || i.scheduledDate === selectedDay) && i.status !== 'done',
+    )
+    list.sort((a, b) => {
+      if (a.dueTime && !b.dueTime) return -1
+      if (!a.dueTime && b.dueTime) return 1
+      if (a.dueTime && b.dueTime) return a.dueTime.localeCompare(b.dueTime)
+      return a.title.localeCompare(b.title)
+    })
+    return list
+  }, [isToday, focusItems, items, selectedDay])
+
+  const dayEvents = useMemo(() => {
+    if (isToday) return agendaEvents
+    return events.filter(e => e.start.startsWith(selectedDay)).sort((a, b) => a.start.localeCompare(b.start))
+  }, [isToday, agendaEvents, events, selectedDay])
+
+  // ID 053: tags presentes na lista atualmente exibida (para servir de filtro).
+  const tagsInList = useMemo(() => {
+    const set = new Set<string>()
+    for (const it of dayItems) for (const t of it.tags) set.add(t)
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [dayItems])
+
+  const visibleItems = useMemo(
+    () => (activeTag ? dayItems.filter(i => i.tags.includes(activeTag)) : dayItems),
+    [dayItems, activeTag],
+  )
+
+  // Mini-calendário (mês atual, início na segunda, dias com conteúdo marcados).
   const datesWithContent = useMemo(() => {
     const set = new Set<string>()
     for (const it of items) {
@@ -180,11 +233,10 @@ export default function TodayFocusedPage() {
     })
   }, [today])
 
-  // Counts for sidebar
+  // Counts do painel (ID 053).
+  const inboxCount = items.filter(i => i.status === 'inbox').length
   const todayCount = todayItems.length + agendaEvents.length
-  const openCount = items.filter(i => i.status !== 'done').length
-  const tasksCount = items.filter(i => i.complexity === 'task' && i.status !== 'done').length
-  const overdueCount = items.filter(i => i.dueDate && i.dueDate < today && i.status !== 'done').length
+  const upcomingCount = items.filter(i => i.dueDate && i.dueDate > today && i.status !== 'done').length
 
   const getFolderName = (folderId?: string) => {
     if (!folderId) return ''
@@ -197,7 +249,7 @@ export default function TodayFocusedPage() {
     if (isPersonal) return 'personal'
     return 'task'
   }
-  
+
   if (itemsLoading || eventsLoading) {
     return <div className="flex h-[calc(100vh-136px)] items-center justify-center font-mono text-sm text-navy-500">carregando today...</div>
   }
@@ -212,6 +264,17 @@ export default function TodayFocusedPage() {
     setTimeout(() => {
       updateItem(item.id, { status: 'done' })
     }, 1500)
+  }
+
+  // ID 048: reagenda todas as atrasadas para hoje.
+  const handleRescheduleOverdue = async () => {
+    if (overdueItems.length === 0) return
+    await bulkUpdateItems({ ids: overdueItems.map(i => i.id), patch: { dueDate: today } }, overdueItems)
+  }
+
+  const selectDay = (key: string) => {
+    setSelectedDay(key)
+    setActiveTag(null)
   }
 
   const renderTask = (item: Item, isOverdue: boolean = false) => {
@@ -231,15 +294,19 @@ export default function TodayFocusedPage() {
         className={`row ${styleType} ${prioClass} ${hasTime ? 'has-time' : 'no-time'} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
       >
         <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
-        <button 
-          onClick={(e) => !isTempDone && handleCompleteTask(e, item)} 
-          onPointerDown={(e) => e.stopPropagation()} 
+        <button
+          onClick={(e) => !isTempDone && handleCompleteTask(e, item)}
+          onPointerDown={(e) => e.stopPropagation()}
           className={`icon task-check ${isTempDone ? 'done-icon' : ''} transition-colors cursor-pointer`}
         >
           <TaskIcon checked={isTempDone} />
         </button>
         <div className="row-main">
-          <div className="row-title">{item.title}</div>
+          <div className="row-title">
+            {/* ID 049: ícone de recorrência antes do título. */}
+            {item.recurrence ? <RecurrenceIcon /> : null}
+            {item.title}
+          </div>
           <div className="meta">
             {isOverdue && <span className="text-red-500 font-bold">Atrasado</span>}
             {item.status === 'doing' && <span className="text-violet-500 font-bold">Foco</span>}
@@ -260,9 +327,9 @@ export default function TodayFocusedPage() {
   const renderEvent = (event: CalendarEvent) => {
     const isPast = new Date(event.start) < now
     return (
-      <article 
-        key={event.id} 
-        onClick={() => setOpenEvent(event)} 
+      <article
+        key={event.id}
+        onClick={() => setOpenEvent(event)}
         className={`row event cursor-pointer ${isPast ? 'done' : ''}`}
       >
         <div className="time">{formatTime(event.start) || 'o dia'}</div>
@@ -271,10 +338,9 @@ export default function TodayFocusedPage() {
         </div>
         <div className="row-main">
           <div className="row-title">{event.title}</div>
+          {/* ID 041: sem texto "Agenda"/"finalizado" — ícone e esmaecimento já comunicam o estado. */}
           <div className="meta">
-            <span className="badge event-badge">Agenda</span>
-            {isPast ? <span>finalizado</span> : null}
-            {event.start.startsWith(tomorrow) ? <span>amanhã</span> : null}
+            {isToday && event.start.startsWith(tomorrow) ? <span>amanhã</span> : null}
           </div>
         </div>
         <button className="more" onClick={(e) => {
@@ -285,27 +351,20 @@ export default function TodayFocusedPage() {
     )
   }
 
-  const allItemsEmpty = agendaEvents.length === 0 && todayItems.length === 0 && priorityItems.length === 0
+  const selectedLabel = isToday
+    ? now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+    : new Date(selectedDay + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const headingLabel = isToday ? 'Hoje' : new Date(selectedDay + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+
+  const listEmpty = dayEvents.length === 0 && visibleItems.length === 0
 
   return (
     <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
-      <div className="mobile-filters px-4 pt-2">
-        {['Hoje', 'Agenda', 'Tarefas', 'Atrasados'].map(f => (
-          <div 
-            key={f}
-            onClick={() => setMobileFilter(f)}
-            className={`mobile-filter cursor-pointer ${mobileFilter === f ? 'active' : ''}`}
-          >
-            {f}
-          </div>
-        ))}
-      </div>
-
       <section className="board flex-1 mx-4 mb-4 lg:mx-0 lg:mb-0">
         <aside className="sidebar hidden lg:grid">
           <div className="month-top">
             <b>{now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</b>
-            <span>Hoje</span>
+            <span>{isToday ? 'Hoje' : headingLabel}</span>
           </div>
 
           <div className="calendar">
@@ -318,74 +377,86 @@ export default function TodayFocusedPage() {
             </div>
             <div className="days">
               {miniDays.map((d) => (
-                <div
+                <button
+                  type="button"
                   key={d.key}
-                  className={`day${d.inMonth ? '' : ' out'}${d.key === today ? ' active' : ''}${datesWithContent.has(d.key) ? ' has-items' : ''}`}
+                  onClick={() => selectDay(d.key)}
+                  className={`day${d.inMonth ? '' : ' out'}${d.key === selectedDay ? ' active' : ''}${d.key === today && d.key !== selectedDay ? ' today' : ''}${datesWithContent.has(d.key) ? ' has-items' : ''}`}
                 >
                   {String(d.day).padStart(2, '0')}
-                </div>
+                </button>
               ))}
             </div>
           </div>
 
+          {/* ID 053: entradas principais Inbox / Hoje / Próximos. */}
           <nav className="sidebar-list">
-            <div className="side-row active cursor-pointer">
+            <Link href="/inbox" className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 5h14v14H5z"/></svg>
+              <span>Inbox</span>
+              <span className="count">{inboxCount}</span>
+            </Link>
+            <button
+              type="button"
+              onClick={() => selectDay(today)}
+              className={`side-row cursor-pointer${isToday ? ' active' : ''}`}
+            >
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
               <span>Hoje</span>
               <span className="count">{todayCount}</span>
-            </div>
-            <div className="side-row cursor-pointer">
-              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
-              <span>Abertos</span>
-              <span className="count">{openCount}</span>
-            </div>
-            <div className="side-row cursor-pointer">
-              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M7 3v3M17 3v3M4 9h16"/></svg>
-              <span>Agenda</span>
-              <span className="count">{agendaEvents.length}</span>
-            </div>
-            <div className="side-row cursor-pointer">
-              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M8 12l3 3 5-6"/><circle cx="12" cy="12" r="9"/></svg>
-              <span>Tarefas</span>
-              <span className="count">{tasksCount}</span>
-            </div>
-            <div className="side-row cursor-pointer">
-              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M12 8v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>
-              <span>Atrasados</span>
-              <span className="count">{overdueCount}</span>
-            </div>
+            </button>
+            <Link href="/upcoming" className="side-row cursor-pointer">
+              <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+              <span>Próximos</span>
+              <span className="count">{upcomingCount}</span>
+            </Link>
           </nav>
-          
-          {/* Static contexts for UI parity */}
-          <div className="contexts hidden xl:grid">
-            <div className="context-title">Contextos</div>
-            <div className="context-row"><div className="dot"></div><span>doit.md</span><span className="count">3</span></div>
-            <div className="context-row"><div className="dot teal"></div><span>Loja</span><span className="count">4</span></div>
-            <div className="context-row"><div className="dot pink"></div><span>Marketing</span><span className="count">2</span></div>
-          </div>
+
+          {/* ID 053: tags presentes na lista atual, como filtro. */}
+          {tagsInList.length > 0 && (
+            <div className="tags-filter">
+              <div className="context-title">Tags</div>
+              <div className="tag-chips">
+                {tagsInList.map((t) => (
+                  <button
+                    type="button"
+                    key={t}
+                    onClick={() => setActiveTag(activeTag === t ? null : t)}
+                    className={`tag-chip${activeTag === t ? ' active' : ''}`}
+                  >
+                    #{t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </aside>
 
         <section className="center">
           <div className="center-head">
             <div className="center-title-inline">
-              <h1>Hoje</h1>
-              <span>{now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+              <h1>{headingLabel}</h1>
+              <span>{selectedLabel}</span>
             </div>
-            <div className="filter-pills hidden md:inline-flex">
-              <span className="active cursor-pointer">Todos</span>
-              <span className="cursor-pointer">Agenda</span>
-              <span className="cursor-pointer">Tarefas</span>
-            </div>
+            {/* ID 048: só aparece quando há tarefas atrasadas. */}
+            {overdueItems.length > 0 && (
+              <button type="button" className="reschedule-btn" onClick={() => void handleRescheduleOverdue()}>
+                <RecurrenceIcon className="h-4 w-4" />
+                Reagendar para hoje
+              </button>
+            )}
           </div>
 
           <div className="content-scroll">
             <div className="list">
-              {allItemsEmpty ? (
-                <div className="p-8 text-center text-sm text-gray-500 font-medium">Tudo limpo por hoje!</div>
+              {listEmpty ? (
+                <div className="p-8 text-center text-sm text-gray-500 font-medium">
+                  {activeTag ? `Nenhum item com #${activeTag}.` : isToday ? 'Tudo limpo por hoje!' : 'Nada neste dia.'}
+                </div>
               ) : (
                 <>
-                  {agendaEvents.map(renderEvent)}
-                  {focusItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
+                  {dayEvents.map(renderEvent)}
+                  {visibleItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
                 </>
               )}
             </div>
