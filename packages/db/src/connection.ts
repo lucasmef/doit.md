@@ -167,10 +167,12 @@ function isCreateTableStatement(sql: string): boolean {
 async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
+  await ensureColumn(db, 'items', 'clearedAt', 'TEXT')
   await ensureColumn(db, 'items', 'folderId', 'TEXT')
   await ensureColumn(db, 'items', 'order', 'INTEGER')
   await ensureColumn(db, 'folders', 'viewMode', "TEXT NOT NULL DEFAULT 'list'")
   await ensureColumn(db, 'folders', 'viewModeManual', 'INTEGER NOT NULL DEFAULT 0')
+  await ensureColumn(db, 'folders', 'hideCompleted', 'INTEGER NOT NULL DEFAULT 1')
   await ensureColumn(db, 'pending_changes', 'folderId', 'TEXT')
   await ensureColumn(db, 'pending_changes', 'folderNameBefore', 'TEXT')
   await ensureColumn(db, 'pending_changes', 'folderNameAfter', 'TEXT')
@@ -213,6 +215,7 @@ const sqliteSchema = [
     recurrence TEXT,
     startDate TEXT,
     scheduledDate TEXT,
+    clearedAt TEXT,
     folderId TEXT,
     areaId TEXT,
     parentId TEXT,
@@ -434,6 +437,7 @@ const postgresIdentifiers = [
   'expirationTime',
   'deviceLabel',
   'scheduledDate',
+  'clearedAt',
   'recurrence',
   'lastSeenAt',
   'lastUsedAt',
@@ -464,6 +468,7 @@ const postgresIdentifiers = [
   'resetAt',
   'viewModeManual',
   'viewMode',
+  'hideCompleted',
   'localPath',
   'syncHash',
   'parentId',

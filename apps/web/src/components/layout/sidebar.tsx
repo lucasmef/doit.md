@@ -342,6 +342,9 @@ export function Sidebar() {
     () => pinnedFolderIds.map((folderId) => folderById.get(folderId)).filter(Boolean),
     [folderById, pinnedFolderIds],
   )
+  const pinnedNotes = useMemo(() => {
+    return items.filter((it) => it.complexity === 'note' && it.status !== 'archived' && !it.deletedAt && prefs.pinnedNoteIds?.includes(it.id))
+  }, [items, prefs.pinnedNoteIds])
   const allParentIds = useMemo(() => collectIds(tree), [tree])
   const allExpanded = allParentIds.length > 0 && allParentIds.every((id) => expanded.has(id))
 
@@ -508,7 +511,7 @@ export function Sidebar() {
           Notas
         </SectionTitle>
       )}
-      {!collapsed && pinnedFolders.length > 0 && (
+      {!collapsed && (pinnedFolders.length > 0 || pinnedNotes.length > 0) && (
         <>
           <SectionTitle>Fixadas</SectionTitle>
           <div className="flex flex-col gap-px px-2">
@@ -543,6 +546,37 @@ export function Sidebar() {
                 </Link>
               ) : null,
             )}
+            {pinnedNotes.map((note) => (
+              <Link
+                key={note.id}
+                href={`/notas/${note.id}`}
+                className={`group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13px] transition-colors ${
+                  pathname === `/notas/${note.id}`
+                    ? 'bg-surface-selected text-brand-600 font-semibold'
+                    : 'text-navy-900 hover:bg-surface-soft'
+                }`}
+              >
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#B47410]">
+                  ★
+                </span>
+                <span className="min-w-0 flex-1 truncate">{note.title}</span>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    update({
+                      pinnedNoteIds: (prefs.pinnedNoteIds ?? []).filter((id) => id !== note.id)
+                    })
+                  }}
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-navy-300 opacity-0 hover:bg-white hover:text-navy-700 group-hover:opacity-100"
+                  title="Desafixar"
+                  aria-label={`Desafixar ${note.title}`}
+                >
+                  ★
+                </button>
+              </Link>
+            ))}
           </div>
         </>
       )}

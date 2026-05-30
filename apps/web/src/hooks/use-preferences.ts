@@ -19,6 +19,7 @@ export type Preferences = {
   theme: ThemePreference
   sidebarCollapsed: boolean
   pinnedFolderIds: string[]
+  pinnedNoteIds: string[]
   /** Ordenação escolhida por pasta (ID 026). Chave = folderId ou 'root'; valor = SortKey. */
   folderSort: Record<string, string>
   calendarWeekStartsOn: CalendarWeekStart
@@ -47,6 +48,7 @@ const DEFAULTS: Preferences = {
   theme: 'system',
   sidebarCollapsed: false,
   pinnedFolderIds: [],
+  pinnedNoteIds: [],
   folderSort: {},
   calendarWeekStartsOn: 'monday',
   defaultCalendarId: 'primary',
@@ -124,6 +126,9 @@ function read(): Preferences {
       pinnedFolderIds: Array.isArray(parsed.pinnedFolderIds)
         ? parsed.pinnedFolderIds.filter((id): id is string => typeof id === 'string')
         : [],
+      pinnedNoteIds: Array.isArray(parsed.pinnedNoteIds)
+        ? parsed.pinnedNoteIds.filter((id): id is string => typeof id === 'string')
+        : [],
       folderSort:
         parsed.folderSort && typeof parsed.folderSort === 'object' && !Array.isArray(parsed.folderSort)
           ? (parsed.folderSort as Record<string, string>)
@@ -167,6 +172,11 @@ export function usePreferences() {
     if (patch.pinnedFolderIds) {
       next.pinnedFolderIds = Array.from(
         new Set(patch.pinnedFolderIds.filter((id): id is string => typeof id === 'string')),
+      )
+    }
+    if (patch.pinnedNoteIds) {
+      next.pinnedNoteIds = Array.from(
+        new Set(patch.pinnedNoteIds.filter((id): id is string => typeof id === 'string')),
       )
     }
     if (next.calendarWeekStartsOn !== 'monday' && next.calendarWeekStartsOn !== 'sunday') {

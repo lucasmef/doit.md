@@ -69,7 +69,7 @@ export function ShortcutHelpModal() {
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-navy-950/40 px-4 py-6 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] flex items-center justify-center bg-navy-900/35 px-4 py-6 backdrop-blur-[2px]"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) setShortcutsOpen(false)

@@ -1120,7 +1120,7 @@ export default function CalendarPage() {
       onItemClick={setSelectedItemId}
       onToggleExpand={() => setExpanded((value) => !value)}
       expanded={showExpanded}
-      monthMaxVisible={!isMobile && expanded ? 6 : 2}
+      monthMaxVisible={isMobile ? 3 : (expanded ? 6 : 2)}
       selectedEventId={selectedEventId}
       onPickMonth={handlePickMonth}
       viewMode={viewMode}

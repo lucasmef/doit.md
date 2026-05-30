@@ -13,6 +13,7 @@ import {
   validateItemState,
 } from '@/lib/api/item-guards'
 import { createManualAuditLog } from '@/lib/api/audit-log'
+import { spawnNextRecurrenceIfNeeded } from '@/lib/api/recurrence'
 
 export const dynamic = 'force-dynamic'
 
@@ -190,6 +191,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           ...patch,
           ...(merged.complexity === 'note' ? { title: merged.title } : {}),
           ...(patch.status && patch.status !== 'archived' ? { deletedAt: null } : {}),
+          // Reabrir um item desfaz o "Limpar concluídos" (ID 036).
+          ...(patch.status && patch.status !== 'done' ? { clearedAt: null } : {}),
           updatedAt: new Date().toISOString(),
         },
         ...(merged.complexity === 'note' || Object.keys(unset).length > 0
@@ -207,6 +210,12 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     ).lean()
 
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // Recorrência: ao concluir uma tarefa recorrente, cria a próxima ocorrência.
+    // `current` é o doc anterior ao update, então `current.status` é o status antigo.
+    if (Object.prototype.hasOwnProperty.call(body, 'status')) {
+      await spawnNextRecurrenceIfNeeded(current, body.status, userId)
+    }
 
     // Anexo segue a nota: se o folder mudou, reposiciona os arquivos no Drive.
     if (

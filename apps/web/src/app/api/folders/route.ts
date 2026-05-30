@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       order: body.order ?? count,
       viewMode: body.viewMode ?? parent?.['viewMode'] ?? 'list',
       viewModeManual: body.viewModeManual ?? false,
+      hideCompleted: body.hideCompleted ?? true,
       createdAt: now,
       updatedAt: now,
     })

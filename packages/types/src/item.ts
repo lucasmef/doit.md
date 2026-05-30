@@ -22,6 +22,8 @@ export type Item = {
   recurrence?: ItemRecurrence
   startDate?: string
   scheduledDate?: string
+  /** Marca de "Limpar concluídos": oculta o item concluído da pasta sem removê-lo dela (ID 036). */
+  clearedAt?: string
 
   folderId?: string
   /** @deprecated removed; alias for folderId during transition */
@@ -79,6 +81,7 @@ export type UpdateItemInput = Partial<
     | 'recurrence'
     | 'startDate'
     | 'scheduledDate'
+    | 'clearedAt'
     | 'folderId'
     | 'projectId'
     | 'areaId'

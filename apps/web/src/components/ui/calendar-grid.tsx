@@ -401,7 +401,7 @@ export function CalendarGrid({
                     <span className="px-1 font-mono text-[9px] font-medium leading-4 text-navy-300 sm:text-[10px]">
                       {googleLike ? (
                         <>
-                          <span className="lg:hidden">mais {mobileHidden}</span>
+                          <span className="lg:hidden">+{mobileHidden}</span>
                           <span className="hidden lg:inline">mais {desktopHidden}</span>
                         </>
                       ) : (
