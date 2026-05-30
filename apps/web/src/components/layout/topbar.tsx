@@ -367,13 +367,18 @@ export function Topbar() {
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-300">
               <SearchIcon />
             </span>
-            {open && debounced.length > 1 && (
+            {open && !mobileSearchOpen && debounced.length > 1 && (
               <SearchResults
                 items={items}
                 isSearching={isSearching}
-                onSelect={(itemId) => {
+                onSelect={(item) => {
                   setOpen(false)
-                  setSelectedItemId(itemId)
+                  if (item.complexity === 'note') {
+                    setSelectedItemId(null)
+                    router.push(`/notas/${item.id}`)
+                    return
+                  }
+                  setSelectedItemId(item.id)
                 }}
               />
             )}
@@ -435,14 +440,19 @@ export function Topbar() {
           <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-navy-300">
             <SearchIcon />
           </span>
-          {open && debounced.length > 1 && (
+          {open && mobileSearchOpen && debounced.length > 1 && (
             <SearchResults
               items={items}
               isSearching={isSearching}
-              onSelect={(itemId) => {
+              onSelect={(item) => {
                 setOpen(false)
                 setMobileSearchOpen(false)
-                setSelectedItemId(itemId)
+                if (item.complexity === 'note') {
+                  setSelectedItemId(null)
+                  router.push(`/notas/${item.id}`)
+                  return
+                }
+                setSelectedItemId(item.id)
               }}
             />
           )}
@@ -544,7 +554,7 @@ function SearchResults({
 }: {
   items: Item[]
   isSearching: boolean
-  onSelect: (itemId: string) => void
+  onSelect: (item: Item) => void
 }) {
   return (
     <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-80 overflow-y-auto rounded-xl border border-ui-border bg-white p-1.5 shadow-cool-md">
@@ -557,7 +567,14 @@ function SearchResults({
           {items.map((item) => (
             <button
               key={item.id}
-              onClick={() => onSelect(item.id)}
+              data-search-result-id={item.id}
+              data-search-result-type={item.complexity}
+              onPointerDown={(event) => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return
+                event.preventDefault()
+                onSelect(item)
+              }}
+              onClick={() => onSelect(item)}
               className="w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-soft"
             >
               <span className="block truncate font-medium text-navy-900">{item.title}</span>

@@ -186,8 +186,8 @@ function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?
 // ID 023: tarefa aberta usa tom neutro (checkbox vazio, não verde); verde/teal só quando concluída.
 function itemGlyphTone(item: Item): string {
   if (item.complexity === 'note') return 'bg-brand-500/10 text-brand-600'
-  if (item.status === 'done') return 'bg-teal-500/10 text-teal-600'
-  return 'bg-navy-900/[0.05] text-navy-500'
+  if (item.status === 'done') return 'border border-brand-600 bg-brand-600 text-white'
+  return 'border border-brand-500/70 bg-white text-brand-600'
 }
 
 // ----- Sidebar tree -----
@@ -325,7 +325,7 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
         onOpen(item.id)
       }}
       {...longPressProps}
-      className="group w-full select-none touch-pan-y [-webkit-touch-callout:none] rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+      className="group w-full select-none touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
         <span className={`grid h-[22px] w-[22px] place-items-center rounded-md ${itemGlyphTone(item)}`}>
@@ -374,7 +374,7 @@ function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void
         onOpen(item.id)
       }}
       {...longPressProps}
-      className="grid w-full select-none touch-pan-y [-webkit-touch-callout:none] grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
+      className="grid w-full select-none touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
     >
       <span className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${itemGlyphTone(item)}`}>
         <ItemTypeGlyph item={item} className="h-4 w-4" />
@@ -943,7 +943,7 @@ function NotasBrowser() {
   )
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 pb-6 lg:min-h-[calc(100vh-104px)] lg:px-8">
+    <div className="doit-folder-browser mx-auto w-full max-w-[1440px] px-4 pb-6 lg:min-h-[calc(100vh-104px)] lg:px-8">
       {/* Scroll da página em vez de containers internos fixos */}
       <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
         {/* Sidebar / folder navigator (desktop) */}

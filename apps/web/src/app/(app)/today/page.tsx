@@ -21,10 +21,11 @@ function EventIcon({ className = 'h-[15px] w-[15px]' }) {
   )
 }
 
-function TaskIcon() {
+function TaskIcon({ checked }: { checked?: boolean }) {
   return (
     <svg className="h-[15px] w-[15px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4}>
-      <path d="M8 12l3 3 5-6" />
+      <rect x="5" y="5" width="14" height="14" rx="4" />
+      {checked ? <path d="M8.5 12.5 11 15l4.5-6" /> : null}
     </svg>
   )
 }
@@ -64,7 +65,7 @@ function TaskArticle({
         onOpen(item.id)
       }}
       {...longPressProps}
-      className={`touch-pan-y [-webkit-touch-callout:none] ${className}`}
+      className={`touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] ${className}`}
     >
       {children}
     </article>
@@ -217,6 +218,7 @@ export default function TodayFocusedPage() {
     const isTempDone = temporarilyDone.has(item.id)
     const styleType = getTaskStyle(item)
     const isSelected = selectedItemId === item.id
+    const hasTime = Boolean(item.dueTime)
     // ID 020: barra lateral por prioridade (1=alta/vermelho, 2=média/laranja, 3=baixa/amarelo, demais=neutro).
     const prioClass = item.priority && item.priority < 4 ? `prio-${item.priority}` : 'prio-0'
 
@@ -226,15 +228,15 @@ export default function TodayFocusedPage() {
         item={item}
         disabled={isTempDone}
         onOpen={setSingleSelection}
-        className={`row ${styleType} ${prioClass} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
+        className={`row ${styleType} ${prioClass} ${hasTime ? 'has-time' : 'no-time'} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
       >
         <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
         <button 
           onClick={(e) => !isTempDone && handleCompleteTask(e, item)} 
           onPointerDown={(e) => e.stopPropagation()} 
-          className={`icon ${styleType}-icon ${isTempDone ? 'done-icon' : ''} transition-colors cursor-pointer`}
+          className={`icon task-check ${isTempDone ? 'done-icon' : ''} transition-colors cursor-pointer`}
         >
-          <TaskIcon />
+          <TaskIcon checked={isTempDone} />
         </button>
         <div className="row-main">
           <div className="row-title">{item.title}</div>
