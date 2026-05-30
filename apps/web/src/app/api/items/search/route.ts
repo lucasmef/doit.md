@@ -6,13 +6,14 @@ import { ensureDB } from '@/lib/db'
 export const dynamic = 'force-dynamic'
 
 function matchesSearch(item: Record<string, unknown>, q: string) {
-  const needle = q.toLocaleLowerCase('pt-BR')
+  const needle = q.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
   const tags = Array.isArray(item['tags']) ? item['tags'].join(' ') : ''
-  const haystack = [
-    item['title'],
-    item['contentMd'],
-    tags,
-  ].filter(Boolean).join(' ').toLocaleLowerCase('pt-BR')
+  const haystack = [item['title'], item['contentMd'], tags]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('pt-BR')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
   return haystack.includes(needle)
 }
 
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
     await ensureDB()
     const items = await ItemModel.find({
       userId,
-      status: { $ne: 'archived' },
+      status: { $nin: ['archived', 'done'] },
       deletedAt: null,
     })
       .sort({ updatedAt: -1 })

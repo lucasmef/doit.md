@@ -310,7 +310,7 @@ function SidebarFolderRow({
 
 // ----- Content cards -----
 
-function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
+function ContentCard({ item, onOpen, onToggle }: { item: Item; onOpen: (id: string) => void; onToggle?: (id: string, next: ItemStatus) => void }) {
   const { openContextMenu } = useUI()
   const large = isLargeNote(item)
   const text = item.complexity === 'note' ? snippet(item, large ? 180 : 120) : snippet(item, 90)
@@ -361,7 +361,7 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
   )
 }
 
-function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void }) {
+function ContentRow({ item, onOpen, onToggle }: { item: Item; onOpen: (id: string) => void; onToggle?: (id: string, next: ItemStatus) => void }) {
   const { openContextMenu } = useUI()
   const text = snippet(item, 90)
   const { longPressProps, consumeClick } = useLongPress({
@@ -377,9 +377,18 @@ function ContentRow({ item, onOpen }: { item: Item; onOpen: (id: string) => void
       {...longPressProps}
       className="grid w-full select-none touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] grid-cols-[34px_minmax(0,1fr)] items-center gap-3 border-b border-navy-900/[0.06] px-3 py-3 text-left last:border-b-0 hover:bg-white/55 sm:grid-cols-[34px_minmax(0,1fr)_120px_96px]"
     >
-      <span className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${itemGlyphTone(item)}`}>
+      <div 
+        role="button"
+        onClick={(e) => {
+          if (item.complexity === 'task' && onToggle) {
+            e.stopPropagation()
+            onToggle(item.id, item.status === 'done' ? 'todo' : 'done')
+          }
+        }}
+        className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${itemGlyphTone(item)} ${item.complexity === 'task' ? 'cursor-pointer hover:opacity-80' : ''}`}
+      >
         <ItemTypeGlyph item={item} className="h-4 w-4" />
-      </span>
+      </div>
       <span className="min-w-0">
         <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
         {text ? (
@@ -975,23 +984,7 @@ function NotasBrowser() {
         )}
       </div>
 
-      <div className="space-y-2 border-t border-navy-900/[0.07] p-3">
-        <button
-          type="button"
-          onClick={handleNewFolder}
-          className="min-h-[42px] w-full rounded-[15px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] font-extrabold text-white"
-        >
-          Nova pasta
-        </button>
-        <button
-          type="button"
-          onClick={() => selectedId && setAgentsForId(selectedId)}
-          disabled={!selectedId}
-          className="min-h-[42px] w-full rounded-[15px] bg-navy-900/[0.055] font-extrabold text-navy-900 disabled:opacity-40"
-        >
-          Editar AGENTS.md
-        </button>
-      </div>
+
     </>
   )
 
@@ -1037,20 +1030,64 @@ function NotasBrowser() {
                   ))}
                 </div>
 
-                <div className="mt-2.5 flex flex-wrap items-start justify-between gap-3">
-                  <h1 className="text-[34px] font-black leading-none -tracking-[.05em] text-navy-900 lg:text-[42px]">
-                    {selectedFolder.name}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* ID 025: no topo fica só a ação primária "Novo item"; o resto vai para o menu kebab. */}
-                    <button
-                      type="button"
-                      onClick={() => handleNewItem(selectedId)}
-                      className="hidden h-[38px] items-center rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-3.5 text-[13px] font-extrabold text-white lg:inline-flex"
-                    >
-                      Novo item
-                    </button>
+                <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className="text-[28px] font-black leading-none -tracking-[.05em] text-navy-900 lg:text-[28px]">
+                      {selectedFolder.name}
+                    </h1>
 
+                    {/* Desktop View/Sort toggles (ID 058) */}
+                    <div className="hidden lg:flex items-center gap-2">
+                      <div className="inline-flex gap-1 rounded-full bg-navy-900/[0.055] p-1">
+                        {(['kanban', 'list'] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => void changeView(mode)}
+                            className={`inline-flex h-8 items-center rounded-full px-3 font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] ${
+                              viewMode === mode ? 'bg-white text-brand-600 shadow-cool-sm' : 'text-navy-500'
+                            }`}
+                          >
+                            {mode === 'kanban' ? 'Kanban' : 'Lista'}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="relative" ref={sortRef}>
+                        <button
+                          type="button"
+                          onClick={() => setSortOpen((v) => !v)}
+                          className="inline-flex h-8 items-center gap-2 rounded-full border border-white/72 bg-white/68 px-3 font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] text-navy-500"
+                          aria-haspopup="menu"
+                          aria-expanded={sortOpen}
+                        >
+                          Ordenar: {activeSort.label} ▾
+                        </button>
+                        {sortOpen ? (
+                          <div className="absolute left-0 top-10 z-20 w-56 rounded-[20px] border border-white/78 bg-white/92 p-2 shadow-cool-md backdrop-blur-2xl" role="menu">
+                            {SORT_OPTIONS.map((option) => (
+                              <button
+                                key={option.key}
+                                type="button"
+                                role="menuitemradio"
+                                aria-checked={option.key === sortKey}
+                                onClick={() => {
+                                  setSortKey(option.key)
+                                  setSortOpen(false)
+                                }}
+                                className={`flex min-h-[36px] w-full items-center justify-between gap-3 rounded-[13px] px-2.5 text-[12px] font-semibold ${
+                                  option.key === sortKey ? 'bg-brand-500/[0.08] text-brand-600' : 'text-navy-900 hover:bg-navy-900/[0.045]'
+                                }`}
+                              >
+                                <span>{option.label}</span>
+                                <span className="font-mono text-[10px] text-navy-500">{option.hint}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
                     {/* Mobile & Desktop: ações agrupadas em menu kebab (ID 016/025). */}
                     <div className="relative" ref={headerMenuRef}>
                       <button
@@ -1158,10 +1195,19 @@ function NotasBrowser() {
                           <button
                             type="button"
                             role="menuitem"
-                            onClick={() => { handleNewSubfolder(); setHeaderMenuOpen(false) }}
+                            onClick={() => { handleNewFolder(); setHeaderMenuOpen(false) }}
                             className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
                           >
                             <FolderGlyph className="h-4 w-4 text-brand-600" />
+                            Nova pasta
+                          </button>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => { handleNewSubfolder(); setHeaderMenuOpen(false) }}
+                            className="flex min-h-[40px] w-full items-center gap-2.5 rounded-[12px] px-3 text-left text-[13px] font-semibold text-navy-900 hover:bg-navy-900/[0.045]"
+                          >
+                            <FolderGlyph className="h-4 w-4 text-brand-600 opacity-60" />
                             Nova subpasta
                           </button>
                           <button
@@ -1189,7 +1235,8 @@ function NotasBrowser() {
                   </div>
                 </div>
 
-                <div className="mt-4 flex flex-wrap items-center gap-2.5">
+                {/* Mobile View/Sort toggles */}
+                <div className="mt-4 flex flex-wrap items-center gap-2.5 lg:hidden">
                   <div className="inline-flex gap-1 rounded-full bg-navy-900/[0.055] p-1">
                     {(['kanban', 'list'] as const).map((mode) => (
                       <button
@@ -1204,13 +1251,7 @@ function NotasBrowser() {
                       </button>
                     ))}
                   </div>
-                  <span className="hidden h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500 lg:inline-flex">
-                    {allFolderItems.length} {allFolderItems.length === 1 ? 'item' : 'itens'}
-                  </span>
-                  <span className="hidden h-8 items-center rounded-full border border-white/68 bg-white/62 px-2.5 font-mono text-[10px] text-navy-500 lg:inline-flex">
-                    {childFolders.length} {childFolders.length === 1 ? 'subpasta' : 'subpastas'}
-                  </span>
-                  <div className="relative" ref={sortRef}>
+                  <div className="relative">
                     <button
                       type="button"
                       onClick={() => setSortOpen((v) => !v)}
