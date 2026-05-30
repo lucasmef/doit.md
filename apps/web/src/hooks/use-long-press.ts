@@ -39,6 +39,7 @@ export function useLongPress({ onLongPress, delay = 450, moveTolerance = 10 }: O
     start.current = { x, y }
     timer.current = setTimeout(() => {
       triggered.current = true
+      window.getSelection()?.removeAllRanges()
       onLongPress({ clientX: x, clientY: y })
     }, delay)
   }
@@ -65,6 +66,7 @@ export function useLongPress({ onLongPress, delay = 450, moveTolerance = 10 }: O
 
   return {
     longPressProps: {
+      'data-long-press-target': 'true',
       onPointerDown,
       onPointerMove,
       onPointerUp: clear,
