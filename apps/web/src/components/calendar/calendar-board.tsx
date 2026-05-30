@@ -343,7 +343,6 @@ export function CalendarBoard({ items, compactSide = false, fullscreen = false }
           hideMonthControls
           fillHeight
           googleLike
-          expandedDesktop
           calendarColors={new Map(calendars.map((calendar) => [calendar.id, calendar.backgroundColor]))}
           weekStartsOn={prefs.calendarWeekStartsOn}
         />
