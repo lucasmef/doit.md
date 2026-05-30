@@ -79,11 +79,14 @@ export function ShortcutHelpModal() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="shortcut-help-title"
-        className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-xl border border-ui-border bg-white shadow-2xl"
+        className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-[24px] border border-white/70 bg-white/[0.92] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px]"
       >
-        <div className="flex items-center justify-between border-b border-ui-border px-5 py-4">
-          <div>
-            <h2 id="shortcut-help-title" className="text-[17px] font-semibold text-navy-900">
+        <div className="flex items-start justify-between gap-3 border-b border-navy-900/[0.07] px-5 pb-3.5 pt-4">
+          <div className="min-w-0">
+            <span className="block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+              Teclado
+            </span>
+            <h2 id="shortcut-help-title" className="mt-0.5 text-[17px] font-[850] text-navy-900">
               Atalhos
             </h2>
             <p className="mt-1 text-[12px] text-navy-500">
@@ -94,11 +97,11 @@ export function ShortcutHelpModal() {
             type="button"
             aria-label="Fechar atalhos"
             onClick={() => setShortcutsOpen(false)}
-            className="flex h-10 w-10 items-center justify-center rounded-lg text-navy-500 transition-colors hover:bg-surface-soft hover:text-navy-900"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] bg-navy-900/[0.055] text-navy-500 transition-colors hover:bg-navy-900/[0.08] hover:text-navy-900"
           >
-            <span aria-hidden="true" className="text-2xl leading-none">
-              x
-            </span>
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
           </button>
         </div>
 
