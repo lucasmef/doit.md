@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Status: review
+- Status: done
 - Mode: bugfix
 - Complexity: medium
 - Created: 2026-05-30
@@ -86,6 +86,7 @@ None.
 - 2026-05-30 20:23 - Validacao Playwright repetida com caso recorrente; confirmou concluida preservada e proxima ocorrencia criada apos o atraso.
 - 2026-05-30 20:24 - Segundo servidor temporario encerrado; porta 3100 liberada.
 - 2026-05-30 20:30 - Solicitado publish flow: ajustar docs para commit/push/PR apos tarefas validadas, commitar em `dev`, push e abrir PR para `main`.
+- 2026-05-30 20:35 - Commit `c9b8c9c` criado e enviado para `origin/dev`; PR draft `dev -> main` aberto: https://github.com/lucasmef/doit.md/pull/48.
 
 ## Decisions
 
@@ -155,4 +156,4 @@ Frontend evidence:
 
 ## Next step
 
-Commit em `dev`, push para GitHub e PR `dev -> main`.
+PR draft `dev -> main` aberto para revisao: https://github.com/lucasmef/doit.md/pull/48.
