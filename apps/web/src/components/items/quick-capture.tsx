@@ -15,7 +15,7 @@ import { RecurrencePopover } from './recurrence-popover'
 import { CaptureModeTabs, createCaptureSwipeHandlers } from '@/components/capture/capture-mode-tabs'
 import type { Priority } from './priority-select'
 import type { ItemComplexity, ItemRecurrence, ItemStatus } from '@doit/types'
-import { formatRecurrenceLabel } from '@doit/core'
+import { formatRecurrenceLabel, nextMondayOfNextWeekKey } from '@doit/core'
 
 type ItemMode = Extract<ItemComplexity, 'task' | 'note'>
 type Popover = 'date' | 'priority' | 'recurrence' | 'tags' | 'folder' | null
@@ -31,7 +31,7 @@ const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
 // agora \u00e9 obrigat\u00f3rio \u2014 um n\u00famero solto como `8` ou `123` n\u00e3o vira mais hor\u00e1rio.
 const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
 const DATE_WORD_SHORTCUT =
-  /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
+  /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|pr(?:o|\u00f3)xima semana|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
 const ISO_DATE_SHORTCUT = /(?:^|\s)(\d{4}-\d{2}-\d{2})\b/u
 const PRIORITIES: Priority[] = [1, 2, 3, 4]
@@ -168,7 +168,7 @@ const DATE_SUGGESTIONS = [
   { label: 'Amanhã', getValue: () => dateAfter(1) },
   { label: 'Mais tarde essa semana', getValue: laterThisWeekDate },
   { label: 'Final de semana', getValue: () => nextWeekday(6) },
-  { label: 'Semana que vem', getValue: () => nextWeekday(1) },
+  { label: 'Proxima semana', getValue: nextMondayOfNextWeekKey },
 ]
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
   const hour = Math.floor(index / 2)
@@ -253,7 +253,8 @@ function parseDateWord(value: string) {
   if (token === 'amanha' || token === 'amanhã') return dateAfter(1)
   if (token === 'depois de amanha' || token === 'depois de amanhã') return dateAfter(2)
   if (token === 'fim de semana' || token === 'final de semana') return nextWeekday(6)
-  if (token === 'semana que vem') return nextWeekday(1)
+  if (token === 'semana que vem' || token.normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'proxima semana')
+    return nextMondayOfNextWeekKey()
 
   const weekdays: Record<string, number> = {
     domingo: 0,

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { BulkItemActionInput, Item, ItemRecurrence, ItemStatus } from '@doit/types'
-import { STATUS_LABELS, toLocalDateKey } from '@doit/core'
+import { nextMondayOfNextWeekKey, STATUS_LABELS, toLocalDateKey } from '@doit/core'
 import { bulkUpdateItems, createItem, useItems } from '@/hooks/use-items'
 import { useFolders } from '@/hooks/use-folders'
 import { usePreferences } from '@/hooks/use-preferences'
@@ -40,7 +40,7 @@ function dateAfter(days: number) {
 }
 
 function nextWeek() {
-  return dateAfter(7)
+  return nextMondayOfNextWeekKey()
 }
 
 function formatDateLabel(dateStr: string): string {
@@ -703,11 +703,11 @@ function ItemContextMenuContent({
         </button>
         <button
           className={`flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[15px] ${
-            targetItem.dueDate === dateAfter(7)
+            targetItem.dueDate === nextWeek()
               ? 'bg-brand-50 text-brand-600 shadow-[0_0_0_1px_rgba(47,107,255,0.22)_inset]'
               : 'bg-white/70 text-navy-900 shadow-[0_1px_0_rgba(255,255,255,0.7)_inset]'
           }`}
-          onClick={() => setDate(dateAfter(7))}
+          onClick={() => setDate(nextWeek())}
         >
           <span className="text-[17px] leading-none">📅</span>
           <b className="text-[11px] font-extrabold leading-none">Próx.</b>

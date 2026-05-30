@@ -19,6 +19,7 @@ Preferred workflow:
 - AI agent executes asynchronously
 - user reviews later
 - deploy only after validation
+- after validated implementation, commit on local `dev`, push `dev`, and open a PR from `dev` to `main` unless explicitly told not to publish
 
 ## Agent workflow roles
 
@@ -37,6 +38,15 @@ main: production branch + production server
 ```
 
 There should be no assumption of a permanent dev environment on the server unless an ADR says otherwise.
+
+Default AI delivery handoff:
+
+- finish implementation and validation locally
+- update the BuilderFlow living spec
+- commit only the scoped task changes on `dev`
+- push `dev` to GitHub
+- open a PR from `dev` to `main` for review
+- do not merge to `main` or deploy unless the user explicitly asks
 
 ## Stack
 

@@ -220,6 +220,8 @@ Default workflow:
 6. Register ADRs only for architectural or hard-to-reverse decisions.
 7. Update the living spec before ending the task.
 8. For frontend-impacting work, complete local browser validation and save screenshots in `specs/artifacts/<spec-slug>/` before marking the task done.
+9. After a task is implemented and validated, commit the scoped changes on the local `dev` branch, push `dev` to GitHub, and open a PR from `dev` to `main`, unless the user explicitly asks not to publish.
+10. Do not leave validated work only in the local worktree when the user asked for execution; the normal handoff is a pushed `dev` branch plus PR for review.
 
 Important files:
 

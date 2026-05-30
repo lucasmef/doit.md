@@ -361,8 +361,9 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
   )
 }
 
-function ContentRow({ item, onOpen, onToggle }: { item: Item; onOpen: (id: string) => void; onToggle?: (id: string, next: ItemStatus) => void }) {
+function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item: Item; onOpen: (id: string) => void; onToggle?: (id: string, next: ItemStatus) => void; temporarilyDone?: boolean }) {
   const { openContextMenu } = useUI()
+  const displayStatus = temporarilyDone ? 'done' : item.status
   const text = snippet(item, 90)
   const { longPressProps, consumeClick } = useLongPress({
     onLongPress: ({ clientX, clientY }) => openContextMenu({ itemId: item.id, x: clientX, y: clientY }),
@@ -382,12 +383,12 @@ function ContentRow({ item, onOpen, onToggle }: { item: Item; onOpen: (id: strin
         onClick={(e) => {
           if (item.complexity === 'task' && onToggle) {
             e.stopPropagation()
-            onToggle(item.id, item.status === 'done' ? 'todo' : 'done')
+            onToggle(item.id, displayStatus === 'done' ? 'todo' : 'done')
           }
         }}
-        className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${itemGlyphTone(item)} ${item.complexity === 'task' ? 'cursor-pointer hover:opacity-80' : ''}`}
+        className={`grid h-[34px] w-[34px] place-items-center rounded-[13px] ${itemGlyphTone({ ...item, status: displayStatus })} ${item.complexity === 'task' ? 'cursor-pointer hover:opacity-80' : ''}`}
       >
-        <ItemTypeGlyph item={item} className="h-4 w-4" />
+        <ItemTypeGlyph item={{ ...item, status: displayStatus }} className="h-4 w-4" />
       </div>
       <span className="min-w-0">
         <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
@@ -397,7 +398,7 @@ function ContentRow({ item, onOpen, onToggle }: { item: Item; onOpen: (id: strin
           </span>
         ) : null}
       </span>
-      <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{STATUS_LABEL[item.status]}</span>
+      <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{STATUS_LABEL[displayStatus]}</span>
       <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{formatRelative(item.updatedAt)}</span>
     </button>
   )
@@ -677,8 +678,10 @@ function NotasBrowser() {
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const [folderMenu, setFolderMenu] = useState<FolderMenuState | null>(null)
+  const [temporarilyDone, setTemporarilyDone] = useState<Set<string>>(() => new Set())
   const sortRef = useRef<HTMLDivElement>(null)
   const headerMenuRef = useRef<HTMLDivElement>(null)
+  const doneTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const tree = useMemo(() => buildFolderTree(folders), [folders])
   const folderById = useMemo(() => new Map(folders.map((f) => [f.id, f])), [folders])
@@ -737,6 +740,14 @@ function NotasBrowser() {
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
+  }, [])
+
+  useEffect(() => {
+    const timeouts = doneTimeoutsRef.current
+    return () => {
+      for (const timeout of timeouts.values()) clearTimeout(timeout)
+      timeouts.clear()
+    }
   }, [])
 
   // Esc fecha o drawer de pastas no mobile mesmo sem foco interno (ID 010).
@@ -850,6 +861,38 @@ function NotasBrowser() {
   // ID 059: concluir/reabrir tarefa pelo checkbox da lista da pasta (mesmo comportamento
   // da página Hoje). A pasta cuida de ocultar/manter concluídos conforme sua regra.
   function toggleItemDone(id: string, next: ItemStatus) {
+    const pending = doneTimeoutsRef.current.get(id)
+    if (pending) {
+      clearTimeout(pending)
+      doneTimeoutsRef.current.delete(id)
+    }
+
+    if (next === 'done') {
+      setTemporarilyDone((current) => {
+        const updated = new Set(current)
+        updated.add(id)
+        return updated
+      })
+      const timeout = setTimeout(() => {
+        doneTimeoutsRef.current.delete(id)
+        void updateItem(id, { status: 'done' } as never).finally(() => {
+          setTemporarilyDone((current) => {
+            const updated = new Set(current)
+            updated.delete(id)
+            return updated
+          })
+        })
+      }, 1500)
+      doneTimeoutsRef.current.set(id, timeout)
+      return
+    }
+
+    setTemporarilyDone((current) => {
+      if (!current.has(id)) return current
+      const updated = new Set(current)
+      updated.delete(id)
+      return updated
+    })
     void updateItem(id, { status: next } as never)
   }
 
@@ -1404,7 +1447,13 @@ function NotasBrowser() {
                     {allFolderItems.length > 0 ? (
                       <div className="overflow-hidden rounded-[22px] border border-white/62 bg-white/50">
                         {allFolderItems.map((item) => (
-                          <ContentRow key={item.id} item={item} onOpen={setSingleSelection} onToggle={toggleItemDone} />
+                          <ContentRow
+                            key={item.id}
+                            item={item}
+                            onOpen={setSingleSelection}
+                            onToggle={toggleItemDone}
+                            temporarilyDone={temporarilyDone.has(item.id)}
+                          />
                         ))}
                       </div>
                     ) : null}
