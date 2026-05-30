@@ -394,7 +394,8 @@ function IconEdit() {
     </svg>
   )
 }
-function IconCalendar() {
+// ID 071: ícone de "calendário com ×" deixa claro que a ação remove a data do item.
+function IconCalendarOff() {
   return (
     <svg
       className="h-4 w-4"
@@ -408,6 +409,7 @@ function IconCalendar() {
         strokeLinejoin="round"
         d="M8 3v3M16 3v3M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z"
       />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m10 13 4 4M14 13l-4 4" />
     </svg>
   )
 }
@@ -759,7 +761,7 @@ function ItemContextMenuContent({
         <MenuRow icon={<IconCopy />} label="Duplicar" onClick={duplicate} />
         <MenuRow icon={<IconEdit />} label="Editar item" onClick={openEdit} />
         {targetItem.dueDate && (
-           <MenuRow icon={<IconCalendar />} label="Remover data" onClick={() => setDate(null)} />
+           <MenuRow icon={<IconCalendarOff />} label="Remover data" onClick={() => setDate(null)} />
         )}
       </div>
       

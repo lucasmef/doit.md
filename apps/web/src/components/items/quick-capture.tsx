@@ -27,7 +27,9 @@ type ActiveShortcut =
 const PRIORITY_SHORTCUT = /(?:^|\s)p([1-4])\b/i
 const FOLDER_SHORTCUT = /(?:^|\s)#([\p{L}\p{N}][\p{L}\p{N}_-]*)/iu
 const TAG_SHORTCUT = /(?:^|\s)@([\p{L}\p{N}][\p{L}\p{N}_-]*)/giu
-const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?|\s+horas?)?\b/iu
+// ID 067: hora s\u00f3 nos formatos `xh`, `xh00` ou `xx:xx`. O indicador (`:mm` ou `h`)
+// agora \u00e9 obrigat\u00f3rio \u2014 um n\u00famero solto como `8` ou `123` n\u00e3o vira mais hor\u00e1rio.
+const TIME_SHORTCUT = /(?:^|\s)(?:as\s+|\u00e0s\s+)?([01]?\d|2[0-3])(?::([0-5]\d)|h([0-5]\d)?)\b/iu
 const DATE_WORD_SHORTCUT =
   /(?:^|\s)(hoje|amanh(?:a|\u00e3)|depois de amanh(?:a|\u00e3)|fim de semana|final de semana|semana que vem|segunda(?:-feira)?|ter(?:c|\u00e7)a(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|s(?:a|\u00e1)bado|domingo)(?=$|\s|[,.!?])/iu
 const SLASH_DATE_SHORTCUT = /(?:^|\s)(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/u
@@ -87,6 +89,17 @@ function toDateInputValue(date: Date) {
 
 function todayDate() {
   return toDateInputValue(new Date())
+}
+
+// ID 065: pasta aberta no navegador de notas (`/notas?folder=<id>`) vira o contexto
+// da adição rápida. Lido no momento de abrir, então basta consultar a URL atual.
+function currentFolderFromUrl(pathname: string | null): string | null {
+  if (typeof window === 'undefined') return null
+  if (pathname === '/notas') {
+    const folder = new URLSearchParams(window.location.search).get('folder')
+    if (folder) return folder
+  }
+  return null
 }
 
 function formatDueDate(dateStr: string) {
@@ -456,6 +469,8 @@ export function QuickCapture() {
     setQuickCaptureOpen,
     quickCaptureFolderId,
     setQuickCaptureFolderId,
+    quickCaptureDate,
+    setQuickCaptureDate,
     quickCaptureEditId,
     setQuickCaptureEditId,
     setSingleSelection,
@@ -593,27 +608,27 @@ export function QuickCapture() {
         setRecurrence((editItem.recurrence ?? '') as ItemRecurrence | '')
         setEditStatus((editItem.status ?? 'todo') as ItemStatus)
       } else if (quickCaptureOpen) {
+        // ID 065/068: data herdada do contexto — dia aberto do calendário, senão
+        // hoje só quando a tela é a de Hoje; fora disso fica sem data.
+        const contextDate = quickCaptureDate ?? (isTodayContext ? todayDate() : '')
+        // ID 065: pasta herdada do contexto (gatilho da pasta ou URL do navegador).
+        const contextFolder = quickCaptureFolderId ?? currentFolderFromUrl(pathname)
         const draft = loadDraft()
         if (draft) {
           const nextComplexity = captureMode === 'note' ? 'note' : 'task'
           setTitle(draft.title ?? '')
           setContentMd(draft.contentMd ?? '')
           setComplexity(nextComplexity)
-          setDueDate(nextComplexity === 'task' ? draft.dueDate ?? (isTodayContext ? todayDate() : '') : '')
+          setDueDate(nextComplexity === 'task' ? draft.dueDate ?? contextDate : '')
           setDueTime(nextComplexity === 'task' ? draft.dueTime ?? '' : '')
-          setFolderId(draft.projectId ?? quickCaptureFolderId ?? '')
+          setFolderId(draft.projectId || contextFolder || '')
           setTags(draft.tags ?? [])
           setPriority((draft.priority as Priority) ?? 4)
           setRecurrence((draft.recurrence as ItemRecurrence | '') ?? '')
         } else {
           setComplexity(captureMode === 'note' ? 'note' : 'task')
-          setDueDate(isTodayContext ? todayDate() : '')
-          if (quickCaptureFolderId) {
-            setFolderId(quickCaptureFolderId)
-          } else {
-            const folderMatch = pathname?.match(/^\/notas\/([^/]+)/)
-            if (folderMatch?.[1]) setFolderId(folderMatch[1])
-          }
+          setDueDate(contextDate)
+          if (contextFolder) setFolderId(contextFolder)
         }
       }
       const focusInput = () => {
@@ -645,8 +660,9 @@ export function QuickCapture() {
       setPopover(null)
       setExpanded(false)
       setQuickCaptureFolderId(null)
+      setQuickCaptureDate(null)
     }
-  }, [isOpen, editMode, editItem?.id, captureMode, isTodayContext, quickCaptureFolderId, pathname, setQuickCaptureFolderId])
+  }, [isOpen, editMode, editItem?.id, captureMode, isTodayContext, quickCaptureFolderId, quickCaptureDate, pathname, setQuickCaptureFolderId, setQuickCaptureDate])
 
   useEffect(() => {
     if (!quickCaptureOpen || editMode) return
@@ -1277,7 +1293,7 @@ export function QuickCapture() {
                         void submitAndContinue()
                       }
                     }}
-                    placeholder="Revisar layout amanhã 8 horas"
+                    placeholder="Revisar layout amanhã 8h"
                     className="h-[52px] w-full rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 text-[16px] font-bold text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] placeholder:text-navy-300 focus:ring-2 focus:ring-brand-100"
                     autoFocus
                   />
