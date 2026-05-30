@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import type { CalendarEvent, Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 import { BentoGrid, CardTitle, VividBlueCard, GlassCard } from '@/components/ui/bento'
@@ -218,6 +218,28 @@ function CalendarCard({
   const weekStart = useMemo(() => startOfWeek(anchor), [anchor])
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart])
 
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [dynamicMaxVisible, setDynamicMaxVisible] = useState(monthMaxVisible)
+
+  useEffect(() => {
+    if (!expanded || viewMode !== 'MES') {
+      setDynamicMaxVisible(monthMaxVisible)
+      return
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0]
+      if (entry) {
+        const h = entry.contentRect.height
+        const cellH = (h - 22 - 36) / 6
+        const available = cellH - 48
+        const fit = Math.max(1, Math.floor(available / 16))
+        setDynamicMaxVisible(fit)
+      }
+    })
+    if (gridRef.current) observer.observe(gridRef.current)
+    return () => observer.disconnect()
+  }, [expanded, viewMode, monthMaxVisible])
+
   const weekNumber = useMemo(() => {
     const firstThursday = new Date(cursorYear, 0, 4)
     const offset = (firstThursday.getDay() + 6) % 7
@@ -328,7 +350,7 @@ function CalendarCard({
       </div>
 
       {viewMode === 'MES' ? (
-        <div className="grid flex-1 grid-cols-7 grid-rows-[22px_repeat(6,minmax(0,1fr))] gap-1.5 min-h-0">
+        <div ref={gridRef} className="grid flex-1 grid-cols-7 grid-rows-[22px_repeat(6,minmax(0,1fr))] gap-1.5 min-h-0">
           {DOW_SHORT.map((dow) => (
             <div key={dow} className="pb-1 text-center font-mono text-[10px] font-bold tracking-wider text-navy-500">
               {dow}
@@ -343,8 +365,8 @@ function CalendarCard({
             const cellItems = itemsMap.get(key) ?? []
             const total = cellEvents.length + cellItems.length
             // ID 022: no fullscreen desktop mostra mais eventos por célula (usa a altura), reduzindo truncamento.
-            const visible = cellEvents.slice(0, monthMaxVisible)
-            const visibleItems = cellItems.slice(0, Math.max(0, monthMaxVisible - visible.length))
+            const visible = cellEvents.slice(0, dynamicMaxVisible)
+            const visibleItems = cellItems.slice(0, Math.max(0, dynamicMaxVisible - visible.length))
             const more = total - visible.length - visibleItems.length
             return (
               <div
