@@ -413,18 +413,25 @@ function ToolButton({
 export function ItemDetail() {
   const pathname = usePathname()
   const router = useRouter()
-  const { selectedItemId, setSelectedItemId } = useUI()
+  const { selectedItemId, setSelectedItemId, setQuickCaptureEditId } = useUI()
   const { item, isLoading } = useItem(selectedItemId)
 
-  // Notas usam o editor imersivo dedicado (/notas/[id]); o overlay atende
-  // apenas tarefas/eventos/capturas/projetos. Redireciona em vez de abrir o overlay.
+  // Notas usam o editor imersivo dedicado (/notas/[id]); tarefas/eventos/capturas/
+  // projetos passam a editar no modal de criação (QuickCapture editMode) — ID 062.
+  // Este componente vira um único ponto de redirecionamento; o overlay antigo não
+  // é mais renderizado para itens.
   useEffect(() => {
-    if (item && item.complexity === 'note') {
+    if (!item) return
+    if (item.complexity === 'note') {
       const noteId = item.id
       setSelectedItemId(null)
       router.push(`/notas/${noteId}`)
+      return
     }
-  }, [item, router, setSelectedItemId])
+    const editId = item.id
+    setSelectedItemId(null)
+    setQuickCaptureEditId(editId)
+  }, [item, router, setSelectedItemId, setQuickCaptureEditId])
 
   // Esc fecha o overlay de tarefa/evento mesmo quando o foco está fora dele (ID 010).
   useEscapeClose(Boolean(selectedItemId && item && item.complexity !== 'note'), () => {
@@ -897,8 +904,12 @@ export function ItemDetail() {
 
   if (!selectedItemId) return null
 
-  // Evita o flash do overlay enquanto o redirecionamento para /notas/[id] acontece.
-  if (item && item.complexity === 'note') return null
+  // Item carregado → este componente apenas redireciona (efeito acima): notas vão
+  // para /notas/[id] e tarefas/eventos abrem o QuickCapture editMode (ID 062).
+  // Derivamos de `item?.id` para não estreitar o tipo de `item` e manter o restante
+  // (overlay legado, agora inalcançável em runtime) válido para o type-check.
+  const redirectingItemId = item?.id
+  if (redirectingItemId) return null
 
   if (isLoading || !item) {
     return (

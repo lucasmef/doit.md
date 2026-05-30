@@ -27,14 +27,21 @@ export async function GET(req: Request) {
 
   try {
     await ensureDB()
+    // O SqlModel de @doit/db não suporta `$nin`; filtramos status em JS (ID 056).
     const items = await ItemModel.find({
       userId,
-      status: { $nin: ['archived', 'done'] },
       deletedAt: null,
     })
       .sort({ updatedAt: -1 })
       .lean()
-    const results = items.filter((item: Record<string, unknown>) => matchesSearch(item, q)).slice(0, 10)
+    const results = items
+      .filter((item: Record<string, unknown>) => {
+        const status = item['status']
+        // Esconde concluídas e arquivadas por padrão; notas e abertas seguem normais.
+        if (status === 'done' || status === 'archived') return false
+        return matchesSearch(item, q)
+      })
+      .slice(0, 10)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mapped = results.map((i: any) => ({

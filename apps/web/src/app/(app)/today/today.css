@@ -173,9 +173,9 @@
   box-shadow: var(--shadow);
   overflow: hidden;
   display: grid;
-  /* O detalhe do item é o drawer global <ItemDetail/>, então o board usa 2 colunas
-     (sidebar + lista) e não reserva a 3ª coluna do mockup (evita faixa vazia à direita). */
-  grid-template-columns: 255px minmax(0, 1fr);
+  /* ID 039: 3 colunas como a referência v3 — sidebar + lista + painel de detalhes.
+     O painel some abaixo de 1180px (ver media query), onde a edição usa o modal. */
+  grid-template-columns: 255px minmax(0, 1fr) 350px;
 }
 
 .today-v3-layout .sidebar {
@@ -227,6 +227,32 @@
   color: var(--gray);
   font-family: var(--mono);
   font-size: 10px;
+}
+
+/* ID 063: botão "Hoje" no topo do calendário lateral. */
+.today-v3-layout .cal-today-btn {
+  border: 1px solid rgba(47, 107, 255, 0.22);
+  background: rgba(47, 107, 255, 0.08);
+  color: var(--blue);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.today-v3-layout .cal-today-btn:hover {
+  background: rgba(47, 107, 255, 0.16);
+}
+
+.today-v3-layout .cal-today-btn.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
 }
 
 .today-v3-layout .week,
@@ -636,6 +662,20 @@
   border-left: 1px solid var(--line);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+}
+
+/* ID 039: estado vazio do painel de detalhes (nenhum item selecionado). */
+.today-v3-layout .detail-empty {
+  grid-row: 1 / -1;
+  display: grid;
+  place-items: center;
+  padding: 32px 26px;
+  text-align: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .today-v3-layout .detail-head {

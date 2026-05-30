@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useItems, updateItem, bulkUpdateItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
@@ -56,12 +56,14 @@ function TaskArticle({
   item,
   disabled,
   onOpen,
+  onEdit,
   className,
   children,
 }: {
   item: Item
   disabled?: boolean
   onOpen: (id: string) => void
+  onEdit?: (id: string) => void
   className: string
   children: React.ReactNode
 }) {
@@ -76,6 +78,11 @@ function TaskArticle({
         if (consumeClick()) return
         onOpen(item.id)
       }}
+      // ID 039: clique simples seleciona (painel); duplo clique abre o modal de edição.
+      onDoubleClick={() => {
+        if (disabled) return
+        onEdit?.(item.id)
+      }}
       {...longPressProps}
       className={`touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] ${className}`}
     >
@@ -89,9 +96,22 @@ export default function TodayFocusedPage() {
   const { events, isLoading: eventsLoading } = useCalendarEvents()
   const { projects } = useProjects()
   const { prefs } = usePreferences()
-  const { setSingleSelection, selectedItemId } = useUI()
+  const { setQuickCaptureEditId } = useUI()
 
   const [openEvent, setOpenEvent] = useState<CalendarEvent | null>(null)
+  // ID 039: item selecionado para o painel de detalhes à direita.
+  const [panelId, setPanelId] = useState<string | null>(null)
+  // O painel de detalhes só existe a partir de 1181px (igual à referência v3); abaixo
+  // disso (tablet/mobile) o toque na tarefa abre direto o modal de edição.
+  const [panelEnabled, setPanelEnabled] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 1181px)')
+    const sync = () => setPanelEnabled(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
   const [temporarilyDone, setTemporarilyDone] = useState<Set<string>>(new Set())
   const today = toLocalDateKey()
   // ID 040: dia selecionado no calendário lateral (padrão = hoje).
@@ -281,15 +301,18 @@ export default function TodayFocusedPage() {
     await bulkUpdateItems({ ids: overdueItems.map(i => i.id), patch: { dueDate: today } }, overdueItems)
   }
 
+  // ID 060/063: escolher um dia (ou "Hoje") volta para a visão de dia, mantendo o
+  // painel/layout — nunca redireciona para fora da página.
   const selectDay = (key: string) => {
     setSelectedDay(key)
     setActiveTag(null)
+    setCurrentView('hoje')
   }
 
   const renderTask = (item: Item, isOverdue: boolean = false) => {
     const isTempDone = temporarilyDone.has(item.id)
     const styleType = getTaskStyle(item)
-    const isSelected = selectedItemId === item.id
+    const isSelected = panelId === item.id
     const hasTime = Boolean(item.dueTime)
     // ID 020: barra lateral por prioridade (1=alta/vermelho, 2=média/laranja, 3=baixa/amarelo, demais=neutro).
     const prioClass = item.priority && item.priority < 4 ? `prio-${item.priority}` : 'prio-0'
@@ -299,7 +322,8 @@ export default function TodayFocusedPage() {
         key={item.id}
         item={item}
         disabled={isTempDone}
-        onOpen={setSingleSelection}
+        onOpen={(id) => (panelEnabled ? setPanelId(id) : setQuickCaptureEditId(id))}
+        onEdit={setQuickCaptureEditId}
         className={`row ${styleType} ${prioClass} ${hasTime ? 'has-time' : 'no-time'} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
       >
         <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
@@ -327,7 +351,7 @@ export default function TodayFocusedPage() {
         </div>
         <button className="more" onClick={(e) => {
           e.stopPropagation();
-          setSingleSelection(item.id);
+          setQuickCaptureEditId(item.id);
         }}>⋯</button>
       </TaskArticle>
     )
@@ -369,6 +393,28 @@ export default function TodayFocusedPage() {
   const currentHeading = currentView === 'inbox' ? 'Inbox' : currentView === 'upcoming' ? 'Próximos' : headingLabel
   const currentSub = currentView === 'inbox' ? 'Itens não processados' : currentView === 'upcoming' ? 'Tarefas futuras' : selectedLabel
 
+  // ID 039: item do painel de detalhes à direita.
+  const panelItem = panelId ? items.find((i) => i.id === panelId) ?? null : null
+  const panelStyleType = panelItem ? getTaskStyle(panelItem) : 'task'
+  const panelTypeLabel = panelItem
+    ? panelStyleType === 'personal'
+      ? 'Pessoal'
+      : panelItem.complexity === 'note'
+        ? 'Nota'
+        : 'Tarefa'
+    : ''
+  const panelDateLabel = panelItem?.dueDate
+    ? new Date(panelItem.dueDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })
+    : '—'
+  const STATUS_PT: Record<string, string> = {
+    inbox: 'Inbox',
+    todo: 'A fazer',
+    doing: 'Em foco',
+    waiting: 'Aguardando',
+    done: 'Concluído',
+    archived: 'Arquivado',
+  }
+
   return (
     <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
       <section className="board flex-1 mx-4 mb-4 lg:mx-0 lg:mb-0">
@@ -381,7 +427,14 @@ export default function TodayFocusedPage() {
           <div className="calendar">
             <div className="calendar-title">
               <b>Calendário</b>
-              <span>mês</span>
+              {/* ID 063: botão "Hoje" no topo do calendário lateral. */}
+              <button
+                type="button"
+                className={`cal-today-btn${isToday && currentView === 'hoje' ? ' active' : ''}`}
+                onClick={() => selectDay(today)}
+              >
+                Hoje
+              </button>
             </div>
             <div className="week">
               <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
@@ -473,6 +526,65 @@ export default function TodayFocusedPage() {
             </div>
           </div>
         </section>
+
+        {/* ID 039: painel de detalhes à direita (3ª coluna, conforme referência v3). */}
+        <aside className="detail hidden lg:grid">
+          {panelItem ? (
+            <>
+              <div className="detail-head">
+                <div className="detail-title">
+                  <span className="type">{panelTypeLabel}</span>
+                  <h2>{panelItem.title || 'Sem título'}</h2>
+                </div>
+                <button type="button" className="close" onClick={() => setPanelId(null)} aria-label="Fechar painel">
+                  ×
+                </button>
+              </div>
+              <div className="detail-scroll">
+                <section className="detail-section">
+                  <div className="detail-label">Detalhes</div>
+                  <div className="info-grid">
+                    <div className="info-row"><span>Data</span><b>{panelDateLabel}</b></div>
+                    {panelItem.dueTime ? (
+                      <div className="info-row"><span>Horário</span><b>{panelItem.dueTime}</b></div>
+                    ) : null}
+                    <div className="info-row"><span>Pasta</span><b>{getFolderName(panelItem.folderId) || 'Sem pasta'}</b></div>
+                    <div className="info-row"><span>Status</span><b>{STATUS_PT[panelItem.status] ?? panelItem.status}</b></div>
+                  </div>
+                </section>
+
+                {panelItem.tags.length > 0 ? (
+                  <section className="detail-section">
+                    <div className="detail-label">Tags</div>
+                    <div className="tag-chips">
+                      {panelItem.tags.map((t) => (
+                        <span key={t} className="tag-chip">#{t}</span>
+                      ))}
+                    </div>
+                  </section>
+                ) : null}
+
+                <section className="detail-section">
+                  <div className="detail-label">Ações rápidas</div>
+                  <div className="actions">
+                    <button
+                      type="button"
+                      className="action primary"
+                      onClick={() => updateItem(panelItem.id, { status: panelItem.status === 'done' ? 'todo' : 'done' })}
+                    >
+                      {panelItem.status === 'done' ? '↺ Reabrir tarefa' : '✓ Marcar como concluído'}
+                    </button>
+                    <button type="button" className="action" onClick={() => setQuickCaptureEditId(panelItem.id)}>
+                      ✎ Editar
+                    </button>
+                  </div>
+                </section>
+              </div>
+            </>
+          ) : (
+            <div className="detail-empty">Selecione um item para ver os detalhes.</div>
+          )}
+        </aside>
       </section>
 
       {openEvent && (

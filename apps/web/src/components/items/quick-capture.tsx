@@ -14,7 +14,7 @@ import { FolderGlyph, flattenFolderOptions } from '@/components/folders/folder-o
 import { RecurrencePopover } from './recurrence-popover'
 import { CaptureModeTabs, createCaptureSwipeHandlers } from '@/components/capture/capture-mode-tabs'
 import type { Priority } from './priority-select'
-import type { ItemComplexity, ItemRecurrence } from '@doit/types'
+import type { ItemComplexity, ItemRecurrence, ItemStatus } from '@doit/types'
 import { formatRecurrenceLabel } from '@doit/core'
 
 type ItemMode = Extract<ItemComplexity, 'task' | 'note'>
@@ -480,6 +480,8 @@ export function QuickCapture() {
   const [tags, setTags] = useState<string[]>([])
   const [priority, setPriority] = useState<Priority>(4)
   const [recurrence, setRecurrence] = useState<ItemRecurrence | ''>('')
+  // ID 061: status da tarefa em edição, para o checkbox de conclusão.
+  const [editStatus, setEditStatus] = useState<ItemStatus>('todo')
   const [tagQuery, setTagQuery] = useState('')
   const [folderQuery, setProjectQuery] = useState('')
   const [titleCursor, setTitleCursor] = useState(0)
@@ -589,6 +591,7 @@ export function QuickCapture() {
         setTags(editItem.tags ?? [])
         setPriority(((editItem.priority as Priority) ?? 4) as Priority)
         setRecurrence((editItem.recurrence ?? '') as ItemRecurrence | '')
+        setEditStatus((editItem.status ?? 'todo') as ItemStatus)
       } else if (quickCaptureOpen) {
         const draft = loadDraft()
         if (draft) {
@@ -725,6 +728,21 @@ export function QuickCapture() {
   function handleDueTimeChange(next: string) {
     setDueTime(next)
     if (next && !dueDate) setDueDate(todayDate())
+  }
+
+  // ID 061: conclui/reabre a tarefa em edição direto pelo checkbox do modal.
+  // Usa o mesmo updateItem da página Hoje/listas (recorrência tratada no servidor).
+  async function toggleEditDone() {
+    if (!quickCaptureEditId) return
+    const next: ItemStatus = editStatus === 'done' ? 'todo' : 'done'
+    setEditStatus(next)
+    try {
+      await updateItem(quickCaptureEditId, { status: next } as never)
+      toast(next === 'done' ? 'Tarefa concluída' : 'Tarefa reaberta', 'success')
+    } catch (error) {
+      setEditStatus(editStatus)
+      toast(error instanceof Error ? error.message : 'Erro ao atualizar tarefa.', 'error')
+    }
   }
 
   function addTag(value: string) {
@@ -1074,13 +1092,32 @@ export function QuickCapture() {
             <>
               {!isNote && (
                 <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.07] px-5 pb-3.5 pt-4">
-                  <div className="h-[38px] w-[38px] rounded-[14px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] shadow-[0_10px_22px_-14px_rgba(47,107,255,.85)]" />
+                  {editMode ? (
+                    // ID 061: checkbox de conclusão direto na edição da tarefa.
+                    <button
+                      type="button"
+                      onClick={() => void toggleEditDone()}
+                      className={`grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[14px] border transition-colors ${
+                        editStatus === 'done'
+                          ? 'border-[#28C7B7] bg-[#28C7B7] text-white'
+                          : 'border-navy-900/15 bg-white text-navy-300 hover:border-[#28C7B7] hover:text-[#28C7B7]'
+                      }`}
+                      aria-label={editStatus === 'done' ? 'Reabrir tarefa' : 'Concluir tarefa'}
+                      title={editStatus === 'done' ? 'Reabrir tarefa' : 'Concluir tarefa'}
+                    >
+                      <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m5 12 4 4L19 6" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <div className="h-[38px] w-[38px] rounded-[14px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] shadow-[0_10px_22px_-14px_rgba(47,107,255,.85)]" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <b className="block truncate text-[15px] font-[850] text-navy-900">
                       {editMode ? 'Editar tarefa' : 'Adicionar tarefa'}
                     </b>
                     <span className="mt-1 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
-                      modal completo
+                      {editMode ? (editStatus === 'done' ? 'concluída' : 'modal completo') : 'modal completo'}
                     </span>
                   </div>
                   <button
