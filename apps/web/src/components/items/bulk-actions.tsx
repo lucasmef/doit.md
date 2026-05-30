@@ -5,6 +5,7 @@ import type { BulkItemActionInput, Item, ItemRecurrence, ItemStatus } from '@doi
 import { STATUS_LABELS, toLocalDateKey } from '@doit/core'
 import { bulkUpdateItems, createItem, useItems } from '@/hooks/use-items'
 import { useFolders } from '@/hooks/use-folders'
+import { usePreferences } from '@/hooks/use-preferences'
 import { useUI } from '@/store/ui'
 import { useToast } from '@/components/ui/toast'
 import { PRIORITY_CONFIG, type Priority } from './priority-select'
@@ -526,6 +527,16 @@ function ItemContextMenuContent({
   allTargets: Item[]
 }) {
   const { closeContextMenu, setSingleSelection } = useUI()
+  const { prefs, update } = usePreferences()
+  const isPinned = targetItem.complexity === 'note' && prefs.pinnedNoteIds?.includes(targetItem.id)
+
+  function togglePinned() {
+    const next = isPinned
+      ? (prefs.pinnedNoteIds ?? []).filter((id) => id !== targetItem.id)
+      : [targetItem.id, ...(prefs.pinnedNoteIds ?? [])]
+    update({ pinnedNoteIds: next })
+    closeContextMenu()
+  }
   const { folders } = useFolders()
   const { toast } = useToast()
   const [sub, setSub] = useState<Sub>(null)
@@ -734,6 +745,13 @@ function ItemContextMenuContent({
       <div className="py-1 border-t border-ui-border-soft">
         <MenuRow icon={<IconFolder />} label="Mover para pasta" onClick={() => setSub('folder')} />
         <MenuRow icon={<IconEdit />} label="Editar tags" onClick={openEdit} />
+        {targetItem.complexity === 'note' && (
+          <MenuRow 
+            icon={<span className="text-[14px]" style={{ color: isPinned ? '#B47410' : 'inherit' }}>★</span>} 
+            label={isPinned ? 'Remover destaque' : 'Destacar'} 
+            onClick={togglePinned} 
+          />
+        )}
         <MenuRow icon={<IconCheck />} label="Prioridade" onClick={() => setSub('priority')} />
       </div>
       

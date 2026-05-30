@@ -237,6 +237,16 @@ export function CalendarEventCapture() {
   const [calendarId, setCalendarId] = useState(resolveDefaultCalendar(calendars, preferredCalendarId))
   const [saving, setSaving] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const update = () => setIsDesktop(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  const isExpanded = expanded || isDesktop
   const swipeHandlers = createCaptureSwipeHandlers({
     mode: 'event',
     onExpand: () => setExpanded(true),
@@ -351,9 +361,9 @@ export function CalendarEventCapture() {
       >
         <form
           onSubmit={handleSubmit}
-          className={`flex flex-col sm:max-h-none ${expanded ? 'max-h-[calc(100dvh-1rem)]' : ''}`}
+          className={`flex flex-col sm:max-h-none ${isExpanded ? 'max-h-[calc(100dvh-1rem)]' : ''}`}
         >
-          {!expanded ? (
+          {!isExpanded ? (
             <div className="w-full">
               <button
                 type="button"
@@ -417,7 +427,7 @@ export function CalendarEventCapture() {
                   </svg>
                 </button>
               </div>
-        <div className={`${expanded ? 'block' : 'hidden sm:block'} min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-[14px] text-navy-700`}>
+        <div className={`${isExpanded ? 'block' : 'hidden sm:block'} min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-[14px] text-navy-700`}>
           <label className="block">
             <span className="mb-2 block font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">
               Evento

@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
 import { useItems, updateItem, bulkUpdateItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
@@ -97,6 +96,7 @@ export default function TodayFocusedPage() {
   const today = toLocalDateKey()
   // ID 040: dia selecionado no calendário lateral (padrão = hoje).
   const [selectedDay, setSelectedDay] = useState(today)
+  const [currentView, setCurrentView] = useState<'hoje' | 'inbox' | 'upcoming'>('hoje')
   // ID 053: filtro por tag da lista atual.
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const isToday = selectedDay === today
@@ -193,17 +193,26 @@ export default function TodayFocusedPage() {
     return events.filter(e => e.start.startsWith(selectedDay)).sort((a, b) => a.start.localeCompare(b.start))
   }, [isToday, agendaEvents, events, selectedDay])
 
-  // ID 053: tags presentes na lista atualmente exibida (para servir de filtro).
-  const tagsInList = useMemo(() => {
-    const set = new Set<string>()
-    for (const it of dayItems) for (const t of it.tags) set.add(t)
-    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
-  }, [dayItems])
+
 
   const visibleItems = useMemo(
     () => (activeTag ? dayItems.filter(i => i.tags.includes(activeTag)) : dayItems),
     [dayItems, activeTag],
   )
+
+  const inboxItems = useMemo(() => items.filter((i) => i.status === 'inbox'), [items])
+  const upcomingItems = useMemo(() => items.filter((i) => i.dueDate && i.dueDate > today && i.status !== 'done').sort((a,b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')), [items, today])
+
+  // ID 053: tags presentes na lista atualmente exibida (para servir de filtro).
+  const tagsInList = useMemo(() => {
+    const set = new Set<string>()
+    const baseList = currentView === 'inbox' ? inboxItems : currentView === 'upcoming' ? upcomingItems : dayItems
+    for (const it of baseList) for (const t of it.tags) set.add(t)
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }, [dayItems, inboxItems, upcomingItems, currentView])
+
+  const displayedItems = currentView === 'inbox' ? (activeTag ? inboxItems.filter(i => i.tags.includes(activeTag)) : inboxItems) : currentView === 'upcoming' ? (activeTag ? upcomingItems.filter(i => i.tags.includes(activeTag)) : upcomingItems) : visibleItems;
+  const displayedEvents = currentView === 'hoje' ? dayEvents : [];
 
   // Mini-calendário (mês atual, início na segunda, dias com conteúdo marcados).
   const datesWithContent = useMemo(() => {
@@ -356,7 +365,9 @@ export default function TodayFocusedPage() {
     : new Date(selectedDay + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
   const headingLabel = isToday ? 'Hoje' : new Date(selectedDay + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 
-  const listEmpty = dayEvents.length === 0 && visibleItems.length === 0
+  const listEmpty = displayedItems.length === 0 && displayedEvents.length === 0
+  const currentHeading = currentView === 'inbox' ? 'Inbox' : currentView === 'upcoming' ? 'Próximos' : headingLabel
+  const currentSub = currentView === 'inbox' ? 'Itens não processados' : currentView === 'upcoming' ? 'Tarefas futuras' : selectedLabel
 
   return (
     <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
@@ -364,7 +375,7 @@ export default function TodayFocusedPage() {
         <aside className="sidebar hidden lg:grid">
           <div className="month-top">
             <b>{now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</b>
-            <span>{isToday ? 'Hoje' : headingLabel}</span>
+            <span>{currentView === 'hoje' ? (isToday ? 'Hoje' : headingLabel) : currentHeading}</span>
           </div>
 
           <div className="calendar">
@@ -391,25 +402,25 @@ export default function TodayFocusedPage() {
 
           {/* ID 053: entradas principais Inbox / Hoje / Próximos. */}
           <nav className="sidebar-list">
-            <Link href="/inbox" className="side-row cursor-pointer">
+            <button type="button" onClick={() => { setCurrentView('inbox'); setActiveTag(null); }} className={`side-row cursor-pointer${currentView === 'inbox' ? ' active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 5h14v14H5z"/></svg>
               <span>Inbox</span>
               <span className="count">{inboxCount}</span>
-            </Link>
+            </button>
             <button
               type="button"
               onClick={() => selectDay(today)}
-              className={`side-row cursor-pointer${isToday ? ' active' : ''}`}
+              className={`side-row cursor-pointer${isToday && currentView === 'hoje' ? ' active' : ''}`}
             >
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
               <span>Hoje</span>
               <span className="count">{todayCount}</span>
             </button>
-            <Link href="/upcoming" className="side-row cursor-pointer">
+            <button type="button" onClick={() => { setCurrentView('upcoming'); setActiveTag(null); }} className={`side-row cursor-pointer${currentView === 'upcoming' ? ' active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
               <span>Próximos</span>
               <span className="count">{upcomingCount}</span>
-            </Link>
+            </button>
           </nav>
 
           {/* ID 053: tags presentes na lista atual, como filtro. */}
@@ -435,11 +446,11 @@ export default function TodayFocusedPage() {
         <section className="center">
           <div className="center-head">
             <div className="center-title-inline">
-              <h1>{headingLabel}</h1>
-              <span>{selectedLabel}</span>
+              <h1>{currentHeading}</h1>
+              <span>{currentSub}</span>
             </div>
             {/* ID 048: só aparece quando há tarefas atrasadas. */}
-            {overdueItems.length > 0 && (
+            {currentView === 'hoje' && overdueItems.length > 0 && (
               <button type="button" className="reschedule-btn" onClick={() => void handleRescheduleOverdue()}>
                 <RecurrenceIcon className="h-4 w-4" />
                 Reagendar para hoje
@@ -451,12 +462,12 @@ export default function TodayFocusedPage() {
             <div className="list">
               {listEmpty ? (
                 <div className="p-8 text-center text-sm text-gray-500 font-medium">
-                  {activeTag ? `Nenhum item com #${activeTag}.` : isToday ? 'Tudo limpo por hoje!' : 'Nada neste dia.'}
+                  {activeTag ? `Nenhum item com #${activeTag}.` : currentView === 'inbox' ? 'Inbox vazia!' : currentView === 'upcoming' ? 'Nada programado.' : isToday ? 'Tudo limpo por hoje!' : 'Nada neste dia.'}
                 </div>
               ) : (
                 <>
-                  {dayEvents.map(renderEvent)}
-                  {visibleItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
+                  {displayedEvents.map(renderEvent)}
+                  {displayedItems.map(item => renderTask(item, item.dueDate ? item.dueDate < today : false))}
                 </>
               )}
             </div>
