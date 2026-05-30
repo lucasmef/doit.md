@@ -12,7 +12,7 @@ import {
   useFolders,
   type FolderTreeNode,
 } from '@/hooks/use-folders'
-import { useItems, bulkUpdateItems } from '@/hooks/use-items'
+import { useItems, bulkUpdateItems, updateItem } from '@/hooks/use-items'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useUI } from '@/store/ui'
 import { useEscapeClose } from '@/hooks/use-escape-close'
@@ -843,6 +843,12 @@ function NotasBrowser() {
     openCapture('note')
   }
 
+  // ID 059: concluir/reabrir tarefa pelo checkbox da lista da pasta (mesmo comportamento
+  // da página Hoje). A pasta cuida de ocultar/manter concluídos conforme sua regra.
+  function toggleItemDone(id: string, next: ItemStatus) {
+    void updateItem(id, { status: next } as never)
+  }
+
   // ----- Ações do menu de contexto de pasta (parametrizadas por folderId) -----
   function openFolderMenu(folderId: string, x: number, y: number) {
     setFolderMenu({ folderId, x, y })
@@ -994,12 +1000,12 @@ function NotasBrowser() {
       <div className="grid grid-cols-1 gap-[18px] lg:grid-cols-[340px_minmax(0,1fr)] lg:items-start">
         {/* Sidebar / folder navigator (desktop) */}
         {/* ID 016: sidebar acompanha o scroll da página (sticky), sem barra de rolagem interna própria. */}
-        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl lg:flex lg:sticky lg:top-[96px] lg:self-start">
+        <aside className="hidden flex-col rounded-[28px] border border-white/78 bg-white/85 shadow-cool-md backdrop-blur-2xl lg:flex lg:sticky lg:top-[96px] lg:self-start">
           {folderNavContent}
         </aside>
 
         {/* Content panel */}
-        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/74 shadow-cool-md backdrop-blur-2xl">
+        <section className="flex flex-col rounded-[28px] border border-white/78 bg-white/85 shadow-cool-md backdrop-blur-2xl">
           {selectedFolder ? (
             <>
               <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
@@ -1379,7 +1385,7 @@ function NotasBrowser() {
                     {allFolderItems.length > 0 ? (
                       <div className="overflow-hidden rounded-[22px] border border-white/62 bg-white/50">
                         {allFolderItems.map((item) => (
-                          <ContentRow key={item.id} item={item} onOpen={setSingleSelection} />
+                          <ContentRow key={item.id} item={item} onOpen={setSingleSelection} onToggle={toggleItemDone} />
                         ))}
                       </div>
                     ) : null}
@@ -1417,7 +1423,7 @@ function NotasBrowser() {
               <div className="border-b border-navy-900/[0.07] bg-[radial-gradient(560px_260px_at_100%_0%,rgba(47,107,255,.16),transparent_68%),rgba(255,255,255,.66)] px-5 pb-4 pt-5 lg:px-6">
                 <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.08em] text-navy-500">Notas</div>
                 <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3">
-                  <h1 className="text-[34px] font-black leading-none -tracking-[.05em] text-navy-900 lg:text-[42px]">Pastas</h1>
+                  <h1 className="text-[28px] font-black leading-none -tracking-[.05em] text-navy-900">Pastas</h1>
                   <button
                     type="button"
                     onClick={handleNewFolder}
@@ -1426,7 +1432,6 @@ function NotasBrowser() {
                     Nova pasta
                   </button>
                 </div>
-                <p className="mt-2 max-w-xl text-[13px] text-navy-500">Escolha uma pasta para ver suas notas, tarefas e referências.</p>
               </div>
               <div className="p-4 lg:p-5">
                 {pinnedFolders.length > 0 || pinnedNotes.length > 0 ? (
