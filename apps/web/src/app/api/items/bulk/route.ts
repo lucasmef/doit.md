@@ -178,6 +178,8 @@ function buildPatch(current: Record<string, unknown>, body: BulkItemActionInput,
   const set: Record<string, unknown> = { ...patch, updatedAt: now }
   if (patch.status === 'archived') set.deletedAt = now
   if (patch.status && patch.status !== 'archived') unset.deletedAt = ''
+  // Reabrir um item (status != done) desfaz o "Limpar concluídos" (ID 036).
+  if (patch.status && patch.status !== 'done') unset.clearedAt = ''
 
   return { set, unset, versionPatch: patch }
 }

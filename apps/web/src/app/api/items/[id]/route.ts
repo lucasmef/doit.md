@@ -191,6 +191,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
           ...patch,
           ...(merged.complexity === 'note' ? { title: merged.title } : {}),
           ...(patch.status && patch.status !== 'archived' ? { deletedAt: null } : {}),
+          // Reabrir um item desfaz o "Limpar concluídos" (ID 036).
+          ...(patch.status && patch.status !== 'done' ? { clearedAt: null } : {}),
           updatedAt: new Date().toISOString(),
         },
         ...(merged.complexity === 'note' || Object.keys(unset).length > 0

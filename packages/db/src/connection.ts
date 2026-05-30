@@ -167,6 +167,7 @@ function isCreateTableStatement(sql: string): boolean {
 async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'recurrence', 'TEXT')
   await ensureColumn(db, 'items', 'dueTime', 'TEXT')
+  await ensureColumn(db, 'items', 'clearedAt', 'TEXT')
   await ensureColumn(db, 'items', 'folderId', 'TEXT')
   await ensureColumn(db, 'items', 'order', 'INTEGER')
   await ensureColumn(db, 'folders', 'viewMode', "TEXT NOT NULL DEFAULT 'list'")
@@ -214,6 +215,7 @@ const sqliteSchema = [
     recurrence TEXT,
     startDate TEXT,
     scheduledDate TEXT,
+    clearedAt TEXT,
     folderId TEXT,
     areaId TEXT,
     parentId TEXT,
@@ -435,6 +437,7 @@ const postgresIdentifiers = [
   'expirationTime',
   'deviceLabel',
   'scheduledDate',
+  'clearedAt',
   'recurrence',
   'lastSeenAt',
   'lastUsedAt',

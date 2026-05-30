@@ -38,6 +38,7 @@ const ITEM_PATCH_FIELDS = new Set<keyof UpdateItemInput>([
   'recurrence',
   'startDate',
   'scheduledDate',
+  'clearedAt',
   'folderId',
   'projectId',
   'areaId',
@@ -135,6 +136,18 @@ export function validateItemPatchInput(input: UpdateItemInput) {
       (typeof value !== 'string' || !isDateKey(value))
     ) {
       return `${field} is invalid`
+    }
+  }
+
+  if (hasOwn(input, 'clearedAt')) {
+    const clearedAt = (input as Record<string, unknown>).clearedAt
+    if (
+      clearedAt !== null &&
+      clearedAt !== undefined &&
+      clearedAt !== '' &&
+      typeof clearedAt !== 'string'
+    ) {
+      return 'clearedAt must be a string'
     }
   }
 

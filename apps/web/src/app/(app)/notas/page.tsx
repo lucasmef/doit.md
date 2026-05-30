@@ -739,7 +739,8 @@ function NotasBrowser() {
       return items.filter((it) => {
         if (it.folderId !== selectedId) return false
         if (it.status === 'archived') return false
-        if (it.status === 'done' && isHideCompleted) return false
+        // Concluídos somem se a pasta os oculta OU se foram "limpos" individualmente (ID 036).
+        if (it.status === 'done' && (isHideCompleted || it.clearedAt)) return false
         return true
       })
     },
@@ -753,7 +754,7 @@ function NotasBrowser() {
       if (item.status === 'archived') continue
       const f = folderById.get(item.folderId)
       const hideComp = f ? f.hideCompleted !== false : true
-      if (item.status === 'done' && hideComp) continue
+      if (item.status === 'done' && (hideComp || item.clearedAt)) continue
       const list = map.get(item.folderId) ?? []
       list.push(item)
       map.set(item.folderId, list)
@@ -1100,7 +1101,8 @@ function NotasBrowser() {
                                 if (completedItems.length > 0) {
                                   await bulkUpdateItems({
                                     ids: completedItems.map((it) => it.id),
-                                    patch: { folderId: '' }
+                                    // Oculta da pasta sem removê-la: mantém folderId e status done (ID 036).
+                                    patch: { clearedAt: new Date().toISOString() }
                                   })
                                 }
                                 setHeaderMenuOpen(false)
@@ -1490,11 +1492,14 @@ function NotasBrowser() {
           }}
           onClearCompleted={async () => {
             const folderId = folderMenu.folderId
-            const completedItems = items.filter((it) => it.folderId === folderId && it.status === 'done')
+            const completedItems = items.filter(
+              (it) => it.folderId === folderId && it.status === 'done' && !it.clearedAt,
+            )
             if (completedItems.length > 0) {
               await bulkUpdateItems({
                 ids: completedItems.map((it) => it.id),
-                patch: { folderId: '' }
+                // Oculta da pasta sem removê-la: mantém folderId e status done (ID 036).
+                patch: { clearedAt: new Date().toISOString() },
               })
             }
             setFolderMenu(null)
