@@ -1006,25 +1006,26 @@ export function EventSheet({
     >
       <form
         onSubmit={handleSubmit}
-        className="flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-2xl border border-ui-border bg-surface-panel shadow-cool-lg sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-2xl"
+        className="flex max-h-[calc(100dvh-0.75rem)] w-full flex-col overflow-hidden rounded-t-[24px] border border-white/70 bg-white/[0.92] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px] sm:max-h-[calc(100dvh-2rem)] sm:max-w-md sm:rounded-[24px]"
       >
-        <div className="shrink-0 border-b border-ui-border-soft px-4 pb-3 pt-4">
-          <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
+        <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.07] px-5 pb-3.5 pt-4">
+          <div className="h-[38px] w-[38px] shrink-0 rounded-[14px] bg-[linear-gradient(135deg,#28C7B7,#1AAED7)] shadow-[0_10px_22px_-14px_rgba(40,199,183,.85)]" />
+          <div className="min-w-0 flex-1">
+            <b className="block truncate text-[15px] font-[850] text-navy-900">Editar evento</b>
+            <span className="mt-1 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
               {event.source === 'google' ? 'Google Calendar' : 'Evento'}
-            </p>
-            <h2 className="mt-1 text-xl font-bold text-navy-900">Editar evento</h2>
+            </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full px-2 py-1 text-lg leading-none text-navy-300 hover:bg-surface-soft hover:text-navy-700"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-[11px] bg-navy-900/[0.055] text-navy-500 transition-colors hover:bg-navy-900/[0.08] hover:text-navy-900"
             aria-label="Fechar evento"
           >
-            x
+            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
           </button>
-          </div>
         </div>
 
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-[14px] text-navy-700">
@@ -1118,12 +1119,12 @@ export function EventSheet({
           </label>
         </div>
 
-        <div className="flex shrink-0 flex-wrap justify-between gap-2 border-t border-ui-border-soft bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-navy-900/[0.07] bg-white/[0.62] px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={handleDelete}
             disabled={saving || deleting}
-            className="h-10 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
+            className="h-10 rounded-full bg-[rgba(240,68,56,0.08)] px-4 text-sm font-bold text-[#F04438] transition-colors hover:brightness-95 disabled:opacity-50"
           >
             {deleting ? 'Excluindo...' : 'Excluir'}
           </button>
@@ -1132,14 +1133,14 @@ export function EventSheet({
               type="button"
               onClick={onClose}
               disabled={saving || deleting}
-              className="h-10 rounded-lg border border-ui-border px-3 text-sm font-semibold text-navy-500 transition-colors hover:bg-surface-soft disabled:opacity-50"
+              className="h-10 rounded-full bg-navy-900/[0.055] px-4 text-sm font-bold text-navy-500 transition-colors hover:bg-white hover:text-navy-700 disabled:opacity-50"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving || deleting || !title.trim()}
-              className="h-10 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:opacity-50"
+              className="h-10 rounded-full bg-[linear-gradient(135deg,#28C7B7,#1AAED7)] px-4 text-sm font-extrabold text-white transition-colors hover:brightness-95 disabled:opacity-50"
             >
               {saving ? 'Salvando...' : 'Salvar'}
             </button>

@@ -370,6 +370,7 @@ export function Topbar() {
             {open && !mobileSearchOpen && debounced.length > 1 && (
               <SearchResults
                 items={items}
+                query={debounced}
                 isSearching={isSearching}
                 onSelect={(item) => {
                   setOpen(false)
@@ -443,6 +444,7 @@ export function Topbar() {
           {open && mobileSearchOpen && debounced.length > 1 && (
             <SearchResults
               items={items}
+              query={debounced}
               isSearching={isSearching}
               onSelect={(item) => {
                 setOpen(false)
@@ -547,12 +549,43 @@ export function Topbar() {
   )
 }
 
+// ID 051: trecho do conteudo (contentMd) ao redor do termo buscado, com leve limpeza
+// de marcacao Markdown. Retorna os pedacos antes/match/depois para destacar o termo.
+function buildContentSnippet(
+  content: string | undefined | null,
+  query: string,
+): { before: string; match: string; after: string } | null {
+  if (!content) return null
+  const cleaned = content
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/[#>*_`~[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!cleaned) return null
+  const needle = query.trim().toLocaleLowerCase('pt-BR')
+  if (!needle) return null
+  const index = cleaned.toLocaleLowerCase('pt-BR').indexOf(needle)
+  if (index === -1) return null
+  const radius = 42
+  const start = Math.max(0, index - radius)
+  const end = Math.min(cleaned.length, index + needle.length + radius)
+  const prefix = start > 0 ? '…' : ''
+  const suffix = end < cleaned.length ? '…' : ''
+  return {
+    before: prefix + cleaned.slice(start, index),
+    match: cleaned.slice(index, index + needle.length),
+    after: cleaned.slice(index + needle.length, end) + suffix,
+  }
+}
+
 function SearchResults({
   items,
+  query,
   isSearching,
   onSelect,
 }: {
   items: Item[]
+  query: string
   isSearching: boolean
   onSelect: (item: Item) => void
 }) {
@@ -564,27 +597,39 @@ function SearchResults({
         <div className="p-4 text-center text-sm text-navy-500">Nenhum item encontrado.</div>
       ) : (
         <div className="space-y-1">
-          {items.map((item) => (
-            <button
-              key={item.id}
-              data-search-result-id={item.id}
-              data-search-result-type={item.complexity}
-              onPointerDown={(event) => {
-                if (event.pointerType === 'mouse' && event.button !== 0) return
-                event.preventDefault()
-                onSelect(item)
-              }}
-              onClick={() => onSelect(item)}
-              className="w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-soft"
-            >
-              <span className="block truncate font-medium text-navy-900">{item.title}</span>
-              {item.dueDate && (
-                <span className="mt-0.5 block font-mono text-[11px] text-navy-500">
-                  {formatSearchDate(item.dueDate)}
-                </span>
-              )}
-            </button>
-          ))}
+          {items.map((item) => {
+            const snippet = buildContentSnippet(item.contentMd, query)
+            return (
+              <button
+                key={item.id}
+                data-search-result-id={item.id}
+                data-search-result-type={item.complexity}
+                onPointerDown={(event) => {
+                  if (event.pointerType === 'mouse' && event.button !== 0) return
+                  event.preventDefault()
+                  onSelect(item)
+                }}
+                onClick={() => onSelect(item)}
+                className="w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors hover:bg-surface-soft"
+              >
+                <span className="block truncate font-medium text-navy-900">{item.title}</span>
+                {snippet && (
+                  <span className="mt-0.5 block truncate text-[12px] leading-4 text-navy-500">
+                    {snippet.before}
+                    <mark className="rounded-[3px] bg-brand-100 px-0.5 font-semibold text-brand-700">
+                      {snippet.match}
+                    </mark>
+                    {snippet.after}
+                  </span>
+                )}
+                {item.dueDate && (
+                  <span className="mt-0.5 block font-mono text-[11px] text-navy-500">
+                    {formatSearchDate(item.dueDate)}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
     </div>

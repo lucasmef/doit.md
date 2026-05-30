@@ -128,11 +128,11 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
         >
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-md rounded-t-xl border border-ui-border bg-white shadow-cool-lg sm:rounded-xl"
+            className="w-full max-w-md overflow-hidden rounded-t-[24px] border border-white/70 bg-white/[0.92] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px] sm:rounded-[24px]"
           >
-            <div className="px-5 pb-3 pt-5">
+            <div className="px-5 pb-4 pt-5">
               {state.options.title && (
-                <h2 className="mb-1 text-[15px] font-semibold text-navy-900">{state.options.title}</h2>
+                <h2 className="mb-1 text-[15px] font-[850] text-navy-900">{state.options.title}</h2>
               )}
               <p className="text-[14px] leading-5 text-navy-700 whitespace-pre-line">
                 {state.options.message}
@@ -143,24 +143,24 @@ export function DialogProvider({ children }: { children: React.ReactNode }) {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={state.options.placeholder}
-                  className="mt-3 h-10 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-3 text-[16px] text-navy-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100 sm:h-9 sm:text-[14px]"
+                  className="mt-3 h-11 w-full rounded-[14px] border border-navy-900/[0.08] bg-white/[0.88] px-3.5 text-[16px] text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] focus:ring-2 focus:ring-brand-100 sm:h-10 sm:text-[14px]"
                 />
               )}
             </div>
-            <div className="flex items-center justify-end gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+            <div className="flex items-center justify-end gap-2 border-t border-navy-900/[0.07] bg-white/[0.62] px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
               <button
                 type="button"
                 onClick={() => close(state.kind === 'confirm' ? false : null)}
-                className="h-10 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700 sm:h-8"
+                className="h-9 rounded-full bg-navy-900/[0.055] px-4 text-[12px] font-bold text-navy-500 transition-colors hover:bg-white hover:text-navy-700"
               >
                 {state.options.cancelLabel}
               </button>
               <button
                 type="submit"
-                className={`h-10 rounded-[10px] px-3 text-[12px] font-semibold text-white shadow-sm transition-colors sm:h-8 ${
+                className={`h-9 rounded-full px-4 text-[12px] font-extrabold text-white shadow-sm transition-colors ${
                   state.kind === 'confirm' && state.options.variant === 'danger'
-                    ? 'bg-red-600 hover:bg-red-700'
-                    : 'bg-brand-600 hover:bg-brand-700'
+                    ? 'bg-[linear-gradient(135deg,#F04438,#FF6FAE)] hover:brightness-95'
+                    : 'bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] hover:brightness-95'
                 }`}
               >
                 {state.options.confirmLabel}

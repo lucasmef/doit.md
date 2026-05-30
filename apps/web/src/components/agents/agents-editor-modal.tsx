@@ -59,32 +59,40 @@ export function AgentsEditorModal({
         if (event.target === event.currentTarget && !saving) onClose()
       }}
     >
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-xl border border-ui-border bg-white shadow-cool-lg sm:rounded-xl">
-        <div className="border-b border-ui-border-soft px-5 py-4">
-          <h2 className="text-[15px] font-semibold text-navy-900">{title}</h2>
-          <p className="mt-0.5 text-xs text-navy-400">
-            Este arquivo sera sincronizado como nota e baixado pelo CLI como AGENTS.local.md,
-            complementando o AGENTS.md padrao do app.
-          </p>
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-t-[24px] border border-white/70 bg-white/[0.92] shadow-[0_34px_90px_-42px_rgba(15,35,66,.58),0_10px_26px_rgba(15,35,66,.10),0_1px_0_rgba(255,255,255,.76)_inset] backdrop-blur-[24px] sm:rounded-[24px]">
+        <div className="flex shrink-0 items-center gap-3 border-b border-navy-900/[0.07] px-5 pb-3.5 pt-4">
+          <div className="grid h-[38px] w-[38px] shrink-0 place-items-center rounded-[14px] bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] font-mono text-[11px] font-bold text-white shadow-[0_10px_22px_-14px_rgba(47,107,255,.85)]">
+            AG
+          </div>
+          <div className="min-w-0 flex-1">
+            <b className="block truncate text-[15px] font-[850] text-navy-900">{title}</b>
+            <span className="mt-1 block font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-navy-500">
+              AGENTS.md
+            </span>
+          </div>
         </div>
-        <div className="min-h-0 flex-1 px-5 py-4">
+        <p className="shrink-0 px-5 pb-1 pt-3 text-xs text-navy-400">
+          Este arquivo sera sincronizado como nota e baixado pelo CLI como AGENTS.local.md,
+          complementando o AGENTS.md padrao do app.
+        </p>
+        <div className="min-h-0 flex-1 px-5 py-3">
           {isLoading ? (
-            <div className="h-56 animate-pulse rounded-lg bg-slate-100" />
+            <div className="h-56 animate-pulse rounded-[14px] bg-slate-100" />
           ) : (
             <textarea
               value={value}
               onChange={(event) => setValue(event.target.value)}
               spellCheck={false}
-              className="h-80 w-full resize-none rounded-[10px] border border-ui-border-soft bg-surface-soft p-3 font-mono text-[13px] leading-5 text-navy-900 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+              className="h-80 w-full resize-none rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] p-3.5 font-mono text-[13px] leading-5 text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] focus:ring-2 focus:ring-brand-100"
             />
           )}
         </div>
-        <div className="flex items-center justify-end gap-2 border-t border-ui-border bg-surface-soft px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+        <div className="flex items-center justify-end gap-2 border-t border-navy-900/[0.07] bg-white/[0.62] px-5 py-3.5 pb-[calc(0.875rem+env(safe-area-inset-bottom))]">
           <button
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="h-10 rounded-[10px] px-3 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-slate-700 disabled:opacity-50 sm:h-8"
+            className="h-9 rounded-full bg-navy-900/[0.055] px-4 text-[12px] font-bold text-navy-500 transition-colors hover:bg-white hover:text-navy-700 disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -92,7 +100,7 @@ export function AgentsEditorModal({
             type="button"
             onClick={() => void handleSave()}
             disabled={saving || isLoading}
-            className="h-10 rounded-[10px] bg-brand-600 px-3 text-[12px] font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50 sm:h-8"
+            className="h-9 rounded-full bg-[linear-gradient(135deg,#2F6BFF,#7B5BFF)] px-4 text-[12px] font-extrabold text-white shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
           >
             {saving ? 'Salvando...' : 'Salvar'}
           </button>

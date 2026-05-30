@@ -166,8 +166,10 @@
 .today-v3-layout .board {
   min-height: 0;
   border-radius: 30px;
-  background: var(--paper);
-  border: 1px solid rgba(255,255,255,.86);
+  /* ID 050: fundo translúcido sobre o wallpaper do app (coerente com o calendário). */
+  background: rgba(255,255,255,.62);
+  backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.72);
   box-shadow: var(--shadow);
   overflow: hidden;
   display: grid;
@@ -252,6 +254,21 @@
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 750;
+  /* ID 040: dias são botões clicáveis (filtram a lista). */
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.today-v3-layout .day:hover {
+  background: rgba(47,107,255,.10);
+}
+
+/* Dia de hoje quando outro dia está selecionado: anel sutil para referência. */
+.today-v3-layout .day.today {
+  color: var(--blue);
+  box-shadow: inset 0 0 0 1.5px rgba(47,107,255,.45);
 }
 
 .today-v3-layout .day.out {
@@ -364,7 +381,8 @@
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  background: #fff;
+  /* ID 050: deixa o fundo translúcido do board aparecer (sem branco chapado). */
+  background: rgba(255,255,255,.30);
 }
 
 .today-v3-layout .center-head {
@@ -996,5 +1014,103 @@
 .today-v3-layout .row.prio-2 { box-shadow: inset 3px 0 0 0 #F5A524; }
 .today-v3-layout .row.prio-3 { box-shadow: inset 3px 0 0 0 #EAB308; }
 .today-v3-layout .row.prio-0 { box-shadow: inset 3px 0 0 0 rgba(15,35,66,.10); }
+
+/* ============================================================
+   ID 053 / 040 / 048 / 049 - Painel (Inbox/Hoje/Próximos + tags),
+   chips de tags, ícone de recorrência e botão "Reagendar para hoje".
+   ============================================================ */
+
+/* side-row agora é <a>/<button>: reset para herdar o visual da lista. */
+.today-v3-layout .sidebar-list .side-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.today-v3-layout .sidebar-list .side-row:hover {
+  background: rgba(15,35,66,.04);
+}
+
+.today-v3-layout .sidebar-list .side-row.active:hover {
+  background: rgba(47,107,255,.14);
+}
+
+.today-v3-layout .tags-filter {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.today-v3-layout .tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.today-v3-layout .tag-chip {
+  border: 1px solid rgba(15,35,66,.10);
+  background: rgba(255,255,255,.58);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--gray);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.today-v3-layout .tag-chip:hover {
+  color: var(--navy);
+  border-color: rgba(47,107,255,.30);
+}
+
+.today-v3-layout .tag-chip.active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+}
+
+/* ID 049: ícone de recorrência ao lado do título. */
+.today-v3-layout .recur-icon {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  margin-right: 6px;
+  vertical-align: -2px;
+  display: inline-block;
+  stroke: var(--blue);
+  opacity: .85;
+}
+
+/* ID 048: botão "Reagendar para hoje" (só aparece com atrasadas). */
+.today-v3-layout .reschedule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 34px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 820;
+  background: linear-gradient(135deg, var(--amber), #EC8B12);
+  box-shadow: 0 10px 24px -16px rgba(245,165,36,.9);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.today-v3-layout .reschedule-btn:hover {
+  filter: brightness(1.03);
+}
+
+.today-v3-layout .reschedule-btn svg {
+  stroke: #fff;
+}
 
 

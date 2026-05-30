@@ -26,6 +26,17 @@ function formatDue(item: Item): string {
   return date ? `${date} ${item.dueTime}` : item.dueTime
 }
 
+function IconRecurrence({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+      <path d="M17 2.5 20 5.5 17 8.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 5.5H8.5A4.5 4.5 0 0 0 4 10" strokeLinecap="round" />
+      <path d="M7 21.5 4 18.5 7 15.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 18.5h11.5A4.5 4.5 0 0 0 20 14" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IconNoteFilled({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -246,11 +257,15 @@ export function ItemRow({
 
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
-          className={`text-[14px] leading-5 font-normal truncate transition-all ${
+          className={`flex items-center gap-1.5 text-[14px] leading-5 font-normal truncate transition-all ${
             displayDone ? 'line-through text-navy-500' : 'text-navy-900'
           }`}
         >
-          {item.title}
+          {/* ID 049: ícone de recorrência para identificar tarefas recorrentes sem abrir. */}
+          {item.recurrence && (
+            <IconRecurrence className="h-3.5 w-3.5 shrink-0 text-brand-500" />
+          )}
+          <span className="truncate">{item.title}</span>
         </p>
 
         <div className="flex items-center gap-1.5">

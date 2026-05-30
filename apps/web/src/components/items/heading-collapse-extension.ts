@@ -11,6 +11,7 @@ type CollapseState = {
 type ToggleMeta = {
   toggle?: number
   action?: 'collapseAll' | 'expandAll'
+  setCollapsed?: number[]
 }
 
 const PLUGIN_KEY = new PluginKey<CollapseState>('doitHeadingCollapse')
@@ -19,6 +20,16 @@ function getHeadingPositions(doc: PMNode): Set<number> {
   const positions = new Set<number>()
   doc.forEach((node, offset) => {
     if (node.type.name === 'heading') positions.add(offset)
+  })
+  return positions
+}
+
+// ID 052: posicoes dos titulos na ordem do documento, para mapear estado recolhido
+// para indices ordinais estaveis (persistencia por nota, resistente a deslocamentos).
+function getOrderedHeadingPositions(doc: PMNode): number[] {
+  const positions: number[] = []
+  doc.forEach((node, offset) => {
+    if (node.type.name === 'heading') positions.push(offset)
   })
   return positions
 }
@@ -97,6 +108,12 @@ export const HeadingCollapse = Extension.create({
             if (meta?.action === 'collapseAll') {
               return { collapsed: getHeadingPositions(tr.doc) }
             }
+            if (meta?.setCollapsed !== undefined) {
+              const valid = meta.setCollapsed.filter(
+                (pos) => pos >= 0 && pos <= tr.doc.content.size,
+              )
+              return { collapsed: new Set(valid) }
+            }
             if (meta?.toggle !== undefined) {
               if (next.has(meta.toggle)) next.delete(meta.toggle)
               else next.add(meta.toggle)
@@ -126,5 +143,29 @@ export function setAllHeadingsCollapsed(editor: Editor, collapsed: boolean) {
     editor.state.tr.setMeta(PLUGIN_KEY, {
       action: collapsed ? 'collapseAll' : 'expandAll',
     } satisfies ToggleMeta),
+  )
+}
+
+// ID 052: estado de expansao serializado como indices ordinais dos titulos recolhidos.
+export function getCollapsedHeadingIndices(editor: Editor): number[] {
+  const state = PLUGIN_KEY.getState(editor.state)
+  if (!state) return []
+  const ordered = getOrderedHeadingPositions(editor.state.doc)
+  const indices: number[] = []
+  state.collapsed.forEach((pos) => {
+    const index = ordered.indexOf(pos)
+    if (index >= 0) indices.push(index)
+  })
+  return indices.sort((a, b) => a - b)
+}
+
+// ID 052: restaura o estado recolhido a partir de indices ordinais (ignora fora do range).
+export function applyCollapsedHeadingIndices(editor: Editor, indices: number[]) {
+  const ordered = getOrderedHeadingPositions(editor.state.doc)
+  const positions = indices
+    .map((index) => ordered[index])
+    .filter((pos): pos is number => pos !== undefined)
+  editor.view.dispatch(
+    editor.state.tr.setMeta(PLUGIN_KEY, { setCollapsed: positions } satisfies ToggleMeta),
   )
 }

@@ -17,6 +17,8 @@ import { TableCell } from '@tiptap/extension-table-cell'
 import { useDialog } from '@/components/ui/dialog'
 import { BlockReorderHandle } from './block-reorder-extension'
 import {
+  applyCollapsedHeadingIndices,
+  getCollapsedHeadingIndices,
   getHeadingCollapseSummary,
   HeadingCollapse,
   setAllHeadingsCollapsed,
@@ -335,6 +337,51 @@ export function MarkdownEditor({
       contentType: 'markdown',
     })
   }, [editor, value])
+
+  // ID 052: restaura o estado de expansao/retracao dos topicos da nota apos o conteudo
+  // carregar (TipTap aplica setContent de forma assincrona), uma vez por itemId.
+  const collapseRestoredRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!editor || !itemId) return
+    if (collapseRestoredRef.current === itemId) return
+    if (getHeadingCollapseSummary(editor).total === 0) return
+    collapseRestoredRef.current = itemId
+    try {
+      const raw = window.localStorage.getItem(`doit-note-collapse:${itemId}`)
+      if (!raw) return
+      const indices = JSON.parse(raw) as unknown
+      if (Array.isArray(indices) && indices.length > 0) {
+        applyCollapsedHeadingIndices(editor, indices as number[])
+      }
+    } catch {
+      // localStorage indisponivel ou JSON invalido: ignora
+    }
+  }, [editor, itemId, value])
+
+  // ID 052: persiste o estado de expansao por nota a cada transacao (inclui toggles de topico,
+  // que nao disparam onUpdate por nao alterarem o doc).
+  useEffect(() => {
+    if (!editor || !itemId) return
+    const key = `doit-note-collapse:${itemId}`
+    let last = ''
+    const handler = () => {
+      if (collapseRestoredRef.current !== itemId) return
+      const indices = getCollapsedHeadingIndices(editor)
+      const serialized = JSON.stringify(indices)
+      if (serialized === last) return
+      last = serialized
+      try {
+        if (indices.length === 0) window.localStorage.removeItem(key)
+        else window.localStorage.setItem(key, serialized)
+      } catch {
+        // ignora erros de quota/indisponibilidade
+      }
+    }
+    editor.on('transaction', handler)
+    return () => {
+      editor.off('transaction', handler)
+    }
+  }, [editor, itemId])
 
   useEffect(() => {
     if (!editor || !focusAtStart) return
