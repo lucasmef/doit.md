@@ -43,6 +43,9 @@ export type Item = {
   /** Ordem manual definida pelo usuário (modo reordenar). Null/undefined = não ordenado, usa updatedAt. */
   order?: number
 
+  /** Indices ordinais dos titulos recolhidos no editor de nota. */
+  collapsedHeadingIndices?: number[]
+
   createdAt: string
   updatedAt: string
   deletedAt?: string
@@ -89,6 +92,7 @@ export type UpdateItemInput = Partial<
     | 'tags'
     | 'backlinks'
     | 'order'
+    | 'collapsedHeadingIndices'
   >
 >
 

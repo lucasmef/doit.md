@@ -1,0 +1,147 @@
+[
+  {
+    "id": "039",
+    "status": "OK",
+    "evidence": "board=\"255px 777px 350px\" detail=true"
+  },
+  {
+    "id": "063",
+    "status": "OK",
+    "evidence": "cal-today-btn=true"
+  },
+  {
+    "id": "060",
+    "status": "OK",
+    "evidence": "inbox=\"Inbox\" proximos=\"Próximos\" volta=\"Hoje\""
+  },
+  {
+    "id": "062",
+    "status": "Não OK",
+    "evidence": "header \"Editar tarefa\"=false, overlay antigo=false"
+  },
+  {
+    "id": "061",
+    "status": "Não OK",
+    "evidence": "checkbox visível=false, marca concluída=false"
+  },
+  {
+    "id": "056",
+    "status": "OK",
+    "evidence": "done=0(esp 0) aberta=1(>=1) nota=1(>=1)"
+  },
+  {
+    "id": "064",
+    "status": "OK",
+    "evidence": "texto explicativo=false, título \"Pastas\" 28px"
+  },
+  {
+    "id": "044",
+    "status": "OK",
+    "evidence": "bg painel=rgba(255, 255, 255, 0.85)"
+  },
+  {
+    "id": "077",
+    "status": "OK",
+    "evidence": "alta=true media=true baixa=true neutra=true"
+  },
+  {
+    "id": "075",
+    "status": "OK",
+    "evidence": "linha=\"075 evento datado qa-main-1780241534959 8 de jun. 09:00\""
+  },
+  {
+    "id": "059",
+    "status": "OK",
+    "evidence": "concluiu pela lista (some=true)"
+  },
+  {
+    "id": "073",
+    "status": "OK",
+    "evidence": "visível no atraso=true, some depois=true"
+  },
+  {
+    "id": "076",
+    "status": "OK",
+    "evidence": "altura=96px"
+  },
+  {
+    "id": "078",
+    "status": "OK",
+    "evidence": "fechou=true, pasta mantida=\"QA Pasta A qa-main-1780241534959\""
+  },
+  {
+    "id": "079",
+    "status": "OK",
+    "evidence": "salvo no Item=true, persiste no reload=true"
+  },
+  {
+    "id": "080",
+    "status": "OK",
+    "evidence": "margem p=0px, cópia sem linha dupla=true"
+  },
+  {
+    "id": "081",
+    "status": "OK",
+    "evidence": "pref persistida=true, nav desktop=\"Hoje / Dashboard / Calendario / Notas\""
+  },
+  {
+    "id": "074",
+    "status": "OK",
+    "evidence": "esperado=2026-06-01 obtido=2026-06-01 título=\"Validar 074\""
+  },
+  {
+    "id": "067",
+    "status": "OK",
+    "evidence": "\"8\"->time=none, \"8h\"->time=08:00, \"123\"->time=none"
+  },
+  {
+    "id": "068",
+    "status": "OK",
+    "evidence": "\"8\"->date=none, \"123\"->date=none"
+  },
+  {
+    "id": "066",
+    "status": "OK",
+    "evidence": "botão Adicionar visível em lista=true"
+  },
+  {
+    "id": "065",
+    "status": "OK",
+    "evidence": "chip de pasta no quickadd=\"QA Pasta A qa-main-1780241534959\""
+  },
+  {
+    "id": "069",
+    "status": "OK",
+    "evidence": "complexity criado=\"task\" (esperado task)"
+  },
+  {
+    "id": "065",
+    "status": "OK",
+    "evidence": "pasta criada=A"
+  },
+  {
+    "id": "070",
+    "status": "Parcial",
+    "evidence": "kebab aberto=true, ação \"Mover pasta\"=false"
+  },
+  {
+    "id": "071",
+    "status": "Não OK",
+    "evidence": "ação \"Remover data\" presente=false"
+  },
+  {
+    "id": "043",
+    "status": "Não testado",
+    "evidence": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button').filter({ hasText: 'Nota QA destaque' }).first() to be visible\u001b[22m\n"
+  },
+  {
+    "id": "030",
+    "status": "OK",
+    "evidence": "card bg=rgb(255, 255, 255) (alpha=1)"
+  },
+  {
+    "id": "072",
+    "status": "OK",
+    "evidence": "inventário+recomendação na spec=true, prints=26"
+  }
+]

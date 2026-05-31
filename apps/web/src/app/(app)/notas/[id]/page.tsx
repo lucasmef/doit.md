@@ -761,7 +761,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   }, [item?.id, item?.tags])
 
   const persist = useCallback(
-    async (patch: { contentMd?: string }) => {
+    async (patch: UpdateItemInput) => {
       if (!item) return
       setSaveStatus('saving')
       try {
@@ -783,6 +783,14 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
       }, 600)
     },
     [persist],
+  )
+
+  const onCollapsedHeadingsChange = useCallback(
+    (indices: number[]) => {
+      if (!item) return
+      void persist({ collapsedHeadingIndices: indices })
+    },
+    [item, persist],
   )
 
   useEffect(() => {
@@ -911,6 +919,10 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
               attachmentsPortalId="note-editor-attachments"
               focusMode={focusMode}
               onToggleFocus={() => setFocusMode((value) => !value)}
+              collapsedHeadingIndices={
+                Array.isArray(item.collapsedHeadingIndices) ? item.collapsedHeadingIndices : undefined
+              }
+              onCollapsedHeadingIndicesChange={onCollapsedHeadingsChange}
             />
           </div>
         </div>

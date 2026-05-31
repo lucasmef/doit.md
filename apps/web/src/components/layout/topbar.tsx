@@ -7,6 +7,7 @@ import useSWR from 'swr'
 import { useUI } from '@/store/ui'
 import { SignOutButton } from '@/components/auth/sign-out-button'
 import type { Item } from '@doit/types'
+import { usePreferences, type MobileNavItemId } from '@/hooks/use-preferences'
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
@@ -32,6 +33,25 @@ const DESKTOP_NAV_ITEMS = [
   { href: '/calendar', label: 'Calendário', icon: 'calendar', match: ['/calendar'] },
   { href: '/settings', label: 'Ajustes', icon: 'settings', match: ['/settings'] },
 ] as const
+
+type DesktopNavIconKind = (typeof DESKTOP_NAV_ITEMS)[number]['icon']
+type DesktopNavItem = {
+  href: string
+  label: string
+  icon: DesktopNavIconKind
+  match: readonly string[]
+}
+
+const DESKTOP_NAV_BY_PREF_ID: Partial<Record<MobileNavItemId, DesktopNavItem>> = {
+  dashboard: { href: '/dashboard', label: 'Dashboard', icon: 'dashboard', match: ['/dashboard'] },
+  inbox: { href: '/inbox', label: 'Inbox', icon: 'items', match: ['/inbox'] },
+  today: { href: '/today', label: 'Hoje', icon: 'today', match: ['/today'] },
+  upcoming: { href: '/upcoming', label: 'Proximos', icon: 'items', match: ['/upcoming'] },
+  calendar: { href: '/calendar', label: 'Calendario', icon: 'calendar', match: ['/calendar'] },
+  notas: { href: '/notas', label: 'Notas', icon: 'notes', match: ['/notas'] },
+}
+
+const SETTINGS_NAV_ITEM = DESKTOP_NAV_ITEMS.find((item) => item.href === '/settings')!
 
 type MobileIconKind = 'dashboard' | 'today' | 'items' | 'inbox' | 'upcoming' | 'calendar' | 'notes' | 'settings'
 
@@ -143,7 +163,7 @@ function CalendarIcon() {
   )
 }
 
-function NavIcon({ kind }: { kind: (typeof DESKTOP_NAV_ITEMS)[number]['icon'] }) {
+function NavIcon({ kind }: { kind: DesktopNavIconKind }) {
   const common = {
     className: 'h-[15px] w-[15px]',
     fill: 'none',
@@ -218,6 +238,7 @@ export function Topbar() {
   const pathname = usePathname()
   const router = useRouter()
   const { setQuickCaptureOpen, setSelectedItemId } = useUI()
+  const { prefs } = usePreferences()
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [open, setOpen] = useState(false)
@@ -276,6 +297,13 @@ export function Topbar() {
   }, [pathname])
   const profileName = profileData?.profile.name?.trim() || profileData?.profile.email?.trim() || 'Usuario'
   const profileInitial = profileName.slice(0, 1).toLocaleUpperCase('pt-BR')
+  const desktopNavItems = useMemo(() => {
+    const configured = prefs.mobileNav
+      .filter((entry) => entry.visible && entry.id !== 'settings')
+      .map((entry) => DESKTOP_NAV_BY_PREF_ID[entry.id])
+      .filter((entry): entry is DesktopNavItem => Boolean(entry))
+    return [...(configured.length > 0 ? configured : DESKTOP_NAV_ITEMS.filter((item) => item.href !== '/settings')), SETTINGS_NAV_ITEM]
+  }, [prefs.mobileNav])
 
   function isActive(match: readonly string[]) {
     return match.some((href) => pathname === href || pathname.startsWith(`${href}/`))
@@ -297,7 +325,7 @@ export function Topbar() {
         </Link>
 
         <nav className="hidden items-center gap-1 rounded-full border border-white/60 bg-white/55 p-1.5 shadow-cool-sm backdrop-blur-xl lg:inline-flex">
-          {DESKTOP_NAV_ITEMS.map((item) => {
+          {desktopNavItems.map((item) => {
             const active = isActive(item.match)
             return (
               <Link

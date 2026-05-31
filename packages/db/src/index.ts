@@ -4,7 +4,7 @@ export { connectDB } from './connection'
 
 export const ItemModel = new SqlModel({
   table: 'items',
-  jsonFields: ['tags', 'backlinks'],
+  jsonFields: ['tags', 'backlinks', 'collapsedHeadingIndices'],
 })
 
 export const FolderModel = new SqlModel({

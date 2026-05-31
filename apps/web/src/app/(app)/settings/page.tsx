@@ -395,9 +395,9 @@ function AppearanceSection() {
         <div className="border-b border-ui-border-soft px-5 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-slate-700">Menu inferior (mobile)</h2>
+              <h2 className="text-sm font-semibold text-slate-700">Menu</h2>
               <p className="mt-0.5 text-xs text-slate-400">
-                Escolha quais itens aparecem no menu de baixo no celular e em que ordem. O botao +
+                Escolha quais itens aparecem no menu do app e em que ordem. No celular, o botao +
                 de captura fica sempre no centro.
               </p>
             </div>
