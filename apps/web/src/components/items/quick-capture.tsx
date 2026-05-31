@@ -516,9 +516,19 @@ export function QuickCapture() {
   }, [])
   const [popover, setPopover] = useState<Popover>(null)
   const inputRef = useRef<TitleInputElement | null>(null)
+  function autosizeTitleInput(node: TitleInputElement | null) {
+    if (!(node instanceof HTMLTextAreaElement)) return
+    node.style.height = 'auto'
+    node.style.height = `${node.scrollHeight}px`
+  }
   const setInputRef = useCallback((node: TitleInputElement | null) => {
     inputRef.current = node
+    requestAnimationFrame(() => autosizeTitleInput(node))
   }, [])
+
+  useEffect(() => {
+    autosizeTitleInput(inputRef.current)
+  }, [title, isOpen, expanded, isDesktop, editMode])
 
   const activeFolders = activeFoldersShim.filter((p) => p.status !== 'archived')
   const folderOptions = useMemo(() => flattenFolderOptions(activeFolders), [activeFolders])
@@ -1234,6 +1244,7 @@ export function QuickCapture() {
                     onChange={(e) => {
                       applyTitleShortcuts(e.target.value)
                       setTitleCursor(e.target.selectionStart ?? e.target.value.length)
+                      autosizeTitleInput(e.currentTarget)
                     }}
                     onPaste={handleTitlePaste}
                     onClick={(e) => setTitleCursor(e.currentTarget.selectionStart ?? title.length)}
@@ -1273,7 +1284,7 @@ export function QuickCapture() {
                   <span className="mb-2 block font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">
                     Tarefa
                   </span>
-                  <input
+                  <textarea
                     ref={setInputRef}
                     value={title}
                     onChange={(e) => {
@@ -1295,7 +1306,8 @@ export function QuickCapture() {
                       }
                     }}
                     placeholder="Revisar layout amanhã 8h"
-                    className="h-[52px] w-full rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 text-[16px] font-bold text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] placeholder:text-navy-300 focus:ring-2 focus:ring-brand-100"
+                    rows={1}
+                    className="block max-h-40 min-h-[52px] w-full resize-none overflow-hidden rounded-[18px] border border-navy-900/[0.08] bg-white/[0.88] px-4 py-3 text-[16px] font-bold leading-6 text-navy-900 outline-none shadow-[0_1px_0_rgba(255,255,255,.85)_inset] placeholder:text-navy-300 focus:ring-2 focus:ring-brand-100"
                     autoFocus
                   />
                   {hasDetectedDueMetadata ? <DetectedDateInlineHint date={dueDate} time={dueTime} /> : null}
@@ -1701,6 +1713,22 @@ export function QuickCapture() {
               </button>
               {popover === 'folder' && (
                 <div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[110] max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:z-10 sm:w-72">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      Pasta
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPopover(null)}
+                      className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-surface-soft hover:text-slate-700"
+                      aria-label="Cancelar selecao de pasta"
+                      title="Cancelar"
+                    >
+                      <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </svg>
+                    </button>
+                  </div>
                   <input
                     value={folderQuery}
                     onChange={(e) => setProjectQuery(e.target.value)}

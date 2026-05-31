@@ -20,6 +20,7 @@ import { useLongPress } from '@/hooks/use-long-press'
 import { useDialog } from '@/components/ui/dialog'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 import { flattenFolderOptions } from '@/components/folders/folder-options'
+import { PRIORITY_CONFIG, PriorityFlag, type Priority } from '@/components/items/priority-select'
 
 type SortKey = 'manual' | 'updated' | 'created' | 'alpha' | 'type' | 'priority'
 
@@ -185,9 +186,20 @@ function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?
 }
 
 // ID 023: tarefa aberta usa tom neutro (checkbox vazio, não verde); verde/teal só quando concluída.
+function priorityTone(priority: Priority) {
+  const cfg = PRIORITY_CONFIG[priority]
+  return `${cfg.border} ${cfg.color} ${priority === 1 ? 'bg-red-50' : priority === 2 ? 'bg-orange-50' : 'bg-blue-50'}`
+}
+
+function itemPriority(item: Item): Priority {
+  return ((item.priority as Priority | undefined) ?? 4) as Priority
+}
+
 function itemGlyphTone(item: Item): string {
   if (item.complexity === 'note') return 'bg-brand-500/10 text-brand-600'
   if (item.status === 'done') return 'border border-brand-600 bg-brand-600 text-white'
+  const priority = itemPriority(item)
+  if (priority < 4) return `border ${priorityTone(priority)}`
   return 'border border-brand-500/70 bg-white text-brand-600'
 }
 
@@ -315,6 +327,8 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
   const large = isLargeNote(item)
   const text = item.complexity === 'note' ? snippet(item, large ? 180 : 120) : snippet(item, 90)
   const due = dueLabel(item)
+  const priority = itemPriority(item)
+  const priorityConfig = PRIORITY_CONFIG[priority]
   const { longPressProps, consumeClick } = useLongPress({
     onLongPress: ({ clientX, clientY }) => openContextMenu({ itemId: item.id, x: clientX, y: clientY }),
   })
@@ -332,8 +346,11 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
         <span className={`grid h-[22px] w-[22px] place-items-center rounded-md ${itemGlyphTone(item)}`}>
           <ItemTypeGlyph item={item} className="h-3.5 w-3.5" />
         </span>
-        {item.priority && item.priority <= 2 ? (
-          <span className="rounded-full bg-warning/15 px-1.5 py-0.5 text-[#B47410]">prioridade</span>
+        {priority < 4 ? (
+          <span className={`inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 ${priorityTone(priority)}`}>
+            <PriorityFlag priority={priority} size={11} />
+            {priorityConfig.label}
+          </span>
         ) : null}
       </div>
       <h3 className="text-[14px] font-bold leading-tight -tracking-[.01em] text-navy-900">{item.title}</h3>
@@ -365,6 +382,8 @@ function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item:
   const { openContextMenu } = useUI()
   const displayStatus = temporarilyDone ? 'done' : item.status
   const text = snippet(item, 90)
+  const due = dueLabel(item)
+  const priority = itemPriority(item)
   const { longPressProps, consumeClick } = useLongPress({
     onLongPress: ({ clientX, clientY }) => openContextMenu({ itemId: item.id, x: clientX, y: clientY }),
   })
@@ -392,9 +411,18 @@ function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item:
       </div>
       <span className="min-w-0">
         <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
-        {text ? (
-          <span className="hidden truncate text-[12px] text-navy-500 sm:block">
-            {text}
+        {text || due || priority < 4 ? (
+          <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-navy-500">
+            {due ? <span className="font-mono text-[11px] font-medium text-navy-500">{due}</span> : null}
+            {due && (text || priority < 4) ? <span className="font-mono text-navy-200">/</span> : null}
+            {priority < 4 ? (
+              <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-px font-mono text-[10px] font-bold ${priorityTone(priority)}`}>
+                <PriorityFlag priority={priority} size={10} />
+                {PRIORITY_CONFIG[priority].label}
+              </span>
+            ) : null}
+            {priority < 4 && text ? <span className="font-mono text-navy-200">/</span> : null}
+            {text ? <span className="hidden min-w-0 truncate sm:inline">{text}</span> : null}
           </span>
         ) : null}
       </span>

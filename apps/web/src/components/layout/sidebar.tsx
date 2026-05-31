@@ -8,7 +8,7 @@ import { useItems } from '@/hooks/use-items'
 import { useFolders, buildFolderTree, createFolder, type FolderTreeNode } from '@/hooks/use-folders'
 import { useUI } from '@/store/ui'
 import { useDialog } from '@/components/ui/dialog'
-import { usePreferences } from '@/hooks/use-preferences'
+import { usePreferences, type MobileNavItemId } from '@/hooks/use-preferences'
 import { toLocalDateKey } from '@doit/core'
 
 type IconKey = 'dashboard' | 'today' | 'inbox' | 'upcoming' | 'calendar' | 'settings' | 'folder' | 'tag'
@@ -109,6 +109,15 @@ const TOP_NAV: { href: string; label: string; icon: IconKey }[] = [
   { href: '/upcoming', label: 'Próximos', icon: 'upcoming' },
   { href: '/calendar', label: 'Calendário', icon: 'calendar' },
 ]
+
+const NAV_BY_PREF_ID: Partial<Record<MobileNavItemId, { href: string; label: string; icon: IconKey }>> = {
+  dashboard: { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
+  inbox: { href: '/inbox', label: 'Inbox', icon: 'inbox' },
+  today: { href: '/today', label: 'Hoje', icon: 'today' },
+  upcoming: { href: '/upcoming', label: 'Proximos', icon: 'upcoming' },
+  calendar: { href: '/calendar', label: 'Calendario', icon: 'calendar' },
+  notas: { href: '/notas', label: 'Pastas', icon: 'folder' },
+}
 
 const BOTTOM_NAV: { href: string; label: string; icon: IconKey }[] = [
   { href: '/settings', label: 'Configurações', icon: 'settings' },
@@ -347,6 +356,13 @@ export function Sidebar() {
   }, [items, prefs.pinnedNoteIds])
   const allParentIds = useMemo(() => collectIds(tree), [tree])
   const allExpanded = allParentIds.length > 0 && allParentIds.every((id) => expanded.has(id))
+  const desktopNav = useMemo(() => {
+    const configured = prefs.mobileNav
+      .filter((entry) => entry.visible && entry.id !== 'settings')
+      .map((entry) => NAV_BY_PREF_ID[entry.id])
+      .filter((entry): entry is { href: string; label: string; icon: IconKey } => Boolean(entry))
+    return configured.length > 0 ? configured : TOP_NAV
+  }, [prefs.mobileNav])
 
   function toggle(id: string) {
     setExpanded((current) => {
@@ -443,7 +459,7 @@ export function Sidebar() {
 
       {!collapsed && <SectionTitle>Menu</SectionTitle>}
       <div className="flex flex-col gap-px px-2">
-        {TOP_NAV.filter((n) => n.href !== '/inbox' || prefs.showInbox).map((n) => (
+        {desktopNav.filter((n) => n.href !== '/inbox' || prefs.showInbox).map((n) => (
           <NavLink key={n.href} {...n} count={counts[n.href]} collapsed={collapsed} />
         ))}
       </div>

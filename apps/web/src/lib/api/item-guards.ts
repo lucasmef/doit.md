@@ -46,6 +46,7 @@ const ITEM_PATCH_FIELDS = new Set<keyof UpdateItemInput>([
   'tags',
   'backlinks',
   'order',
+  'collapsedHeadingIndices',
 ])
 
 export function pickItemPatch(input: unknown): UpdateItemInput {
@@ -192,6 +193,18 @@ export function validateItemPatchInput(input: UpdateItemInput) {
       (typeof input.order !== 'number' || !Number.isFinite(input.order))
     ) {
       return 'order must be a number'
+    }
+  }
+
+  if (hasOwn(input, 'collapsedHeadingIndices')) {
+    const value = (input as Record<string, unknown>).collapsedHeadingIndices
+    if (
+      value !== null &&
+      value !== undefined &&
+      (!Array.isArray(value) ||
+        value.some((entry) => !Number.isInteger(entry) || entry < 0 || entry > 999))
+    ) {
+      return 'collapsedHeadingIndices must be an array of heading indexes'
     }
   }
 

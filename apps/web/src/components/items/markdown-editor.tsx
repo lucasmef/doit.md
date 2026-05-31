@@ -38,6 +38,8 @@ type Props = {
   attachmentsPortalId?: string
   focusMode?: boolean
   onToggleFocus?: () => void
+  collapsedHeadingIndices?: number[]
+  onCollapsedHeadingIndicesChange?: (indices: number[]) => void
 }
 
 type DriveUploadResult = {
@@ -125,6 +127,13 @@ function getSelectedMarkdown(editor: Editor) {
   const markdown = editor.markdown.serialize(doc).trim()
 
   return markdown ? normalizeMarkdownTableSpacing(markdown) : null
+}
+
+function getSelectedPlainText(editor: Editor) {
+  const { from, to, empty } = editor.state.selection
+  if (empty) return null
+  const text = editor.state.doc.textBetween(from, to, '\n', '\n').replace(/\n{3,}/g, '\n\n').trim()
+  return text || null
 }
 
 function escapeHtml(value: string) {
@@ -241,8 +250,11 @@ export function MarkdownEditor({
   attachmentsPortalId,
   focusMode = false,
   onToggleFocus,
+  collapsedHeadingIndices,
+  onCollapsedHeadingIndicesChange,
 }: Props) {
   const editorRef = useRef<Editor | null>(null)
+  const collapseSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [toolbarHost, setToolbarHost] = useState<HTMLElement | null>(null)
   const [attachmentsHost, setAttachmentsHost] = useState<HTMLElement | null>(null)
   const editor = useEditor({
@@ -338,8 +350,8 @@ export function MarkdownEditor({
     })
   }, [editor, value])
 
-  // ID 052: restaura o estado de expansao/retracao dos topicos da nota apos o conteudo
-  // carregar (TipTap aplica setContent de forma assincrona), uma vez por itemId.
+  // ID 079: restaura o estado de expansao/retracao dos topicos da nota apos o conteudo
+  // carregar. Usa o campo sincronizado do Item e mantem localStorage apenas como migracao.
   const collapseRestoredRef = useRef<string | null>(null)
   useEffect(() => {
     if (!editor || !itemId) return
@@ -347,41 +359,52 @@ export function MarkdownEditor({
     if (getHeadingCollapseSummary(editor).total === 0) return
     collapseRestoredRef.current = itemId
     try {
-      const raw = window.localStorage.getItem(`doit-note-collapse:${itemId}`)
-      if (!raw) return
-      const indices = JSON.parse(raw) as unknown
+      const indices = Array.isArray(collapsedHeadingIndices)
+        ? collapsedHeadingIndices
+        : JSON.parse(window.localStorage.getItem(`doit-note-collapse:${itemId}`) ?? '[]')
       if (Array.isArray(indices) && indices.length > 0) {
         applyCollapsedHeadingIndices(editor, indices as number[])
       }
     } catch {
       // localStorage indisponivel ou JSON invalido: ignora
     }
-  }, [editor, itemId, value])
+  }, [editor, itemId, value, collapsedHeadingIndices])
 
-  // ID 052: persiste o estado de expansao por nota a cada transacao (inclui toggles de topico,
-  // que nao disparam onUpdate por nao alterarem o doc).
+  // ID 079: persiste o estado de expansao por nota a cada transacao (inclui toggles de topico,
+  // que nao disparam onUpdate por nao alterarem o doc). Quando ha callback, salva no Item.
   useEffect(() => {
     if (!editor || !itemId) return
     const key = `doit-note-collapse:${itemId}`
-    let last = ''
+    let last = JSON.stringify(collapsedHeadingIndices ?? [])
     const handler = () => {
       if (collapseRestoredRef.current !== itemId) return
       const indices = getCollapsedHeadingIndices(editor)
       const serialized = JSON.stringify(indices)
       if (serialized === last) return
       last = serialized
-      try {
-        if (indices.length === 0) window.localStorage.removeItem(key)
-        else window.localStorage.setItem(key, serialized)
-      } catch {
-        // ignora erros de quota/indisponibilidade
-      }
+      if (collapseSaveTimer.current) clearTimeout(collapseSaveTimer.current)
+      collapseSaveTimer.current = setTimeout(() => {
+        if (onCollapsedHeadingIndicesChange) {
+          onCollapsedHeadingIndicesChange(indices)
+          return
+        }
+        try {
+          if (indices.length === 0) window.localStorage.removeItem(key)
+          else window.localStorage.setItem(key, serialized)
+        } catch {
+          // ignora erros de quota/indisponibilidade
+        }
+      }, 350)
     }
     editor.on('transaction', handler)
     return () => {
+      if (collapseSaveTimer.current) {
+        clearTimeout(collapseSaveTimer.current)
+        collapseSaveTimer.current = null
+      }
       editor.off('transaction', handler)
     }
-  }, [editor, itemId])
+  }, [editor, itemId, collapsedHeadingIndices, onCollapsedHeadingIndicesChange])
 
   useEffect(() => {
     if (!editor || !focusAtStart) return
@@ -494,12 +517,13 @@ export function MarkdownEditor({
       }
     }
     const onCopy = (event: ClipboardEvent) => {
+      const plainText = getSelectedPlainText(editor)
       const markdown = getSelectedMarkdown(editor)
-      if (!markdown) return
+      if (!plainText && !markdown) return
 
       event.preventDefault()
-      event.clipboardData?.setData('text/plain', markdown)
-      event.clipboardData?.setData('text/markdown', markdown)
+      if (plainText) event.clipboardData?.setData('text/plain', plainText)
+      if (markdown) event.clipboardData?.setData('text/markdown', markdown)
     }
     const onDragOver = (event: DragEvent) => {
       if (event.dataTransfer?.types.includes('Files')) {

@@ -170,6 +170,7 @@ async function ensureKnownColumns(db: DBClient): Promise<void> {
   await ensureColumn(db, 'items', 'clearedAt', 'TEXT')
   await ensureColumn(db, 'items', 'folderId', 'TEXT')
   await ensureColumn(db, 'items', 'order', 'INTEGER')
+  await ensureColumn(db, 'items', 'collapsedHeadingIndices', 'TEXT')
   await ensureColumn(db, 'folders', 'viewMode', "TEXT NOT NULL DEFAULT 'list'")
   await ensureColumn(db, 'folders', 'viewModeManual', 'INTEGER NOT NULL DEFAULT 0')
   await ensureColumn(db, 'folders', 'hideCompleted', 'INTEGER NOT NULL DEFAULT 1')
@@ -226,6 +227,7 @@ const sqliteSchema = [
     googleEventId TEXT,
     calendarEventId TEXT,
     "order" INTEGER,
+    collapsedHeadingIndices TEXT,
     createdAt TEXT NOT NULL,
     updatedAt TEXT NOT NULL,
     deletedAt TEXT
