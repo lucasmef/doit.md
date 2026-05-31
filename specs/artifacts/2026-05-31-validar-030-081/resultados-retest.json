@@ -1,0 +1,27 @@
+[
+  {
+    "id": "062",
+    "status": "Não OK",
+    "evidence": "header \"Editar tarefa\"=false (via painel Editar=true)"
+  },
+  {
+    "id": "061",
+    "status": "Não OK",
+    "evidence": "checkbox concluir visível=false, alterna=false"
+  },
+  {
+    "id": "070",
+    "status": "OK",
+    "evidence": "kebab \"Mover pasta\"=true, lista de destino=true"
+  },
+  {
+    "id": "071",
+    "status": "OK",
+    "evidence": "ação \"Remover data\"=true"
+  },
+  {
+    "id": "043",
+    "status": "Não testado",
+    "evidence": "locator.waitFor: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('RT nota qa-rt-1780241888049').first() to be visible\u001b[22m\n"
+  }
+]
