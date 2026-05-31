@@ -118,7 +118,7 @@ export function DueDatePicker({ value, onChange, className = '', compact = false
     { label: 'Hoje', detail: formatDetail(today), date: today, tone: 'text-green-600' },
     { label: 'Amanha', detail: formatDetail(addDays(today, 1)), date: addDays(today, 1), tone: 'text-amber-600' },
     { label: 'Fim de semana', detail: formatDetail(nextWeekend(today)), date: nextWeekend(today), tone: 'text-violet-600' },
-    { label: 'Semana que vem', detail: formatDetail(nextWeek(today)), date: nextWeek(today), tone: 'text-blue-600' },
+    { label: 'Proxima semana', detail: formatDetail(nextWeek(today)), date: nextWeek(today), tone: 'text-blue-600' },
   ], [])
 
   const days = getMonthDays(visibleMonth)
