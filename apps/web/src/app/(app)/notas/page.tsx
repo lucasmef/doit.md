@@ -146,6 +146,16 @@ function findNode(nodes: FolderTreeNode[], id: string): FolderTreeNode | null {
   return null
 }
 
+function collectExpandableFolderIds(nodes: FolderTreeNode[], acc: string[] = []): string[] {
+  for (const node of nodes) {
+    if (node.children.length > 0) {
+      acc.push(node.id)
+      collectExpandableFolderIds(node.children, acc)
+    }
+  }
+  return acc
+}
+
 function FolderGlyph({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -737,6 +747,8 @@ function NotasBrowser() {
   const childFolders = useMemo(() => [...(node?.children ?? [])].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')), [node])
   const breadcrumb = useMemo(() => buildBreadcrumb(folders, selectedId), [folders, selectedId])
   const isPinned = selectedId ? prefs.pinnedFolderIds.includes(selectedId) : false
+  const expandableFolderIds = useMemo(() => collectExpandableFolderIds(tree), [tree])
+  const allFoldersExpanded = expandableFolderIds.length > 0 && expandableFolderIds.every((id) => expanded.has(id))
   const viewMode: 'kanban' | 'list' =
     selectedFolder?.viewMode === 'kanban' && childFolders.length > 0 ? 'kanban' : 'list'
 
@@ -848,6 +860,10 @@ function NotasBrowser() {
       else next.add(id)
       return next
     })
+  }
+
+  function toggleAllFolders() {
+    setExpanded(allFoldersExpanded ? new Set() : new Set(expandableFolderIds))
   }
 
   function togglePinned() {
@@ -1043,7 +1059,22 @@ function NotasBrowser() {
                 ))}
               </>
             ) : null}
-            <div className="px-2 py-2 font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</div>
+            <div className="flex items-center justify-between gap-2 px-2 py-2">
+              <span className="font-mono text-[10px] font-extrabold uppercase tracking-[0.10em] text-navy-500">Todas</span>
+              {expandableFolderIds.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={toggleAllFolders}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-full border border-navy-900/[0.08] bg-white/62 px-2.5 font-mono text-[10px] font-extrabold text-navy-500 transition-colors hover:border-brand-300 hover:text-brand-600"
+                  aria-pressed={allFoldersExpanded}
+                  aria-label={allFoldersExpanded ? 'Recolher todas as subpastas' : 'Expandir todas as subpastas'}
+                  title={allFoldersExpanded ? 'Recolher tudo' : 'Expandir tudo'}
+                >
+                  <span aria-hidden="true">{allFoldersExpanded ? '-' : '+'}</span>
+                  {allFoldersExpanded ? 'Recolher tudo' : 'Expandir tudo'}
+                </button>
+              ) : null}
+            </div>
             {tree.length === 0 ? (
               <p className="px-2 py-6 text-center font-mono text-[11px] text-navy-400">Nenhuma pasta ainda</p>
             ) : (

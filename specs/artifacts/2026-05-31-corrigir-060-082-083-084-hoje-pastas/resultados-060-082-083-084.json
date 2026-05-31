@@ -1,0 +1,57 @@
+[
+  {
+    "name": "ID 082 - painel direito nao aparece ao abrir Hoje",
+    "ok": true,
+    "extra": "{\"detailCount\":0,\"emptyText\":false,\"calendarTodayButton\":false,\"calendarTitleText\":\"Calendário\"}"
+  },
+  {
+    "name": "ID 083 - calendario lateral nao tem botao Hoje no topo",
+    "ok": true,
+    "extra": "{\"detailCount\":0,\"emptyText\":false,\"calendarTodayButton\":false,\"calendarTitleText\":\"Calendário\"}"
+  },
+  {
+    "name": "ID 060 - Inbox mostra somente itens sem data e sem pasta",
+    "ok": true,
+    "extra": "060 Inbox solto qa-060-084-1780251394343 #qa060 ⋯"
+  },
+  {
+    "name": "ID 060 - Proximos mostra futuros com data visivel",
+    "ok": true,
+    "extra": "09:30 060 Futuro tarefa qa-060-084-1780251394343 7 de jun. #qa060 ⋯"
+  },
+  {
+    "name": "ID 060 - botao Hoje volta para data atual sem redirecionar",
+    "ok": true,
+    "extra": "heading=Hoje; list=060 Hoje tarefa qa-060-084-1780251394343 #qa060 ⋯"
+  },
+  {
+    "name": "ID 082 - selecionar item abre painel direito com detalhes",
+    "ok": true,
+    "extra": "{\"detailCount\":1,\"panelText\":\"Tarefa060 Hoje tarefa qa-060-084-1780251394343×DetalhesData31 de maioPastaSem pastaStatusA fazerTags#qa060Ações rápidas✓ Marcar como concluído✎ Editar\",\"hasTitle\":true}"
+  },
+  {
+    "name": "ID 082 - fechar painel oculta coluna de detalhes",
+    "ok": true,
+    "extra": "{\"detailCount\":0,\"emptyText\":false}"
+  },
+  {
+    "name": "ID 084 - botao Expandir tudo aparece na lista lateral de Pastas",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 084 - Expandir tudo revela todas as subpastas",
+    "ok": true,
+    "extra": "TODAS - Recolher tudo ▾ 084 Raiz qa-060-084-1780251394343 1 subpasta 1 ▾ 084 Filho qa-060-084-1780251394343 1 subpasta 0 084 Neto qa-060-084-1780251394343 pasta 0"
+  },
+  {
+    "name": "ID 084 - Recolher tudo oculta subpastas",
+    "ok": true,
+    "extra": "TODAS + Expandir tudo ▸ 084 Raiz qa-060-084-1780251394343 1 subpasta 1"
+  },
+  {
+    "name": "ID 084 - expansao individual continua funcionando depois do toggle geral",
+    "ok": true,
+    "extra": "TODAS + Expandir tudo ▾ 084 Raiz qa-060-084-1780251394343 1 subpasta 1 ▸ 084 Filho qa-060-084-1780251394343 1 subpasta 0"
+  }
+]

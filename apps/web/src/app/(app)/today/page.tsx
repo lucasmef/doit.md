@@ -10,6 +10,7 @@ import { toLocalDateKey } from '@doit/core'
 import { EventSheet } from '@/components/calendar/calendar-board'
 import type { CalendarEvent, Item } from '@doit/types'
 import { useProjects } from '@/hooks/use-projects'
+import { isLooseInboxItem } from '@/lib/item-order'
 import './today.css'
 
 function EventIcon({ className = 'h-[15px] w-[15px]' }) {
@@ -49,6 +50,13 @@ function formatTime(dateStr: string) {
   } catch {
     return ''
   }
+}
+
+function formatDateLabel(dateStr: string) {
+  return new Date(dateStr + 'T12:00:00').toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'short',
+  })
 }
 
 // Artigo de tarefa com toque simples (abrir) + toque longo / clique-direito (menu de ações).
@@ -220,8 +228,27 @@ export default function TodayFocusedPage() {
     [dayItems, activeTag],
   )
 
-  const inboxItems = useMemo(() => items.filter((i) => i.status === 'inbox'), [items])
-  const upcomingItems = useMemo(() => items.filter((i) => i.dueDate && i.dueDate > today && i.status !== 'done').sort((a,b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')), [items, today])
+  const inboxItems = useMemo(
+    () => items.filter((i) => i.status !== 'done' && i.status !== 'archived' && isLooseInboxItem(i)),
+    [items],
+  )
+  const upcomingItems = useMemo(
+    () =>
+      items
+        .filter((i) => {
+          if (i.status === 'done' || i.status === 'archived') return false
+          const date = i.dueDate ?? i.scheduledDate
+          return Boolean(date && date > today)
+        })
+        .sort((a, b) => {
+          const dateCompare = (a.dueDate ?? a.scheduledDate ?? '').localeCompare(
+            b.dueDate ?? b.scheduledDate ?? '',
+          )
+          if (dateCompare !== 0) return dateCompare
+          return (a.dueTime ?? '').localeCompare(b.dueTime ?? '')
+        }),
+    [items, today],
+  )
 
   // ID 053: tags presentes na lista atualmente exibida (para servir de filtro).
   const tagsInList = useMemo(() => {
@@ -263,9 +290,9 @@ export default function TodayFocusedPage() {
   }, [today])
 
   // Counts do painel (ID 053).
-  const inboxCount = items.filter(i => i.status === 'inbox').length
+  const inboxCount = inboxItems.length
   const todayCount = todayItems.length + agendaEvents.length
-  const upcomingCount = items.filter(i => i.dueDate && i.dueDate > today && i.status !== 'done').length
+  const upcomingCount = upcomingItems.length
 
   const getFolderName = (folderId?: string) => {
     if (!folderId) return ''
@@ -307,6 +334,7 @@ export default function TodayFocusedPage() {
     setSelectedDay(key)
     setActiveTag(null)
     setCurrentView('hoje')
+    setPanelId(null)
   }
 
   const renderTask = (item: Item, isOverdue: boolean = false) => {
@@ -314,6 +342,7 @@ export default function TodayFocusedPage() {
     const styleType = getTaskStyle(item)
     const isSelected = panelId === item.id
     const hasTime = Boolean(item.dueTime)
+    const date = item.dueDate ?? item.scheduledDate
     // ID 020: barra lateral por prioridade (1=alta/vermelho, 2=média/laranja, 3=baixa/amarelo, demais=neutro).
     const prioClass = item.priority && item.priority < 4 ? `prio-${item.priority}` : 'prio-0'
 
@@ -341,6 +370,7 @@ export default function TodayFocusedPage() {
             {item.title}
           </div>
           <div className="meta">
+            {currentView === 'upcoming' && date ? <span className="date-badge">{formatDateLabel(date)}</span> : null}
             {isOverdue && <span className="text-red-500 font-bold">Atrasado</span>}
             {item.status === 'doing' && <span className="text-violet-500 font-bold">Foco</span>}
             {getFolderName(item.folderId) && (
@@ -417,7 +447,7 @@ export default function TodayFocusedPage() {
 
   return (
     <div className="today-v3-layout flex w-full flex-col lg:h-[calc(100vh-8rem)]">
-      <section className="board flex-1 mx-4 mb-4 lg:mx-0 lg:mb-0">
+      <section className={`board flex-1 mx-4 mb-4 lg:mx-0 lg:mb-0${panelItem ? ' has-detail' : ' no-detail'}`}>
         <aside className="sidebar hidden lg:grid">
           <div className="month-top">
             <b>{now.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</b>
@@ -427,14 +457,6 @@ export default function TodayFocusedPage() {
           <div className="calendar">
             <div className="calendar-title">
               <b>Calendário</b>
-              {/* ID 063: botão "Hoje" no topo do calendário lateral. */}
-              <button
-                type="button"
-                className={`cal-today-btn${isToday && currentView === 'hoje' ? ' active' : ''}`}
-                onClick={() => selectDay(today)}
-              >
-                Hoje
-              </button>
             </div>
             <div className="week">
               <span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span><span>D</span>
@@ -455,7 +477,7 @@ export default function TodayFocusedPage() {
 
           {/* ID 053: entradas principais Inbox / Hoje / Próximos. */}
           <nav className="sidebar-list">
-            <button type="button" onClick={() => { setCurrentView('inbox'); setActiveTag(null); }} className={`side-row cursor-pointer${currentView === 'inbox' ? ' active' : ''}`}>
+            <button type="button" onClick={() => { setCurrentView('inbox'); setActiveTag(null); setPanelId(null); }} className={`side-row cursor-pointer${currentView === 'inbox' ? ' active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 5h14v14H5z"/></svg>
               <span>Inbox</span>
               <span className="count">{inboxCount}</span>
@@ -469,7 +491,7 @@ export default function TodayFocusedPage() {
               <span>Hoje</span>
               <span className="count">{todayCount}</span>
             </button>
-            <button type="button" onClick={() => { setCurrentView('upcoming'); setActiveTag(null); }} className={`side-row cursor-pointer${currentView === 'upcoming' ? ' active' : ''}`}>
+            <button type="button" onClick={() => { setCurrentView('upcoming'); setActiveTag(null); setPanelId(null); }} className={`side-row cursor-pointer${currentView === 'upcoming' ? ' active' : ''}`}>
               <svg viewBox="0 0 24 24" fill="none" strokeWidth="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
               <span>Próximos</span>
               <span className="count">{upcomingCount}</span>
@@ -527,9 +549,9 @@ export default function TodayFocusedPage() {
           </div>
         </section>
 
-        {/* ID 039: painel de detalhes à direita (3ª coluna, conforme referência v3). */}
-        <aside className="detail hidden lg:grid">
-          {panelItem ? (
+        {/* ID 082: painel de detalhes so aparece depois de selecionar um item. */}
+        {panelItem ? (
+          <aside className="detail hidden lg:grid">
             <>
               <div className="detail-head">
                 <div className="detail-title">
@@ -581,10 +603,8 @@ export default function TodayFocusedPage() {
                 </section>
               </div>
             </>
-          ) : (
-            <div className="detail-empty">Selecione um item para ver os detalhes.</div>
-          )}
-        </aside>
+          </aside>
+        ) : null}
       </section>
 
       {openEvent && (
