@@ -9,6 +9,7 @@ const BASE = process.env.BASE_URL ?? 'http://127.0.0.1:3300'
 const OUT = 'specs/artifacts/2026-05-31-corrigir-060-082-083-084-hoje-pastas'
 const GLOBAL_DIR = 'G:/Meu Drive/.agentes'
 const DESKTOP = { width: 1440, height: 900 }
+const MOBILE = { width: 390, height: 844 }
 
 const results = []
 
@@ -246,6 +247,39 @@ async function validateFolders(page, unique, data) {
   )
 }
 
+async function validateMobile(page, unique, data) {
+  await page.setViewportSize(MOBILE)
+  await page.goto(`${BASE}/today`)
+  await page.waitForLoadState('networkidle')
+  const todayMobile = await page.evaluate(() => ({
+    detailCount: document.querySelectorAll('.today-v3-layout .detail').length,
+    emptyText: document.body.textContent?.includes('Selecione um item para ver os detalhes.') ?? false,
+    columns: getComputedStyle(document.querySelector('.today-v3-layout .board')).gridTemplateColumns,
+  }))
+  await screenshot(page, '10-today-mobile-no-empty-panel.png')
+  check(
+    'Mobile - Hoje preserva layout sem painel vazio',
+    todayMobile.detailCount === 0 && !todayMobile.emptyText && todayMobile.columns.split(' ').filter(Boolean).length === 1,
+    JSON.stringify(todayMobile),
+  )
+
+  await page.goto(`${BASE}/notas?folder=${data.rootFolder.id}`)
+  await page.waitForLoadState('networkidle')
+  await page.getByLabel('Abrir navegador de pastas').click()
+  await page.waitForTimeout(500)
+  const drawer = page.locator('[role="dialog"]').filter({ hasText: 'Todas' }).first()
+  const expandButton = drawer.getByRole('button', { name: 'Expandir todas as subpastas' })
+  await expandButton.click()
+  await page.waitForTimeout(500)
+  const expandedText = (await drawer.innerText()).replace(/\s+/g, ' ')
+  await screenshot(page, '11-folders-mobile-expanded-all.png')
+  check(
+    'Mobile - Pastas permite expandir tudo no drawer',
+    expandedText.includes(data.childFolder.name) && expandedText.includes(data.grandChildFolder.name),
+    expandedText,
+  )
+}
+
 ensureDirs()
 
 const browser = await chromium.launch({ headless: true })
@@ -257,6 +291,7 @@ try {
   const data = await seed(page, unique)
   await validateToday(page, unique, data)
   await validateFolders(page, unique, data)
+  await validateMobile(page, unique, data)
   const failed = results.filter((r) => !r.ok)
   fs.writeFileSync(path.join(OUT, 'resultados-060-082-083-084.json'), JSON.stringify(results, null, 2))
   if (failed.length > 0) throw new Error(`Failed checks: ${failed.map((r) => r.name).join('; ')}`)
