@@ -178,6 +178,10 @@
   grid-template-columns: 255px minmax(0, 1fr) 350px;
 }
 
+.today-v3-layout .board.no-detail {
+  grid-template-columns: 255px minmax(0, 1fr);
+}
+
 .today-v3-layout .sidebar {
   min-height: 0;
   padding: 22px 22px 18px;
@@ -227,32 +231,6 @@
   color: var(--gray);
   font-family: var(--mono);
   font-size: 10px;
-}
-
-/* ID 063: botão "Hoje" no topo do calendário lateral. */
-.today-v3-layout .cal-today-btn {
-  border: 1px solid rgba(47, 107, 255, 0.22);
-  background: rgba(47, 107, 255, 0.08);
-  color: var(--blue);
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-family: var(--mono);
-  font-size: 10px;
-  font-weight: 850;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.today-v3-layout .cal-today-btn:hover {
-  background: rgba(47, 107, 255, 0.16);
-}
-
-.today-v3-layout .cal-today-btn.active {
-  color: #fff;
-  border-color: transparent;
-  background: linear-gradient(135deg, var(--blue), var(--violet));
 }
 
 .today-v3-layout .week,
@@ -639,6 +617,11 @@
   background: rgba(245,165,36,.13);
 }
 
+.today-v3-layout .date-badge {
+  color: var(--blue);
+  font-weight: 850;
+}
+
 .today-v3-layout .more {
   width: 28px;
   height: 28px;
@@ -844,6 +827,7 @@
   
   .today-v3-layout .app { height: auto; min-height: 100vh; }
   .today-v3-layout .board { grid-template-columns: 240px minmax(0, 1fr); }
+  .today-v3-layout .board.no-detail { grid-template-columns: 240px minmax(0, 1fr); }
   .today-v3-layout .detail { display: none; }
 }
 
@@ -873,6 +857,10 @@
   }
 
   .today-v3-layout .board {
+    grid-template-columns: 1fr;
+  }
+
+  .today-v3-layout .board.no-detail {
     grid-template-columns: 1fr;
   }
 
@@ -1152,5 +1140,3 @@
 .today-v3-layout .reschedule-btn svg {
   stroke: #fff;
 }
-
-
