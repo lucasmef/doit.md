@@ -1,0 +1,75 @@
+{
+  "results": [
+    {
+      "name": "ID082-abrir-sem-painel",
+      "ok": true,
+      "extra": "{\"detailCount\":0,\"emptyText\":false,\"calendarTitleText\":\"Calendário\",\"calButtonsOutsideDays\":[]}"
+    },
+    {
+      "name": "ID083-sem-botao-hoje-no-calendario",
+      "ok": true,
+      "extra": "{\"detailCount\":0,\"emptyText\":false,\"calendarTitleText\":\"Calendário\",\"calButtonsOutsideDays\":[]}"
+    },
+    {
+      "name": "ID060-inbox-so-sem-data-sem-pasta",
+      "ok": true,
+      "extra": "060 Inbox solto qa-060-084-1780411409386 #qa060 ⋯"
+    },
+    {
+      "name": "ID060-proximos-com-data-visivel",
+      "ok": true,
+      "extra": "09:30 060 Futuro tarefa qa-060-084-1780411409386 9 de jun. #qa060 ⋯"
+    },
+    {
+      "name": "ID083-clicar-outro-dia-funciona",
+      "ok": true,
+      "extra": "{\"activeDays\":1,\"url\":\"/today\"}"
+    },
+    {
+      "name": "ID060-hoje-volta-data-atual",
+      "ok": true,
+      "extra": "heading=Hoje; list=060 Hoje tarefa qa-060-084-1780411409386 #qa060 ⋯"
+    },
+    {
+      "name": "ID082-selecionar-abre-painel",
+      "ok": true,
+      "extra": "{\"detailCount\":1,\"hasTitle\":true}"
+    },
+    {
+      "name": "ID082-fechar-oculta-painel",
+      "ok": true,
+      "extra": "{\"detailCount\":0,\"emptyText\":false}"
+    },
+    {
+      "name": "ID084-controle-aparece-na-lista",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID084-expandir-revela-subpastas",
+      "ok": true,
+      "extra": "TODAS - Recolher tudo ▾ 084 Raiz qa-060-084-1780411409386 1 subpasta 1 ▾ 084 Filho qa-060-084-1780411409386 1 subpasta 0 084 Neto qa-060-084-1780411409386 pasta 0"
+    },
+    {
+      "name": "ID084-recolher-oculta-subpastas",
+      "ok": true,
+      "extra": "TODAS + Expandir tudo ▸ 084 Raiz qa-060-084-1780411409386 1 subpasta 1"
+    },
+    {
+      "name": "ID084-toggle-individual-funciona",
+      "ok": true,
+      "extra": "TODAS + Expandir tudo ▾ 084 Raiz qa-060-084-1780411409386 1 subpasta 1 ▸ 084 Filho qa-060-084-1780411409386 1 subpasta 0"
+    },
+    {
+      "name": "ID082-mobile-sem-painel-vazio",
+      "ok": true,
+      "extra": "{\"detailCount\":0,\"emptyText\":false,\"columns\":\"356px\"}"
+    },
+    {
+      "name": "ID084-mobile-expandir-no-drawer",
+      "ok": true,
+      "extra": "TODAS - Recolher tudo ▾ 084 Raiz qa-060-084-1780411409386 1 subpasta 1 ▾ 084 Filho qa-060-084-1780411409386 1 subpasta 0 084 Neto qa-060-084-1780411409386 pasta 0"
+    }
+  ],
+  "fatal": null
+}

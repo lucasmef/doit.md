@@ -1,0 +1,75 @@
+{
+  "results": [
+    {
+      "name": "ID085-editor-normal-largura-util",
+      "ok": true,
+      "extra": "{\"wrapperWidth\":902,\"proseWidth\":854,\"viewport\":1440}"
+    },
+    {
+      "name": "ID085-foco-amplia-e-remove-trilhos",
+      "ok": true,
+      "extra": "{\"wrapperWidth\":1180,\"sidebars\":0}"
+    },
+    {
+      "name": "ID085-mobile-sem-quebra-horizontal",
+      "ok": true,
+      "extra": "{\"wrapperWidth\":360,\"viewport\":390,\"bodyScrollW\":390}"
+    },
+    {
+      "name": "ID086-busca-cancelar-lista-rolavel",
+      "ok": true,
+      "extra": "{\"hasSearch\":true,\"hasCancel\":true,\"scroll\":\"auto\"}"
+    },
+    {
+      "name": "ID086-ordem-alfabetica",
+      "ok": true,
+      "extra": "Pasta / Alpha qa-085-090-1780419257094 / Beta qa-085-090-1780419257094 / Gamma qa-085-090-1780419257094 / Zeta qa-085-090-1780419257094"
+    },
+    {
+      "name": "ID086-busca-filtra",
+      "ok": true,
+      "extra": "busca=Beta"
+    },
+    {
+      "name": "ID086-cancelar-sem-selecionar",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID089-pasta-principal-oculta-concluidos-subpasta",
+      "ok": true,
+      "extra": "pasta principal hideCompleted=true"
+    },
+    {
+      "name": "ID087-modo-foco-tela-cheia",
+      "ok": true,
+      "extra": "{\"hasDialog\":true,\"width\":1440,\"height\":900,\"hasExit\":true}"
+    },
+    {
+      "name": "ID087-sair-do-foco",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID089-subpasta-direta-mostra-concluidos",
+      "ok": true,
+      "extra": "subpasta beta hideCompleted=false"
+    },
+    {
+      "name": "ID088-hoje-sem-risco-vertical-desalinhado",
+      "ok": true,
+      "extra": "{\"anyRowShadow\":false,\"prioCheckPresent\":true}"
+    },
+    {
+      "name": "ID090-topbar-desktop-compacta",
+      "ok": true,
+      "extra": "{\"topbarBottom\":62,\"navHeight\":42,\"topbarHeight\":42}"
+    },
+    {
+      "name": "ID088-mobile-checkbox-preservado-sem-risco",
+      "ok": true,
+      "extra": "{\"hasCheck\":true,\"shadow\":\"none\"}"
+    }
+  ],
+  "fatal": null
+}
