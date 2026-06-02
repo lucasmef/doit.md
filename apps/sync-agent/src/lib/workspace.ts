@@ -4,23 +4,42 @@ import { join } from 'path'
 export { slugify } from '@doit/core'
 
 export const SPECIAL_DIRS = {
-  inbox: 'Inbox',
-  upcoming: 'Proximos',
-  archive: '_arquivo',
+  inbox: 'inbox',
+  upcoming: 'proximos',
+  archive: 'arquivo',
 } as const
 
-export const SYSTEM_DIRS = ['_system', '_changes', '_raw_archive'] as const
+export const SYSTEM_ROOT = '.doit-sync' as const
+export const SYSTEM_DIRS = [SYSTEM_ROOT, '.git', 'node_modules'] as const
+
+export function systemPath(root: string, ...parts: string[]): string {
+  return join(root, SYSTEM_ROOT, ...parts)
+}
+
+export function systemStatePath(root: string, ...parts: string[]): string {
+  return systemPath(root, 'system', ...parts)
+}
+
+export function changesPath(root: string, ...parts: string[]): string {
+  return systemPath(root, 'changes', ...parts)
+}
+
+export function rawArchivePath(root: string, ...parts: string[]): string {
+  return systemPath(root, 'raw-archive', ...parts)
+}
 
 export async function ensureWorkspace(root: string): Promise<void> {
   const dirs = [
-    SPECIAL_DIRS.inbox,
-    SPECIAL_DIRS.upcoming,
-    SPECIAL_DIRS.archive,
-    ...SYSTEM_DIRS,
+    join(root, SPECIAL_DIRS.inbox),
+    join(root, SPECIAL_DIRS.upcoming),
+    join(root, SPECIAL_DIRS.archive),
+    systemPath(root, 'system'),
+    systemPath(root, 'changes'),
+    systemPath(root, 'raw-archive'),
   ]
 
   for (const dir of dirs) {
-    await mkdir(join(root, dir), { recursive: true })
+    await mkdir(dir, { recursive: true })
   }
 }
 

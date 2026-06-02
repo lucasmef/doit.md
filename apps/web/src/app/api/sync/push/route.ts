@@ -137,7 +137,11 @@ export async function POST(req: NextRequest) {
 
     async function ensureFolderSegments(segments: string[]): Promise<string | undefined> {
       if (segments.length === 0) return undefined
-      if (['Inbox', 'Proximos', '_arquivo', 'Arquivo'].includes(segments[0] ?? '')) {
+      if (
+        ['Inbox', 'inbox', 'Proximos', 'proximos', '_arquivo', 'Arquivo', 'arquivo'].includes(
+          segments[0] ?? '',
+        )
+      ) {
         return undefined
       }
 

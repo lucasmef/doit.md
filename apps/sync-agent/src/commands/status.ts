@@ -1,7 +1,6 @@
-import { join } from 'path'
 import chalk from 'chalk'
 import { getConfig, isInitialized, isLoggedIn } from '../lib/config.js'
-import { readJson } from '../lib/workspace.js'
+import { changesPath, readJson, systemStatePath } from '../lib/workspace.js'
 import type { PendingChange } from '@doit/types'
 import type { DriveIndex } from '../drive/indexer.js'
 import { reconcileDrive } from '../drive/reconcile.js'
@@ -19,16 +18,16 @@ export async function statusCommand() {
   const config = getConfig()
 
   const lastPull = await readJson<{ at: string; count?: number; itemCount?: number }>(
-    join(config.workspacePath, '_system', 'last-pull.json'),
+    systemStatePath(config.workspacePath, 'last-pull.json'),
   )
   const lastDiff = await readJson<{ at: string; count: number }>(
-    join(config.workspacePath, '_system', 'last-diff.json'),
+    systemStatePath(config.workspacePath, 'last-diff.json'),
   )
   const lastPush = await readJson<{ at: string; count: number }>(
-    join(config.workspacePath, '_system', 'last-push.json'),
+    systemStatePath(config.workspacePath, 'last-push.json'),
   )
   const pending = await readJson<{ changes: PendingChange[] }>(
-    join(config.workspacePath, '_changes', 'pending.json'),
+    changesPath(config.workspacePath, 'pending.json'),
   )
   const lastPullCount = lastPull?.itemCount ?? lastPull?.count ?? 0
 
@@ -53,7 +52,7 @@ export async function statusCommand() {
   console.log(`  Aprovados: ${chalk.green(approvedCount)}\n`)
 
   const driveIndex = await readJson<DriveIndex>(
-    join(config.workspacePath, '_system', 'drive-index.json'),
+    systemStatePath(config.workspacePath, 'drive-index.json'),
   )
   if (driveIndex) {
     const total = Object.keys(driveIndex.files).length

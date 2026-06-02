@@ -5,7 +5,15 @@ import { stdin, stdout } from 'node:process'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
-import { readJson, writeJson, slugify, SPECIAL_DIRS } from '../lib/workspace.js'
+import {
+  rawArchivePath,
+  readJson,
+  writeJson,
+  slugify,
+  SPECIAL_DIRS,
+  SYSTEM_DIRS,
+  systemStatePath,
+} from '../lib/workspace.js'
 import { parseItemFile, serializeItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import { isUserAgentsItem, USER_AGENTS_FILENAME, USER_AGENTS_TITLE } from '@doit/core'
@@ -19,7 +27,7 @@ import { DEFAULT_AGENTS_MD } from '../lib/agents-template.js'
 type FolderNode = Folder & { children: FolderNode[]; relativePath: string }
 type PullConflict = { relativePath: string; action: 'overwrite' | 'remove' }
 
-const SYSTEM_DIRS = new Set(['_system', '_changes', '_raw_archive', '.git', 'node_modules'])
+const SKIP_DIRS = new Set<string>(SYSTEM_DIRS)
 
 function buildFolderTree(folders: Folder[]): FolderNode[] {
   const map = new Map<string, FolderNode>()
@@ -105,7 +113,7 @@ async function walkMarkdown(root: string, current = root): Promise<string[]> {
   const out: string[] = []
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      if (SYSTEM_DIRS.has(entry.name)) continue
+      if (SKIP_DIRS.has(entry.name)) continue
       out.push(...(await walkMarkdown(root, join(current, entry.name))))
     } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'README.md') {
       out.push(join(current, entry.name))
@@ -157,7 +165,7 @@ async function archiveIfLocallyModified(
 
   if (hashContent(raw) === previous.syncHash) return false
 
-  const archivePath = join(workspacePath, '_raw_archive', archiveName, relativePath)
+  const archivePath = rawArchivePath(workspacePath, archiveName, relativePath)
   await mkdir(dirname(archivePath), { recursive: true })
   await writeFile(archivePath, raw, 'utf-8')
   return true
@@ -202,7 +210,7 @@ async function confirmLocalOverwrite(conflicts: PullConflict[]) {
       [
         'O pull vai sobrescrever/remover arquivos com edicoes locais:',
         preview + remaining,
-        'Essas edicoes serao preservadas em _raw_archive antes da alteracao.',
+        'Essas edicoes serao preservadas em .doit-sync/raw-archive antes da alteracao.',
       ].join('\n'),
     ),
   )
@@ -243,9 +251,8 @@ async function removeStaleFiles(
     }
 
     if (hashContent(raw) !== previous.syncHash) {
-      const archivePath = join(
+      const archivePath = rawArchivePath(
         workspacePath,
-        '_raw_archive',
         `pull-removed-${now}`,
         previous.localPath,
       )
@@ -268,7 +275,7 @@ export async function pullCommand() {
     const config = getConfig()
     const headers = { Authorization: `Bearer ${config.apiKey}` }
     const previousManifest = await readJson<Manifest>(
-      join(config.workspacePath, '_system', 'manifest.json'),
+      systemStatePath(config.workspacePath, 'manifest.json'),
     )
 
     const [foldersRes, itemsRes] = await Promise.all([
@@ -362,11 +369,6 @@ export async function pullCommand() {
     // Cria todos os diretorios reais (vazios ficam visiveis)
     for (const node of folderById.values()) {
       await mkdir(join(config.workspacePath, node.relativePath), { recursive: true })
-      await writeJson(join(config.workspacePath, node.relativePath, '_folder.json'), {
-        folderId: node.id,
-        name: node.name,
-        parentId: node.parentId ?? null,
-      })
     }
 
     for (const write of pendingWrites) {
@@ -393,8 +395,8 @@ export async function pullCommand() {
       entries,
       folders: folderEntries,
     }
-    await writeJson(join(config.workspacePath, '_system', 'manifest.json'), manifest)
-    await writeJson(join(config.workspacePath, '_system', 'last-pull.json'), {
+    await writeJson(systemStatePath(config.workspacePath, 'manifest.json'), manifest)
+    await writeJson(systemStatePath(config.workspacePath, 'last-pull.json'), {
       at: new Date().toISOString(),
       itemCount: items.length,
       folderCount: folders.length,
@@ -405,21 +407,25 @@ export async function pullCommand() {
         (stale.removed > 0
           ? chalk.dim(
               ` — ${stale.removed} fechado(s) removido(s) do workspace${
-                stale.archived > 0 ? `, ${stale.archived} com copia em _raw_archive` : ''
+                stale.archived > 0
+                  ? `, ${stale.archived} com copia em .doit-sync/raw-archive`
+                  : ''
               }`,
             )
           : '') +
         (overwrittenArchives > 0
-          ? chalk.dim(` — ${overwrittenArchives} edicao local preservada em _raw_archive`)
+          ? chalk.dim(
+              ` — ${overwrittenArchives} edicao local preservada em .doit-sync/raw-archive`,
+            )
           : ''),
     )
 
     const driveSpinner = ora('Indexando Drive...').start()
     try {
       const driveIndex = await buildDriveIndex(config.apiUrl, config.apiKey)
-      await writeJson(join(config.workspacePath, '_system', 'drive-index.json'), driveIndex)
+      await writeJson(systemStatePath(config.workspacePath, 'drive-index.json'), driveIndex)
       const report = await reconcileDrive(config.workspacePath, driveIndex)
-      await writeJson(join(config.workspacePath, '_system', 'inbox.json'), {
+      await writeJson(systemStatePath(config.workspacePath, 'inbox.json'), {
         version: 1,
         generatedAt: new Date().toISOString(),
         pending: report.inboxPending,

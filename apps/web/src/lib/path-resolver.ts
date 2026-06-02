@@ -3,9 +3,12 @@ import type { Folder } from '@doit/types'
 
 const SPECIAL = {
   Inbox: 'inbox',
+  inbox: 'inbox',
   Proximos: 'upcoming',
+  proximos: 'upcoming',
   _arquivo: 'archive',
   Arquivo: 'archive',
+  arquivo: 'archive',
 } as const
 
 export type SpecialDir = (typeof SPECIAL)[keyof typeof SPECIAL]
@@ -58,7 +61,8 @@ function buildTree(folders: Folder[]): FolderNode[] {
  * Given the folder tree from DB and a relative path like
  * `Trabalho/Cliente A/proposta.md`, returns `{ folderId, special }`.
  *
- * - If path starts with `Inbox/`, `Proximos/` or `Arquivo/`, returns the
+ * - If path starts with `inbox/`, `proximos/`, `arquivo/` or legacy
+ *   capitalized variants, returns the
  *   matching `special` and `folderId: null`.
  * - Otherwise walks segments matching against slugified folder names. The
  *   filename (last segment) is ignored.

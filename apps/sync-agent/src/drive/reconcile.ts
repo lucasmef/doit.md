@@ -2,6 +2,7 @@ import { readdir, readFile, stat } from 'fs/promises'
 import type { Dirent } from 'fs'
 import { join, relative } from 'path'
 import type { DriveIndex } from './indexer.js'
+import { SYSTEM_ROOT } from '../lib/workspace.js'
 
 export type DriveReconcileReport = {
   linked: Array<{ fileId: string; path: string; markdowns: string[] }>
@@ -45,7 +46,7 @@ export async function reconcileDrive(
   workspaceRoot: string,
   index: DriveIndex,
 ): Promise<DriveReconcileReport> {
-  const skipDirs = new Set(['_system', '_changes', 'node_modules', '.git', 'drive'])
+  const skipDirs = new Set([SYSTEM_ROOT, 'node_modules', '.git', 'drive'])
   const files = await walkMarkdowns(workspaceRoot, skipDirs)
 
   const refs = new Map<string, string[]>()

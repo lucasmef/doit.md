@@ -942,6 +942,25 @@ function SettingsContent() {
               <code className="rounded bg-slate-100 px-1 font-mono text-[11px]">AGENTS.md</code> na
               raiz com as regras que sua IA deve seguir ao reorganizar os arquivos.
             </p>
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="mb-2 text-xs font-semibold uppercase text-slate-500">
+                Estrutura local
+              </p>
+              <div className="space-y-1 font-mono text-xs text-slate-600">
+                <p>workspace-doitmd/</p>
+                <p>  inbox/</p>
+                <p>  proximos/</p>
+                <p>  pasta-x/subpasta-y/</p>
+                <p>  .doit-sync/</p>
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                Edite arquivos nas pastas da raiz. A pasta{' '}
+                <code className="rounded bg-white px-1 font-mono text-[11px]">.doit-sync/</code>{' '}
+                guarda manifest, pendencias, cache e snapshots do CLI. Use{' '}
+                <code className="rounded bg-white px-1 font-mono text-[11px]">inbox/</code> como
+                entrada para arquivos soltos; tudo ali deve ser revisado por IA antes do push.
+              </p>
+            </div>
           </div>
         </section>
       )}

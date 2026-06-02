@@ -144,3 +144,62 @@ Remove the remote Doit dev environment from the VPS, including versioned dev sys
 - Keep self-hosted CI and increase VPS memory/swap.
 - Add a second self-hosted runner on another machine.
 - Build deploy artifacts on GitHub-hosted runners and copy only artifacts to the VPS.
+
+---
+
+## ADR-004 - Sync CLI Workspace Layout
+
+Status: active
+Date: 2026-06-02
+
+### Context
+
+The current `doit-sync` workspace mixes user-editable synced folders with CLI-owned state at the workspace root. After `doit-sync init` and `doit-sync pull`, folders such as `Inbox`, `Proximos`, app folders, `_system`, `_changes`, `_raw_archive`, `AGENTS.md`, and `README.md` appear side by side.
+
+This makes the local workspace confusing for humans and AI agents because internal sync files look like part of the editable content tree.
+
+### Decision
+
+Use a separated workspace layout for new sync CLI workspaces:
+
+```txt
+workspace-doitmd/
+  README.md
+  AGENTS.md
+  inbox/
+  proximos/
+  arquivo/
+  <pastas sincronizadas>/
+  .doit-sync/
+    system/
+    changes/
+    raw-archive/
+```
+
+The workspace root remains the editable surface for synced Markdown content. `.doit-sync/` is owned by the CLI and stores manifests, pending changes, last run metadata, Drive cache/index data, and raw archives.
+
+Manifest `localPath` values remain relative to the workspace root, preserving app-level sync semantics and avoiding server paths that include CLI system directories.
+
+The `inbox/` folder is an intentional entry point for loose files. Any file placed there must be reviewed by an AI agent before being moved, rewritten, classified, or pushed into the app.
+
+The CLI must not write folder marker files such as `_folder.json` inside synced content folders. Folder metadata belongs in `.doit-sync/system`.
+
+### Consequences
+
+- New workspaces have a cleaner root and a clearer boundary between content and system state.
+- The CLI needs path helpers so commands do not hardcode root-level `_system`, `_changes`, and `_raw_archive`.
+- Documentation and the app's Sync settings page must teach the new layout.
+- Existing workspace compatibility is intentionally not implemented for this change because the only current user removed the old local workspace before reinstalling the CLI.
+- Empty folder renames may be harder to classify without in-folder marker files; preserving a clean content tree is more important for this single-user workflow.
+
+### Risks
+
+- Reusing an old workspace with root-level `_system`, `_changes`, or `_raw_archive` will not be supported by this implementation.
+- If manifest paths are interpreted relative to the wrong root, `diff` may report false moves or deletes.
+- AI agents may initially look in the old root paths if using older instructions.
+
+### Alternatives considered
+
+- Put synced content under `items/`. This would make the root cleaner, but the user prefers opening the workspace and seeing `inbox`, `proximos`, and real folders immediately.
+- Keep the old layout. This avoids code changes but preserves the confusing mix of CLI state and editable content.
+- Implement automatic migration/fallback for old workspaces. This is unnecessary for the current single-user rollout and would add risk around unpushed local edits.
