@@ -30,8 +30,8 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
       <div className="doit-wallpaper pointer-events-none fixed inset-0 z-0 bg-[#f4f1ff]" />
 
       <div className="relative z-10 flex min-h-screen flex-col text-navy-900">
-        <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-1 flex-col p-0 lg:p-7">
-          <div className="sticky top-0 z-50 lg:top-7 lg:mb-4">
+        <div className="mx-auto flex w-full min-w-0 max-w-[1440px] flex-1 flex-col p-0 lg:p-5">
+          <div className="sticky top-0 z-50 lg:top-5 lg:mb-2">
             <Topbar />
           </div>
           <NotificationFailureBanner />

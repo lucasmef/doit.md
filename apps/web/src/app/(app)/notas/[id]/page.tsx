@@ -882,7 +882,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   return (
     <div
       className={`grid h-full grid-cols-1 gap-3.5 p-3.5 ${
-        focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-[260px_1fr_280px]'
+        focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-[220px_minmax(0,1fr)_240px] xl:grid-cols-[230px_minmax(0,1fr)_250px]'
       }`}
     >
       {focusMode ? null : (
@@ -907,7 +907,13 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
         <div id="note-editor-toolbar" />
 
         <div className="flex-1 overflow-auto" data-note-scroll-container="true">
-          <div className="w-full max-w-[760px] px-6 pb-20 pt-8 lg:px-16">
+          <div
+            className={`mx-auto w-full px-5 pb-20 pt-8 sm:px-6 ${
+              focusMode
+                ? 'max-w-[1180px] lg:px-16 xl:px-20'
+                : 'max-w-[980px] lg:px-4 xl:max-w-[1040px] xl:px-6'
+            }`}
+          >
             <MarkdownEditor
               value={localContent}
               onChange={onContentChange}

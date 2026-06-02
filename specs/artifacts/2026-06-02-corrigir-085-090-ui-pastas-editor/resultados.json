@@ -1,0 +1,72 @@
+[
+  {
+    "name": "ID 085 - editor normal usa largura ampliada com limite",
+    "ok": true,
+    "extra": "{\"wrapperWidth\":902,\"proseWidth\":854}"
+  },
+  {
+    "name": "ID 085 - modo foco amplia editor e remove trilhos laterais",
+    "ok": true,
+    "extra": "{\"wrapperWidth\":1180,\"sidebars\":0}"
+  },
+  {
+    "name": "ID 085 - editor mobile respeita viewport",
+    "ok": true,
+    "extra": "{\"wrapperWidth\":360,\"viewport\":390}"
+  },
+  {
+    "name": "ID 086 - seletor tem busca, cancelar e lista rolavel",
+    "ok": true,
+    "extra": "{\"names\":[\"Pasta\",\"Alpha qa-085-090-1780412531926\",\"Beta qa-085-090-1780412531926\",\"Gamma qa-085-090-1780412531926\",\"Zeta qa-085-090-1780412531926\"],\"hasSearch\":true,\"hasCancel\":true,\"scrollerOverflow\":\"auto\"}"
+  },
+  {
+    "name": "ID 086 - pastas aparecem em ordem alfabetica hierarquica",
+    "ok": true,
+    "extra": "Pasta / Alpha qa-085-090-1780412531926 / Beta qa-085-090-1780412531926 / Gamma qa-085-090-1780412531926 / Zeta qa-085-090-1780412531926"
+  },
+  {
+    "name": "ID 086 - busca filtra pasta",
+    "ok": true,
+    "extra": "busca=Beta"
+  },
+  {
+    "name": "ID 086 - cancelar fecha sem selecionar",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 089 - Kanban da pasta aberta oculta concluidos das subpastas",
+    "ok": true,
+    "extra": "pasta principal"
+  },
+  {
+    "name": "ID 087 - Kanban tem modo foco em tela cheia",
+    "ok": true,
+    "extra": "{\"hasDialog\":true,\"columns\":3,\"width\":1440,\"height\":900}"
+  },
+  {
+    "name": "ID 087 - sair do foco retorna ao Kanban normal",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 089 - subpasta direta respeita propria regra de concluidos",
+    "ok": true,
+    "extra": "subpasta direta"
+  },
+  {
+    "name": "ID 088 - Hoje sem risco vertical desalinhado e prioridade no checkbox",
+    "ok": true,
+    "extra": "{\"boxShadow\":\"none\",\"checkBorder\":\"rgba(240, 68, 56, 0.72)\",\"topbarBottom\":62,\"topbarHeight\":42}"
+  },
+  {
+    "name": "ID 090 - topbar desktop ocupa menos altura mantendo botoes",
+    "ok": true,
+    "extra": "{\"boxShadow\":\"none\",\"checkBorder\":\"rgba(240, 68, 56, 0.72)\",\"topbarBottom\":62,\"topbarHeight\":42}"
+  },
+  {
+    "name": "ID 088 - Hoje mobile preserva checkbox",
+    "ok": true,
+    "extra": ""
+  }
+]

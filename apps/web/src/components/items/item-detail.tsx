@@ -1085,7 +1085,27 @@ export function ItemDetail() {
                   </span>
                 </button>
                 {popover === 'project' && (
-                  <div className="absolute left-0 top-9 z-[80] w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div
+                    className="absolute left-0 top-9 z-[80] flex max-h-[min(420px,70vh)] w-72 flex-col overflow-hidden rounded-xl border border-ui-border bg-white p-2 shadow-cool-md"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Pasta
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPopover(null)}
+                        className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-surface-soft hover:text-slate-700"
+                        aria-label="Cancelar selecao de pasta"
+                        title="Cancelar"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6 6 18" />
+                        </svg>
+                      </button>
+                    </div>
                     <input
                       value={projectQuery}
                       onChange={(e) => setProjectQuery(e.target.value)}
@@ -1099,7 +1119,7 @@ export function ItemDetail() {
                       className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                       autoFocus
                     />
-                    <div className="mt-1 max-h-52 overflow-y-auto">
+                    <div className="mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -1697,7 +1717,27 @@ export function ItemDetail() {
                   <span className="truncate">{selectedProject?.name ?? 'Pasta'}</span>
                 </button>
                 {popover === 'project' && (
-                  <div className="absolute bottom-9 left-0 z-10 w-72 rounded-xl border border-ui-border bg-white p-2 shadow-cool-md">
+                  <div
+                    className="absolute bottom-9 left-0 z-10 flex max-h-[min(420px,70vh)] w-72 flex-col overflow-hidden rounded-xl border border-ui-border bg-white p-2 shadow-cool-md"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                      <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Pasta
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPopover(null)}
+                        className="grid h-7 w-7 place-items-center rounded-full text-slate-400 hover:bg-surface-soft hover:text-slate-700"
+                        aria-label="Cancelar selecao de pasta"
+                        title="Cancelar"
+                      >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round">
+                          <path d="M6 6l12 12M18 6 6 18" />
+                        </svg>
+                      </button>
+                    </div>
                     <input
                       value={projectQuery}
                       onChange={(e) => setProjectQuery(e.target.value)}
@@ -1711,7 +1751,7 @@ export function ItemDetail() {
                       className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                       autoFocus
                     />
-                    <div className="mt-1 max-h-52 overflow-y-auto">
+                    <div className="mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                       <button
                         type="button"
                         onClick={() => {
