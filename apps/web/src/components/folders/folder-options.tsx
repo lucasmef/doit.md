@@ -29,6 +29,13 @@ export function FolderGlyph({ className = 'h-3.5 w-3.5' }: { className?: string 
 export function flattenFolderOptions(folders: Folder[]): FolderOption[] {
   const out: FolderOption[] = []
 
+  function sortNodes(nodes: FolderTreeNode[]): FolderTreeNode[] {
+    return nodes
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+      .map((node) => ({ ...node, children: sortNodes(node.children) }))
+  }
+
   function visit(nodes: FolderTreeNode[], depth: number) {
     for (const node of nodes) {
       out.push({ folder: node, depth })
@@ -36,7 +43,7 @@ export function flattenFolderOptions(folders: Folder[]): FolderOption[] {
     }
   }
 
-  visit(buildFolderTree(folders), 0)
+  visit(sortNodes(buildFolderTree(folders)), 0)
   return out
 }
 

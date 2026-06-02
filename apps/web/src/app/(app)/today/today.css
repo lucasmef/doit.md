@@ -1038,10 +1038,27 @@
    ID 020 - Barra lateral por prioridade (não azul para todos)
    1=alta/vermelho, 2=média/laranja, 3=baixa/amarelo, 0=sem prioridade/neutro
    ============================================================ */
-.today-v3-layout .row.prio-1 { box-shadow: inset 3px 0 0 0 #F04438; }
-.today-v3-layout .row.prio-2 { box-shadow: inset 3px 0 0 0 #F5A524; }
-.today-v3-layout .row.prio-3 { box-shadow: inset 3px 0 0 0 #EAB308; }
-.today-v3-layout .row.prio-0 { box-shadow: inset 3px 0 0 0 rgba(15,35,66,.10); }
+.today-v3-layout .row.prio-1,
+.today-v3-layout .row.prio-2,
+.today-v3-layout .row.prio-3,
+.today-v3-layout .row.prio-0 {
+  box-shadow: none;
+}
+.today-v3-layout .row.prio-1 .task-check:not(.done-icon) {
+  color: #F04438;
+  background: rgba(240,68,56,.06);
+  border-color: rgba(240,68,56,.72);
+}
+.today-v3-layout .row.prio-2 .task-check:not(.done-icon) {
+  color: #D98200;
+  background: rgba(245,165,36,.08);
+  border-color: rgba(245,165,36,.78);
+}
+.today-v3-layout .row.prio-3 .task-check:not(.done-icon) {
+  color: #A16207;
+  background: rgba(234,179,8,.08);
+  border-color: rgba(234,179,8,.78);
+}
 
 /* ============================================================
    ID 053 / 040 / 048 / 049 - Painel (Inbox/Hoje/Próximos + tags),

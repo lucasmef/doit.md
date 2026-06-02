@@ -716,6 +716,7 @@ function NotasBrowser() {
   const [mobileFoldersOpen, setMobileFoldersOpen] = useState(false)
   const [headerMenuOpen, setHeaderMenuOpen] = useState(false)
   const [folderMenu, setFolderMenu] = useState<FolderMenuState | null>(null)
+  const [kanbanFocusOpen, setKanbanFocusOpen] = useState(false)
   const [temporarilyDone, setTemporarilyDone] = useState<Set<string>>(() => new Set())
   const sortRef = useRef<HTMLDivElement>(null)
   const headerMenuRef = useRef<HTMLDivElement>(null)
@@ -792,6 +793,11 @@ function NotasBrowser() {
 
   // Esc fecha o drawer de pastas no mobile mesmo sem foco interno (ID 010).
   useEscapeClose(mobileFoldersOpen, () => setMobileFoldersOpen(false))
+  useEscapeClose(kanbanFocusOpen, () => setKanbanFocusOpen(false))
+
+  useEffect(() => {
+    if (viewMode !== 'kanban') setKanbanFocusOpen(false)
+  }, [viewMode])
 
   const isHideCompleted = selectedFolder ? selectedFolder.hideCompleted !== false : true
 
@@ -814,15 +820,13 @@ function NotasBrowser() {
     for (const item of items) {
       if (!item.folderId) continue
       if (item.status === 'archived') continue
-      const f = folderById.get(item.folderId)
-      const hideComp = f ? f.hideCompleted !== false : true
-      if (item.status === 'done' && (hideComp || item.clearedAt)) continue
+      if (item.status === 'done' && (isHideCompleted || item.clearedAt)) continue
       const list = map.get(item.folderId) ?? []
       list.push(item)
       map.set(item.folderId, list)
     }
     return map
-  }, [items, folderById])
+  }, [items, isHideCompleted])
 
   const allFolderItems = useMemo(() => {
     return sortItems(directItems, sortKey)
@@ -938,6 +942,66 @@ function NotasBrowser() {
       return updated
     })
     void updateItem(id, { status: next } as never)
+  }
+
+  function renderKanbanBoard(focus = false) {
+    return (
+      <div
+        className={`flex min-h-0 gap-3.5 overflow-auto overscroll-contain ${
+          focus ? 'h-full px-4 pb-4' : 'min-h-[60vh]'
+        }`}
+      >
+        {kanbanColumns.map((column) => (
+          <div
+            key={column.id}
+            // ID 034: clique direito no quadro/coluna abre o menu da pasta correspondente
+            // (cards param o contextmenu via stopPropagation, entao nao conflita com itens).
+            onContextMenu={(e) => {
+              if (column.id !== 'root' && folderById.has(column.id)) {
+                e.preventDefault()
+                openFolderMenu(column.id, e.clientX, e.clientY)
+              }
+            }}
+            className={`flex shrink-0 flex-col overflow-hidden rounded-[24px] border border-white/62 bg-white/46 ${
+              focus ? 'h-full w-[min(84vw,360px)] sm:w-80' : 'w-72'
+            }`}
+          >
+            <div className="flex items-center gap-2 border-b border-navy-900/[0.06] px-3.5 py-3">
+              <span className="h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_9px_rgba(47,107,255,.45)]" />
+              {column.id !== selectedId && column.id !== 'root' ? (
+                <button
+                  type="button"
+                  onClick={() => selectFolder(column.id)}
+                  className="min-w-0 flex-1 truncate text-left text-[13px] font-black text-navy-900 hover:text-brand-600"
+                  title={`Abrir ${column.title}`}
+                >
+                  {column.title}
+                </button>
+              ) : (
+                <b className="min-w-0 flex-1 truncate text-[13px] font-black text-navy-900">{column.title}</b>
+              )}
+              <span className="ml-auto font-mono text-[10px] text-navy-500">{column.items.length}</span>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain p-3">
+              {column.items.length === 0 ? (
+                <p className="px-1 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
+              ) : (
+                column.items.map((item) => (
+                  <ContentCard key={item.id} item={item} onOpen={setSingleSelection} />
+                ))
+              )}
+              <button
+                type="button"
+                onClick={() => handleNewItem(column.id === 'root' ? selectedId : column.id)}
+                className="mt-1 flex items-center gap-1.5 rounded-[14px] border border-dashed border-navy-900/12 px-3 py-2 text-[12px] font-semibold text-navy-500 hover:border-brand-300 hover:text-brand-600"
+              >
+                + Adicionar
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )
   }
 
   // ----- Ações do menu de contexto de pasta (parametrizadas por folderId) -----
@@ -1200,6 +1264,19 @@ function NotasBrowser() {
                     </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {viewMode === 'kanban' ? (
+                      <button
+                        type="button"
+                        onClick={() => setKanbanFocusOpen(true)}
+                        className="hidden h-[38px] items-center gap-2 rounded-full border border-white/72 bg-white/68 px-3 font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] text-navy-600 shadow-cool-sm transition-colors hover:text-brand-600 lg:inline-flex"
+                        title="Abrir Kanban em modo foco"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" />
+                        </svg>
+                        Foco
+                      </button>
+                    ) : null}
                     {/* Mobile & Desktop: ações agrupadas em menu kebab (ID 016/025). */}
                     <div className="relative" ref={headerMenuRef}>
                       <button
@@ -1378,6 +1455,19 @@ function NotasBrowser() {
                       </button>
                     ))}
                   </div>
+                  {viewMode === 'kanban' ? (
+                    <button
+                      type="button"
+                      onClick={() => setKanbanFocusOpen(true)}
+                      className="inline-flex h-8 items-center gap-2 rounded-full border border-white/72 bg-white/68 px-3 font-mono text-[10px] font-extrabold uppercase tracking-[0.06em] text-navy-500 lg:hidden"
+                      title="Abrir Kanban em modo foco"
+                    >
+                      <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3" />
+                      </svg>
+                      Foco
+                    </button>
+                  ) : null}
                   <div className="relative">
                     <button
                       type="button"
@@ -1605,6 +1695,35 @@ function NotasBrowser() {
               </svg>
             </button>
             {folderNavContent}
+          </div>
+        </div>
+      ) : null}
+
+      {kanbanFocusOpen && viewMode === 'kanban' && selectedFolder ? (
+        <div className="fixed inset-0 z-[210] flex flex-col bg-[#EEF3FA] text-navy-900" role="dialog" aria-modal="true">
+          <div className="flex shrink-0 items-center gap-3 border-b border-white/70 bg-white/82 px-4 py-3 shadow-cool-sm backdrop-blur-2xl">
+            <div className="min-w-0 flex-1">
+              <div className="font-mono text-[10px] font-extrabold uppercase tracking-[0.08em] text-navy-500">
+                Kanban em foco
+              </div>
+              <h2 className="truncate text-[18px] font-black leading-tight text-navy-900">
+                {selectedFolder.name}
+              </h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setKanbanFocusOpen(false)}
+              className="inline-flex h-9 items-center gap-2 rounded-full bg-navy-900 px-3 text-[13px] font-bold text-white shadow-cool-sm transition-colors hover:bg-navy-800"
+              title="Sair do modo foco"
+            >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M16 21v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+              </svg>
+              Sair
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 py-4">
+            {renderKanbanBoard(true)}
           </div>
         </div>
       ) : null}

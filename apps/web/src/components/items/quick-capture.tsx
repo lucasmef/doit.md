@@ -1712,7 +1712,11 @@ export function QuickCapture() {
                 <span className="truncate">{selectedFolder?.name ?? 'Pasta'}</span>
               </button>
               {popover === 'folder' && (
-                <div className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[110] max-h-[55dvh] overflow-y-auto rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:z-10 sm:w-72">
+                <div
+                  className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[110] flex max-h-[55dvh] flex-col overflow-hidden rounded-xl border border-ui-border bg-white p-2 shadow-cool-md sm:absolute sm:inset-x-auto sm:bottom-9 sm:left-0 sm:z-10 sm:w-72"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                >
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
                     <span className="font-mono text-[10px] font-bold uppercase tracking-wide text-slate-400">
                       Pasta
@@ -1742,7 +1746,7 @@ export function QuickCapture() {
                     className="h-8 w-full rounded-[10px] border border-ui-border-soft bg-surface-soft px-2 text-[12px] text-slate-800 outline-none focus:ring-2 focus:ring-brand-500"
                     autoFocus
                   />
-                  <div className="mt-1 max-h-52 overflow-y-auto">
+                  <div className="mt-1 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
                     <button
                       type="button"
                       onClick={() => {

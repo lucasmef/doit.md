@@ -311,27 +311,27 @@ export function Topbar() {
 
   return (
     <>
-      <header className="z-[130] flex h-14 shrink-0 items-center gap-3 border-b border-white/45 bg-white/58 px-4 shadow-[0_1px_0_rgba(255,255,255,.65)_inset,0_10px_30px_rgba(15,35,66,.08)] backdrop-blur-2xl lg:mb-6 lg:grid lg:h-auto lg:grid-cols-[1fr_auto_1fr] lg:gap-[18px] lg:border-none lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none lg:backdrop-blur-none">
+      <header className="z-[130] flex h-14 shrink-0 items-center gap-3 border-b border-white/45 bg-white/58 px-4 shadow-[0_1px_0_rgba(255,255,255,.65)_inset,0_10px_30px_rgba(15,35,66,.08)] backdrop-blur-2xl lg:mb-3 lg:grid lg:h-auto lg:grid-cols-[1fr_auto_1fr] lg:gap-3.5 lg:border-none lg:bg-transparent lg:px-0 lg:py-0 lg:shadow-none lg:backdrop-blur-none">
         <Link
           href="/dashboard"
-          className="hidden w-max items-center gap-3 rounded-full border border-white/60 bg-white/55 py-2 pl-2 pr-4 shadow-cool-sm backdrop-blur-xl lg:inline-flex"
+          className="hidden w-max items-center gap-2.5 rounded-full border border-white/60 bg-white/55 py-1 pl-1.5 pr-3.5 shadow-cool-sm backdrop-blur-xl lg:inline-flex"
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
-            <img src="/brand/logo-icon.svg" alt="" className="h-[22px] w-[22px]" />
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-[8px] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
+            <img src="/brand/logo-icon.svg" alt="" className="h-5 w-5" />
           </span>
           <span className="text-[16px] font-black tracking-normal text-navy-900">
             doit<span className="text-brand-600">.md</span>
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 rounded-full border border-white/60 bg-white/55 p-1.5 shadow-cool-sm backdrop-blur-xl lg:inline-flex">
+        <nav className="hidden items-center gap-1 rounded-full border border-white/60 bg-white/55 p-1 shadow-cool-sm backdrop-blur-xl lg:inline-flex">
           {desktopNavItems.map((item) => {
             const active = isActive(item.match)
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-[13px] transition-colors ${
+                className={`inline-flex h-8 items-center gap-2 rounded-full px-3.5 text-[13px] transition-colors ${
                   active
                     ? 'bg-white font-bold text-navy-900 shadow-cool-sm'
                     : 'font-medium text-navy-500 hover:text-navy-900'
@@ -387,7 +387,7 @@ export function Topbar() {
               onFocus={() => {
                 if (query) setOpen(true)
               }}
-              className="h-10 w-full rounded-full border border-white/60 bg-white/60 py-1.5 pl-9 pr-16 text-[13px] text-navy-900 outline-none shadow-cool-sm transition-colors placeholder:font-mono placeholder:text-navy-300 focus:border-brand-300 focus:bg-white/80"
+              className="h-9 w-full rounded-full border border-white/60 bg-white/60 py-1.5 pl-9 pr-16 text-[13px] text-navy-900 outline-none shadow-cool-sm transition-colors placeholder:font-mono placeholder:text-navy-300 focus:border-brand-300 focus:bg-white/80"
             />
             <kbd className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded-full border border-white/70 bg-white/72 px-1.5 py-0.5 font-mono text-[10px] text-navy-500">
               Ctrl K
@@ -414,7 +414,7 @@ export function Topbar() {
           </div>
           <button
             onClick={() => router.push('/calendar')}
-            className={`inline-flex h-10 w-10 items-center justify-center rounded-full transition-colors ${
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
               pathname === '/calendar'
                 ? 'bg-white/80 text-brand-600 shadow-cool-sm'
                 : 'text-navy-500 hover:bg-white/65'
@@ -425,11 +425,11 @@ export function Topbar() {
           </button>
           <button
             onClick={() => setQuickCaptureOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-brand-600 px-4 text-[13px] font-bold text-white shadow-cool-sm transition-colors hover:bg-brand-700"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-brand-600 px-3.5 text-[13px] font-bold text-white shadow-cool-sm transition-colors hover:bg-brand-700"
           >
             + Novo
           </button>
-          <div className="flex h-[42px] w-[42px] items-center justify-center rounded-full border-2 border-white/70 bg-gradient-to-br from-pink-400 via-violet-400 to-teal-500 text-[13px] font-bold text-white shadow-[0_2px_8px_rgba(15,35,66,.18)]">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-white/70 bg-gradient-to-br from-pink-400 via-violet-400 to-teal-500 text-[13px] font-bold text-white shadow-[0_2px_8px_rgba(15,35,66,.18)]">
             {profileInitial}
           </div>
           <SignOutButton className="hidden xl:inline-flex" />
