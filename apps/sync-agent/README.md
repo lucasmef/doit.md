@@ -24,7 +24,7 @@ doit-sync init
 doit-sync init ~/Notes/doit
 ```
 
-Cria a pasta com `AGENTS.md` (regras pra IA), `README.md` e diretórios de sistema.
+Cria a pasta com `AGENTS.md` (regras pra IA), `README.md`, pastas de conteúdo na raiz e estado interno em `.doit-sync/`.
 
 ### 3. Autenticar
 
@@ -63,14 +63,20 @@ Após `doit-sync pull`:
 workspace-doitmd/
 ├── AGENTS.md            # regras pra IA editar (não apagar)
 ├── README.md
-├── Inbox/               # itens sem pasta (notas, tarefas sem data)
-├── Proximos/            # tarefas com data sem pasta
-├── Arquivo/             # itens arquivados
+├── inbox/               # entrada bruta e itens sem pasta
+├── proximos/            # tarefas com data sem pasta
+├── arquivo/             # itens arquivados
 ├── Trabalho/            # pastas reais espelhadas do app
 │   └── Cliente A/
-├── _system/             # estado interno (não editar)
-└── _changes/            # mudanças locais pendentes
+└── .doit-sync/          # estado interno do CLI (não editar)
+    ├── system/          # manifest, últimas execuções, cache do Drive
+    ├── changes/         # mudanças locais pendentes
+    └── raw-archive/     # snapshots locais preservados
 ```
+
+Use a raiz como superfície de edição. A pasta `.doit-sync/` pertence ao CLI.
+
+`inbox/` também é a porta de entrada para arquivos soltos: tudo que for jogado ali deve ser revisado por IA antes de ser movido, classificado, reescrito ou enviado com `doit-sync push`.
 
 ## Frontmatter
 
@@ -97,7 +103,7 @@ Conteúdo livre em markdown.
 
 ## Fluxo de edição com IA
 
-1. Edite os `.md` manualmente ou peça pra uma IA reorganizar (Claude Code, Cursor, Copilot…). O `AGENTS.md` na raiz contém as regras que a IA deve seguir.
+1. Edite os `.md` manualmente ou peça pra uma IA reorganizar (Claude Code, Cursor, Copilot…). O `AGENTS.md` na raiz contém as regras que a IA deve seguir, incluindo a revisão obrigatória da `inbox/`.
 2. `doit-sync diff` — detecta alterações e envia pra tela de **Auditoria** no app.
 3. Aprove cada mudança no app (ou rejeite as que não fazem sentido).
 4. `doit-sync push` — aplica as mudanças aprovadas no servidor. Snapshot da versão anterior é salvo automaticamente; é possível restaurar via Auditoria.

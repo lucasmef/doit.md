@@ -3,7 +3,15 @@ import { mkdir, readFile, readdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
-import { readJson, writeJson, SPECIAL_DIRS } from '../lib/workspace.js'
+import {
+  changesPath,
+  rawArchivePath,
+  readJson,
+  writeJson,
+  SPECIAL_DIRS,
+  SYSTEM_DIRS,
+  systemStatePath,
+} from '../lib/workspace.js'
 import { parseItemFile } from '@doit/md'
 import { hashContent } from '@doit/sync'
 import { assessRisk } from '@doit/audit'
@@ -11,7 +19,7 @@ import { newChangeId, USER_AGENTS_FILENAME, USER_AGENTS_TAG, USER_AGENTS_TITLE }
 import type { FolderManifestEntry, Manifest, ManifestEntry } from '@doit/sync'
 import type { ChangeType, PendingChange } from '@doit/types'
 
-const SYSTEM_DIRS = new Set(['_system', '_changes', '_raw_archive', '.git', 'node_modules'])
+const SKIP_DIRS = new Set<string>(SYSTEM_DIRS)
 
 type LocalFile = {
   relativePath: string
@@ -31,7 +39,6 @@ type LocalFile = {
 type LocalFolder = {
   relativePath: string
   name: string
-  folderId?: string
 }
 
 async function walkMarkdown(root: string, current = root): Promise<string[]> {
@@ -39,7 +46,7 @@ async function walkMarkdown(root: string, current = root): Promise<string[]> {
   const out: string[] = []
   for (const entry of entries) {
     if (entry.isDirectory()) {
-      if (SYSTEM_DIRS.has(entry.name)) continue
+      if (SKIP_DIRS.has(entry.name)) continue
       const sub = await walkMarkdown(root, join(current, entry.name))
       out.push(...sub)
     } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'README.md') {
@@ -54,18 +61,14 @@ async function walkFolders(root: string, current = root): Promise<LocalFolder[]>
   const out: LocalFolder[] = []
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
-    if (SYSTEM_DIRS.has(entry.name)) continue
+    if (SKIP_DIRS.has(entry.name)) continue
     const absolute = join(current, entry.name)
     const relativePath = toRelative(root, absolute)
     if (isSpecialRoot(relativePath)) continue
 
-    const marker = await readJson<{ folderId?: string; name?: string }>(
-      join(absolute, '_folder.json'),
-    )
     out.push({
       relativePath,
       name: entry.name,
-      folderId: marker?.folderId,
     })
     out.push(...(await walkFolders(root, absolute)))
   }
@@ -76,12 +79,6 @@ function isSpecialRoot(relativePath: string): boolean {
   return Object.values(SPECIAL_DIRS).includes(
     relativePath as (typeof SPECIAL_DIRS)[keyof typeof SPECIAL_DIRS],
   )
-}
-
-function dirnameAsPosix(relativePath: string): string {
-  const parts = relativePath.split('/').filter(Boolean)
-  parts.pop()
-  return parts.join('/')
 }
 
 function toRelative(workspaceRoot: string, absolute: string): string {
@@ -120,7 +117,7 @@ function syncFrontmatter(file: LocalFile): Record<string, unknown> {
 
 async function archiveChangedRaw(workspacePath: string, file: LocalFile, now: string) {
   const safeTimestamp = now.replace(/[:.]/g, '-')
-  const target = join(workspacePath, '_raw_archive', safeTimestamp, file.relativePath)
+  const target = rawArchivePath(workspacePath, safeTimestamp, file.relativePath)
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, file.raw, 'utf-8')
 }
@@ -146,7 +143,7 @@ export async function diffCommand() {
   const spinner = ora('Analisando mudanças...').start()
   const config = getConfig()
 
-  const manifest = await readJson<Manifest>(join(config.workspacePath, '_system', 'manifest.json'))
+  const manifest = await readJson<Manifest>(systemStatePath(config.workspacePath, 'manifest.json'))
   if (!manifest) {
     spinner.fail('Nenhum manifest encontrado. Execute doit-sync pull primeiro.')
     process.exit(1)
@@ -155,14 +152,12 @@ export async function diffCommand() {
   const manifestByPath = new Map<string, ManifestEntry>()
   const manifestById = new Map<string, ManifestEntry>()
   const folderManifestByPath = new Map<string, FolderManifestEntry>()
-  const folderManifestById = new Map<string, FolderManifestEntry>()
   for (const entry of manifest.entries) {
     manifestByPath.set(entry.localPath, entry)
     manifestById.set(entry.itemId, entry)
   }
   for (const entry of manifest.folders ?? []) {
     folderManifestByPath.set(entry.localPath, entry)
-    folderManifestById.set(entry.folderId, entry)
   }
 
   // Coleta arquivos locais
@@ -240,45 +235,17 @@ export async function diffCommand() {
   // 1. Pra cada arquivo local: criação, movimento, conteúdo, frontmatter
   const localFolders = await walkFolders(config.workspacePath)
   for (const folder of localFolders) {
-    if (!folder.folderId) {
-      const previousAtPath = folderManifestByPath.get(folder.relativePath)
-      if (previousAtPath) {
-        seenFolderIds.add(previousAtPath.folderId)
-        continue
-      }
-      record({
-        changeType: 'folder_created',
-        localPathAfter: folder.relativePath,
-        folderNameAfter: folder.name,
-      })
+    const previousAtPath = folderManifestByPath.get(folder.relativePath)
+    if (previousAtPath) {
+      seenFolderIds.add(previousAtPath.folderId)
       continue
     }
 
-    seenFolderIds.add(folder.folderId)
-    const entry = folderManifestById.get(folder.folderId)
-    if (!entry) {
-      record({
-        changeType: 'folder_created',
-        folderId: folder.folderId,
-        localPathAfter: folder.relativePath,
-        folderNameAfter: folder.name,
-      })
-      continue
-    }
-
-    if (folder.relativePath !== entry.localPath) {
-      const renamedOnly =
-        dirnameAsPosix(folder.relativePath) === dirnameAsPosix(entry.localPath) &&
-        folder.name !== entry.name
-      record({
-        changeType: renamedOnly ? 'folder_renamed' : 'folder_moved',
-        folderId: folder.folderId,
-        localPathBefore: entry.localPath,
-        localPathAfter: folder.relativePath,
-        folderNameBefore: entry.name,
-        folderNameAfter: folder.name,
-      })
-    }
+    record({
+      changeType: 'folder_created',
+      localPathAfter: folder.relativePath,
+      folderNameAfter: folder.name,
+    })
   }
 
   for (const entry of manifest.folders ?? []) {
@@ -381,7 +348,7 @@ export async function diffCommand() {
   }
 
   const previousPending = await readJson<{ changes: PendingChange[] }>(
-    join(config.workspacePath, '_changes', 'pending.json'),
+    changesPath(config.workspacePath, 'pending.json'),
   )
   const previousByKey = new Map<string, PendingChange>()
   for (const previous of previousPending?.changes ?? []) {
@@ -396,8 +363,8 @@ export async function diffCommand() {
     }
   }
 
-  await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes })
-  await writeJson(join(config.workspacePath, '_system', 'last-diff.json'), {
+  await writeJson(changesPath(config.workspacePath, 'pending.json'), { changes })
+  await writeJson(systemStatePath(config.workspacePath, 'last-diff.json'), {
     at: now,
     count: changes.length,
   })

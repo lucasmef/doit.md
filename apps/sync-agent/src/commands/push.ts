@@ -3,7 +3,7 @@ import { readFile } from 'fs/promises'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
-import { readJson, writeJson } from '../lib/workspace.js'
+import { changesPath, readJson, systemStatePath, writeJson } from '../lib/workspace.js'
 import { hashContent } from '@doit/sync'
 import { parseItemFile } from '@doit/md'
 import type { Manifest } from '@doit/sync'
@@ -12,7 +12,7 @@ import type { PendingChange } from '@doit/types'
 export async function pushCommand() {
   const config = getConfig()
   const pending = await readJson<{ changes: PendingChange[] }>(
-    join(config.workspacePath, '_changes', 'pending.json'),
+    changesPath(config.workspacePath, 'pending.json'),
   )
 
   if (!pending || pending.changes.length === 0) {
@@ -76,7 +76,7 @@ export async function pushCommand() {
     const { applied } = (await res.json()) as { applied: number }
 
     const now = new Date().toISOString()
-    await writeJson(join(config.workspacePath, '_system', 'last-push.json'), {
+    await writeJson(systemStatePath(config.workspacePath, 'last-push.json'), {
       at: now,
       count: applied,
     })
@@ -84,7 +84,7 @@ export async function pushCommand() {
     // Limpar aprovados do pending local
     const remaining = changes.filter((c) => !approved.find((a) => a.id === c.id))
     const manifest = await readJson<Manifest>(
-      join(config.workspacePath, '_system', 'manifest.json'),
+      systemStatePath(config.workspacePath, 'manifest.json'),
     )
     if (manifest?.entries) {
       const deletedItemIds = new Set(
@@ -148,9 +148,9 @@ export async function pushCommand() {
       }
 
       manifest.generatedAt = now
-      await writeJson(join(config.workspacePath, '_system', 'manifest.json'), manifest)
+      await writeJson(systemStatePath(config.workspacePath, 'manifest.json'), manifest)
     }
-    await writeJson(join(config.workspacePath, '_changes', 'pending.json'), { changes: remaining })
+    await writeJson(changesPath(config.workspacePath, 'pending.json'), { changes: remaining })
 
     spinner.succeed(chalk.green(`✓ ${applied} mudança(s) aplicada(s) com sucesso!`))
     if (remaining.length > 0) {

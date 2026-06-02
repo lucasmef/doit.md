@@ -1,13 +1,14 @@
-import { dirname, isAbsolute, join, resolve } from 'path'
+import { dirname, isAbsolute, resolve } from 'path'
 import { mkdir, writeFile } from 'fs/promises'
 import chalk from 'chalk'
 import ora from 'ora'
 import { getConfig } from '../lib/config.js'
 import { DriveNotConnectedError, downloadFile, fetchDriveToken } from '../drive/client.js'
+import { systemStatePath } from '../lib/workspace.js'
 
 /**
  * `doit-sync drive get <fileId> [dest]` — baixa um anexo do Drive para leitura
- * local pela IA. Sem `dest`, salva em `_system/drive-cache/<fileId>`.
+ * local pela IA. Sem `dest`, salva em `.doit-sync/system/drive-cache/<fileId>`.
  */
 export async function driveGetCommand(fileId: string, dest?: string): Promise<void> {
   const config = getConfig()
@@ -19,7 +20,7 @@ export async function driveGetCommand(fileId: string, dest?: string): Promise<vo
       ? isAbsolute(dest)
         ? dest
         : resolve(process.cwd(), dest)
-      : join(config.workspacePath, '_system', 'drive-cache', fileId)
+      : systemStatePath(config.workspacePath, 'drive-cache', fileId)
     await mkdir(dirname(outPath), { recursive: true })
     await writeFile(outPath, data)
     spinner.succeed(chalk.green(`✓ ${data.length} byte(s) salvos`))
