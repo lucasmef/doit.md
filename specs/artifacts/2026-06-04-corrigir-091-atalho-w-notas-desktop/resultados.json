@@ -1,0 +1,62 @@
+[
+  {
+    "name": "W abre rota /notas/[id] no desktop",
+    "ok": true,
+    "extra": "http://127.0.0.1:3300/notas/itm_ljHAIf36"
+  },
+  {
+    "name": "Editor novo de notas esta visivel",
+    "ok": true,
+    "extra": "count=1"
+  },
+  {
+    "name": "Modal compacto/intermediario nao aparece",
+    "ok": true,
+    "extra": "modalCount=0"
+  },
+  {
+    "name": "Editor antigo/modal de detalhe nao aparece",
+    "ok": true,
+    "extra": "oldNoteDetailCount=0"
+  },
+  {
+    "name": "Nota criada pelo W salva conteudo",
+    "ok": true,
+    "extra": "itm_ljHAIf36"
+  },
+  {
+    "name": "W dentro do editor nao cria outra nota",
+    "ok": true,
+    "extra": "before=1; after=1"
+  },
+  {
+    "name": "W dentro de input nao dispara atalho",
+    "ok": true,
+    "extra": "http://127.0.0.1:3300/today"
+  },
+  {
+    "name": "Atalho Q ainda abre captura de tarefa",
+    "ok": true,
+    "extra": "modalCount=1"
+  },
+  {
+    "name": "Atalho E ainda abre captura de evento",
+    "ok": true,
+    "extra": "evento encontrado no texto da tela"
+  },
+  {
+    "name": "Atalho H ainda navega para Hoje",
+    "ok": true,
+    "extra": "http://127.0.0.1:3300/today"
+  },
+  {
+    "name": "Atalho ? ainda abre ajuda de atalhos",
+    "ok": true,
+    "extra": "modalCount=1"
+  },
+  {
+    "name": "Mobile continua abrindo editor novo sem modal compacto pelo W",
+    "ok": true,
+    "extra": "editor=1; modal=0"
+  }
+]
