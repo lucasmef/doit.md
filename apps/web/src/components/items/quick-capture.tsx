@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { createItem, updateItem, useItem, useItems } from '@/hooks/use-items'
 import { createProject, useProjects } from '@/hooks/use-projects'
 import { useUI } from '@/store/ui'
@@ -464,6 +464,7 @@ function ToolButton({
 }
 
 export function QuickCapture() {
+  const router = useRouter()
   const pathname = usePathname()
   const {
     quickCaptureOpen,
@@ -474,7 +475,6 @@ export function QuickCapture() {
     setQuickCaptureDate,
     quickCaptureEditId,
     setQuickCaptureEditId,
-    setSingleSelection,
     markPendingEmptyNote,
     openCalendarEventCapture,
     captureMode,
@@ -843,6 +843,18 @@ export function QuickCapture() {
     try {
       const trimmedContent = contentMd.trim()
       const parsedTitle = titleFromNoteContent(contentMd)
+      if (editMode && quickCaptureEditId) {
+        await updateItem(quickCaptureEditId, {
+          title: parsedTitle,
+          complexity: 'note',
+          contentMd: trimmedContent,
+          folderId: folderId || '',
+          tags,
+        } as never)
+        closeAll()
+        router.push(`/notas/${quickCaptureEditId}`)
+        return
+      }
       const item = await createItem({
         title: parsedTitle,
         complexity: 'note',
@@ -855,7 +867,7 @@ export function QuickCapture() {
       closeAll()
       if (item?.id) {
         if (!parsedTitle && !trimmedContent) markPendingEmptyNote(item.id)
-        setSingleSelection(item.id)
+        router.push(`/notas/${item.id}`)
       }
     } catch (error) {
       toast(error instanceof Error ? error.message : 'Erro ao criar nota.', 'error')
@@ -1058,7 +1070,11 @@ export function QuickCapture() {
             <div className="w-full">
               <button
                 type="button"
-                onClick={() => setExpanded(true)}
+                onClick={() => {
+                  if (isNote) void handleOpenFullscreen()
+                  else setExpanded(true)
+                }}
+                disabled={isNote && saving}
                 className="mx-auto mb-3 block h-1.5 w-12 rounded-full bg-navy-900/15 transition-colors hover:bg-navy-900/25"
                 aria-label="Expandir"
                 title="Expandir"

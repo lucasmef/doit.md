@@ -350,7 +350,7 @@ export function Topbar() {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/55 bg-white/45 text-navy-600 hover:bg-white/75"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/70 bg-white/90 text-navy-600 shadow-cool-sm hover:bg-white"
             aria-label="Abrir menu"
             title="Menu"
           >
@@ -491,14 +491,14 @@ export function Topbar() {
 
       {mobileMenuOpen ? (
         <div
-          className="fixed inset-0 z-[220] isolate bg-navy-900/35 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-[220] isolate bg-navy-900/45 backdrop-blur-[3px] lg:hidden"
           role="dialog"
           aria-modal="true"
           onClick={(event) => {
             if (event.target === event.currentTarget) setMobileMenuOpen(false)
           }}
         >
-          <div className="absolute inset-y-3 left-3 flex w-[min(82vw,340px)] flex-col overflow-hidden rounded-[24px] border border-white/55 bg-white/72 shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_24px_60px_rgba(15,35,66,.28),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-2xl">
+          <div className="absolute inset-y-3 left-3 flex w-[min(82vw,340px)] flex-col overflow-hidden rounded-[24px] border border-white/85 bg-[rgba(255,255,255,0.96)] shadow-[0_1px_0_rgba(255,255,255,.7)_inset,0_24px_60px_rgba(15,35,66,.28),0_4px_12px_rgba(15,35,66,.06)] backdrop-blur-2xl">
             <div className="flex items-center gap-3 border-b border-navy-900/[0.06] px-4 pb-3 pt-4">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] bg-[#F8FAFC] shadow-[0_1px_2px_rgba(15,35,66,.08)]">
                 <img src="/brand/logo-icon.svg" alt="" className="h-[18px] w-[18px]" />

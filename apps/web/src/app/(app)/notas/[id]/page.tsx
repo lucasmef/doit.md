@@ -419,6 +419,82 @@ function NotePropertiesPanel({
   )
 }
 
+function MobileNoteActions({
+  item,
+  folders,
+  attachmentsOpen,
+  onToggleAttachments,
+  onPatch,
+}: {
+  item: Item
+  folders: Folder[]
+  attachmentsOpen: boolean
+  onToggleAttachments: () => void
+  onPatch: (patch: UpdateItemInput) => void
+}) {
+  return (
+    <div className="border-b border-[#ECF0F5] bg-white/96 px-3 py-2 lg:hidden">
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          onClick={onToggleAttachments}
+          aria-expanded={attachmentsOpen}
+          className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-[12px] border px-2 text-[12px] font-semibold ${
+            attachmentsOpen
+              ? 'border-brand-200 bg-brand-50 text-brand-700'
+              : 'border-navy-900/[0.08] bg-white text-navy-600'
+          }`}
+        >
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.44 11.05 12 20.49a6 6 0 0 1-8.49-8.49l9.44-9.44a4 4 0 0 1 5.66 5.66l-9.44 9.44a2 2 0 1 1-2.83-2.83l8.49-8.49" />
+          </svg>
+          Anexos
+        </button>
+        <label className="min-w-0">
+          <span className="sr-only">Pasta</span>
+          <select
+            value={item.folderId ?? ''}
+            onChange={(event) => onPatch({ folderId: (event.target.value || null) as unknown as string })}
+            className="h-10 w-full rounded-[12px] border border-navy-900/[0.08] bg-white px-2 text-[12px] font-semibold text-navy-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+            aria-label="Editar pasta da nota"
+          >
+            <option value="">Inbox</option>
+            {flattenFolderOptions(folders).map(({ id, name, depth }) => (
+              <option key={id} value={id}>
+                {`${'  '.repeat(depth)}${depth > 0 ? '- ' : ''}${name}`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="min-w-0">
+          <span className="sr-only">Data</span>
+          <input
+            type="date"
+            value={item.dueDate ?? ''}
+            onChange={(event) => onPatch({ dueDate: (event.target.value || null) as unknown as string })}
+            className="h-10 w-full rounded-[12px] border border-navy-900/[0.08] bg-white px-2 text-[12px] font-semibold text-navy-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+            aria-label="Editar data da nota"
+          />
+        </label>
+      </div>
+      {item.dueDate ? (
+        <button
+          type="button"
+          onClick={() => onPatch({ dueDate: null as unknown as string })}
+          className="mt-2 h-8 rounded-full bg-navy-900/[0.05] px-3 text-[12px] font-semibold text-navy-500"
+        >
+          Remover data
+        </button>
+      ) : null}
+      {attachmentsOpen ? (
+        <div className="mt-3 rounded-[16px] border border-navy-900/[0.08] bg-navy-900/[0.03] p-2">
+          <div id="note-editor-mobile-attachments" />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function OutlineRail({
   headings,
   progress,
@@ -741,6 +817,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [hydrated, setHydrated] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+  const [mobileAttachmentsOpen, setMobileAttachmentsOpen] = useState(false)
   
   useEscapeClose(!focusMode, () => {
     if (folderParam) router.push(`/notas?folder=${folderParam}`)
@@ -860,6 +937,8 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     URL.revokeObjectURL(url)
   }, [fileName, localContent])
 
+  const attachmentsPortalId = mobileAttachmentsOpen ? 'note-editor-mobile-attachments' : 'note-editor-attachments'
+
   if (isLoading) {
     return (
       <div className="grid h-full place-items-center font-mono text-sm text-navy-500">
@@ -904,6 +983,15 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
           isPinned={isPinned}
           onTogglePin={handleTogglePin}
         />
+        {focusMode ? null : (
+          <MobileNoteActions
+            item={item}
+            folders={folders}
+            attachmentsOpen={mobileAttachmentsOpen}
+            onToggleAttachments={() => setMobileAttachmentsOpen((open) => !open)}
+            onPatch={handleMetadataPatch}
+          />
+        )}
         <div id="note-editor-toolbar" />
 
         <div className="flex-1 overflow-auto" data-note-scroll-container="true">
@@ -922,7 +1010,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
               hideDocumentActions
               variant="sheet"
               toolbarPortalId="note-editor-toolbar"
-              attachmentsPortalId="note-editor-attachments"
+              attachmentsPortalId={attachmentsPortalId}
               focusMode={focusMode}
               onToggleFocus={() => setFocusMode((value) => !value)}
               collapsedHeadingIndices={

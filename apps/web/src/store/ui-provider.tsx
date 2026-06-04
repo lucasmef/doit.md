@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { UIContext, type CaptureMode, type ItemContextMenuState } from '@/store/ui'
 import { useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
-import { archiveItem } from '@/hooks/use-items'
+import { archiveItem, createItem } from '@/hooks/use-items'
 import { toLocalDateKey } from '@doit/core'
 
 async function archiveIfStillEmpty(id: string) {
@@ -172,6 +172,25 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     setQuickCaptureOpenState(true)
   }, [lastCaptureMode])
 
+  const openNewNoteEditor = useCallback(async () => {
+    try {
+      const item = await createItem({
+        title: '',
+        complexity: 'note',
+        status: 'inbox',
+        contentMd: '',
+      })
+      setQuickCaptureOpenState(false)
+      setQuickCaptureEditId(null)
+      setCalendarEventCaptureOpen(false)
+      setSingleSelection(null)
+      markPendingEmptyNote(item.id)
+      router.push(`/notas/${item.id}`)
+    } catch (error) {
+      console.error('[shortcut W] failed to create note', error)
+    }
+  }, [markPendingEmptyNote, router, setSingleSelection])
+
   const goTo = useCallback((href: string) => {
     router.push(href)
   }, [router])
@@ -204,7 +223,7 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       key: 'w',
       handler: (e) => {
         e.preventDefault()
-        openCapture('note')
+        void openNewNoteEditor()
       },
     },
     {

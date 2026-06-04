@@ -23,7 +23,6 @@ export default function InboxPage() {
   const inboxItems = sortForcedItemOrder(
     items.filter((item) => {
       if (item.status === 'archived') return false
-      if (item.status === 'done') return false
       return isLooseInboxItem(item)
     }),
   )
