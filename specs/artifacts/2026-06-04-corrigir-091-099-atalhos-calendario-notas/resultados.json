@@ -1,0 +1,77 @@
+[
+  {
+    "name": "ID 091 - W abre editor novo de notas em tela cheia",
+    "ok": true,
+    "extra": "http://127.0.0.1:3300/notas/itm_DwSsFGcc"
+  },
+  {
+    "name": "ID 091 - W dentro do editor nao cria nova nota",
+    "ok": true,
+    "extra": "before=3; after=3"
+  },
+  {
+    "name": "ID 091 - W dentro de input nao dispara atalho",
+    "ok": true,
+    "extra": "http://127.0.0.1:3300/today"
+  },
+  {
+    "name": "ID 097 - nota aberta pela pagina Hoje usa editor novo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 098 - editor novo mobile expoe anexos, pasta e data",
+    "ok": true,
+    "extra": "{\"hasAttachments\":true,\"hasFolder\":true,\"hasDate\":true}"
+  },
+  {
+    "name": "ID 098 - editor novo mobile altera pasta e data",
+    "ok": true,
+    "extra": "{\"folderId\":\"fld_17m74iA48\",\"dueDate\":\"2026-06-04\"}"
+  },
+  {
+    "name": "ID 099 - expandir nota compacta abre editor novo direto",
+    "ok": true,
+    "extra": "http://127.0.0.1:3300/notas/itm_14YTnp33G"
+  },
+  {
+    "name": "ID 093 - topo desktop nao exibe Semana X",
+    "ok": true,
+    "extra": "Jun 2026 hoje"
+  },
+  {
+    "name": "ID 092 - calendario tem menu sanduiche com calendarios visiveis",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 092 - ocultar calendario remove eventos daquele calendario",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 092 - selecao de calendarios persiste ao reabrir",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 093 - topo mobile nao exibe Semana X",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 094 - clique em evento no mes mobile abre lista do dia",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 095 - menu sanduiche mobile tem fundo opaco legivel",
+    "ok": true,
+    "extra": "rgba(255, 255, 255, 0.96)"
+  },
+  {
+    "name": "ID 096 - concluir evento/captura no Inbox mostra concluido antes de sumir",
+    "ok": true,
+    "extra": "immediate=1; later=0"
+  }
+]

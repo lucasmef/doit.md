@@ -1,14 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import type { CalendarEvent, Item } from '@doit/types'
+import type { CalendarEvent, GoogleCalendar, Item } from '@doit/types'
 import { toLocalDateKey } from '@doit/core'
 import { BentoGrid, CardTitle, VividBlueCard, GlassCard } from '@/components/ui/bento'
-import { useCalendarEvents } from '@/hooks/use-calendar-events'
+import { useCalendarEvents, useGoogleCalendars } from '@/hooks/use-calendar-events'
 import { useItems } from '@/hooks/use-items'
 import { useUI } from '@/store/ui'
 import { useEscapeClose } from '@/hooks/use-escape-close'
 import { EventSheet } from '@/components/calendar/calendar-board'
+import { usePreferences } from '@/hooks/use-preferences'
 
 const WEEKDAY_PT = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado']
 const MONTH_PT = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ']
@@ -190,6 +191,11 @@ function CalendarCard({
   onPickMonth,
   viewMode,
   setViewMode,
+  calendars,
+  visibleCalendarIds,
+  onToggleCalendar,
+  onShowAllCalendars,
+  monthEntriesOpenDay,
 }: {
   anchor: Date
   todayKey: string
@@ -209,6 +215,11 @@ function CalendarCard({
   onPickMonth: (year: number, month: number) => void
   viewMode: ViewMode
   setViewMode: (mode: ViewMode) => void
+  calendars: GoogleCalendar[]
+  visibleCalendarIds: string[]
+  onToggleCalendar: (calendarId: string) => void
+  onShowAllCalendars: () => void
+  monthEntriesOpenDay: boolean
 }) {
   const cursorYear = anchor.getFullYear()
   const cursorMonth = anchor.getMonth()
@@ -220,6 +231,7 @@ function CalendarCard({
 
   const gridRef = useRef<HTMLDivElement>(null)
   const [dynamicMaxVisible, setDynamicMaxVisible] = useState(monthMaxVisible)
+  const [calendarMenuOpen, setCalendarMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!expanded || viewMode !== 'MES') {
@@ -240,14 +252,6 @@ function CalendarCard({
     return () => observer.disconnect()
   }, [expanded, viewMode, monthMaxVisible])
 
-  const weekNumber = useMemo(() => {
-    const firstThursday = new Date(cursorYear, 0, 4)
-    const offset = (firstThursday.getDay() + 6) % 7
-    const start = addDays(firstThursday, -offset)
-    const today = new Date(todayKey + 'T12:00:00')
-    return Math.max(1, Math.floor((today.getTime() - start.getTime()) / (7 * 86400 * 1000)) + 1)
-  }, [cursorYear, todayKey])
-
   const header = useMemo(() => {
     if (viewMode === 'ANO') return { big: String(cursorYear), small: 'ano' }
     if (viewMode === 'SEM') {
@@ -262,8 +266,8 @@ function CalendarCard({
       const dow = WEEKDAY_PT[anchor.getDay()] ?? ''
       return { big: String(anchor.getDate()), small: `${dow} · ${MONTH_LONG[cursorMonth]} ${cursorYear}` }
     }
-    return { big: MONTH_LONG[cursorMonth] ?? '', small: `${cursorYear} · SEMANA ${weekNumber}` }
-  }, [viewMode, cursorYear, cursorMonth, anchor, weekStart, weekNumber])
+    return { big: MONTH_LONG[cursorMonth] ?? '', small: String(cursorYear) }
+  }, [viewMode, cursorYear, cursorMonth, anchor, weekStart])
 
   const navLabels: Record<ViewMode, { prev: string; next: string }> = {
     DIA: { prev: 'Dia anterior', next: 'Proximo dia' },
@@ -317,6 +321,78 @@ function CalendarCard({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setCalendarMenuOpen((open) => !open)}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/55 bg-white/70 text-navy-500 shadow-cool-sm transition-colors hover:bg-white hover:text-navy-900"
+              aria-label="Escolher calendarios visiveis"
+              aria-expanded={calendarMenuOpen}
+              title="Calendarios visiveis"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            </button>
+            {calendarMenuOpen ? (
+              <>
+                <button
+                  type="button"
+                  aria-hidden="true"
+                  tabIndex={-1}
+                  onClick={() => setCalendarMenuOpen(false)}
+                  className="fixed inset-0 z-40 cursor-default"
+                />
+                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(82vw,300px)] rounded-[18px] border border-white/70 bg-white/95 p-3 text-left shadow-[0_18px_44px_rgba(15,35,66,.20)] backdrop-blur-xl">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div>
+                      <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
+                        Calendarios
+                      </p>
+                      <p className="text-[13px] font-semibold text-navy-900">Visiveis</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={onShowAllCalendars}
+                      className="rounded-full bg-navy-900/[0.05] px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-600 hover:bg-navy-900/[0.10]"
+                    >
+                      Todos
+                    </button>
+                  </div>
+                  {calendars.length === 0 ? (
+                    <p className="rounded-[12px] bg-navy-900/[0.04] px-3 py-2 text-[12px] text-navy-500">
+                      Nenhum calendario Google carregado.
+                    </p>
+                  ) : (
+                    <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+                      {calendars.map((calendar) => {
+                        const selected = visibleCalendarIds.includes(calendar.id)
+                        return (
+                          <button
+                            key={calendar.id}
+                            type="button"
+                            onClick={() => onToggleCalendar(calendar.id)}
+                            className={`flex h-10 w-full items-center gap-2 rounded-[12px] border px-3 text-left text-[13px] font-semibold transition-colors ${
+                              selected
+                                ? 'border-teal-200 bg-teal-50 text-navy-900'
+                                : 'border-navy-900/[0.08] bg-white text-navy-400 hover:text-navy-700'
+                            }`}
+                          >
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full bg-teal-500"
+                              style={calendar.backgroundColor ? { backgroundColor: calendar.backgroundColor } : undefined}
+                            />
+                            <span className="min-w-0 flex-1 truncate">{calendar.summary}</span>
+                            <span className="font-mono text-[10px]">{selected ? 'ON' : 'OFF'}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : null}
+          </div>
           <div className="inline-flex items-center gap-px rounded-full border border-white/55 bg-white/55 p-1 font-mono text-[10px] font-bold tracking-wider text-navy-500 shadow-cool-sm">
             {VIEW_MODES.map((label) => (
               <button
@@ -394,7 +470,11 @@ function CalendarCard({
                 {visible.map((event, idx) => (
                   <span
                     key={event.id}
-                    onClick={(e) => { e.stopPropagation(); onEventClick(event); }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (monthEntriesOpenDay) onDayClick(key)
+                      else onEventClick(event)
+                    }}
                     className={`block truncate rounded px-1 py-0.5 text-[9.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 lg:px-1.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx))} ${event.id === selectedEventId ? 'ring-[1.5px] ring-navy-900 ring-offset-1' : ''}`}
                     title={event.title}
                   >
@@ -404,7 +484,11 @@ function CalendarCard({
                 {visibleItems.map((item, idx) => (
                   <span
                     key={item.id}
-                    onClick={(e) => { e.stopPropagation(); onItemClick(item.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (monthEntriesOpenDay) onDayClick(key)
+                      else onItemClick(item.id)
+                    }}
                     className={`block truncate rounded px-1 py-0.5 text-[9.5px] font-semibold leading-tight cursor-pointer hover:opacity-80 lg:px-1.5 lg:text-[10.5px] lg:leading-tight ${toneClass(eventTone(idx + visible.length))}`}
                     title={item.title}
                   >
@@ -997,6 +1081,8 @@ export default function CalendarPage() {
   const [anchor, setAnchor] = useState<Date>(() => new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('MES')
   const { items } = useItems()
+  const { calendars } = useGoogleCalendars()
+  const { prefs, update: updatePreferences } = usePreferences()
   const { setSelectedItemId } = useUI()
 
   useEffect(() => {
@@ -1029,6 +1115,42 @@ export default function CalendarPage() {
   }, [todayKey])
   const { events: homeEvents } = useCalendarEvents(homeRange.from, homeRange.to)
 
+  const visibleCalendarIds = useMemo(
+    () => (prefs.visibleCalendarIds === null ? calendars.map((calendar) => calendar.id) : prefs.visibleCalendarIds),
+    [calendars, prefs.visibleCalendarIds],
+  )
+  const isEventCalendarVisible = useCallback(
+    (event: CalendarEvent) => {
+      if (!event.googleCalendarId) return true
+      if (prefs.visibleCalendarIds === null && calendars.length === 0) return true
+      return visibleCalendarIds.includes(event.googleCalendarId)
+    },
+    [calendars.length, prefs.visibleCalendarIds, visibleCalendarIds],
+  )
+  const visibleEvents = useMemo(
+    () => events.filter(isEventCalendarVisible),
+    [events, isEventCalendarVisible],
+  )
+  const visibleHomeEvents = useMemo(
+    () => homeEvents.filter(isEventCalendarVisible),
+    [homeEvents, isEventCalendarVisible],
+  )
+
+  const toggleVisibleCalendar = useCallback((calendarId: string) => {
+    const current = prefs.visibleCalendarIds === null
+      ? calendars.map((calendar) => calendar.id)
+      : prefs.visibleCalendarIds
+    updatePreferences({
+      visibleCalendarIds: current.includes(calendarId)
+        ? current.filter((id) => id !== calendarId)
+        : [...current, calendarId],
+    })
+  }, [calendars, prefs.visibleCalendarIds, updatePreferences])
+
+  const showAllCalendars = useCallback(() => {
+    updatePreferences({ visibleCalendarIds: calendars.map((calendar) => calendar.id) })
+  }, [calendars, updatePreferences])
+
   const [selectedDate, setSelectedDate] = useState<string>(todayKey)
   const [openDayKey, setOpenDayKey] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
@@ -1053,8 +1175,8 @@ export default function CalendarPage() {
   const showExpanded = expanded || isMobile
 
   const todayEvents = useMemo(
-    () => sortByStart(homeEvents.filter((event) => toLocalDateKey(new Date(event.start)) === todayKey)),
-    [homeEvents, todayKey],
+    () => sortByStart(visibleHomeEvents.filter((event) => toLocalDateKey(new Date(event.start)) === todayKey)),
+    [visibleHomeEvents, todayKey],
   )
   const todayItems = useMemo(
     () =>
@@ -1068,9 +1190,9 @@ export default function CalendarPage() {
   const popupEvents = useMemo(
     () =>
       openDayKey
-        ? sortByStart(events.filter((event) => toLocalDateKey(new Date(event.start)) === openDayKey))
+        ? sortByStart(visibleEvents.filter((event) => toLocalDateKey(new Date(event.start)) === openDayKey))
         : [],
-    [events, openDayKey],
+    [visibleEvents, openDayKey],
   )
   const popupItems = useMemo(
     () =>
@@ -1085,20 +1207,20 @@ export default function CalendarPage() {
 
   const upcomingEvent = useMemo(() => {
     const nowMs = now.getTime()
-    return homeEvents
+    return visibleHomeEvents
       .filter((event) => new Date(event.start).getTime() > nowMs)
       .sort((a, b) => a.start.localeCompare(b.start))[0] ?? null
-  }, [homeEvents, now])
+  }, [visibleHomeEvents, now])
 
   const weekStart = useMemo(() => startOfWeek(now), [now])
   const weekEnd = useMemo(() => addDays(weekStart, 7), [weekStart])
   const weekEvents = useMemo(
     () =>
-      homeEvents.filter((event) => {
+      visibleHomeEvents.filter((event) => {
         const t = new Date(event.start).getTime()
         return t >= weekStart.getTime() && t < weekEnd.getTime()
       }),
-    [homeEvents, weekStart, weekEnd],
+    [visibleHomeEvents, weekStart, weekEnd],
   )
 
   const prev = () =>
@@ -1132,7 +1254,7 @@ export default function CalendarPage() {
       anchor={anchor}
       todayKey={todayKey}
       selectedKey={selectedDate}
-      events={events}
+      events={visibleEvents}
       items={items}
       onPrev={prev}
       onNext={next}
@@ -1147,6 +1269,11 @@ export default function CalendarPage() {
       onPickMonth={handlePickMonth}
       viewMode={viewMode}
       setViewMode={setViewMode}
+      calendars={calendars}
+      visibleCalendarIds={visibleCalendarIds}
+      onToggleCalendar={toggleVisibleCalendar}
+      onShowAllCalendars={showAllCalendars}
+      monthEntriesOpenDay={isMobile}
     />
   )
 

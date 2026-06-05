@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useItems, updateItem, bulkUpdateItems } from '@/hooks/use-items'
 import { useCalendarEvents } from '@/hooks/use-calendar-events'
 import { usePreferences } from '@/hooks/use-preferences'
@@ -100,6 +101,7 @@ function TaskArticle({
 }
 
 export default function TodayFocusedPage() {
+  const router = useRouter()
   const { items, isLoading: itemsLoading } = useItems()
   const { events, isLoading: eventsLoading } = useCalendarEvents()
   const { projects } = useProjects()
@@ -128,6 +130,29 @@ export default function TodayFocusedPage() {
   // ID 053: filtro por tag da lista atual.
   const [activeTag, setActiveTag] = useState<string | null>(null)
   const isToday = selectedDay === today
+
+  const openItemFromToday = useCallback((id: string) => {
+    const target = items.find((item) => item.id === id)
+    if (target?.complexity === 'note') {
+      setPanelId(null)
+      setQuickCaptureEditId(null)
+      router.push(`/notas/${id}`)
+      return
+    }
+    if (panelEnabled) setPanelId(id)
+    else setQuickCaptureEditId(id)
+  }, [items, panelEnabled, router, setQuickCaptureEditId])
+
+  const editItemFromToday = useCallback((id: string) => {
+    const target = items.find((item) => item.id === id)
+    if (target?.complexity === 'note') {
+      setPanelId(null)
+      setQuickCaptureEditId(null)
+      router.push(`/notas/${id}`)
+      return
+    }
+    setQuickCaptureEditId(id)
+  }, [items, router, setQuickCaptureEditId])
 
   const tomorrowDate = new Date()
   tomorrowDate.setDate(tomorrowDate.getDate() + 1)
@@ -351,8 +376,8 @@ export default function TodayFocusedPage() {
         key={item.id}
         item={item}
         disabled={isTempDone}
-        onOpen={(id) => (panelEnabled ? setPanelId(id) : setQuickCaptureEditId(id))}
-        onEdit={setQuickCaptureEditId}
+        onOpen={openItemFromToday}
+        onEdit={editItemFromToday}
         className={`row ${styleType} ${prioClass} ${hasTime ? 'has-time' : 'no-time'} ${isTempDone ? 'done' : ''} ${isSelected ? 'selected' : ''}`}
       >
         <div className={`time ${item.dueTime ? '' : 'empty'}`}>{item.dueTime || '•'}</div>
@@ -381,7 +406,7 @@ export default function TodayFocusedPage() {
         </div>
         <button className="more" onClick={(e) => {
           e.stopPropagation();
-          setQuickCaptureEditId(item.id);
+          editItemFromToday(item.id);
         }}>⋯</button>
       </TaskArticle>
     )
@@ -596,7 +621,7 @@ export default function TodayFocusedPage() {
                     >
                       {panelItem.status === 'done' ? '↺ Reabrir tarefa' : '✓ Marcar como concluído'}
                     </button>
-                    <button type="button" className="action" onClick={() => setQuickCaptureEditId(panelItem.id)}>
+                    <button type="button" className="action" onClick={() => editItemFromToday(panelItem.id)}>
                       ✎ Editar
                     </button>
                   </div>

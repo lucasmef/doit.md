@@ -24,6 +24,7 @@ export type Preferences = {
   folderSort: Record<string, string>
   calendarWeekStartsOn: CalendarWeekStart
   defaultCalendarId: string
+  visibleCalendarIds: string[] | null
   defaultCalendarEventDurationMinutes: number
   todayCalendarHidePastAfterHours: number
   todayCalendarShowTomorrowAfterTime: string
@@ -52,6 +53,7 @@ const DEFAULTS: Preferences = {
   folderSort: {},
   calendarWeekStartsOn: 'monday',
   defaultCalendarId: 'primary',
+  visibleCalendarIds: null,
   defaultCalendarEventDurationMinutes: 30,
   todayCalendarHidePastAfterHours: 2,
   todayCalendarShowTomorrowAfterTime: '18:00',
@@ -112,6 +114,12 @@ function read(): Preferences {
       typeof parsed.defaultCalendarId === 'string' && parsed.defaultCalendarId.trim()
         ? parsed.defaultCalendarId
         : DEFAULTS.defaultCalendarId
+    const visibleCalendarIds =
+      parsed.visibleCalendarIds === null || parsed.visibleCalendarIds === undefined
+        ? DEFAULTS.visibleCalendarIds
+        : Array.isArray(parsed.visibleCalendarIds)
+          ? Array.from(new Set(parsed.visibleCalendarIds.filter((id): id is string => typeof id === 'string')))
+          : DEFAULTS.visibleCalendarIds
     const defaultCalendarEventDurationMinutes =
       typeof parsed.defaultCalendarEventDurationMinutes === 'number' &&
       Number.isFinite(parsed.defaultCalendarEventDurationMinutes) &&
@@ -135,6 +143,7 @@ function read(): Preferences {
           : {},
       calendarWeekStartsOn,
       defaultCalendarId,
+      visibleCalendarIds,
       defaultCalendarEventDurationMinutes,
       todayCalendarHidePastAfterHours: hidePastHours,
       todayCalendarShowTomorrowAfterTime: showTomorrowTime,
@@ -184,6 +193,11 @@ export function usePreferences() {
     }
     if (typeof next.defaultCalendarId !== 'string' || !next.defaultCalendarId.trim()) {
       next.defaultCalendarId = DEFAULTS.defaultCalendarId
+    }
+    if (next.visibleCalendarIds !== null) {
+      next.visibleCalendarIds = Array.isArray(next.visibleCalendarIds)
+        ? Array.from(new Set(next.visibleCalendarIds.filter((id): id is string => typeof id === 'string')))
+        : DEFAULTS.visibleCalendarIds
     }
     if (
       !Number.isFinite(next.defaultCalendarEventDurationMinutes) ||
