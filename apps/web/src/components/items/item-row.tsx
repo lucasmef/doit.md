@@ -191,7 +191,7 @@ export function ItemRow({
       style={{ animationDelay: staggerDelay }}
       className={
         isGlass
-          ? `group flex w-full cursor-pointer select-none touch-pan-y [-webkit-touch-callout:none] items-center gap-3 rounded-[20px] border px-2 py-2.5 text-left shadow-cool-sm backdrop-blur-xl transition-colors animate-stagger-item ${
+          ? `group flex w-full max-w-full cursor-pointer select-none touch-pan-y [-webkit-touch-callout:none] items-center gap-3 overflow-hidden rounded-[20px] border px-2 py-2.5 text-left shadow-cool-sm backdrop-blur-xl transition-colors animate-stagger-item ${
               selected || active
                 ? 'border-white/70 bg-white/82 text-navy-900 ring-2 ring-brand-300/35'
                 : 'border-white/48 bg-white/52 hover:bg-white/72'
@@ -257,7 +257,7 @@ export function ItemRow({
 
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <p
-          className={`flex items-center gap-1.5 text-[14px] leading-5 font-normal truncate transition-all ${
+          className={`flex min-w-0 items-start gap-1.5 text-[14px] leading-5 font-normal transition-all ${
             displayDone ? 'line-through text-navy-500' : 'text-navy-900'
           }`}
         >
@@ -265,7 +265,7 @@ export function ItemRow({
           {item.recurrence && (
             <IconRecurrence className="h-3.5 w-3.5 shrink-0 text-brand-500" />
           )}
-          <span className="truncate">{item.title}</span>
+          <span className="min-w-0 break-words [overflow-wrap:anywhere] sm:truncate">{item.title}</span>
         </p>
 
         <div className="flex items-center gap-1.5">

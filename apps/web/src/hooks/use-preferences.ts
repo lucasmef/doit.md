@@ -25,6 +25,8 @@ export type Preferences = {
   calendarWeekStartsOn: CalendarWeekStart
   defaultCalendarId: string
   visibleCalendarIds: string[] | null
+  showCalendarNotes: boolean
+  showCalendarTasks: boolean
   defaultCalendarEventDurationMinutes: number
   todayCalendarHidePastAfterHours: number
   todayCalendarShowTomorrowAfterTime: string
@@ -54,6 +56,8 @@ const DEFAULTS: Preferences = {
   calendarWeekStartsOn: 'monday',
   defaultCalendarId: 'primary',
   visibleCalendarIds: null,
+  showCalendarNotes: true,
+  showCalendarTasks: true,
   defaultCalendarEventDurationMinutes: 30,
   todayCalendarHidePastAfterHours: 2,
   todayCalendarShowTomorrowAfterTime: '18:00',
@@ -144,6 +148,8 @@ function read(): Preferences {
       calendarWeekStartsOn,
       defaultCalendarId,
       visibleCalendarIds,
+      showCalendarNotes: parsed.showCalendarNotes !== false,
+      showCalendarTasks: parsed.showCalendarTasks !== false,
       defaultCalendarEventDurationMinutes,
       todayCalendarHidePastAfterHours: hidePastHours,
       todayCalendarShowTomorrowAfterTime: showTomorrowTime,

@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { UIContext, type CaptureMode, type ItemContextMenuState } from '@/store/ui'
-import { useKeyboard } from '@/hooks/use-keyboard'
+import { hasShortcutBlocker, isTypingTarget, useKeyboard } from '@/hooks/use-keyboard'
 import { onOfflineItemRemapped } from '@/lib/offline-items'
 import { archiveItem, createItem } from '@/hooks/use-items'
 import { toLocalDateKey } from '@doit/core'
@@ -24,6 +24,7 @@ async function archiveIfStillEmpty(id: string) {
 
 function UIProviderInner({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const pathname = usePathname()
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [quickCaptureOpen, setQuickCaptureOpenState] = useState(false)
   const [captureMode, setCaptureMode] = useState<CaptureMode>('task')
@@ -173,12 +174,15 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
   }, [lastCaptureMode])
 
   const openNewNoteEditor = useCallback(async () => {
+    const folderId =
+      pathname === '/notas' ? new URLSearchParams(window.location.search).get('folder') : null
     try {
       const item = await createItem({
         title: '',
         complexity: 'note',
-        status: 'inbox',
+        status: folderId ? 'todo' : 'inbox',
         contentMd: '',
+        folderId: folderId || undefined,
       })
       setQuickCaptureOpenState(false)
       setQuickCaptureEditId(null)
@@ -189,10 +193,46 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('[shortcut W] failed to create note', error)
     }
-  }, [markPendingEmptyNote, router, setSingleSelection])
+  }, [markPendingEmptyNote, pathname, router, setSingleSelection])
 
   const goTo = useCallback((href: string) => {
     router.push(href)
+  }, [router])
+
+  const archiveCurrentNote = useCallback(() => {
+    const openNoteId = pathname.startsWith('/notas/') ? pathname.split('/')[2] : null
+    const itemId = openNoteId || selectedItemId
+    if (!itemId) return false
+    void archiveItem(itemId).then(() => {
+      clearSelection()
+      if (openNoteId) router.push('/notas')
+    })
+    return true
+  }, [clearSelection, pathname, router, selectedItemId])
+
+  useEffect(() => {
+    let prefixAt = 0
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isTypingTarget(event.target) || hasShortcutBlocker()) {
+        prefixAt = 0
+        return
+      }
+      const key = event.key.toLowerCase()
+      const now = Date.now()
+      if (key === 'g' && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        prefixAt = now
+        return
+      }
+      if (prefixAt && now - prefixAt <= 1200 && (key === 'i' || key === 'h')) {
+        event.preventDefault()
+        prefixAt = 0
+        router.push(key === 'i' ? '/inbox' : '/today')
+        return
+      }
+      prefixAt = 0
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
   }, [router])
 
   useKeyboard([
@@ -224,6 +264,20 @@ function UIProviderInner({ children }: { children: React.ReactNode }) {
       handler: (e) => {
         e.preventDefault()
         void openNewNoteEditor()
+      },
+    },
+    {
+      key: '#',
+      shift: true,
+      handler: (e) => {
+        if (archiveCurrentNote()) e.preventDefault()
+      },
+    },
+    {
+      key: '3',
+      shift: true,
+      handler: (e) => {
+        if (archiveCurrentNote()) e.preventDefault()
       },
     },
     {

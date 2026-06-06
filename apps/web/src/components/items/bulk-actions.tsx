@@ -810,10 +810,8 @@ export function ItemContextMenu() {
   useEffect(() => {
     if (!contextMenu) return
     const close = () => closeContextMenu()
-    window.addEventListener('scroll', close, true)
     window.addEventListener('resize', close)
     return () => {
-      window.removeEventListener('scroll', close, true)
       window.removeEventListener('resize', close)
     }
   }, [contextMenu, closeContextMenu])
@@ -834,7 +832,7 @@ export function ItemContextMenu() {
   return (
     <div className="fixed inset-0 z-[130]" onMouseDown={handleBackdropDown}>
       <div
-        className="fixed max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:rounded-t-[30px] max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:bg-white/96 max-md:p-4 max-md:pb-10 max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] max-md:backdrop-blur-2xl md:max-h-[min(420px,calc(100vh-16px))] md:overflow-y-auto md:rounded-[24px] md:border md:border-white/76 md:bg-white/86 md:p-2 md:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset] md:backdrop-blur-[24px]"
+        className="fixed max-h-[calc(100dvh-16px)] overscroll-contain overflow-y-auto max-md:bottom-0 max-md:left-0 max-md:right-0 max-md:top-auto max-md:rounded-t-[30px] max-md:rounded-b-none max-md:border-x-0 max-md:border-b-0 max-md:bg-white/96 max-md:p-4 max-md:pb-10 max-md:shadow-[0_-28px_70px_-36px_rgba(15,35,66,0.64)] max-md:backdrop-blur-2xl md:max-h-[min(520px,calc(100vh-16px))] md:rounded-[24px] md:border md:border-white/76 md:bg-white/86 md:p-2 md:shadow-[0_34px_90px_-42px_rgba(15,35,66,0.58),0_10px_26px_rgba(15,35,66,0.1),0_1px_0_rgba(255,255,255,0.76)_inset] md:backdrop-blur-[24px]"
         style={isMobile ? {} : { left: position.left, top: position.top }}
         onMouseDown={(e) => e.stopPropagation()}
       >

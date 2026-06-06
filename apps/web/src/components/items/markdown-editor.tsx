@@ -306,6 +306,15 @@ export function MarkdownEditor({
 
         return true
       },
+      handleKeyDown: (_view, event) => {
+        if (!event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return false
+        if (!['1', '2', '3'].includes(event.key)) return false
+        const activeEditor = editorRef.current
+        if (!activeEditor) return false
+        event.preventDefault()
+        activeEditor.chain().focus().toggleHeading({ level: Number(event.key) as 1 | 2 | 3 }).run()
+        return true
+      },
     },
     onCreate: ({ editor }) => {
       editorRef.current = editor
@@ -563,6 +572,7 @@ export function MarkdownEditor({
       attachments={attachmentData?.links ?? []}
       onUploadFiles={() => fileInputRef.current?.click()}
       onDelete={handleDeleteAttachment}
+      compactMobile={attachmentsPortalId === 'note-editor-mobile-attachments'}
     />
   )
 
@@ -985,6 +995,7 @@ function EditorAttachmentsPanel({
   attachments,
   onUploadFiles,
   onDelete,
+  compactMobile = false,
 }: {
   canUpload: boolean
   uploadingFiles: number
@@ -992,6 +1003,7 @@ function EditorAttachmentsPanel({
   attachments: DriveAttachment[]
   onUploadFiles: () => void
   onDelete: (fileId: string, name: string) => void | Promise<void>
+  compactMobile?: boolean
 }) {
   const visibleUploads = uploads.filter(
     (upload) =>
@@ -1005,7 +1017,7 @@ function EditorAttachmentsPanel({
         type="button"
         onClick={onUploadFiles}
         disabled={!canUpload || uploadingFiles > 0}
-        className="flex w-full items-center justify-center gap-2 rounded-[8px] border border-dashed border-navy-900/15 bg-white/65 px-3 py-2 text-[12px] font-semibold text-navy-600 hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-45"
+        className={`flex w-full items-center justify-center gap-2 border border-dashed border-navy-900/15 bg-white/65 px-3 py-2 text-[12px] font-semibold text-navy-600 hover:border-brand-300 hover:text-brand-700 disabled:cursor-not-allowed disabled:opacity-45 ${compactMobile ? 'rounded-[12px]' : 'rounded-[8px]'}`}
       >
         <EditorIcon name="paperclip" />
         {uploadingFiles > 0 ? 'enviando...' : 'anexar arquivo'}
@@ -1017,7 +1029,7 @@ function EditorAttachmentsPanel({
         </div>
       ) : null}
 
-      <div className="space-y-2">
+      <div className={compactMobile ? 'grid grid-cols-1 gap-2' : 'space-y-2'}>
         {visibleUploads.map((upload) => (
           <div key={upload.id} className="rounded-[10px] bg-white/60 p-2 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
             <div className="flex items-center gap-2">
@@ -1352,12 +1364,14 @@ function EditorToolbarAccessible({
 
   const toolbarClass =
     variant === 'sheet'
-      ? 'relative z-[5] border-b border-[#ECF0F5] bg-white/96 px-[18px] py-2 backdrop-blur-md'
+      ? `relative z-[5] border-b border-[#ECF0F5] bg-white/96 px-2 py-1.5 backdrop-blur-md sm:px-[18px] sm:py-2 ${
+          focusMode ? 'max-h-14 overflow-x-auto overflow-y-hidden' : ''
+        }`
       : 'sticky top-0 z-[5] border-b border-navy-900/[0.04] bg-white/96 px-4 py-2 backdrop-blur-md'
 
   return (
     <div className={toolbarClass}>
-      <div className="hidden min-w-0 flex-1 flex-wrap items-center gap-0 sm:flex">
+      <div className={`hidden min-w-0 flex-1 items-center gap-0 sm:flex ${focusMode ? 'flex-nowrap' : 'flex-wrap'}`}>
         <ToolbarGroup>
           <ToolbarBtn
             title="Desfazer (Ctrl+Z)"

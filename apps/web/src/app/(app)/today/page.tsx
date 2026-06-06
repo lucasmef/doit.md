@@ -413,14 +413,14 @@ export default function TodayFocusedPage() {
   }
 
   const renderEvent = (event: CalendarEvent) => {
-    const isPast = new Date(event.start) < now
+    const isPast = !event.allDay && new Date(event.end ?? event.start) < now
     return (
       <article
         key={event.id}
         onClick={() => setOpenEvent(event)}
         className={`row event cursor-pointer ${isPast ? 'done' : ''}`}
       >
-        <div className="time">{formatTime(event.start) || 'o dia'}</div>
+        <div className="time">{event.allDay ? 'Dia todo' : (formatTime(event.start) || 'o dia')}</div>
         <div className="icon">
           <EventIcon />
         </div>
