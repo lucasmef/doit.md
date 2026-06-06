@@ -195,6 +195,10 @@ function CalendarCard({
   visibleCalendarIds,
   onToggleCalendar,
   onShowAllCalendars,
+  showNotes,
+  showTasks,
+  onToggleNotes,
+  onToggleTasks,
   monthEntriesOpenDay,
 }: {
   anchor: Date
@@ -219,6 +223,10 @@ function CalendarCard({
   visibleCalendarIds: string[]
   onToggleCalendar: (calendarId: string) => void
   onShowAllCalendars: () => void
+  showNotes: boolean
+  showTasks: boolean
+  onToggleNotes: () => void
+  onToggleTasks: () => void
   monthEntriesOpenDay: boolean
 }) {
   const cursorYear = anchor.getFullYear()
@@ -343,7 +351,7 @@ function CalendarCard({
                   onClick={() => setCalendarMenuOpen(false)}
                   className="fixed inset-0 z-40 cursor-default"
                 />
-                <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[min(82vw,300px)] rounded-[18px] border border-white/70 bg-white/95 p-3 text-left shadow-[0_18px_44px_rgba(15,35,66,.20)] backdrop-blur-xl">
+                <div className="fixed inset-x-3 top-20 z-50 max-h-[calc(100dvh-6rem)] overflow-y-auto overscroll-contain rounded-[18px] border border-white/70 bg-white/95 p-3 text-left shadow-[0_18px_44px_rgba(15,35,66,.20)] backdrop-blur-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-[300px] sm:max-w-[calc(100vw-24px)]">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div>
                       <p className="font-mono text-[10px] font-bold uppercase tracking-wide text-brand-600">
@@ -357,6 +365,30 @@ function CalendarCard({
                       className="rounded-full bg-navy-900/[0.05] px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-navy-600 hover:bg-navy-900/[0.10]"
                     >
                       Todos
+                    </button>
+                  </div>
+                  <div className="mb-2 grid grid-cols-2 gap-1.5 border-b border-navy-900/[0.07] pb-2">
+                    <button
+                      type="button"
+                      onClick={onToggleNotes}
+                      className={`rounded-[12px] border px-3 py-2 text-[12px] font-semibold ${
+                        showNotes
+                          ? 'border-brand-200 bg-brand-50 text-brand-700'
+                          : 'border-navy-900/[0.08] bg-white text-navy-400'
+                      }`}
+                    >
+                      Notas {showNotes ? 'ON' : 'OFF'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onToggleTasks}
+                      className={`rounded-[12px] border px-3 py-2 text-[12px] font-semibold ${
+                        showTasks
+                          ? 'border-brand-200 bg-brand-50 text-brand-700'
+                          : 'border-navy-900/[0.08] bg-white text-navy-400'
+                      }`}
+                    >
+                      Tarefas {showTasks ? 'ON' : 'OFF'}
                     </button>
                   </div>
                   {calendars.length === 0 ? (
@@ -1135,6 +1167,13 @@ export default function CalendarPage() {
     () => homeEvents.filter(isEventCalendarVisible),
     [homeEvents, isEventCalendarVisible],
   )
+  const visibleItems = useMemo(
+    () =>
+      items.filter((item) =>
+        item.complexity === 'note' ? prefs.showCalendarNotes : prefs.showCalendarTasks,
+      ),
+    [items, prefs.showCalendarNotes, prefs.showCalendarTasks],
+  )
 
   const toggleVisibleCalendar = useCallback((calendarId: string) => {
     const current = prefs.visibleCalendarIds === null
@@ -1180,11 +1219,11 @@ export default function CalendarPage() {
   )
   const todayItems = useMemo(
     () =>
-      items.filter((item) => {
+      visibleItems.filter((item) => {
         const key = item.dueDate ?? item.scheduledDate
         return key === todayKey && item.status !== 'archived'
       }),
-    [items, todayKey],
+    [visibleItems, todayKey],
   )
 
   const popupEvents = useMemo(
@@ -1197,12 +1236,12 @@ export default function CalendarPage() {
   const popupItems = useMemo(
     () =>
       openDayKey
-        ? items.filter((item) => {
+        ? visibleItems.filter((item) => {
             const key = item.dueDate ?? item.scheduledDate
             return key === openDayKey && item.status !== 'archived'
           })
         : [],
-    [items, openDayKey],
+    [visibleItems, openDayKey],
   )
 
   const upcomingEvent = useMemo(() => {
@@ -1255,7 +1294,7 @@ export default function CalendarPage() {
       todayKey={todayKey}
       selectedKey={selectedDate}
       events={visibleEvents}
-      items={items}
+      items={visibleItems}
       onPrev={prev}
       onNext={next}
       onToday={goToday}
@@ -1273,6 +1312,10 @@ export default function CalendarPage() {
       visibleCalendarIds={visibleCalendarIds}
       onToggleCalendar={toggleVisibleCalendar}
       onShowAllCalendars={showAllCalendars}
+      showNotes={prefs.showCalendarNotes}
+      showTasks={prefs.showCalendarTasks}
+      onToggleNotes={() => updatePreferences({ showCalendarNotes: !prefs.showCalendarNotes })}
+      onToggleTasks={() => updatePreferences({ showCalendarTasks: !prefs.showCalendarTasks })}
       monthEntriesOpenDay={isMobile}
     />
   )

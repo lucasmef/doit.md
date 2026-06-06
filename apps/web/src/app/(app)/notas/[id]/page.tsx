@@ -9,6 +9,7 @@ import { updateItem, useItems } from '@/hooks/use-items'
 import { usePreferences } from '@/hooks/use-preferences'
 import { useEscapeClose } from '@/hooks/use-escape-close'
 import { MarkdownEditor } from '@/components/items/markdown-editor'
+import { ItemVersions } from '@/components/items/item-versions'
 import { findRelatedNotesInFolder, type RelatedNote } from '@/lib/note-relations'
 
 const SIDEBAR_FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
@@ -423,39 +424,22 @@ function MobileNoteActions({
   item,
   folders,
   attachmentsOpen,
-  onToggleAttachments,
   onPatch,
 }: {
   item: Item
   folders: Folder[]
   attachmentsOpen: boolean
-  onToggleAttachments: () => void
   onPatch: (patch: UpdateItemInput) => void
 }) {
   return (
-    <div className="border-b border-[#ECF0F5] bg-white/96 px-3 py-2 lg:hidden">
-      <div className="grid grid-cols-3 gap-2">
-        <button
-          type="button"
-          onClick={onToggleAttachments}
-          aria-expanded={attachmentsOpen}
-          className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-[12px] border px-2 text-[12px] font-semibold ${
-            attachmentsOpen
-              ? 'border-brand-200 bg-brand-50 text-brand-700'
-              : 'border-navy-900/[0.08] bg-white text-navy-600'
-          }`}
-        >
-          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.44 11.05 12 20.49a6 6 0 0 1-8.49-8.49l9.44-9.44a4 4 0 0 1 5.66 5.66l-9.44 9.44a2 2 0 1 1-2.83-2.83l8.49-8.49" />
-          </svg>
-          Anexos
-        </button>
+    <div className="border-b border-[#ECF0F5] bg-white/96 px-3 py-1.5 lg:hidden">
+      <div className="grid grid-cols-2 gap-1.5">
         <label className="min-w-0">
           <span className="sr-only">Pasta</span>
           <select
             value={item.folderId ?? ''}
             onChange={(event) => onPatch({ folderId: (event.target.value || null) as unknown as string })}
-            className="h-10 w-full rounded-[12px] border border-navy-900/[0.08] bg-white px-2 text-[12px] font-semibold text-navy-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+            className="h-8 w-full rounded-[10px] border border-navy-900/[0.07] bg-navy-900/[0.025] px-2 text-[11px] font-semibold text-navy-600 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
             aria-label="Editar pasta da nota"
           >
             <option value="">Inbox</option>
@@ -472,22 +456,13 @@ function MobileNoteActions({
             type="date"
             value={item.dueDate ?? ''}
             onChange={(event) => onPatch({ dueDate: (event.target.value || null) as unknown as string })}
-            className="h-10 w-full rounded-[12px] border border-navy-900/[0.08] bg-white px-2 text-[12px] font-semibold text-navy-700 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
+            className="h-8 w-full rounded-[10px] border border-navy-900/[0.07] bg-navy-900/[0.025] px-2 text-[11px] font-semibold text-navy-600 outline-none focus:border-brand-300 focus:ring-2 focus:ring-brand-100"
             aria-label="Editar data da nota"
           />
         </label>
       </div>
-      {item.dueDate ? (
-        <button
-          type="button"
-          onClick={() => onPatch({ dueDate: null as unknown as string })}
-          className="mt-2 h-8 rounded-full bg-navy-900/[0.05] px-3 text-[12px] font-semibold text-navy-500"
-        >
-          Remover data
-        </button>
-      ) : null}
       {attachmentsOpen ? (
-        <div className="mt-3 rounded-[16px] border border-navy-900/[0.08] bg-navy-900/[0.03] p-2">
+        <div className="mt-2 rounded-[14px] border border-navy-900/[0.08] bg-navy-900/[0.025] p-2">
           <div id="note-editor-mobile-attachments" />
         </div>
       ) : null}
@@ -626,6 +601,10 @@ function EditorTopBar({
   saveStatus,
   onArchive,
   onDownload,
+  itemId,
+  attachmentsOpen,
+  onToggleAttachments,
+  focusMode,
   isPinned,
   onTogglePin,
 }: {
@@ -633,13 +612,17 @@ function EditorTopBar({
   saveStatus: 'idle' | 'saving' | 'saved'
   onArchive: () => void
   onDownload: () => void
+  itemId: string
+  attachmentsOpen: boolean
+  onToggleAttachments: () => void
+  focusMode: boolean
   isPinned?: boolean
   onTogglePin?: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-[#ECF0F5] px-6 py-3.5">
-      <nav className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500">
+    <div className={`flex shrink-0 items-center gap-1.5 border-b border-[#ECF0F5] px-3 py-2 sm:gap-3 sm:px-6 sm:py-3.5 ${focusMode ? 'max-h-14' : ''}`}>
+      <nav className="hidden min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500 sm:flex">
         {crumbs.map((crumb, i) => (
           <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
             {crumb.href ? (
@@ -655,7 +638,7 @@ function EditorTopBar({
       </nav>
 
       <span
-        className={`ml-auto inline-flex items-center gap-1.5 font-mono text-[11px] font-semibold ${
+        className={`ml-auto inline-flex items-center gap-1 font-mono text-[9px] font-semibold sm:gap-1.5 sm:text-[11px] ${
           saveStatus === 'saving' ? 'text-navy-500' : 'text-teal-600'
         }`}
       >
@@ -676,6 +659,36 @@ function EditorTopBar({
       </div>
 
       <div className="h-[18px] w-px bg-[#D9E1EA]" />
+
+      <button
+        type="button"
+        onClick={onToggleAttachments}
+        aria-expanded={attachmentsOpen}
+        aria-label="Anexos"
+        title="Anexos"
+        className={`inline-flex h-8 w-8 items-center justify-center rounded-[9px] lg:hidden ${
+          attachmentsOpen ? 'bg-brand-50 text-brand-700' : 'text-navy-500 hover:bg-[#ECF0F5]'
+        }`}
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
+          <path d="m21 11.5-8.8 8.8a5.5 5.5 0 0 1-7.8-7.8l9.2-9.2a3.7 3.7 0 0 1 5.2 5.2l-9.1 9.1a1.9 1.9 0 0 1-2.7-2.7l8.5-8.5" />
+        </svg>
+      </button>
+
+      <ItemVersions itemId={itemId} iconTrigger />
+
+      <button
+        type="button"
+        onClick={onArchive}
+        aria-label="Arquivar nota"
+        title="Arquivar nota"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-[9px] text-navy-500 hover:bg-red-50 hover:text-red-600 sm:hidden"
+      >
+        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="4" rx="1" />
+          <path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4" />
+        </svg>
+      </button>
 
       {onTogglePin && (
         <button
@@ -960,9 +973,10 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div
-      className={`grid h-full grid-cols-1 gap-3.5 p-3.5 ${
+      className={`note-editor-page grid h-full grid-cols-1 gap-0 p-0 sm:gap-3.5 sm:p-3.5 ${
         focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-[220px_minmax(0,1fr)_240px] xl:grid-cols-[230px_minmax(0,1fr)_250px]'
       }`}
+      data-focus-mode={focusMode ? 'true' : 'false'}
     >
       {focusMode ? null : (
         <Sidebar
@@ -974,12 +988,16 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
         />
       )}
 
-      <main className="flex min-w-0 flex-col overflow-hidden rounded-[24px] border border-white/70 bg-white shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]">
+      <main className="note-editor-main flex min-w-0 flex-col overflow-hidden bg-white sm:rounded-[24px] sm:border sm:border-white/70 sm:shadow-[0_18px_40px_-16px_rgba(15,35,66,.18),0_4px_12px_rgba(15,35,66,.06)]">
         <EditorTopBar
           crumbs={crumbs}
           saveStatus={saveStatus}
           onArchive={handleArchive}
           onDownload={handleDownload}
+          itemId={item.id}
+          attachmentsOpen={mobileAttachmentsOpen}
+          onToggleAttachments={() => setMobileAttachmentsOpen((open) => !open)}
+          focusMode={focusMode}
           isPinned={isPinned}
           onTogglePin={handleTogglePin}
         />
@@ -988,15 +1006,14 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
             item={item}
             folders={folders}
             attachmentsOpen={mobileAttachmentsOpen}
-            onToggleAttachments={() => setMobileAttachmentsOpen((open) => !open)}
             onPatch={handleMetadataPatch}
           />
         )}
         <div id="note-editor-toolbar" />
 
-        <div className="flex-1 overflow-auto" data-note-scroll-container="true">
+        <div className="note-editor-scroll flex-1 overflow-auto" data-note-scroll-container="true">
           <div
-            className={`mx-auto w-full px-5 pb-20 pt-8 sm:px-6 ${
+            className={`note-print-content mx-auto w-full px-4 pb-20 pt-5 sm:px-6 sm:pt-8 ${
               focusMode
                 ? 'max-w-[1180px] lg:px-16 xl:px-20'
                 : 'max-w-[980px] lg:px-4 xl:max-w-[1040px] xl:px-6'

@@ -1,0 +1,132 @@
+[
+  {
+    "name": "ID 100 - Ctrl+1 aplica H1",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 100 - Ctrl+2 aplica H2",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 100 - Ctrl+3 aplica H3",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 121 - editor novo expoe historico",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 121 - historico lista versoes",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 101 - Shift+# arquiva nota sem excluir conteudo",
+    "ok": "Nota atalhos qa-100-123-1780773936745\n\n### Conteudo versao dois\n\n",
+    "extra": "archived"
+  },
+  {
+    "name": "ID 123 - W cria nota na pasta atual",
+    "ok": true,
+    "extra": "fld_M1s5wROi"
+  },
+  {
+    "name": "ID 120 - sequencia g i abre Inbox",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 120 - sequencia g h abre Hoje",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 120 - sequencia nao dispara em input",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "IDs 110/112/114 - cabecalho mobile compacto e com arquivar",
+    "ok": true,
+    "extra": "{\"breadcrumbVisible\":false,\"archive\":true,\"attachments\":true,\"folderHeight\":32,\"viewportOverflow\":false}"
+  },
+  {
+    "name": "ID 111 - anexos usam icone unico no topo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 111 - galeria de anexos aparece abaixo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 113 - linha vazia aceita foco/selecao para colar",
+    "ok": true,
+    "extra": "{\"active\":true,\"selectionInside\":true}"
+  },
+  {
+    "name": "IDs 109/110/114 - editor mobile sem overflow horizontal",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 116 - impressao mostra conteudo e oculta interface",
+    "ok": true,
+    "extra": "{\"content\":\"visible\",\"topbar\":\"hidden\"}"
+  },
+  {
+    "name": "ID 109 - texto longo respeita card mobile",
+    "ok": true,
+    "extra": "{\"page\":false,\"card\":false,\"lines\":10}"
+  },
+  {
+    "name": "ID 122 - scroll nao fecha seletor de pasta",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 122 - pasta muda pelo menu de contexto",
+    "ok": true,
+    "extra": "fld_1Ay9qw4fX"
+  },
+  {
+    "name": "ID 117 - seletor mobile fica dentro da viewport",
+    "ok": true,
+    "extra": "{\"x\":29,\"y\":161,\"width\":332,\"height\":161.5}"
+  },
+  {
+    "name": "ID 119 - filtros persistem e deixam somente eventos",
+    "ok": true,
+    "extra": "{\"eventVisible\":true,\"noteVisible\":false,\"taskVisible\":false,\"filterState\":{\"notes\":false,\"tasks\":false}}"
+  },
+  {
+    "name": "ID 118 - evento de dia todo mostra Dia todo",
+    "ok": true,
+    "extra": "Dia todo Evento dia todo QA"
+  },
+  {
+    "name": "ID 118 - evento de dia todo nao fica esmaecido",
+    "ok": true,
+    "extra": "row event cursor-pointer "
+  },
+  {
+    "name": "ID 073 - concluida ainda aparece durante feedback",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 073 - concluida some apos feedback",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 074 - proxima semana continua na proxima segunda",
+    "ok": true,
+    "extra": "08/06"
+  }
+]
