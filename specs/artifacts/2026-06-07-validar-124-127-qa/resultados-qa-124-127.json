@@ -1,0 +1,86 @@
+[
+  {
+    "id": "124",
+    "name": "outline exibe texto limpo (sem #, sem marcador checklist)",
+    "ok": true,
+    "extra": "Video H1 com checklist Secao H2 com acento marcada Subsecao H3 com checklist Titulo sem checklist"
+  },
+  {
+    "id": "124",
+    "name": "hierarquia H1/H2/H3 preservada no outline",
+    "ok": false,
+    "extra": "[\"8px\",\"20px\",\"32px\"]"
+  },
+  {
+    "id": "124",
+    "name": "heading mobile não exibe #",
+    "ok": true,
+    "extra": "Video H1 com checklist"
+  },
+  {
+    "id": "125",
+    "name": "checkboxes existem em H1 H2 H3 no editor",
+    "ok": true,
+    "extra": "editor=3"
+  },
+  {
+    "id": "125",
+    "name": "H1=false, H2=true, H3=false (estado inicial correto)",
+    "ok": true,
+    "extra": "H1=false H2=true H3=false"
+  },
+  {
+    "id": "127",
+    "name": "outline mostra checkboxes apenas para headings com checklist",
+    "ok": true,
+    "extra": "outline=3"
+  },
+  {
+    "id": "127",
+    "name": "primeiro checkbox do outline é desmarcado (false)",
+    "ok": true,
+    "extra": "aria-checked=false"
+  },
+  {
+    "id": "126",
+    "name": "clicar no outline atualiza URL com âncora",
+    "ok": true,
+    "extra": "http://127.0.0.1:3411/notas/itm_ltkJbkTf#video-h1-com-checklist"
+  },
+  {
+    "id": "126",
+    "name": "âncora de heading com checkbox funciona",
+    "ok": true,
+    "extra": "http://127.0.0.1:3411/notas/itm_ltkJbkTf#video-h1-com-checklist"
+  },
+  {
+    "id": "127",
+    "name": "toggle no outline marca checkbox (false → true)",
+    "ok": true,
+    "extra": "aria-checked=true"
+  },
+  {
+    "id": "127",
+    "name": "toggle no outline reflete no editor",
+    "ok": true,
+    "extra": "editor aria-checked=true"
+  },
+  {
+    "id": "125",
+    "name": "estado checked/unchecked persiste após reabrir",
+    "ok": true,
+    "extra": "H1=true H2=true"
+  },
+  {
+    "id": "127",
+    "name": "mobile: checkboxes visíveis no editor (outline oculto por design)",
+    "ok": true,
+    "extra": "checks=3"
+  },
+  {
+    "id": "127",
+    "name": "mobile: sem overflow horizontal",
+    "ok": true,
+    "extra": ""
+  }
+]

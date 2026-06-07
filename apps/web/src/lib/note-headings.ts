@@ -8,6 +8,8 @@ export type NoteHeading = {
 
 const HEADING_RE = /^(#{1,3})[ \t]+(.+?)\s*$/
 const CHECKBOX_RE = /^\[([ xX])\][ \t]+/
+const TASK_CHECKBOX_RE = /^\s*[-*+]\s+\[([ xX])\]\s+/
+const HEADING_CHECKBOX_RE = /^(#{1,3})[ \t]+\[([ xX])\][ \t]+/
 
 function decodeHeadingEntities(value: string) {
   return value.replace(
@@ -148,4 +150,31 @@ export function toggleMarkdownHeadingCheckbox(markdown: string, headingIndex: nu
       `${prefix}[${state.toLowerCase() === 'x' ? ' ' : 'x'}]`,
   )
   return lines.join('\n')
+}
+
+export function calculateChecklistProgress(markdown: string) {
+  let done = 0
+  let total = 0
+  let fence: string | null = null
+
+  for (const line of markdown.replace(/\r\n?/g, '\n').split('\n')) {
+    const fenceMatch = line.match(/^\s*(```+|~~~+)/)
+    if (fenceMatch?.[1]) {
+      if (!fence) fence = fenceMatch[1][0] ?? null
+      else if (fenceMatch[1].startsWith(fence)) fence = null
+      continue
+    }
+    if (fence) continue
+
+    const heading = line.match(HEADING_CHECKBOX_RE)
+    const task = heading ? null : line.match(TASK_CHECKBOX_RE)
+    const state = heading?.[2] ?? task?.[1]
+    if (!state) continue
+
+    total += 1
+    if (state.toLowerCase() === 'x') done += 1
+  }
+
+  const percent = total > 0 ? Math.round((done / total) * 100) : 0
+  return { done, total, percent }
 }

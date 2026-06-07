@@ -38,12 +38,15 @@ function buildDecorations(doc: PMNode) {
     occurrences.set(baseId, occurrence)
     const id = createHeadingId(parsed.text, occurrence)
 
-    decorations.push(
-      Decoration.node(pos, pos + node.nodeSize, {
-        id,
-        'data-outline-id': id,
-      }),
-    )
+    const nodeAttrs: Record<string, string> = {
+      id,
+      'data-outline-id': id,
+    }
+    if (parsed.checked === true) {
+      nodeAttrs['class'] = 'doit-heading-checklist-heading is-checked'
+    }
+
+    decorations.push(Decoration.node(pos, pos + node.nodeSize, nodeAttrs))
 
     if (parsed.checked === null || parsed.markerLength === 0) return
     decorations.push(
@@ -56,6 +59,13 @@ function buildDecorations(doc: PMNode) {
         key: `doit-heading-checkbox-${pos}-${parsed.checked ? 'checked' : 'open'}`,
       }),
     )
+    if (parsed.checked) {
+      decorations.push(
+        Decoration.inline(pos + 1 + parsed.markerLength, pos + node.nodeSize - 1, {
+          class: 'doit-heading-checkbox-label is-checked',
+        }),
+      )
+    }
   })
 
   return DecorationSet.create(doc, decorations)

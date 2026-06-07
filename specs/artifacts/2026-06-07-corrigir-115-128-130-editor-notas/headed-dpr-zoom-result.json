@@ -1,0 +1,19 @@
+{
+  "before": {
+    "dpr": 1.0000000149011612,
+    "scale": "1",
+    "topbarHeight": 56,
+    "toolbarHeight": 46.79999923706055,
+    "contentFont": "16px"
+  },
+  "after": {
+    "dpr": 1.5000000596046448,
+    "scale": "0.74",
+    "topbarHeight": 41.4375,
+    "toolbarHeight": 34.82500076293945,
+    "contentFont": "16px"
+  },
+  "screenshot": "specs\\artifacts\\2026-06-07-corrigir-115-128-130-editor-notas\\doitmd-focus-headed-dpr-zoom-2026-06-07.png",
+  "globalStatus": "ENOENT: no such file or directory, mkdir 'G:\\Meu Drive\\.agentes'",
+  "noteId": "itm_16ZYzirwS"
+}

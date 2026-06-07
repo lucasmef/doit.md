@@ -1,0 +1,62 @@
+[
+  {
+    "name": "ID 128 - progresso inicial conta checklists comuns e headings",
+    "ok": true,
+    "extra": "2 / 5 feito"
+  },
+  {
+    "name": "ID 128 - percentual inicial correto",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 129 - outline usa checkbox visual e texto limpo",
+    "ok": true,
+    "extra": "H1 aberto H2 feito H3 aberto Heading sem checklist"
+  },
+  {
+    "name": "ID 129 - headings sem checklist nao exibem checkbox no outline",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 130 - heading concluido fica riscado e cinza",
+    "ok": true,
+    "extra": "{\"color\":\"rgb(148, 163, 184)\",\"textDecorationLine\":\"line-through\"}"
+  },
+  {
+    "name": "ID 130 - checkbox de heading usa azul padrao",
+    "ok": true,
+    "extra": "{\"backgroundColor\":\"rgb(47, 107, 255)\",\"borderColor\":\"rgb(47, 107, 255)\"}"
+  },
+  {
+    "name": "ID 128 - progresso atualiza ao marcar H1",
+    "ok": true,
+    "extra": "3 / 5 feito"
+  },
+  {
+    "name": "ID 128 - progresso atualiza ao marcar checklist comum",
+    "ok": true,
+    "extra": "4 / 5 feito"
+  },
+  {
+    "name": "IDs 128/130 - estados persistem no Markdown",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 128 - progresso persiste ao reabrir nota",
+    "ok": true,
+    "extra": "4 / 5 feito"
+  },
+  {
+    "name": "ID 115 - modo foco publica escala limitada para controles ao detectar zoom",
+    "ok": true,
+    "extra": "{\"beforeZoom\":{\"scale\":\"1\",\"topbarHeight\":56,\"editorFont\":\"16px\"},\"afterZoom\":{\"scale\":\"0.74\",\"topbarHeight\":41.4375,\"editorFont\":\"16px\"},\"zoomOverridden\":true}"
+  },
+  {
+    "name": "IDs 128-130 - mobile mantem editor sem overflow",
+    "ok": true,
+    "extra": "{\"checks\":3,\"overflow\":false,\"progressRailHidden\":true}"
+  }
+]

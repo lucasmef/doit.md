@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { use, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import type { Folder, Item, UpdateItemInput } from '@doit/types'
@@ -12,6 +12,7 @@ import { MarkdownEditor } from '@/components/items/markdown-editor'
 import { ItemVersions } from '@/components/items/item-versions'
 import { findRelatedNotesInFolder, type RelatedNote } from '@/lib/note-relations'
 import {
+  calculateChecklistProgress,
   parseNoteHeadings,
   toggleMarkdownHeadingCheckbox,
   type NoteHeading,
@@ -38,14 +39,6 @@ function countWords(markdown: string) {
     .replace(/\s+/g, ' ')
     .trim()
   return text ? text.split(' ').length : 0
-}
-
-function taskProgress(markdown: string) {
-  const matches = markdown.match(/^\s*[-*]\s+\[[ xX]\]\s+/gm) ?? []
-  const done = matches.filter((line) => /\[[xX]\]/.test(line)).length
-  const total = matches.length
-  const percent = total > 0 ? Math.round((done / total) * 100) : 0
-  return { done, total, percent }
 }
 
 function formatReadableDate(date?: string) {
@@ -626,7 +619,7 @@ function EditorTopBar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <div className={`flex shrink-0 items-center gap-1.5 border-b border-[#ECF0F5] px-3 py-2 sm:gap-3 sm:px-6 sm:py-3.5 ${focusMode ? 'max-h-14' : ''}`}>
+    <div className={`flex shrink-0 items-center gap-1.5 border-b border-[#ECF0F5] px-3 py-2 sm:gap-3 sm:px-6 sm:py-3.5 ${focusMode ? 'note-focus-ui max-h-14' : ''}`}>
       <nav className="hidden min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500 sm:flex">
         {crumbs.map((crumb, i) => (
           <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
@@ -835,6 +828,8 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [hydrated, setHydrated] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
+  const [focusUiScale, setFocusUiScale] = useState(1)
+  const focusZoomBaselineRef = useRef<number | null>(null)
   const [mobileAttachmentsOpen, setMobileAttachmentsOpen] = useState(false)
   
   useEscapeClose(!focusMode, () => {
@@ -903,10 +898,37 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     return () => window.removeEventListener('keydown', onKey)
   }, [focusMode])
 
+  useEffect(() => {
+    if (!focusMode) {
+      focusZoomBaselineRef.current = null
+      setFocusUiScale(1)
+      return undefined
+    }
+
+    const updateFocusScale = () => {
+      const currentZoom = window.devicePixelRatio || 1
+      if (focusZoomBaselineRef.current === null) {
+        focusZoomBaselineRef.current = currentZoom
+      }
+      const baselineZoom = focusZoomBaselineRef.current || currentZoom
+      const nextScale = Math.max(0.74, Math.min(1, baselineZoom / currentZoom))
+      const rounded = Number(nextScale.toFixed(3))
+      setFocusUiScale((current) => (Math.abs(current - rounded) < 0.01 ? current : rounded))
+    }
+
+    updateFocusScale()
+    window.addEventListener('resize', updateFocusScale)
+    window.visualViewport?.addEventListener('resize', updateFocusScale)
+    return () => {
+      window.removeEventListener('resize', updateFocusScale)
+      window.visualViewport?.removeEventListener('resize', updateFocusScale)
+    }
+  }, [focusMode])
+
   const folderPath = useMemo(() => buildFolderPath(folders, item?.folderId), [folders, item])
   const headings = useMemo(() => parseNoteHeadings(localContent), [localContent])
   const noteItems = useMemo(() => items.filter((it) => it.complexity === 'note'), [items])
-  const progress = useMemo(() => taskProgress(localContent), [localContent])
+  const progress = useMemo(() => calculateChecklistProgress(localContent), [localContent])
   const wordCount = useMemo(() => countWords(localContent), [localContent])
   const relatedNotes = useMemo(
     () => (item ? findRelatedNotesInFolder(item, noteItems) : []),
@@ -990,6 +1012,11 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
         focusMode ? 'lg:grid-cols-1' : 'lg:grid-cols-[220px_minmax(0,1fr)_240px] xl:grid-cols-[230px_minmax(0,1fr)_250px]'
       }`}
       data-focus-mode={focusMode ? 'true' : 'false'}
+      style={
+        focusMode
+          ? ({ '--note-focus-ui-scale': focusUiScale } as CSSProperties)
+          : undefined
+      }
     >
       {focusMode ? null : (
         <Sidebar
