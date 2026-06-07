@@ -5,6 +5,7 @@ import { newItemId, isUserAgentsItem } from '@doit/core'
 import type { CreateItemInput, Item } from '@doit/types'
 import { ensureDB } from '@/lib/db'
 import { validateItemReferences } from '@/lib/api/item-guards'
+import { parseHeadingLabel } from '@/lib/note-headings'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +27,7 @@ function titleFromNoteContent(contentMd: string | undefined) {
       ?.split(/\r?\n/)
       .find((line) => line.trim())
       ?.trim() ?? ''
-  return firstLine
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/[*_`[\]]/g, '')
-    .trim()
+  return parseHeadingLabel(firstLine.replace(/^#{1,6}\s+/, '')).text
 }
 
 function matchesSearch(item: Record<string, unknown>, q: string) {

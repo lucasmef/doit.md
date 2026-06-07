@@ -1,0 +1,87 @@
+[
+  {
+    "name": "ID 124 - outline exibe texto limpo",
+    "ok": true,
+    "extra": "Vídeo 01 Seção com acento & números 123 Repetido! Repetido! Sem checklist"
+  },
+  {
+    "name": "ID 124 - hierarquia H1 H2 H3 preservada",
+    "ok": true,
+    "extra": "[\"8px\",\"20px\",\"32px\"]"
+  },
+  {
+    "name": "IDs 125/127 - checkboxes aparecem em H1 H2 H3 e no outline",
+    "ok": true,
+    "extra": "editor=4 outline=4"
+  },
+  {
+    "name": "ID 127 - estado inicial do outline reflete a nota",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 126 - ancora com acento, numero e especial aponta ao heading",
+    "ok": true,
+    "extra": "http://127.0.0.1:3410/notas/itm_cFcQVuVf#secao-com-acento-numeros-123"
+  },
+  {
+    "name": "ID 126 - headings duplicados recebem ancoras unicas",
+    "ok": true,
+    "extra": "[\"repetido\",\"repetido-2\"]"
+  },
+  {
+    "name": "ID 127 - toggle no outline atualiza editor",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "IDs 125/127 - toggle no outline persiste no Markdown",
+    "ok": true,
+    "extra": "# [x] Vídeo 01.md"
+  },
+  {
+    "name": "ID 127 - toggle no editor atualiza outline",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 125 - toggle no editor persiste no Markdown",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 125 - toolbar oferece checklist para heading selecionado",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 125 - toolbar adiciona checklist sem converter o heading em lista",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 125 - toolbar remove checklist mantendo o heading",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "IDs 125/126 - checklist preserva retracao de heading",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 125 - checked e unchecked persistem apos reabrir",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "IDs 124/125 - conteudo real mantem headings e marcador Markdown",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 125 - headings com checkbox funcionam no mobile sem overflow",
+    "ok": true,
+    "extra": "{\"checks\":4,\"overflow\":false,\"firstHeading\":\"[x] Vídeo 01.md\"}"
+  }
+]

@@ -15,6 +15,7 @@ import { TableRow } from '@tiptap/extension-table-row'
 import { TableHeader } from '@tiptap/extension-table-header'
 import { TableCell } from '@tiptap/extension-table-cell'
 import { useDialog } from '@/components/ui/dialog'
+import { normalizeHeadingMarkdown } from '@/lib/note-headings'
 import { BlockReorderHandle } from './block-reorder-extension'
 import {
   applyCollapsedHeadingIndices,
@@ -23,6 +24,11 @@ import {
   HeadingCollapse,
   setAllHeadingsCollapsed,
 } from './heading-collapse-extension'
+import {
+  hasHeadingCheckbox,
+  HeadingCheckbox,
+  toggleHeadingCheckbox,
+} from './heading-checkbox-extension'
 
 type Props = {
   value: string
@@ -266,6 +272,7 @@ export function MarkdownEditor({
       Link.configure({
         openOnClick: false,
         autolink: true,
+        shouldAutoLink: (url) => !/^(?:https?:\/\/)?[^/\s]+\.md\/?$/i.test(url),
         protocols: ['http', 'https', 'mailto'],
         HTMLAttributes: {
           rel: 'noopener noreferrer nofollow',
@@ -279,6 +286,7 @@ export function MarkdownEditor({
       TableHeader,
       TableCell,
       HeadingCollapse,
+      HeadingCheckbox,
       BlockReorderHandle,
     ],
     content: value || '',
@@ -323,7 +331,7 @@ export function MarkdownEditor({
       editorRef.current = null
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getMarkdown())
+      onChange(normalizeHeadingMarkdown(editor.getMarkdown()))
     },
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -1263,6 +1271,12 @@ function EditorToolbarAccessible({
   const headingSummary = getHeadingCollapseSummary(editor)
   const canToggleHeadings = headingSummary.total > 0
   const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
+  const checklistActive = editor.isActive('heading')
+    ? hasHeadingCheckbox(editor)
+    : editor.isActive('taskList')
+  const toggleChecklist = () => {
+    if (!toggleHeadingCheckbox(editor)) editor.chain().focus().toggleTaskList().run()
+  }
 
   const advancedTools = (
     <>
@@ -1457,8 +1471,8 @@ function EditorToolbarAccessible({
           </ToolbarBtn>
           <ToolbarBtn
             title="Lista de tarefas"
-            active={editor.isActive('taskList')}
-            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            active={checklistActive}
+            onClick={toggleChecklist}
           >
             <EditorIcon name="taskList" />
           </ToolbarBtn>
@@ -1576,8 +1590,8 @@ function EditorToolbarAccessible({
         </MobileToolbarBtn>
         <MobileToolbarBtn
             title="Lista de tarefas"
-            active={editor.isActive('taskList')}
-            onClick={() => editor.chain().focus().toggleTaskList().run()}
+            active={checklistActive}
+            onClick={toggleChecklist}
           >
             <EditorIcon name="taskList" />
         </MobileToolbarBtn>
@@ -1684,6 +1698,12 @@ export function EditorToolbar({
   const headingSummary = getHeadingCollapseSummary(editor)
   const canToggleHeadings = headingSummary.total > 0
   const shouldCollapseAll = headingSummary.collapsed < headingSummary.total
+  const checklistActive = editor.isActive('heading')
+    ? hasHeadingCheckbox(editor)
+    : editor.isActive('taskList')
+  const toggleChecklist = () => {
+    if (!toggleHeadingCheckbox(editor)) editor.chain().focus().toggleTaskList().run()
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-0.5 border-b border-white/45 bg-white/46 px-2 py-1 backdrop-blur-xl">
@@ -1765,8 +1785,8 @@ export function EditorToolbar({
       })()}
       <ToolbarBtn
         title="Lista de tarefas"
-        active={editor.isActive('taskList')}
-        onClick={() => editor.chain().focus().toggleTaskList().run()}
+        active={checklistActive}
+        onClick={toggleChecklist}
       >
         [ ]
       </ToolbarBtn>

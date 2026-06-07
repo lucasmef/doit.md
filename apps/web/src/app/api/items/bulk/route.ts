@@ -14,6 +14,7 @@ import {
 } from '@/lib/api/item-guards'
 import { createManualAuditLog } from '@/lib/api/audit-log'
 import { spawnNextRecurrenceIfNeeded } from '@/lib/api/recurrence'
+import { parseHeadingLabel } from '@/lib/note-headings'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,10 +31,7 @@ function titleFromNoteContent(contentMd: string | undefined) {
       ?.split(/\r?\n/)
       .find((line) => line.trim())
       ?.trim() ?? ''
-  return firstLine
-    .replace(/^#{1,6}\s+/, '')
-    .replace(/[*_`[\]]/g, '')
-    .trim()
+  return parseHeadingLabel(firstLine.replace(/^#{1,6}\s+/, '')).text
 }
 
 function mergeTaskTitleIntoNoteContent(title: unknown, contentMd: unknown) {
