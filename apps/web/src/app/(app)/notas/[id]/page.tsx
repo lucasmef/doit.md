@@ -11,6 +11,11 @@ import { useEscapeClose } from '@/hooks/use-escape-close'
 import { MarkdownEditor } from '@/components/items/markdown-editor'
 import { ItemVersions } from '@/components/items/item-versions'
 import { findRelatedNotesInFolder, type RelatedNote } from '@/lib/note-relations'
+import {
+  parseNoteHeadings,
+  toggleMarkdownHeadingCheckbox,
+  type NoteHeading,
+} from '@/lib/note-headings'
 
 const SIDEBAR_FOLDER_COLORS = ['#2F6BFF', '#7B5BFF', '#28C7B7', '#F5A524', '#FF6FAE', '#1AAED7']
 
@@ -24,28 +29,6 @@ function formatRelative(iso: string): string {
   if (hr < 24) return `${hr}h atras`
   const days = Math.round(hr / 24)
   return `${days}d atras`
-}
-
-type Heading = { id: string; text: string; level: 1 | 2 | 3 }
-
-function parseHeadings(markdown: string): Heading[] {
-  if (!markdown) return []
-  const lines = markdown.split('\n')
-  const result: Heading[] = []
-  for (const line of lines) {
-    const match = line.match(/^(#{1,3})\s+(.+)$/)
-    if (!match || !match[1] || !match[2]) continue
-    const level = match[1].length as 1 | 2 | 3
-    const text = match[2].trim()
-    if (!text) continue
-    const id = text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .slice(0, 60)
-    result.push({ id, text, level })
-  }
-  return result
 }
 
 function countWords(markdown: string) {
@@ -481,8 +464,9 @@ function OutlineRail({
   dueLabel,
   onTagsDraftChange,
   onPatch,
+  onToggleHeading,
 }: {
-  headings: Heading[]
+  headings: NoteHeading[]
   progress: { done: number; total: number; percent: number }
   relatedNotes: RelatedNote[]
   item: Item
@@ -492,6 +476,7 @@ function OutlineRail({
   dueLabel: string | null
   onTagsDraftChange: (value: string) => void
   onPatch: (patch: UpdateItemInput) => void
+  onToggleHeading: (headingIndex: number) => void
 }) {
   const progressLabel =
     progress.total > 0 ? `${progress.done} / ${progress.total} feito` : 'sem tarefas'
@@ -537,19 +522,39 @@ function OutlineRail({
         ) : (
           <nav className="flex flex-col gap-1">
             {headings.map((h, i) => (
-              <a
+              <div
                 key={`${h.id}-${i}`}
-                href={`#${h.id}`}
                 className={`flex items-center gap-2 truncate rounded-[7px] px-2 py-1.5 text-[12px] hover:bg-navy-900/[0.05] hover:text-navy-900 ${
                   i === 0 ? 'bg-[rgba(47,107,255,.10)] font-semibold text-brand-600' : 'text-navy-700'
                 }`}
                 style={{ paddingLeft: `${8 + (h.level - 1) * 12}px` }}
               >
-                <span className="font-mono text-[10px] text-navy-400">
-                  {'#'.repeat(h.level)}
-                </span>
-                <span className="truncate">{h.text}</span>
-              </a>
+                {h.checked === null ? null : (
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={h.checked}
+                    aria-label={`${h.checked ? 'Desmarcar' : 'Marcar'} ${h.text}`}
+                    onClick={() => onToggleHeading(i)}
+                    className={`doit-outline-heading-checkbox ${h.checked ? 'is-checked' : ''}`}
+                  />
+                )}
+                <a
+                  href={`#${encodeURIComponent(h.id)}`}
+                  className="min-w-0 flex-1 truncate"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    const target = document.querySelector<HTMLElement>(
+                      `[data-outline-id="${CSS.escape(h.id)}"]`,
+                    )
+                    if (!target) return
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    window.history.replaceState(null, '', `#${encodeURIComponent(h.id)}`)
+                  }}
+                >
+                  {h.text}
+                </a>
+              </div>
             ))}
           </nav>
         )}
@@ -899,7 +904,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   }, [focusMode])
 
   const folderPath = useMemo(() => buildFolderPath(folders, item?.folderId), [folders, item])
-  const headings = useMemo(() => parseHeadings(localContent), [localContent])
+  const headings = useMemo(() => parseNoteHeadings(localContent), [localContent])
   const noteItems = useMemo(() => items.filter((it) => it.complexity === 'note'), [items])
   const progress = useMemo(() => taskProgress(localContent), [localContent])
   const wordCount = useMemo(() => countWords(localContent), [localContent])
@@ -949,6 +954,14 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     anchor.remove()
     URL.revokeObjectURL(url)
   }, [fileName, localContent])
+
+  const handleToggleHeading = useCallback(
+    (headingIndex: number) => {
+      const next = toggleMarkdownHeadingCheckbox(localContent, headingIndex)
+      if (next !== localContent) onContentChange(next)
+    },
+    [localContent, onContentChange],
+  )
 
   const attachmentsPortalId = mobileAttachmentsOpen ? 'note-editor-mobile-attachments' : 'note-editor-attachments'
 
@@ -1051,6 +1064,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
           dueLabel={dueLabel}
           onTagsDraftChange={setTagsDraft}
           onPatch={handleMetadataPatch}
+          onToggleHeading={handleToggleHeading}
         />
       )}
     </div>

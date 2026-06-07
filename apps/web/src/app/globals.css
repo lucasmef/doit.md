@@ -543,6 +543,46 @@
     color: theme('colors.navy.700', #334155);
     opacity: 1;
   }
+  .doit-heading-checkbox-marker {
+    display: none;
+  }
+  .doit-heading-checkbox,
+  .doit-outline-heading-checkbox {
+    display: inline-flex;
+    width: 1rem;
+    height: 1rem;
+    flex: 0 0 1rem;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid theme('colors.navy.300', #94a3b8);
+    border-radius: 0.25rem;
+    background: white;
+    color: white;
+    cursor: pointer;
+    vertical-align: 0.08rem;
+  }
+  .doit-heading-checkbox {
+    margin-right: 0.35rem;
+  }
+  .doit-heading-checkbox.is-checked,
+  .doit-outline-heading-checkbox.is-checked {
+    border-color: #28c7b7;
+    background: #28c7b7;
+  }
+  .doit-heading-checkbox.is-checked::after,
+  .doit-outline-heading-checkbox.is-checked::after {
+    content: '';
+    width: 0.45rem;
+    height: 0.25rem;
+    border-left: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg) translateY(-1px);
+  }
+  .doit-heading-checkbox:focus-visible,
+  .doit-outline-heading-checkbox:focus-visible {
+    outline: 2px solid rgb(47 107 255 / 0.35);
+    outline-offset: 2px;
+  }
   .doit-heading-collapsed-content {
     display: none !important;
   }
