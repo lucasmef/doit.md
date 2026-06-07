@@ -1379,7 +1379,7 @@ function EditorToolbarAccessible({
   const toolbarClass =
     variant === 'sheet'
       ? `relative z-[5] border-b border-[#ECF0F5] bg-white/96 px-2 py-1.5 backdrop-blur-md sm:px-[18px] sm:py-2 ${
-          focusMode ? 'max-h-14 overflow-x-auto overflow-y-hidden' : ''
+          focusMode ? 'note-focus-ui max-h-14 overflow-x-auto overflow-y-hidden' : ''
         }`
       : 'sticky top-0 z-[5] border-b border-navy-900/[0.04] bg-white/96 px-4 py-2 backdrop-blur-md'
 

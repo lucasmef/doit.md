@@ -1,0 +1,170 @@
+[
+  {
+    "id": "073",
+    "name": "concluída aparece durante feedback (desktop)",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "073",
+    "name": "concluída some após feedback (desktop)",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "074",
+    "name": "próxima semana = próxima segunda (08/06)",
+    "ok": false,
+    "extra": "08/06"
+  },
+  {
+    "id": "100",
+    "name": "Ctrl+1 aplica H1",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "100",
+    "name": "Ctrl+2 aplica H2",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "100",
+    "name": "Ctrl+3 aplica H3",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "101",
+    "name": "Shift+# arquiva nota sem excluir conteúdo",
+    "ok": false,
+    "extra": "nao encontrado"
+  },
+  {
+    "id": "109",
+    "name": "texto longo respeita card mobile",
+    "ok": true,
+    "extra": "{\"page\":false,\"card\":false,\"lines\":9}"
+  },
+  {
+    "id": "110",
+    "name": "metadados compactos e área útil ampliada",
+    "ok": true,
+    "extra": "{\"breadcrumbVisible\":false,\"archive\":true,\"attachments\":true,\"folderHeight\":32,\"viewportOverflow\":false}"
+  },
+  {
+    "id": "112",
+    "name": "botão arquivar presente no mobile",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "114",
+    "name": "cabeçalho mobile compacto (sem breadcrumb)",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "109",
+    "name": "editor mobile sem overflow horizontal",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "111",
+    "name": "botão Anexos presente no topo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "111",
+    "name": "galeria de anexos aparece abaixo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "113",
+    "name": "linha vazia aceita foco/seleção para colar",
+    "ok": true,
+    "extra": "{\"active\":true,\"selectionInside\":true}"
+  },
+  {
+    "id": "116",
+    "name": "impressão mostra conteúdo e oculta interface",
+    "ok": true,
+    "extra": "{\"content\":\"visible\",\"topbar\":\"hidden\"}"
+  },
+  {
+    "id": "117",
+    "name": "seletor mobile fica dentro da viewport",
+    "ok": true,
+    "extra": "{\"x\":29,\"y\":161,\"width\":332,\"height\":161.5}"
+  },
+  {
+    "id": "118",
+    "name": "evento dia todo exibe \"Dia todo\"",
+    "ok": true,
+    "extra": "Dia todo Evento dia todo QA"
+  },
+  {
+    "id": "118",
+    "name": "evento dia todo não fica esmaecido",
+    "ok": true,
+    "extra": "row event cursor-pointer "
+  },
+  {
+    "id": "119",
+    "name": "filtros persistem após reload",
+    "ok": false,
+    "extra": "{}"
+  },
+  {
+    "id": "120",
+    "name": "g+i abre Inbox",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "120",
+    "name": "g+h abre Hoje",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "120",
+    "name": "atalhos não disparam em input",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "121",
+    "name": "botão histórico presente no editor novo",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "121",
+    "name": "histórico lista versões ou mostra mensagem",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "122",
+    "name": "scroll não fecha seletor de pasta",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "id": "122",
+    "name": "pasta muda pelo menu de contexto",
+    "ok": true,
+    "extra": "fld_1FMjB5H47"
+  },
+  {
+    "id": "123",
+    "name": "W cria nota na pasta atual",
+    "ok": true,
+    "extra": "fld_15qGUP3W6"
+  }
+]

@@ -410,6 +410,18 @@
     color: theme('colors.ui.text-muted', #94a3b8);
     text-decoration: line-through;
   }
+  .note-editor-page[data-focus-mode='true'] .note-focus-ui {
+    transform: scale(var(--note-focus-ui-scale, 1));
+    transform-origin: top left;
+    width: calc(100% / var(--note-focus-ui-scale, 1));
+  }
+  @supports (zoom: 1) {
+    .note-editor-page[data-focus-mode='true'] .note-focus-ui {
+      transform: none;
+      width: auto;
+      zoom: var(--note-focus-ui-scale, 1);
+    }
+  }
 
   /* Tables */
   .ProseMirror table {
@@ -563,11 +575,12 @@
   }
   .doit-heading-checkbox {
     margin-right: 0.35rem;
+    text-decoration: none;
   }
   .doit-heading-checkbox.is-checked,
   .doit-outline-heading-checkbox.is-checked {
-    border-color: #28c7b7;
-    background: #28c7b7;
+    border-color: #2F6BFF;
+    background: #2F6BFF;
   }
   .doit-heading-checkbox.is-checked::after,
   .doit-outline-heading-checkbox.is-checked::after {
@@ -582,6 +595,12 @@
   .doit-outline-heading-checkbox:focus-visible {
     outline: 2px solid rgb(47 107 255 / 0.35);
     outline-offset: 2px;
+  }
+  .doit-heading-checkbox-label.is-checked {
+    color: theme('colors.ui.text-muted', #94a3b8);
+    text-decoration: line-through;
+    text-decoration-thickness: 0.08em;
+    text-decoration-color: currentColor;
   }
   .doit-heading-collapsed-content {
     display: none !important;
