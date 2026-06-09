@@ -93,7 +93,7 @@ None.
 - [x] ID 136 - padronizar um glifo SVG de checklist em todas as toolbars.
 - [x] Rodar type-check, lint, build e roteiro focado.
 - [x] Validar no navegador, salvar/copiar screenshots, encerrar servidor e atualizar a spec.
-- [ ] Revisar diff e publicar `dev -> main` conforme BuilderFlow.
+- [x] Revisar diff e publicar `dev -> main` conforme BuilderFlow.
 
 ## Progress
 
@@ -110,6 +110,7 @@ None.
 - 2026-06-09 - A tentativa de zoom nativo via navegador e via controle do Windows nao
   ficou disponivel nesta sessao. A escala compensatoria passou no teste automatizado,
   mas o zoom real permanece como revisao manual.
+- 2026-06-09 - Commit `5fd5470` publicado em `dev` e PR draft `#58` aberto para `main`.
 
 ## Decisions
 
@@ -194,4 +195,5 @@ Frontend evidence:
 
 ## Next step
 
-Revisar o diff final, publicar `dev` e abrir PR para `main`.
+Revisar manualmente o zoom nativo e concluir a revisao do PR
+`https://github.com/lucasmef/doit.md/pull/58`.
