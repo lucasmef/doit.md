@@ -196,6 +196,29 @@ function ItemTypeGlyph({ item, className = 'h-4 w-4' }: { item: Item; className?
   return item.complexity === 'note' ? <NoteGlyph className={className} /> : <TaskGlyph done={item.status === 'done'} className={className} />
 }
 
+function ClockGlyph({ className = 'h-3 w-3' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 3" />
+    </svg>
+  )
+}
+
+function NoteProgressBar({ percent, completed }: { percent: number; completed: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${completed ? 'text-teal-700' : 'text-brand-600'}`}>
+      <span className={`relative h-1.5 w-10 overflow-hidden rounded-full ${completed ? 'bg-teal-200/60' : 'bg-brand-500/15'}`}>
+        <span
+          className={`absolute inset-y-0 left-0 rounded-full ${completed ? 'bg-teal-500' : 'bg-brand-500'}`}
+          style={{ width: `${percent}%` }}
+        />
+      </span>
+      <span className="font-mono text-[10px] font-extrabold">{percent}%</span>
+    </span>
+  )
+}
+
 // ID 023: tarefa aberta usa tom neutro (checkbox vazio, não verde); verde/teal só quando concluída.
 function priorityTone(priority: Priority) {
   const cfg = PRIORITY_CONFIG[priority]
@@ -391,17 +414,14 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
           ) : null}
         </div>
         {noteProgress?.total ? (
-          <span
-            className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-extrabold ${
-              noteCompleted ? 'bg-teal-500/12 text-teal-700' : 'bg-brand-500/10 text-brand-600'
-            }`}
-          >
-            {noteCompleted ? 'nota concluida' : `${noteProgress.percent}%`}
-          </span>
+          <NoteProgressBar percent={noteProgress.percent} completed={noteCompleted} />
         ) : item.complexity === 'note' ? (
           <span className="shrink-0 font-mono text-[10px] font-extrabold text-brand-600">abrir nota →</span>
         ) : (
-          <span className="shrink-0 font-mono text-[10px] text-navy-300">{formatRelative(item.updatedAt)}</span>
+          <span className="inline-flex shrink-0 items-center gap-1 font-mono text-[10px] text-navy-300">
+            <ClockGlyph className="h-3 w-3 shrink-0 opacity-55" />
+            {formatRelative(item.updatedAt)}
+          </span>
         )}
       </div>
     </button>
@@ -465,18 +485,19 @@ function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item:
           </span>
         ) : null}
       </span>
-      <span
-        className={`hidden font-mono text-[10px] sm:block ${
-          noteCompleted ? 'font-bold text-teal-700' : 'text-navy-500'
-        }`}
-      >
-        {noteProgress?.total
-          ? noteCompleted
-            ? 'Nota concluida'
-            : `${noteProgress.percent}% concluido`
-          : STATUS_LABEL[displayStatus]}
+      <span className="hidden items-center sm:flex">
+        {noteProgress?.total ? (
+          <NoteProgressBar percent={noteProgress.percent} completed={noteCompleted} />
+        ) : (
+          <span className={`font-mono text-[10px] ${noteCompleted ? 'font-bold text-teal-700' : 'text-navy-500'}`}>
+            {STATUS_LABEL[displayStatus]}
+          </span>
+        )}
       </span>
-      <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{formatRelative(item.updatedAt)}</span>
+      <span className="hidden items-center gap-1 font-mono text-[10px] text-navy-500 sm:flex">
+        <ClockGlyph className="h-3 w-3 shrink-0 opacity-55" />
+        {formatRelative(item.updatedAt)}
+      </span>
     </button>
   )
 }
