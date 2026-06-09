@@ -21,6 +21,7 @@ import { useDialog } from '@/components/ui/dialog'
 import { AgentsEditorModal } from '@/components/agents/agents-editor-modal'
 import { flattenFolderOptions } from '@/components/folders/folder-options'
 import { PRIORITY_CONFIG, PriorityFlag, type Priority } from '@/components/items/priority-select'
+import { calculateChecklistProgress } from '@/lib/note-headings'
 
 type SortKey = 'manual' | 'updated' | 'created' | 'alpha' | 'type' | 'priority'
 
@@ -336,6 +337,9 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
   const { openContextMenu } = useUI()
   const large = isLargeNote(item)
   const text = item.complexity === 'note' ? snippet(item, large ? 180 : 120) : snippet(item, 90)
+  const noteProgress =
+    item.complexity === 'note' ? calculateChecklistProgress(item.contentMd ?? '') : null
+  const noteCompleted = Boolean(noteProgress?.total && noteProgress.percent === 100)
   const due = dueLabel(item)
   const priority = itemPriority(item)
   const priorityConfig = PRIORITY_CONFIG[priority]
@@ -350,7 +354,9 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
         onOpen(item.id)
       }}
       {...longPressProps}
-      className="group w-full select-none touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] rounded-[18px] border border-white/70 bg-white/75 p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)]"
+      className={`group w-full select-none touch-pan-y [-webkit-touch-callout:none] [-webkit-user-select:none] rounded-[18px] border p-3 text-left shadow-[0_10px_24px_-22px_rgba(15,35,66,.38)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_26px_-16px_rgba(15,35,66,.35)] ${
+        noteCompleted ? 'border-teal-200/70 bg-teal-50/65' : 'border-white/70 bg-white/75'
+      }`}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2 font-mono text-[9.5px] font-extrabold uppercase tracking-[0.08em]">
         <span className={`grid h-[22px] w-[22px] place-items-center rounded-md ${itemGlyphTone(item)}`}>
@@ -363,7 +369,13 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
           </span>
         ) : null}
       </div>
-      <h3 className="text-[14px] font-bold leading-tight -tracking-[.01em] text-navy-900">{item.title}</h3>
+      <h3
+        className={`text-[14px] font-bold leading-tight -tracking-[.01em] ${
+          noteCompleted ? 'text-navy-400 line-through' : 'text-navy-900'
+        }`}
+      >
+        {item.title}
+      </h3>
       {text ? (
         <p className={`mt-1.5 text-[12px] leading-snug text-navy-500 ${large ? 'line-clamp-4' : 'line-clamp-2'}`}>{text}</p>
       ) : null}
@@ -378,7 +390,15 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
             <span className="rounded-full bg-navy-900/[0.045] px-1.5 py-0.5 font-mono text-[9.5px] text-navy-500">{due}</span>
           ) : null}
         </div>
-        {item.complexity === 'note' ? (
+        {noteProgress?.total ? (
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-[10px] font-extrabold ${
+              noteCompleted ? 'bg-teal-500/12 text-teal-700' : 'bg-brand-500/10 text-brand-600'
+            }`}
+          >
+            {noteCompleted ? 'nota concluida' : `${noteProgress.percent}%`}
+          </span>
+        ) : item.complexity === 'note' ? (
           <span className="shrink-0 font-mono text-[10px] font-extrabold text-brand-600">abrir nota →</span>
         ) : (
           <span className="shrink-0 font-mono text-[10px] text-navy-300">{formatRelative(item.updatedAt)}</span>
@@ -391,6 +411,9 @@ function ContentCard({ item, onOpen }: { item: Item; onOpen: (id: string) => voi
 function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item: Item; onOpen: (id: string) => void; onToggle?: (id: string, next: ItemStatus) => void; temporarilyDone?: boolean }) {
   const { openContextMenu } = useUI()
   const displayStatus = temporarilyDone ? 'done' : item.status
+  const noteProgress =
+    item.complexity === 'note' ? calculateChecklistProgress(item.contentMd ?? '') : null
+  const noteCompleted = Boolean(noteProgress?.total && noteProgress.percent === 100)
   const text = snippet(item, 90)
   const due = dueLabel(item)
   const priority = itemPriority(item)
@@ -420,7 +443,13 @@ function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item:
         <ItemTypeGlyph item={{ ...item, status: displayStatus }} className="h-4 w-4" />
       </div>
       <span className="min-w-0">
-        <span className="block truncate text-[14px] font-semibold text-navy-900">{item.title}</span>
+        <span
+          className={`block truncate text-[14px] font-semibold ${
+            noteCompleted ? 'text-navy-400 line-through' : 'text-navy-900'
+          }`}
+        >
+          {item.title}
+        </span>
         {text || due || priority < 4 ? (
           <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12px] text-navy-500">
             {due ? <span className="font-mono text-[11px] font-medium text-navy-500">{due}</span> : null}
@@ -436,7 +465,17 @@ function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item:
           </span>
         ) : null}
       </span>
-      <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{STATUS_LABEL[displayStatus]}</span>
+      <span
+        className={`hidden font-mono text-[10px] sm:block ${
+          noteCompleted ? 'font-bold text-teal-700' : 'text-navy-500'
+        }`}
+      >
+        {noteProgress?.total
+          ? noteCompleted
+            ? 'Nota concluida'
+            : `${noteProgress.percent}% concluido`
+          : STATUS_LABEL[displayStatus]}
+      </span>
       <span className="hidden font-mono text-[10px] text-navy-500 sm:block">{formatRelative(item.updatedAt)}</span>
     </button>
   )
@@ -852,6 +891,16 @@ function NotasBrowser() {
     setMobileFoldersOpen(false)
   }
 
+  function handleOpenItem(id: string) {
+    const target = items.find((item) => item.id === id)
+    if (target?.complexity !== 'note') {
+      setSingleSelection(id)
+      return
+    }
+    const source = selectedId ? `/notas?folder=${selectedId}` : '/notas'
+    router.push(`/notas/${id}?from=${encodeURIComponent(source)}`)
+  }
+
   function goToRoot() {
     router.replace('/notas', { scroll: false })
     setMobileFoldersOpen(false)
@@ -987,7 +1036,7 @@ function NotasBrowser() {
                 <p className="px-1 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
               ) : (
                 column.items.map((item) => (
-                  <ContentCard key={item.id} item={item} onOpen={setSingleSelection} />
+                  <ContentCard key={item.id} item={item} onOpen={handleOpenItem} />
                 ))
               )}
               <button
@@ -1114,7 +1163,9 @@ function NotasBrowser() {
                 {pinnedNotes.map((note) => (
                   <Link
                     key={note.id}
-                    href={`/notas/${note.id}`}
+                    href={`/notas/${note.id}?from=${encodeURIComponent(
+                      selectedId ? `/notas?folder=${selectedId}` : '/notas',
+                    )}`}
                     className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 font-mono text-[12px] text-navy-700 hover:bg-navy-900/[0.05]"
                   >
                     <span className="shrink-0 text-[11px] font-bold text-brand-600">★</span>
@@ -1557,7 +1608,7 @@ function NotasBrowser() {
                             <p className="px-1 py-3 text-center font-mono text-[11px] text-navy-300">Vazio</p>
                           ) : (
                             column.items.map((item) => (
-                              <ContentCard key={item.id} item={item} onOpen={setSingleSelection} />
+                              <ContentCard key={item.id} item={item} onOpen={handleOpenItem} />
                             ))
                           )}
                           <button
@@ -1599,7 +1650,7 @@ function NotasBrowser() {
                           <ContentRow
                             key={item.id}
                             item={item}
-                            onOpen={setSingleSelection}
+                            onOpen={handleOpenItem}
                             onToggle={toggleItemDone}
                             temporarilyDone={temporarilyDone.has(item.id)}
                           />
@@ -1660,7 +1711,7 @@ function NotasBrowser() {
                         <RootFolderCard key={folder.id} folder={folder} pinned subCount={findNode(tree, folder.id)?.children.length ?? 0} count={counts.get(folder.id) ?? 0} onOpen={selectFolder} onMenu={openFolderMenu} />
                       ))}
                       {pinnedNotes.map((note) => (
-                        <ContentCard key={note.id} item={note} onOpen={setSingleSelection} />
+                        <ContentCard key={note.id} item={note} onOpen={handleOpenItem} />
                       ))}
                     </div>
                   </>

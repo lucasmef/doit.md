@@ -844,10 +844,13 @@ function EditorIcon({ name }: { name: EditorIconName }) {
   if (name === 'taskList') {
     return (
       <svg {...common}>
-        <path d="M9 7h10" />
-        <path d="M9 17h10" />
-        <path d="m4 7 1 1 2-3" />
-        <rect x="4" y="14" width="3" height="3" rx=".5" />
+        <rect x="3.5" y="4" width="4" height="4" rx="1" />
+        <path d="m4.5 6 1 1 2-2.5" />
+        <path d="M10.5 6h10" />
+        <rect x="3.5" y="10" width="4" height="4" rx="1" />
+        <path d="M10.5 12h10" />
+        <rect x="3.5" y="16" width="4" height="4" rx="1" />
+        <path d="M10.5 18h10" />
       </svg>
     )
   }
@@ -1788,7 +1791,7 @@ export function EditorToolbar({
         active={checklistActive}
         onClick={toggleChecklist}
       >
-        [ ]
+        <EditorIcon name="taskList" />
       </ToolbarBtn>
       <ToolbarBtn
         title={shouldCollapseAll ? 'Recolher todos os topicos' : 'Expandir todos os topicos'}

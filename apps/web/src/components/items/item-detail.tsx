@@ -425,14 +425,15 @@ export function ItemDetail() {
     if (!item) return
     if (item.complexity === 'note') {
       const noteId = item.id
+      const source = `${pathname}${window.location.search}`
       setSelectedItemId(null)
-      router.push(`/notas/${noteId}`)
+      router.push(`/notas/${noteId}?from=${encodeURIComponent(source)}`)
       return
     }
     const editId = item.id
     setSelectedItemId(null)
     setQuickCaptureEditId(editId)
-  }, [item, router, setSelectedItemId, setQuickCaptureEditId])
+  }, [item, pathname, router, setSelectedItemId, setQuickCaptureEditId])
 
   // Esc fecha o overlay de tarefa/evento mesmo quando o foco está fora dele (ID 010).
   useEscapeClose(Boolean(selectedItemId && item && item.complexity !== 'note'), () => {

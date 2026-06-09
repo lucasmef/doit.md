@@ -20,6 +20,7 @@ export type Preferences = {
   sidebarCollapsed: boolean
   pinnedFolderIds: string[]
   pinnedNoteIds: string[]
+  recentNoteIds: string[]
   /** Ordenação escolhida por pasta (ID 026). Chave = folderId ou 'root'; valor = SortKey. */
   folderSort: Record<string, string>
   calendarWeekStartsOn: CalendarWeekStart
@@ -52,6 +53,7 @@ const DEFAULTS: Preferences = {
   sidebarCollapsed: false,
   pinnedFolderIds: [],
   pinnedNoteIds: [],
+  recentNoteIds: [],
   folderSort: {},
   calendarWeekStartsOn: 'monday',
   defaultCalendarId: 'primary',
@@ -141,6 +143,9 @@ function read(): Preferences {
       pinnedNoteIds: Array.isArray(parsed.pinnedNoteIds)
         ? parsed.pinnedNoteIds.filter((id): id is string => typeof id === 'string')
         : [],
+      recentNoteIds: Array.isArray(parsed.recentNoteIds)
+        ? parsed.recentNoteIds.filter((id): id is string => typeof id === 'string').slice(0, 12)
+        : [],
       folderSort:
         parsed.folderSort && typeof parsed.folderSort === 'object' && !Array.isArray(parsed.folderSort)
           ? (parsed.folderSort as Record<string, string>)
@@ -194,6 +199,11 @@ export function usePreferences() {
         new Set(patch.pinnedNoteIds.filter((id): id is string => typeof id === 'string')),
       )
     }
+    if (patch.recentNoteIds) {
+      next.recentNoteIds = Array.from(
+        new Set(patch.recentNoteIds.filter((id): id is string => typeof id === 'string')),
+      ).slice(0, 12)
+    }
     if (next.calendarWeekStartsOn !== 'monday' && next.calendarWeekStartsOn !== 'sunday') {
       next.calendarWeekStartsOn = DEFAULTS.calendarWeekStartsOn
     }
@@ -232,5 +242,10 @@ export function usePreferences() {
     setPrefs(next)
   }
 
-  return { prefs, update }
+  function recordRecentNote(id: string) {
+    const current = read()
+    update({ recentNoteIds: [id, ...current.recentNoteIds.filter((noteId) => noteId !== id)] })
+  }
+
+  return { prefs, update, recordRecentNote }
 }
