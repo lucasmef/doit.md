@@ -70,6 +70,11 @@ function buildFolderPath(folders: Folder[], folderId?: string): Folder[] {
   return path
 }
 
+function safeReturnPath(value: string | null) {
+  if (!value || !value.startsWith('/') || value.startsWith('//')) return null
+  return value
+}
+
 function FolderIcon({ className = 'h-4 w-4' }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -145,21 +150,29 @@ function Sidebar({
   itemCounts,
   parentFolderId,
   currentItemId,
+  recentNoteIds,
 }: {
   folders: Folder[]
   notes: Item[]
   itemCounts: Map<string, number>
   parentFolderId?: string
   currentItemId: string
+  recentNoteIds: string[]
 }) {
   const tree = useMemo(() => buildFolderTree(folders), [folders])
   const visibleNotes = useMemo(() => {
-    const scoped = parentFolderId
-      ? notes.filter((note) => note.folderId === parentFolderId)
-      : notes
+    const currentFolderId = parentFolderId ?? null
+    const scoped = notes.filter((note) => (note.folderId ?? null) === currentFolderId)
     return scoped.slice(0, 6)
   }, [notes, parentFolderId])
-  const favoriteNotes = useMemo(() => notes.filter((note) => note.priority === 1).slice(0, 2), [notes])
+  const recentNotes = useMemo(() => {
+    const notesById = new Map(notes.map((note) => [note.id, note]))
+    return recentNoteIds
+      .map((noteId) => notesById.get(noteId))
+      .filter((note): note is Item => Boolean(note))
+      .slice(0, 5)
+  }, [notes, recentNoteIds])
+  const folderSource = parentFolderId ? `/notas?folder=${parentFolderId}` : '/notas'
   const [expanded, setExpanded] = useState<Set<string>>(() => {
     const initial = new Set<string>()
     if (parentFolderId) initial.add(parentFolderId)
@@ -233,7 +246,7 @@ function Sidebar({
           {visibleNotes.map((note) => (
             <Link
               key={note.id}
-              href={`/notas/${note.id}`}
+              href={`/notas/${note.id}?from=${encodeURIComponent(folderSource)}`}
               className={`flex items-center gap-2 rounded-[7px] px-2 py-1.5 font-mono text-[12px] ${
                 note.id === currentItemId
                   ? 'bg-[linear-gradient(135deg,rgba(47,107,255,.10),rgba(40,199,183,.10))] font-semibold text-navy-900 shadow-[inset_0_0_0_1px_rgba(47,107,255,.18)]'
@@ -248,19 +261,24 @@ function Sidebar({
         </div>
 
         <div className="mt-3 px-2 pb-1 pt-2 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
-          favorites
+          ultimos itens
         </div>
         <div className="flex flex-col gap-px">
-          {(favoriteNotes.length > 0 ? favoriteNotes : notes.slice(0, 2)).map((note) => (
+          {recentNotes.map((note) => (
             <Link
-              key={`fav-${note.id}`}
-              href={`/notas/${note.id}`}
+              key={`recent-${note.id}`}
+              href={`/notas/${note.id}?from=${encodeURIComponent(folderSource)}`}
               className="flex items-center gap-2 rounded-[7px] px-2 py-1.5 font-mono text-[12px] text-navy-700 hover:bg-navy-900/[0.05]"
             >
               <span className="shrink-0 text-[11px] font-bold text-brand-600">M↓</span>
               <span className="truncate">{normalizeFileName(note)}</span>
             </Link>
           ))}
+          {recentNotes.length === 0 ? (
+            <span className="px-2 py-1.5 font-mono text-[11px] text-navy-300">
+              abra uma nota para iniciar
+            </span>
+          ) : null}
         </div>
 
         <div className="mt-3 px-2 pb-1 pt-2 font-mono text-[10px] font-bold uppercase tracking-wider text-navy-500">
@@ -318,31 +336,28 @@ function panelControlClass() {
   return 'w-full rounded-[8px] border border-navy-900/10 bg-white/70 px-2.5 py-2 text-[12px] text-navy-900 outline-none transition focus:border-brand-300 focus:ring-2 focus:ring-brand-100'
 }
 
+function normalizeTagsInput(value: string) {
+  return Array.from(
+    new Set(
+      value
+        .split(',')
+        .map((tag) => tag.trim().replace(/^#/, ''))
+        .filter(Boolean),
+    ),
+  )
+}
+
 function NotePropertiesPanel({
   item,
   folders,
   wordCount,
-  tagsDraft,
-  onTagsDraftChange,
   onPatch,
 }: {
   item: Item
   folders: Folder[]
   wordCount: number
-  tagsDraft: string
-  onTagsDraftChange: (value: string) => void
   onPatch: (patch: UpdateItemInput) => void
 }) {
-  const normalizeTags = (value: string) =>
-    Array.from(
-      new Set(
-        value
-          .split(',')
-          .map((tag) => tag.trim().replace(/^#/, ''))
-          .filter(Boolean),
-      ),
-    )
-
   return (
     <div className="space-y-3 rounded-[12px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
       <PanelField label="pasta">
@@ -373,11 +388,29 @@ function NotePropertiesPanel({
         />
       </PanelField>
 
+      <div className="font-mono text-[10px] text-navy-400">
+        editado {formatRelative(item.updatedAt)} · {wordCount} palavras
+      </div>
+    </div>
+  )
+}
+
+function NoteTagsPanel({
+  tagsDraft,
+  onTagsDraftChange,
+  onPatch,
+}: {
+  tagsDraft: string
+  onTagsDraftChange: (value: string) => void
+  onPatch: (patch: UpdateItemInput) => void
+}) {
+  return (
+    <div className="rounded-[12px] bg-white/46 p-3 shadow-[inset_0_0_0_1px_rgba(15,35,66,.05)]">
       <PanelField label="tags">
         <input
           value={tagsDraft}
           onChange={(event) => onTagsDraftChange(event.target.value)}
-          onBlur={(event) => onPatch({ tags: normalizeTags(event.target.value) })}
+          onBlur={(event) => onPatch({ tags: normalizeTagsInput(event.target.value) })}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
@@ -388,10 +421,6 @@ function NotePropertiesPanel({
           className={panelControlClass()}
         />
       </PanelField>
-
-      <div className="font-mono text-[10px] text-navy-400">
-        editado {formatRelative(item.updatedAt)} · {wordCount} palavras
-      </div>
     </div>
   )
 }
@@ -482,8 +511,6 @@ function OutlineRail({
           item={item}
           folders={folders}
           wordCount={wordCount}
-          tagsDraft={tagsDraft}
-          onTagsDraftChange={onTagsDraftChange}
           onPatch={onPatch}
         />
 
@@ -534,7 +561,9 @@ function OutlineRail({
                 )}
                 <a
                   href={`#${encodeURIComponent(h.id)}`}
-                  className="min-w-0 flex-1 truncate"
+                  className={`min-w-0 flex-1 truncate ${
+                    h.checked ? 'text-navy-400 line-through' : ''
+                  }`}
                   onClick={(event) => {
                     event.preventDefault()
                     const target = document.querySelector<HTMLElement>(
@@ -588,6 +617,13 @@ function OutlineRail({
             ))
           )}
         </div>
+
+        <RailTitle>tags</RailTitle>
+        <NoteTagsPanel
+          tagsDraft={tagsDraft}
+          onTagsDraftChange={onTagsDraftChange}
+          onPatch={onPatch}
+        />
 
       </div>
     </aside>
@@ -798,10 +834,11 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const { id } = use(params)
   const searchParams = useSearchParams()
   const folderParam = searchParams.get('folder')
+  const fromParam = searchParams.get('from')
   const router = useRouter()
   const { items, isLoading } = useItems()
   const { folders } = useFolders()
-  const { prefs, update: updatePrefs } = usePreferences()
+  const { prefs, update: updatePrefs, recordRecentNote } = usePreferences()
 
   const isPinned = prefs.pinnedNoteIds?.includes(id) ?? false
   const handleTogglePin = useCallback(() => {
@@ -831,11 +868,6 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const [focusUiScale, setFocusUiScale] = useState(1)
   const focusZoomBaselineRef = useRef<number | null>(null)
   const [mobileAttachmentsOpen, setMobileAttachmentsOpen] = useState(false)
-  
-  useEscapeClose(!focusMode, () => {
-    if (folderParam) router.push(`/notas?folder=${folderParam}`)
-    else router.push('/notas')
-  })
   const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -849,6 +881,11 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     if (!item) return
     setTagsDraft(item.tags.join(', '))
   }, [item?.id, item?.tags])
+
+  useEffect(() => {
+    if (!item || prefs.recentNoteIds[0] === item.id) return
+    recordRecentNote(item.id)
+  }, [item, prefs.recentNoteIds, recordRecentNote])
 
   const persist = useCallback(
     async (patch: UpdateItemInput) => {
@@ -874,6 +911,29 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     },
     [persist],
   )
+
+  const returnPath = useMemo(() => {
+    const explicit = safeReturnPath(fromParam)
+    if (explicit) return explicit
+    if (folderParam) return `/notas?folder=${folderParam}`
+    if (item?.folderId) return `/notas?folder=${item.folderId}`
+    return '/notas'
+  }, [folderParam, fromParam, item?.folderId])
+
+  const handleExit = useCallback(async () => {
+    if (contentTimer.current) {
+      clearTimeout(contentTimer.current)
+      contentTimer.current = null
+      if (item && localContent !== (item.contentMd ?? '')) {
+        await persist({ contentMd: localContent })
+      }
+    }
+    router.push(returnPath)
+  }, [item, localContent, persist, returnPath, router])
+
+  useEscapeClose(!focusMode, () => {
+    void handleExit()
+  })
 
   const onCollapsedHeadingsChange = useCallback(
     (indices: number[]) => {
@@ -911,7 +971,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
         focusZoomBaselineRef.current = currentZoom
       }
       const baselineZoom = focusZoomBaselineRef.current || currentZoom
-      const nextScale = Math.max(0.74, Math.min(1, baselineZoom / currentZoom))
+      const nextScale = Math.max(0.4, Math.min(1, baselineZoom / currentZoom))
       const rounded = Number(nextScale.toFixed(3))
       setFocusUiScale((current) => (Math.abs(current - rounded) < 0.01 ? current : rounded))
     }
@@ -919,9 +979,11 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
     updateFocusScale()
     window.addEventListener('resize', updateFocusScale)
     window.visualViewport?.addEventListener('resize', updateFocusScale)
+    const zoomTimer = window.setInterval(updateFocusScale, 250)
     return () => {
       window.removeEventListener('resize', updateFocusScale)
       window.visualViewport?.removeEventListener('resize', updateFocusScale)
+      window.clearInterval(zoomTimer)
     }
   }, [focusMode])
 
@@ -953,7 +1015,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const handleArchive = async () => {
     if (!item) return
     await updateItem(item.id, { status: 'archived' })
-    router.push('/notas')
+    router.push(returnPath)
   }
 
   const handleMetadataPatch = (patch: UpdateItemInput) => {
@@ -1025,6 +1087,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
           itemCounts={itemCounts}
           parentFolderId={item.folderId}
           currentItemId={item.id}
+          recentNoteIds={prefs.recentNoteIds}
         />
       )}
 

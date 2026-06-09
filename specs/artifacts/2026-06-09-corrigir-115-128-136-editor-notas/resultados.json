@@ -1,0 +1,87 @@
+[
+  {
+    "name": "ID 131 - lista mostra progresso parcial",
+    "ok": true,
+    "extra": "doit.md Dashboard Hoje Calendario Notas Ajustes Ctrl K + Novo Q Sair TODAS Pasta A qa-115-136-1781029143965 pasta 2 Pasta B qa-115-136-1781029143965 pasta 1 Notas / PASTA A QA-115-136-1781029143965 Pasta A qa-115-136-1781029143965 KANBAN LISTA ORDENAR: ALFABÉTICA ▾ H1 aberto [ ] H1 aberto [x] tarefa feita [x] H2 feito "
+  },
+  {
+    "name": "ID 131 - nota 100% tem visual concluido",
+    "ok": true,
+    "extra": "doit.md Dashboard Hoje Calendario Notas Ajustes Ctrl K + Novo Q Sair TODAS Pasta A qa-115-136-1781029143965 pasta 2 Pasta B qa-115-136-1781029143965 pasta 1 Notas / PASTA A QA-115-136-1781029143965 Pasta A qa-115-136-1781029143965 KANBAN LISTA ORDENAR: ALFABÉTICA ▾ H1 aberto [ ] H1 aberto [x] tarefa feita [x] H2 feito "
+  },
+  {
+    "name": "ID 131 - nota concluida nao altera status de tarefa",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 132 - Files mostra somente a pasta atual",
+    "ok": true,
+    "extra": "doit.md Buscar notas... ⌘K NOTEBOOKS Pasta A qa-115-136-1781029143965 2 Pasta B qa-115-136-1781029143965 1 FILES M↓ h1-feito.md M↓ h1-aberto.md ULTIMOS ITENS abra uma nota para iniciar TRASH LF doit.md synced just now"
+  },
+  {
+    "name": "ID 128 - progresso do editor conta checklist comum e heading",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 129 - outline remove marcadores e usa checkbox visual",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 130 - heading concluido usa checkbox azul e texto riscado",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 134 - Tags fica abaixo das propriedades e secoes principais",
+    "ok": true,
+    "extra": "[\"propriedades\",\"anexos\",\"progresso\",\"outline\",\"relacionadas - 0\",\"tags\"]"
+  },
+  {
+    "name": "ID 134 - edicao de Tags continua funcional",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 136 - toolbar usa icone SVG claro e acessivel",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 128 - progresso atualiza sem reload ao marcar heading",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 128 - progresso atualiza sem reload ao desmarcar checklist comum",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 135 - Esc volta para a pasta de origem",
+    "ok": true,
+    "extra": "http://127.0.0.1:3415/notas?folder=fld_tiLvbJnn"
+  },
+  {
+    "name": "ID 135 - Esc nao perde autosave pendente",
+    "ok": true,
+    "extra": ""
+  },
+  {
+    "name": "ID 133 - Ultimos itens contem apenas notas em ordem recente",
+    "ok": true,
+    "extra": "[\"h1-aberto.md\",\"--[-]-fora-da-pasta.md\"]"
+  },
+  {
+    "name": "ID 115 - modo foco compensa zoom alto nos controles",
+    "ok": true,
+    "extra": "1 -> 0.4"
+  },
+  {
+    "name": "IDs 128-136 - mobile sem overflow e com checklist funcional",
+    "ok": true,
+    "extra": "{\"overflow\":false,\"checklistButtons\":1,\"headingChecks\":2}"
+  }
+]
