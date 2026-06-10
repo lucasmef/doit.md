@@ -1,0 +1,127 @@
+{
+  "results": [
+    {
+      "name": "ID 137 - progresso parcial visivel no mobile",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 137 - progresso 100% visivel no mobile",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 137 - nota 100% continua riscada",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 138 - ultima alteracao continua oculta no mobile",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 139 - primeiro H1 sem margem superior excessiva",
+      "ok": true,
+      "extra": "{\"gap\":16,\"marginTop\":\"0px\",\"tag\":\"H1\"}"
+    },
+    {
+      "name": "ID 139 - primeiro H2 sem margem superior excessiva",
+      "ok": true,
+      "extra": "{\"gap\":16,\"marginTop\":\"0px\",\"tag\":\"H2\"}"
+    },
+    {
+      "name": "ID 139 - primeiro H3 sem margem superior excessiva",
+      "ok": true,
+      "extra": "{\"gap\":16,\"marginTop\":\"0px\",\"tag\":\"H3\"}"
+    },
+    {
+      "name": "ID 139 - primeiro P sem margem superior excessiva",
+      "ok": true,
+      "extra": "{\"gap\":16,\"marginTop\":\"0px\",\"tag\":\"P\"}"
+    },
+    {
+      "name": "ID 140 - abrir nota nao registra recente",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 140 - autosave nao reordena recentes",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 140 - trocar nota registra apenas a nota fechada",
+      "ok": true,
+      "extra": "[\"itm_lYVvUcFz\"]"
+    },
+    {
+      "name": "ID 140 - Esc registra a nota fechada no topo",
+      "ok": true,
+      "extra": "[\"itm_14NJG9thH\",\"itm_lYVvUcFz\"]"
+    },
+    {
+      "name": "ID 140 - Ultimos itens lista somente notas fechadas",
+      "ok": true,
+      "extra": "[\"/notas/itm_14NJG9thH?from=%2Fnotas%3Ffolder%3Dfld_yx54LmGu\",\"/notas/itm_lYVvUcFz?from=%2Fnotas%3Ffolder%3Dfld_yx54LmGu\"]"
+    },
+    {
+      "name": "IDs 115/141 - foco usa topo e toolbar compactos",
+      "ok": true,
+      "extra": "{\"topbarHeight\":37,\"toolbarHeight\":39,\"contentLeft\":15,\"editorGap\":16,\"focusExitVisible\":true}"
+    },
+    {
+      "name": "ID 141 - foco reduz margens e aproxima conteudo",
+      "ok": true,
+      "extra": "{\"topbarHeight\":37,\"toolbarHeight\":39,\"contentLeft\":15,\"editorGap\":16,\"focusExitVisible\":true}"
+    },
+    {
+      "name": "ID 141 - Sair do foco permanece visivel",
+      "ok": true,
+      "extra": ""
+    },
+    {
+      "name": "ID 141 - acoes secundarias acessiveis no menu",
+      "ok": true,
+      "extra": "Historico (1) Imprimir Baixar Markdown ☆ Destacar nota Arquivar nota"
+    },
+    {
+      "name": "ID 115 - compensacao automatica limita controles no zoom",
+      "ok": true,
+      "extra": "1 -> 0.4"
+    }
+  ],
+  "spacingResults": [
+    {
+      "expectedTag": "H1",
+      "gap": 16,
+      "marginTop": "0px",
+      "tag": "H1"
+    },
+    {
+      "expectedTag": "H2",
+      "gap": 16,
+      "marginTop": "0px",
+      "tag": "H2"
+    },
+    {
+      "expectedTag": "H3",
+      "gap": 16,
+      "marginTop": "0px",
+      "tag": "H3"
+    },
+    {
+      "expectedTag": "P",
+      "gap": 16,
+      "marginTop": "0px",
+      "tag": "P"
+    }
+  ],
+  "focusMetrics": {
+    "topbarHeight": 37,
+    "toolbarHeight": 39,
+    "contentLeft": 15,
+    "editorGap": 16,
+    "focusExitVisible": true
+  }
+}

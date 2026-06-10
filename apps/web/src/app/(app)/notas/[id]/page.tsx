@@ -655,16 +655,40 @@ function EditorTopBar({
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
-    <div className={`flex shrink-0 items-center gap-1.5 border-b border-[#ECF0F5] px-3 py-2 sm:gap-3 sm:px-6 sm:py-3.5 ${focusMode ? 'note-focus-ui max-h-14' : ''}`}>
-      <nav className="hidden min-w-0 flex-wrap items-center gap-1.5 font-mono text-[12px] text-navy-500 sm:flex">
+    <div
+      className={`flex shrink-0 items-center border-b border-[#ECF0F5] ${
+        focusMode
+          ? 'note-focus-ui max-h-10 gap-1.5 px-3 py-1 sm:px-4'
+          : 'gap-1.5 px-3 py-2 sm:gap-3 sm:px-6 sm:py-3.5'
+      }`}
+    >
+      <nav
+        className={`hidden min-w-0 items-center gap-1.5 font-mono text-[12px] text-navy-500 sm:flex ${
+          focusMode ? 'flex-nowrap overflow-hidden' : 'flex-wrap'
+        }`}
+      >
         {crumbs.map((crumb, i) => (
-          <span key={`${crumb.label}-${i}`} className="inline-flex items-center gap-1.5">
+          <span
+            key={`${crumb.label}-${i}`}
+            className={`inline-flex min-w-0 items-center gap-1.5 ${
+              focusMode && i === crumbs.length - 1 ? 'truncate' : 'shrink-0'
+            }`}
+          >
             {crumb.href ? (
-              <Link href={crumb.href} className={crumb.isFile ? 'font-semibold text-brand-600' : 'text-navy-500 hover:text-navy-900'}>
+              <Link
+                href={crumb.href}
+                className={
+                  crumb.isFile
+                    ? 'truncate font-semibold text-brand-600'
+                    : 'text-navy-500 hover:text-navy-900'
+                }
+              >
                 {crumb.label}
               </Link>
             ) : (
-              <span className={crumb.isFile ? 'font-semibold text-brand-600' : ''}>{crumb.label}</span>
+              <span className={crumb.isFile ? 'truncate font-semibold text-brand-600' : ''}>
+                {crumb.label}
+              </span>
             )}
             {i < crumbs.length - 1 ? <span className="text-navy-900/20">/</span> : null}
           </span>
@@ -686,13 +710,13 @@ function EditorTopBar({
         {saveStatus === 'saving' ? 'saving...' : 'saved · now'}
       </span>
 
-      <div className="hidden sm:flex">
+      <div className={focusMode ? 'hidden' : 'hidden sm:flex'}>
         <span className="inline-flex h-[26px] w-[26px] items-center justify-center rounded-full border-2 border-white bg-[linear-gradient(135deg,#2F6BFF,#28C7B7)] text-[9px] font-bold text-white">
           LF
         </span>
       </div>
 
-      <div className="h-[18px] w-px bg-[#D9E1EA]" />
+      <div className={focusMode ? 'hidden' : 'h-[18px] w-px bg-[#D9E1EA]'} />
 
       <button
         type="button"
@@ -709,7 +733,7 @@ function EditorTopBar({
         </svg>
       </button>
 
-      <ItemVersions itemId={itemId} iconTrigger />
+      {focusMode ? null : <ItemVersions itemId={itemId} iconTrigger />}
 
       <button
         type="button"
@@ -724,7 +748,7 @@ function EditorTopBar({
         </svg>
       </button>
 
-      {onTogglePin && (
+      {!focusMode && onTogglePin && (
         <button
           type="button"
           onClick={onTogglePin}
@@ -739,31 +763,35 @@ function EditorTopBar({
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={() => window.print()}
-        className="hidden h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] font-medium text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900 sm:inline-flex"
-      >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M7 8V4h10v4" />
-          <path d="M7 17H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" />
-          <path d="M7 14h10v6H7z" />
-        </svg>
-        Imprimir
-      </button>
-      <button
-        type="button"
-        onClick={onDownload}
-        className="hidden h-8 items-center gap-1.5 rounded-lg bg-navy-900 px-3 text-[12px] font-semibold text-white hover:bg-navy-700 sm:inline-flex"
-      >
-        <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 4v10" />
-          <path d="m8 10 4 4 4-4" />
-          <path d="M5 20h14" />
-        </svg>
-        Baixar
-      </button>
-      <div className="relative hidden sm:block">
+      {!focusMode ? (
+        <>
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="hidden h-7 items-center gap-1.5 rounded-[7px] px-2.5 text-[12px] font-medium text-navy-500 hover:bg-[#ECF0F5] hover:text-navy-900 sm:inline-flex"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 8V4h10v4" />
+              <path d="M7 17H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2" />
+              <path d="M7 14h10v6H7z" />
+            </svg>
+            Imprimir
+          </button>
+          <button
+            type="button"
+            onClick={onDownload}
+            className="hidden h-8 items-center gap-1.5 rounded-lg bg-navy-900 px-3 text-[12px] font-semibold text-white hover:bg-navy-700 sm:inline-flex"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 4v10" />
+              <path d="m8 10 4 4 4-4" />
+              <path d="M5 20h14" />
+            </svg>
+            Baixar
+          </button>
+        </>
+      ) : null}
+      <div className={`relative ${focusMode ? 'block' : 'hidden sm:block'}`}>
         <button
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
@@ -792,6 +820,33 @@ function EditorTopBar({
               role="menu"
               className="absolute right-0 top-[calc(100%+6px)] z-50 w-44 overflow-hidden rounded-[12px] border border-navy-900/10 bg-white py-1 shadow-[0_12px_32px_rgba(15,35,66,.20),0_2px_8px_rgba(15,35,66,.08)]"
             >
+              {focusMode ? <ItemVersions itemId={itemId} menuTrigger /> : null}
+              {focusMode ? (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      window.print()
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium text-navy-700 hover:bg-navy-50"
+                  >
+                    Imprimir
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false)
+                      onDownload()
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium text-navy-700 hover:bg-navy-50"
+                  >
+                    Baixar Markdown
+                  </button>
+                </>
+              ) : null}
               {onTogglePin && (
                 <button
                   type="button"
@@ -869,6 +924,13 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const focusZoomBaselineRef = useRef<number | null>(null)
   const [mobileAttachmentsOpen, setMobileAttachmentsOpen] = useState(false)
   const contentTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const previousNoteIdRef = useRef<string | null>(null)
+  const activeNoteIdRef = useRef(id)
+  const recordRecentNoteRef = useRef(recordRecentNote)
+  const closeRecordTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  activeNoteIdRef.current = id
+  recordRecentNoteRef.current = recordRecentNote
 
   useEffect(() => {
     if (!item || hydrated) return
@@ -883,9 +945,25 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   }, [item?.id, item?.tags])
 
   useEffect(() => {
-    if (!item || prefs.recentNoteIds[0] === item.id) return
-    recordRecentNote(item.id)
-  }, [item, prefs.recentNoteIds, recordRecentNote])
+    const previousNoteId = previousNoteIdRef.current
+    if (previousNoteId && previousNoteId !== id) {
+      recordRecentNote(previousNoteId)
+    }
+    previousNoteIdRef.current = id
+  }, [id, recordRecentNote])
+
+  useEffect(() => {
+    if (closeRecordTimerRef.current) {
+      clearTimeout(closeRecordTimerRef.current)
+      closeRecordTimerRef.current = null
+    }
+    return () => {
+      const noteId = activeNoteIdRef.current
+      closeRecordTimerRef.current = setTimeout(() => {
+        recordRecentNoteRef.current(noteId)
+      }, 0)
+    }
+  }, [])
 
   const persist = useCallback(
     async (patch: UpdateItemInput) => {
@@ -928,8 +1006,9 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
         await persist({ contentMd: localContent })
       }
     }
+    if (item) recordRecentNote(item.id)
     router.push(returnPath)
-  }, [item, localContent, persist, returnPath, router])
+  }, [item, localContent, persist, recordRecentNote, returnPath, router])
 
   useEscapeClose(!focusMode, () => {
     void handleExit()
@@ -1015,6 +1094,7 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
   const handleArchive = async () => {
     if (!item) return
     await updateItem(item.id, { status: 'archived' })
+    recordRecentNote(item.id)
     router.push(returnPath)
   }
 
@@ -1116,9 +1196,9 @@ export default function NoteEditorPage({ params }: { params: Promise<{ id: strin
 
         <div className="note-editor-scroll flex-1 overflow-auto" data-note-scroll-container="true">
           <div
-            className={`note-print-content mx-auto w-full px-4 pb-20 pt-5 sm:px-6 sm:pt-8 ${
+            className={`note-print-content mx-auto w-full px-4 pb-20 pt-3 sm:px-6 sm:pt-4 ${
               focusMode
-                ? 'max-w-[1180px] lg:px-16 xl:px-20'
+                ? 'max-w-[1440px] pt-2 sm:pt-3 lg:px-8 xl:px-10'
                 : 'max-w-[980px] lg:px-4 xl:max-w-[1040px] xl:px-6'
             }`}
           >

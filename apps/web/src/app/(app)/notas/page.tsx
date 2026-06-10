@@ -484,6 +484,11 @@ function ContentRow({ item, onOpen, onToggle, temporarilyDone = false }: { item:
             {text ? <span className="hidden min-w-0 truncate sm:inline">{text}</span> : null}
           </span>
         ) : null}
+        {noteProgress?.total ? (
+          <span className="mt-1 flex sm:hidden">
+            <NoteProgressBar percent={noteProgress.percent} completed={noteCompleted} />
+          </span>
+        ) : null}
       </span>
       <span className="hidden items-center sm:flex">
         {noteProgress?.total ? (
