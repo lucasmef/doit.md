@@ -316,6 +316,9 @@
     margin: 0;
     min-height: 1.65em;
   }
+  .doit-note-sheet-prose > :first-child {
+    margin-top: 0;
+  }
   .doit-note-sheet-prose h1,
   .doit-note-sheet-prose h2,
   .doit-note-sheet-prose h3 {
@@ -414,6 +417,9 @@
     transform: scale(var(--note-focus-ui-scale, 1));
     transform-origin: top left;
     width: calc(100% / var(--note-focus-ui-scale, 1));
+  }
+  .note-editor-page[data-focus-mode='true'] .note-focus-ui button {
+    max-height: 2rem;
   }
   @supports (zoom: 1) {
     .note-editor-page[data-focus-mode='true'] .note-focus-ui {

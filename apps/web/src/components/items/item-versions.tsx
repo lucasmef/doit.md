@@ -7,7 +7,12 @@ import { useDialog } from '@/components/ui/dialog'
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
-type Props = { itemId: string; compact?: boolean; iconTrigger?: boolean }
+type Props = {
+  itemId: string
+  compact?: boolean
+  iconTrigger?: boolean
+  menuTrigger?: boolean
+}
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
@@ -62,7 +67,12 @@ function VersionPreview({
   )
 }
 
-export function ItemVersions({ itemId, compact = false, iconTrigger = false }: Props) {
+export function ItemVersions({
+  itemId,
+  compact = false,
+  iconTrigger = false,
+  menuTrigger = false,
+}: Props) {
   const { data, isLoading } = useSWR<{ versions: ItemVersion[] }>(
     `/api/items/${itemId}/versions`,
     fetcher,
@@ -78,7 +88,12 @@ export function ItemVersions({ itemId, compact = false, iconTrigger = false }: P
 
   function toggleOpen() {
     const nextOpen = !open
-    if (nextOpen && (compact || iconTrigger) && buttonRef.current && typeof window !== 'undefined') {
+    if (
+      nextOpen &&
+      (compact || iconTrigger || menuTrigger) &&
+      buttonRef.current &&
+      typeof window !== 'undefined'
+    ) {
       const rect = buttonRef.current.getBoundingClientRect()
       const width = Math.min(360, window.innerWidth - 24)
       const left = Math.min(Math.max(12, rect.right - width), window.innerWidth - width - 12)
@@ -109,11 +124,33 @@ export function ItemVersions({ itemId, compact = false, iconTrigger = false }: P
     }
   }
 
-  const popoverFloating = compact || iconTrigger
+  const popoverFloating = compact || iconTrigger || menuTrigger
 
   return (
     <div className="relative">
-      {iconTrigger ? (
+      {menuTrigger ? (
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={toggleOpen}
+          role="menuitem"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] font-medium text-navy-700 hover:bg-navy-50"
+        >
+          <svg
+            className="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          >
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 3v5h5" />
+            <path d="M12 7v5l3 2" strokeLinecap="round" />
+          </svg>
+          Historico ({versions.length})
+        </button>
+      ) : iconTrigger ? (
         <button
           ref={buttonRef}
           type="button"
